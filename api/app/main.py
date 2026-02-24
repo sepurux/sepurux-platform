@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 
+from app.routes.traces import router as traces_router
+
 app = FastAPI(title="Crash Lab API")
+
+app.include_router(traces_router)
 
 
 @app.get("/healthz", tags=["health"])
