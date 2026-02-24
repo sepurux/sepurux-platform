@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, JSON, String, Text, Uuid, func
+from sqlalchemy import DateTime, ForeignKey, JSON, String, Text, Uuid, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -46,6 +46,21 @@ class Campaign(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     mutation_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     eval_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class Run(Base):
+    __tablename__ = "runs"
+
+    run_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    trace_id: Mapped[UUID] = mapped_column(ForeignKey("traces.trace_id"), nullable=False)
+    campaign_id: Mapped[UUID] = mapped_column(ForeignKey("campaigns.campaign_id"), nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
