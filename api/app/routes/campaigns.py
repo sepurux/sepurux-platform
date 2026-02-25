@@ -1,51 +1,44 @@
 from __future__ import annotations
 
-from typing import Any
-from uuid import UUID, uuid4
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from typing import Annotated
+from uuid import UUID
 
 from app.db import get_db
-from app.models import Campaign
+from app.schemas import CampaignCreateRequest, CampaignMetadata
+from app.services.campaign_service import create_campaign
+from app.services.campaign_service import get_campaign as get_campaign_record
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
 
-
-class CampaignCreateRequest(BaseModel):
-    name: str
-    mutation_set: Any
-    eval_set: Any
+DbSession = Annotated[Session, Depends(get_db)]
 
 
-def campaign_metadata(campaign: Campaign) -> dict[str, Any]:
-    return {
-        "campaign_id": campaign.campaign_id,
-        "name": campaign.name,
-        "mutation_set": campaign.mutation_set,
-        "eval_set": campaign.eval_set,
-        "created_at": campaign.created_at,
-    }
+def _to_campaign_metadata(campaign) -> CampaignMetadata:
+    return CampaignMetadata(
+        campaign_id=campaign.campaign_id,
+        name=campaign.name,
+        mutation_set=campaign.mutation_set,
+        eval_set=campaign.eval_set,
+        created_at=campaign.created_at,
+    )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
-def create_campaign(payload: CampaignCreateRequest, db: Session = Depends(get_db)) -> dict[str, Any]:
-    campaign = Campaign(
-        campaign_id=uuid4(),
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=CampaignMetadata)
+def post_campaign(payload: CampaignCreateRequest, db: DbSession) -> CampaignMetadata:
+    campaign = create_campaign(
+        db,
         name=payload.name,
         mutation_set=payload.mutation_set,
         eval_set=payload.eval_set,
     )
-    db.add(campaign)
-    db.commit()
-    db.refresh(campaign)
-    return campaign_metadata(campaign)
+    return _to_campaign_metadata(campaign)
 
 
-@router.get("/{campaign_id}")
-def get_campaign(campaign_id: UUID, db: Session = Depends(get_db)) -> dict[str, Any]:
-    campaign = db.get(Campaign, campaign_id)
+@router.get("/{campaign_id}", response_model=CampaignMetadata)
+def get_campaign(campaign_id: UUID, db: DbSession) -> CampaignMetadata:
+    campaign = get_campaign_record(db, campaign_id)
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
-    return campaign_metadata(campaign)
+    return _to_campaign_metadata(campaign)
