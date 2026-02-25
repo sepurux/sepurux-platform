@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-
 from app.db import get_db
 from app.schemas import MutationSummaryResponse, RunStatsResponse, ToolFragilityResponse
 from app.services.analytics_service import (
@@ -14,6 +11,8 @@ from app.services.analytics_service import (
     get_run_stats,
     get_tool_fragility,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1", tags=["analytics"])
 
