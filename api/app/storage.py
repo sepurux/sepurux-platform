@@ -7,6 +7,8 @@ import boto3
 
 from .config import get_settings
 
+MAX_JSON_OBJECT_BYTES = 1_000_000
+
 
 def get_s3_client():
     settings = get_settings()
@@ -28,3 +30,21 @@ def put_json_object(key: str, payload: Any) -> None:
         Body=body,
         ContentType="application/json",
     )
+
+
+class JsonObjectTooLargeError(Exception):
+    pass
+
+
+def get_json_object(key: str, *, max_bytes: int = MAX_JSON_OBJECT_BYTES) -> Any:
+    settings = get_settings()
+    client = get_s3_client()
+    head = client.head_object(Bucket=settings.s3_bucket, Key=key)
+    content_length = int(head.get("ContentLength") or 0)
+    if content_length > max_bytes:
+        raise JsonObjectTooLargeError(f"Object exceeds size limit ({content_length} > {max_bytes})")
+    response = client.get_object(Bucket=settings.s3_bucket, Key=key)
+    body = response["Body"].read(max_bytes + 1)
+    if len(body) > max_bytes:
+        raise JsonObjectTooLargeError(f"Object exceeds size limit ({len(body)} > {max_bytes})")
+    return json.loads(body.decode("utf-8"))
