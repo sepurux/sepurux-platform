@@ -4,14 +4,13 @@ from collections.abc import Generator
 from uuid import UUID, uuid4
 
 import pytest
+from app.db import get_db
+from app.main import app
+from app.models import Base, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
-
-from app.db import get_db
-from app.main import app
-from app.models import Base, Trace
 
 
 @pytest.fixture()
