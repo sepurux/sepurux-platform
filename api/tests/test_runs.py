@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -89,7 +89,7 @@ def test_post_run_queues_job_and_persists_queued_status(
     assert data["campaign_id"] == str(campaign_id)
     assert data["status"] == "queued"
     assert data["summary"] is None
-    assert fake_queue.calls == [(("execute_run", str(run_id)), {})]
+    assert fake_queue.calls == [(("worker.execute_run", str(run_id)), {})]
 
     with testing_session_local() as db:
         row = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
