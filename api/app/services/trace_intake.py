@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-
 from app.models import Trace
 from app.storage import put_json_object
+from sqlalchemy.orm import Session
 
 
 def create_trace(db: Session, payload: Any, source: str = "api") -> Trace:
