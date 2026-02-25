@@ -84,3 +84,20 @@ class ReplayAttempt(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+
+class Counterfactual(Base):
+    __tablename__ = "counterfactuals"
+
+    counterfactual_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    attempt_id: Mapped[UUID] = mapped_column(ForeignKey("replay_attempts.attempt_id"), nullable=False)
+    strategy: Mapped[str] = mapped_column(Text, nullable=False)
+    result: Mapped[str] = mapped_column(Text, nullable=False)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metrics: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    diff: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
