@@ -149,3 +149,23 @@ class MutationSummaryItem(BaseModel):
 class MutationSummaryResponse(BaseModel):
     window_days: int
     mutations: list[MutationSummaryItem]
+
+
+class CounterfactualMetadata(BaseModel):
+    counterfactual_id: UUID
+    attempt_id: UUID
+    strategy: str
+    result: str
+    failure_reason: str | None
+    metrics: Any | None
+    diff: Any | None
+    created_at: datetime
+
+
+class CounterfactualListItem(BaseModel):
+    strategy: str
+    result: str
+    failure_reason: str | None
+    metrics: Any | None
+    diff: Any | None
+    created_at: datetime

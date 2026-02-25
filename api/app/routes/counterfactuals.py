@@ -1,0 +1,59 @@
+from __future__ import annotations
+
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.db import get_db
+from app.schemas import CounterfactualListItem, CounterfactualMetadata
+from app.services.counterfactual_service import (
+    CounterfactualNotFoundError,
+    get_counterfactual_or_raise,
+    list_counterfactuals_for_attempt,
+)
+
+router = APIRouter(prefix="/v1", tags=["counterfactuals"])
+
+DbSession = Annotated[Session, Depends(get_db)]
+
+
+def _to_counterfactual_list_item(record) -> CounterfactualListItem:
+    return CounterfactualListItem(
+        strategy=record.strategy,
+        result=record.result,
+        failure_reason=record.failure_reason,
+        metrics=record.metrics,
+        diff=record.diff,
+        created_at=record.created_at,
+    )
+
+
+def _to_counterfactual_metadata(record) -> CounterfactualMetadata:
+    return CounterfactualMetadata(
+        counterfactual_id=record.counterfactual_id,
+        attempt_id=record.attempt_id,
+        strategy=record.strategy,
+        result=record.result,
+        failure_reason=record.failure_reason,
+        metrics=record.metrics,
+        diff=record.diff,
+        created_at=record.created_at,
+    )
+
+
+@router.get("/attempts/{attempt_id}/counterfactuals", response_model=list[CounterfactualListItem])
+def get_attempt_counterfactuals(attempt_id: UUID, db: DbSession) -> list[CounterfactualListItem]:
+    records = list_counterfactuals_for_attempt(db, attempt_id=attempt_id)
+    return [_to_counterfactual_list_item(record) for record in records]
+
+
+@router.get("/counterfactuals/{counterfactual_id}", response_model=CounterfactualMetadata)
+def get_counterfactual(counterfactual_id: UUID, db: DbSession) -> CounterfactualMetadata:
+    try:
+        record = get_counterfactual_or_raise(db, counterfactual_id)
+    except CounterfactualNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _to_counterfactual_metadata(record)
+
