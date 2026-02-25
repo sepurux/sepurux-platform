@@ -1,0 +1,26 @@
+area:api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "api/**"
+
+area:worker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "worker/**"
+
+area:infra:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "infra/**"
+          - "docker-compose*.yml"
+
+area:docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+
+area:ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
