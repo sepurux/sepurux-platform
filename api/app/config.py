@@ -16,7 +16,7 @@ class Settings:
     s3_region: str
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         return cls(
             database_url=os.getenv(
                 "DATABASE_URL",
