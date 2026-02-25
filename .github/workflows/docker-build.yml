@@ -1,0 +1,32 @@
+name: Docker Build
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: crashlab-api
+            context: api
+          - name: crashlab-worker
+            context: worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          push: false
+          tags: ${{ matrix.image.name }}:pr
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
