@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.db import get_db
@@ -18,6 +18,7 @@ router = APIRouter(prefix="/v1/ci", tags=["ci"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 _DONE_STATUSES = {"completed", "done"}
+CIDecision = Literal["pass", "fail", "pending"]
 
 
 @router.post("/runs", status_code=status.HTTP_201_CREATED, response_model=CIRunCreateResponse)
@@ -90,7 +91,7 @@ def _ci_decision(
     unsafe_attempts: int,
     failures: int,
     thresholds: dict[str, Any],
-) -> str:
+) -> CIDecision:
     if (status or "").lower() not in _DONE_STATUSES:
         return "pending"
 
