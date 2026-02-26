@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
 from app.db import get_db
 from app.schemas import TraceMetadata
 from app.services.trace_intake import create_trace, trace_metadata
 from app.services.trace_intake import get_trace as get_trace_record
+from fastapi import APIRouter, Body, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/traces", tags=["traces"])
 

@@ -7,8 +7,9 @@ import redis
 from rq import Queue, Worker
 
 from config import get_settings
+from counterfactuals import run_counterfactual_replays
 from db import get_session
-from models import Campaign, ReplayAttempt, Run, Trace
+from models import Campaign, Counterfactual, ReplayAttempt, Run, Trace
 from replayer import build_attempt_replay_outcome, iter_mutations
 from storage import put_json_object
 
@@ -50,18 +51,37 @@ def execute_run(run_id: str) -> None:
             artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"
             put_json_object(artifact_key, outcome.timeline_artifact)
 
-            db.add(
-                ReplayAttempt(
-                    attempt_id=attempt_id,
-                    run_id=run.run_id,
-                    mutation_id=outcome.mutation_id,
-                    result=outcome.result,
-                    failure_reason=outcome.failure_reason,
-                    first_failure_event_index=outcome.first_failure_event_index,
-                    first_failure_tool=outcome.first_failure_tool,
-                    artifacts_s3_key=artifact_key,
-                )
+            attempt_record = ReplayAttempt(
+                attempt_id=attempt_id,
+                run_id=run.run_id,
+                mutation_id=outcome.mutation_id,
+                result=outcome.result,
+                failure_reason=outcome.failure_reason,
+                first_failure_event_index=outcome.first_failure_event_index,
+                first_failure_tool=outcome.first_failure_tool,
+                artifacts_s3_key=artifact_key,
             )
+            db.add(attempt_record)
+            db.flush()
+
+            if outcome.result == "failed":
+                for counterfactual in run_counterfactual_replays(
+                    run_id=run.run_id,
+                    attempt=attempt_record,
+                    mutation=mutation,
+                    trace_s3_key=trace.s3_key,
+                ):
+                    db.add(
+                        Counterfactual(
+                            counterfactual_id=uuid4(),
+                            attempt_id=attempt_record.attempt_id,
+                            strategy=counterfactual.strategy,
+                            result=counterfactual.result,
+                            failure_reason=counterfactual.failure_reason,
+                            metrics=counterfactual.metrics,
+                            diff=counterfactual.diff,
+                        )
+                    )
 
             if outcome.result == "passed":
                 passed_count += 1
