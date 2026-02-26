@@ -109,6 +109,8 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason=None,
             first_failure_event_index=None,
             first_failure_tool=None,
+            tools_touched=["jira.create_issue", "slack.send_message"],
+            tool_call_counts={"jira.create_issue": 1, "slack.send_message": 1},
             created_at=now - timedelta(hours=2, minutes=10),
         ),
         ReplayAttempt(
@@ -120,6 +122,8 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="timeout",
             first_failure_event_index=6,
             first_failure_tool="jira.create_issue",
+            tools_touched=["jira.create_issue"],
+            tool_call_counts={"jira.create_issue": 1},
             created_at=now - timedelta(hours=2, minutes=9),
         ),
         ReplayAttempt(
@@ -131,6 +135,8 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="permission_denied",
             first_failure_event_index=2,
             first_failure_tool="jira.create_issue",
+            tools_touched=["jira.create_issue", "slack.send_message"],
+            tool_call_counts={"jira.create_issue": 1, "slack.send_message": 2},
             created_at=now - timedelta(hours=2, minutes=8),
         ),
         ReplayAttempt(
@@ -142,6 +148,8 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="timeout",
             first_failure_event_index=6,
             first_failure_tool="slack.send_message",
+            tools_touched=["slack.send_message"],
+            tool_call_counts={"slack.send_message": 1},
             created_at=now - timedelta(hours=2, minutes=7),
         ),
         ReplayAttempt(
@@ -153,6 +161,8 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="timeout",
             first_failure_event_index=3,
             first_failure_tool="jira.create_issue",
+            tools_touched=["github.create_pr", "jira.create_issue"],
+            tool_call_counts={"github.create_pr": 1, "jira.create_issue": 1},
             created_at=now - timedelta(days=1),
         ),
         ReplayAttempt(
@@ -164,6 +174,8 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="rate_limited",
             first_failure_event_index=4,
             first_failure_tool="github.create_pr",
+            tools_touched=["github.create_pr"],
+            tool_call_counts={"github.create_pr": 2},
             created_at=now - timedelta(days=2),
         ),
         ReplayAttempt(
@@ -175,6 +187,8 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="timeout",
             first_failure_event_index=1,
             first_failure_tool="legacy.tool",
+            tools_touched=["legacy.tool"],
+            tool_call_counts={"legacy.tool": 1},
             created_at=now - timedelta(days=14),
         ),
     ]
@@ -205,6 +219,10 @@ def test_get_run_stats_returns_correct_breakdowns(
 
     assert data["failures_by_tool"][0] == {"tool": "jira.create_issue", "count": 2, "pct": 0.6667}
     assert data["failures_by_tool"][1] == {"tool": "slack.send_message", "count": 1, "pct": 0.3333}
+    assert data["tools_usage"] == [
+        {"tool": "slack.send_message", "attempts": 3, "calls": 4},
+        {"tool": "jira.create_issue", "attempts": 3, "calls": 3},
+    ]
 
     assert data["top_failure_reasons"][0] == {"reason": "timeout", "count": 2, "pct": 0.6667}
     assert data["top_failure_reasons"][1] == {
@@ -231,7 +249,7 @@ def test_get_tools_fragility_orders_by_failures_and_respects_window(
     assert response.status_code == 200
     data = response.json()
     assert data["window_days"] == 7
-    assert data["attempts_definition"] == "first_failure_only"
+    assert data["attempts_definition"] == "tools_touched_denominator_first_failure_numerator"
     assert "generated_at" in data
 
     tools = data["tools"]
@@ -242,10 +260,20 @@ def test_get_tools_fragility_orders_by_failures_and_respects_window(
     ]
 
     jira = tools[0]
-    assert jira["attempts"] == 3
+    assert jira["attempts"] == 4
     assert jira["failures"] == 3
-    assert jira["failure_rate"] == 1.0
+    assert jira["failure_rate"] == 0.75
     assert jira["top_reasons"][0] == {"reason": "timeout", "count": 2}
     assert jira["top_reasons"][1] == {"reason": "permission_denied", "count": 1}
     assert {"mutation_id": "m-jira-extra", "count": 1} in jira["top_mutations"]
+
+    github = tools[1]
+    assert github["attempts"] == 2
+    assert github["failures"] == 1
+    assert github["failure_rate"] == 0.5
+
+    slack = tools[2]
+    assert slack["attempts"] == 3
+    assert slack["failures"] == 1
+    assert slack["failure_rate"] == 0.3333
     assert all(tool["tool"] != "legacy.tool" for tool in tools)
