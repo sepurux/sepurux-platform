@@ -63,6 +63,18 @@ services:
       - redis
       - minio
 
+  ui:
+    build:
+      context: ../ui
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://api:8000
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
 volumes:
   pgdata:
   miniodata:
