@@ -204,7 +204,7 @@ def _summary_float(summary: dict[str, Any] | None, key: str) -> float | None:
     if summary is None:
         return None
     value = summary.get(key)
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return float(value)
     return None
 
