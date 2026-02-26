@@ -184,7 +184,7 @@ function DashboardPanels({ data }: { data: DashboardData }) {
           <PassRateTrendCard series={passRateTrend} />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(20rem,0.95fr)_minmax(0,1.7fr)]">
           <TopFragileToolsCard fragility={data.fragility} />
           <CounterfactualInspector runs={dashboardRuns} failedAttemptsByRunId={data.failedAttemptsByRunId} compact />
         </div>

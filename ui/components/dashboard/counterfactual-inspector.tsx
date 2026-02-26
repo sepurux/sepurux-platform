@@ -130,19 +130,25 @@ export function CounterfactualInspector({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-      <div className="space-y-6">
+    <div
+      className={
+        compact
+          ? "grid gap-6 xl:grid-cols-[minmax(24rem,1.15fr)_minmax(0,1.35fr)]"
+          : "grid gap-6 xl:grid-cols-[minmax(24rem,1fr)_minmax(0,1fr)]"
+      }
+    >
+      <div className="min-w-0 space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Counterfactual Inspector</CardTitle>
             <CardDescription>Select a run and failed attempt to compare original vs counterfactual outcomes.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="min-w-0 space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-2 text-sm">
+              <label className="grid min-w-0 gap-2 text-sm">
                 <span className="text-xs uppercase tracking-wide text-muted-foreground">Run</span>
                 <select
-                  className="rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-foreground outline-none"
+                  className="w-full min-w-0 truncate rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-foreground outline-none"
                   value={selectedRunId}
                   onChange={(event) => setSelectedRunId(event.target.value)}
                 >
@@ -153,10 +159,10 @@ export function CounterfactualInspector({
                   ))}
                 </select>
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className="grid min-w-0 gap-2 text-sm">
                 <span className="text-xs uppercase tracking-wide text-muted-foreground">Attempt</span>
                 <select
-                  className="rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-foreground outline-none"
+                  className="w-full min-w-0 truncate rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-foreground outline-none"
                   value={selectedAttemptId}
                   onChange={(event) => setSelectedAttemptId(event.target.value)}
                   disabled={!attemptOptions.length}
@@ -182,13 +188,13 @@ export function CounterfactualInspector({
                   {inspector.attempt.failure_reason ? <Badge variant="outline">{inspector.attempt.failure_reason}</Badge> : null}
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                  <div className="rounded-md border border-border/50 bg-card/30 px-3 py-2">
+                  <div className="min-w-0 rounded-md border border-border/50 bg-card/30 px-3 py-2">
                     <span className="text-xs uppercase tracking-wide">Mutation</span>
                     <p className="mt-1 break-all text-foreground">{inspector.attempt.mutation_id}</p>
                   </div>
-                  <div className="rounded-md border border-border/50 bg-card/30 px-3 py-2">
+                  <div className="min-w-0 rounded-md border border-border/50 bg-card/30 px-3 py-2">
                     <span className="text-xs uppercase tracking-wide">First Failure</span>
-                    <p className="mt-1 text-foreground">
+                    <p className="mt-1 break-words text-foreground">
                       {inspector.attempt.first_failure_tool ?? "--"}
                       {inspector.attempt.first_failure_event_index !== null
                         ? ` @ #${inspector.attempt.first_failure_event_index}`
@@ -206,22 +212,26 @@ export function CounterfactualInspector({
           </CardContent>
         </Card>
 
-        <CounterfactualResultsCard
-          items={inspector.counterfactuals}
-          loading={inspector.loading}
-          error={inspector.error}
-          compact={compact}
-          title="Counterfactual Strategies"
-          description="What-if replay outcomes for the selected attempt."
-        />
+        <div className="min-w-0">
+          <CounterfactualResultsCard
+            items={inspector.counterfactuals}
+            loading={inspector.loading}
+            error={inspector.error}
+            compact={compact}
+            title="Counterfactual Strategies"
+            description="What-if replay outcomes for the selected attempt."
+          />
+        </div>
       </div>
 
-      <TimelineViewer
-        timeline={inspector.timeline}
-        compact
-        title="Attempt Timeline"
-        description="Timeline events for the selected attempt from /attempts/{attempt_id}/timeline."
-      />
+      <div className="min-w-0">
+        <TimelineViewer
+          timeline={inspector.timeline}
+          compact
+          title="Attempt Timeline"
+          description="Timeline events for the selected attempt from /attempts/{attempt_id}/timeline."
+        />
+      </div>
     </div>
   );
 }
