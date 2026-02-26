@@ -8,11 +8,12 @@ import pytest
 from app.db import get_db
 from app.main import app
 from app.models import Base, Campaign, Run, Trace
-from conftest import auth_headers, seed_tenant_project_and_key
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
+
+from .conftest import auth_headers, seed_tenant_project_and_key
 
 
 class FakeQueue:
