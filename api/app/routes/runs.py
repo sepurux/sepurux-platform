@@ -11,6 +11,7 @@ from app.services.attempt_service import list_attempts_for_run
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_run_and_enqueue,
+    get_run_quality_metrics,
     list_recent_runs,
     run_metadata,
 )
@@ -26,8 +27,12 @@ DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 
 
-def _to_run_metadata(run) -> RunMetadata:
-    return RunMetadata(**run_metadata(run))
+def _to_run_metadata(run, *, metrics: dict[str, object] | None = None) -> RunMetadata:
+    payload = run_metadata(run)
+    if metrics is not None:
+        payload["pass_rate"] = metrics.get("pass_rate")
+        payload["unsafe_count"] = metrics.get("unsafe_count")
+    return RunMetadata(**payload)
 
 
 def _to_attempt_list_item(attempt: ReplayAttempt) -> ReplayAttemptListItem:
@@ -63,7 +68,8 @@ def get_run(run_id: UUID, db: DbSession, project_scope: ProjectScopeDep) -> RunM
     run = get_run_record(db, project_id=project_scope.project_id, run_id=run_id)
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
-    return _to_run_metadata(run)
+    metrics = get_run_quality_metrics(db, project_id=project_scope.project_id, run_id=run_id)
+    return _to_run_metadata(run, metrics=metrics)
 
 
 @router.get("", response_model=list[RunMetadata])

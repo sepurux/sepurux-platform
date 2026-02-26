@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, Run, Trace
+from app.models import Base, Campaign, ReplayAttempt, Run, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -154,6 +154,43 @@ def test_get_run_and_list_runs(
                 created_at=datetime(2026, 2, 24, 20, 0, tzinfo=UTC),
             )
         )
+        db.add_all(
+            [
+                ReplayAttempt(
+                    attempt_id=uuid4(),
+                    project_id=project_id,
+                    run_id=older,
+                    mutation_id="ok-1",
+                    result="passed",
+                    failure_reason=None,
+                    first_failure_event_index=None,
+                    first_failure_tool=None,
+                    artifacts_s3_key=None,
+                ),
+                ReplayAttempt(
+                    attempt_id=uuid4(),
+                    project_id=project_id,
+                    run_id=older,
+                    mutation_id="fail-1",
+                    result="failed",
+                    failure_reason="timeout",
+                    first_failure_event_index=3,
+                    first_failure_tool="jira.create_issue",
+                    artifacts_s3_key=None,
+                ),
+                ReplayAttempt(
+                    attempt_id=uuid4(),
+                    project_id=project_id,
+                    run_id=older,
+                    mutation_id="unsafe-1",
+                    result="failed",
+                    failure_reason="policy_blocked",
+                    first_failure_event_index=2,
+                    first_failure_tool="github.delete_repo",
+                    artifacts_s3_key=None,
+                ),
+            ]
+        )
         db.add(
             Run(
                 run_id=newer,
@@ -173,6 +210,8 @@ def test_get_run_and_list_runs(
     assert get_payload["run_id"] == str(older)
     assert get_payload["status"] == "done"
     assert get_payload["summary"] == {"score": 1}
+    assert get_payload["pass_rate"] == 0.3333
+    assert get_payload["unsafe_count"] == 1
 
     list_response = client.get("/v1/runs")
     assert list_response.status_code == 200
