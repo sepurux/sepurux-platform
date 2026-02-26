@@ -43,13 +43,21 @@ def run_counterfactual_replays(
         return []
 
     return [
-        _run_schema_adapter_v1(run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key),
-        _run_retry_cap_v1(run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key),
-        _run_policy_gate_v1(run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key),
+        _run_schema_adapter_v1(
+            run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key
+        ),
+        _run_retry_cap_v1(
+            run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key
+        ),
+        _run_policy_gate_v1(
+            run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key
+        ),
     ]
 
 
-def _run_schema_adapter_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: Any, trace_s3_key: str) -> CounterfactualReplayResult:
+def _run_schema_adapter_v1(
+    *, run_id: UUID, attempt: ReplayAttempt, mutation: Any, trace_s3_key: str
+) -> CounterfactualReplayResult:
     adapter_config = ReplayAdapterConfig(
         mappings={
             "title": "name",
@@ -68,7 +76,9 @@ def _run_schema_adapter_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: An
         adapter_config=adapter_config,
     )
     metrics = {
-        "duration_ms": _estimate_duration_ms(strategy="schema_adapter_v1", outcome=outcome, retry_count=0),
+        "duration_ms": _estimate_duration_ms(
+            strategy="schema_adapter_v1", outcome=outcome, retry_count=0
+        ),
         "retries": 0,
     }
     diff = {
@@ -90,7 +100,9 @@ def _run_schema_adapter_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: An
     )
 
 
-def _run_retry_cap_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: Any, trace_s3_key: str) -> CounterfactualReplayResult:
+def _run_retry_cap_v1(
+    *, run_id: UUID, attempt: ReplayAttempt, mutation: Any, trace_s3_key: str
+) -> CounterfactualReplayResult:
     retry_policy = RetryPolicyConfig(max_retries=2, backoff_ms=250)
     outcome = build_attempt_replay_outcome(
         run_id=run_id,
@@ -102,7 +114,9 @@ def _run_retry_cap_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: Any, tr
     )
     retries_used = _extract_retry_count(outcome.timeline_artifact)
     metrics = {
-        "duration_ms": _estimate_duration_ms(strategy="retry_cap_v1", outcome=outcome, retry_count=retries_used),
+        "duration_ms": _estimate_duration_ms(
+            strategy="retry_cap_v1", outcome=outcome, retry_count=retries_used
+        ),
         "retries": retries_used,
     }
     diff = {
@@ -125,8 +139,12 @@ def _run_retry_cap_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: Any, tr
     )
 
 
-def _run_policy_gate_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: Any, trace_s3_key: str) -> CounterfactualReplayResult:
-    policy_gate = PolicyGateConfig(irreversible_tools=IRREVERSIBLE_TOOLS, require_confirmation_token=True)
+def _run_policy_gate_v1(
+    *, run_id: UUID, attempt: ReplayAttempt, mutation: Any, trace_s3_key: str
+) -> CounterfactualReplayResult:
+    policy_gate = PolicyGateConfig(
+        irreversible_tools=IRREVERSIBLE_TOOLS, require_confirmation_token=True
+    )
     outcome = build_attempt_replay_outcome(
         run_id=run_id,
         attempt_id=attempt.attempt_id,
@@ -136,7 +154,9 @@ def _run_policy_gate_v1(*, run_id: UUID, attempt: ReplayAttempt, mutation: Any, 
         policy_gate=policy_gate,
     )
     metrics = {
-        "duration_ms": _estimate_duration_ms(strategy="policy_gate_v1", outcome=outcome, retry_count=0),
+        "duration_ms": _estimate_duration_ms(
+            strategy="policy_gate_v1", outcome=outcome, retry_count=0
+        ),
         "retries": 0,
     }
     diff = {
@@ -182,8 +202,11 @@ def _estimate_duration_ms(*, strategy: str, outcome, retry_count: int) -> int:
         "retry_cap_v1": 30,
         "policy_gate_v1": 14,
     }.get(strategy, 20)
-    events = outcome.timeline_artifact.get("events") if isinstance(outcome.timeline_artifact, dict) else []
+    events = (
+        outcome.timeline_artifact.get("events")
+        if isinstance(outcome.timeline_artifact, dict)
+        else []
+    )
     event_count = len(events) if isinstance(events, list) else 0
     penalty = 8 if _normalize_result(outcome.result) == "fail" else 0
     return base + (retry_count * 12) + event_count + penalty
-

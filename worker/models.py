@@ -22,7 +22,9 @@ class Trace(Base):
     trace_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     source: Mapped[str] = mapped_column(Text, nullable=False)
     s3_key: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class Campaign(Base):
@@ -32,7 +34,9 @@ class Campaign(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     mutation_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     eval_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class Run(Base):
@@ -43,7 +47,9 @@ class Run(Base):
     campaign_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class ReplayAttempt(Base):
@@ -57,7 +63,9 @@ class ReplayAttempt(Base):
     first_failure_event_index: Mapped[int | None] = mapped_column(nullable=True)
     first_failure_tool: Mapped[str | None] = mapped_column(Text, nullable=True)
     artifacts_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class Counterfactual(Base):
@@ -70,4 +78,6 @@ class Counterfactual(Base):
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     metrics: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     diff: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

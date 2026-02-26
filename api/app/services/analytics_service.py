@@ -25,9 +25,13 @@ def get_run_stats(db: Session, *, run_id: UUID) -> dict[str, Any]:
     failed_attempts = [attempt for attempt in attempts if _is_fail_result(attempt.result)]
     failed_count = len(failed_attempts)
 
-    failures_by_tool = Counter((attempt.first_failure_tool or "unknown") for attempt in failed_attempts)
+    failures_by_tool = Counter(
+        (attempt.first_failure_tool or "unknown") for attempt in failed_attempts
+    )
     failures_by_mutation = Counter(attempt.mutation_id for attempt in failed_attempts)
-    top_failure_reasons = Counter((attempt.failure_reason or "unknown") for attempt in failed_attempts)
+    top_failure_reasons = Counter(
+        (attempt.failure_reason or "unknown") for attempt in failed_attempts
+    )
 
     first_failure_step_counter: Counter[int] = Counter()
     for attempt in failed_attempts:
@@ -132,8 +136,12 @@ def get_mutation_summary(
 
     mutations: list[dict[str, Any]] = []
     for mutation_id, mutation_attempts in by_mutation.items():
-        tool_counter = Counter((attempt.first_failure_tool or "unknown") for attempt in mutation_attempts)
-        reason_counter = Counter((attempt.failure_reason or "unknown") for attempt in mutation_attempts)
+        tool_counter = Counter(
+            (attempt.first_failure_tool or "unknown") for attempt in mutation_attempts
+        )
+        reason_counter = Counter(
+            (attempt.failure_reason or "unknown") for attempt in mutation_attempts
+        )
         mutations.append(
             {
                 "mutation_id": mutation_id,
@@ -180,4 +188,3 @@ def _ratio(numerator: int, denominator: int) -> float:
 
 def _sorted_counter_items(counter: Counter[str]) -> list[tuple[str, int]]:
     return sorted(counter.items(), key=lambda item: (-item[1], item[0]))
-

@@ -43,4 +43,3 @@ def get_mutations_summary_endpoint(
     limit: int = Query(20, ge=1, le=200),
 ) -> MutationSummaryResponse:
     return MutationSummaryResponse(**get_mutation_summary(db, window_days=window_days, limit=limit))
-

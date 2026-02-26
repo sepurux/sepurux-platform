@@ -29,4 +29,3 @@ def get_counterfactual_or_raise(db: Session, counterfactual_id: UUID) -> Counter
     if record is None:
         raise CounterfactualNotFoundError("Counterfactual not found")
     return record
-

@@ -55,4 +55,3 @@ def get_counterfactual(counterfactual_id: UUID, db: DbSession) -> Counterfactual
     except CounterfactualNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _to_counterfactual_metadata(record)
-

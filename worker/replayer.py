@@ -58,10 +58,16 @@ def build_attempt_replay_outcome(
 ) -> AttemptReplayOutcome:
     mutation_obj = mutation if isinstance(mutation, dict) else {"value": mutation}
     tool_name = str(mutation_obj.get("tool") or "replay.execute")
-    mutation_id = str(mutation_obj.get("mutation_id") or mutation_obj.get("id") or default_mutation_id)
-    compact_args = _compact_json(mutation_obj.get("args") or mutation_obj, max_items=8, max_string=240)
+    mutation_id = str(
+        mutation_obj.get("mutation_id") or mutation_obj.get("id") or default_mutation_id
+    )
+    compact_args = _compact_json(
+        mutation_obj.get("args") or mutation_obj, max_items=8, max_string=240
+    )
     should_fail = bool(mutation_obj.get("force_fail") or mutation_obj.get("should_fail"))
-    failure_reason = str(mutation_obj.get("failure_reason") or "simulated_failure") if should_fail else None
+    failure_reason = (
+        str(mutation_obj.get("failure_reason") or "simulated_failure") if should_fail else None
+    )
     retry_policy = retry_policy or RetryPolicyConfig()
 
     events: list[dict[str, Any]] = [
@@ -129,7 +135,9 @@ def build_attempt_replay_outcome(
 
     adapter_applied = False
     if should_fail and failure_reason is not None and adapter_config is not None:
-        if _schema_adapter_recovers_failure(failure_reason=failure_reason, mutation_obj=mutation_obj, adapter_config=adapter_config):
+        if _schema_adapter_recovers_failure(
+            failure_reason=failure_reason, mutation_obj=mutation_obj, adapter_config=adapter_config
+        ):
             adapter_applied = True
             should_fail = False
             failure_reason = None
@@ -261,7 +269,9 @@ def _schema_adapter_recovers_failure(
     return bool(mappings) and bool(mutation_obj.get("tool"))
 
 
-def _adapter_field_mappings(adapter_config: ReplayAdapterConfig | None, mutation_obj: dict[str, Any]) -> dict[str, str]:
+def _adapter_field_mappings(
+    adapter_config: ReplayAdapterConfig | None, mutation_obj: dict[str, Any]
+) -> dict[str, str]:
     if adapter_config is None or not adapter_config.mappings:
         return {}
     mappings = adapter_config.mappings
@@ -280,12 +290,18 @@ def _compact_json(value: Any, *, max_items: int = 10, max_string: int = 256, dep
         return "<truncated-depth>"
     if isinstance(value, dict):
         items = list(value.items())[:max_items]
-        compact = {str(k): _compact_json(v, max_items=max_items, max_string=max_string, depth=depth + 1) for k, v in items}
+        compact = {
+            str(k): _compact_json(v, max_items=max_items, max_string=max_string, depth=depth + 1)
+            for k, v in items
+        }
         if len(value) > max_items:
             compact["__truncated__"] = len(value) - max_items
         return compact
     if isinstance(value, list):
-        items = [_compact_json(v, max_items=max_items, max_string=max_string, depth=depth + 1) for v in value[:max_items]]
+        items = [
+            _compact_json(v, max_items=max_items, max_string=max_string, depth=depth + 1)
+            for v in value[:max_items]
+        ]
         if len(value) > max_items:
             items.append({"__truncated__": len(value) - max_items})
         return items
