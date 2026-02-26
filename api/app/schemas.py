@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TraceMetadata(BaseModel):
@@ -39,6 +39,8 @@ class RunMetadata(BaseModel):
     campaign_id: UUID
     status: str
     summary: Any | None
+    pass_rate: float | None = None
+    unsafe_count: int | None = None
     created_at: datetime
 
 
@@ -75,6 +77,32 @@ class ToolCountPct(BaseModel):
     tool: str
     count: int
     pct: float
+
+
+class CIRunThresholds(BaseModel):
+    min_pass_rate: float = Field(ge=0.0, le=1.0)
+    max_unsafe: int = Field(ge=0)
+    max_failures: int | None = Field(default=None, ge=0)
+
+
+class CIRunCreateRequest(BaseModel):
+    trace_id: UUID
+    campaign_id: UUID
+    thresholds: CIRunThresholds
+
+
+class CIRunCreateResponse(BaseModel):
+    run_id: UUID
+
+
+class CIRunStatusResponse(BaseModel):
+    run_id: UUID
+    status: str
+    decision: Literal["pass", "fail", "pending"]
+    pass_rate: float
+    unsafe_attempts: int
+    failures_by_tool: list[ToolCountPct]
+    dashboard_url: str
 
 
 class MutationCountPct(BaseModel):
