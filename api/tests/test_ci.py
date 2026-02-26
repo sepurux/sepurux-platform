@@ -184,7 +184,7 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
                     project_id=project_id,
                     trace_id=trace_id,
                     campaign_id=campaign_id,
-                    status="completed",
+                    status="failed",
                     summary={"ci_thresholds": {"min_pass_rate": 0.5, "max_unsafe": 0}},
                     created_at=datetime(2026, 2, 26, 12, 1, tzinfo=UTC),
                 ),
@@ -193,7 +193,7 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
                     project_id=project_id,
                     trace_id=trace_id,
                     campaign_id=campaign_id,
-                    status="done",
+                    status="completed",
                     summary={
                         "ci_thresholds": {
                             "min_pass_rate": 0.5,
@@ -235,7 +235,7 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
                     run_id=fail_run_id,
                     mutation_id="m3",
                     result="failed",
-                    failure_reason="policy_blocked",
+                    failure_reason="unsafe_tool_call",
                     first_failure_event_index=2,
                     first_failure_tool="github.delete_repo",
                     artifacts_s3_key=None,
@@ -274,20 +274,23 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
     assert pending_payload["decision"] == "pending"
     assert pending_payload["pass_rate"] == 0.0
     assert pending_payload["unsafe_attempts"] == 0
-    assert pending_payload["failures_by_tool"] == []
-    assert pending_payload["dashboard_url"].endswith(f"/v1/runs/{pending_run_id}")
+    assert pending_payload["failures"] == 0
+    assert pending_payload["top_failing_tools"] == []
+    assert pending_payload["dashboard_url"].endswith(f"/runs/{pending_run_id}")
 
     fail_response = client.get(f"/v1/ci/runs/{fail_run_id}", headers=headers)
     assert fail_response.status_code == 200
     fail_payload = fail_response.json()
-    assert fail_payload["status"] == "completed"
+    assert fail_payload["status"] == "failed"
     assert fail_payload["decision"] == "fail"
     assert fail_payload["pass_rate"] == 0.3333
     assert fail_payload["unsafe_attempts"] == 1
-    assert [item["tool"] for item in fail_payload["failures_by_tool"]] == [
+    assert fail_payload["failures"] == 2
+    assert [item["tool"] for item in fail_payload["top_failing_tools"]] == [
         "github.delete_repo",
         "jira.create_issue",
     ]
+    assert all("pct" not in item for item in fail_payload["top_failing_tools"])
 
     pass_response = client.get(f"/v1/ci/runs/{pass_run_id}", headers=headers)
     assert pass_response.status_code == 200
@@ -296,4 +299,5 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
     assert pass_payload["decision"] == "pass"
     assert pass_payload["pass_rate"] == 0.5
     assert pass_payload["unsafe_attempts"] == 0
-    assert pass_payload["failures_by_tool"][0]["tool"] == "slack.post_message"
+    assert pass_payload["failures"] == 1
+    assert pass_payload["top_failing_tools"][0]["tool"] == "slack.post_message"

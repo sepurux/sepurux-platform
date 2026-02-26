@@ -4,8 +4,7 @@ description: Start a Crash Lab CI run and block until it passes or fails thresho
 inputs:
   base_url:
     description: Crash Lab API base URL
-    required: false
-    default: http://localhost:8000
+    required: true
   token:
     description: CI token for X-CrashLab-Token
     required: true
@@ -23,6 +22,9 @@ inputs:
     description: Maximum allowed unsafe attempts
     required: false
     default: "0"
+  max_failures:
+    description: Maximum allowed failed attempts (optional)
+    required: false
   poll_seconds:
     description: Poll interval in seconds
     required: false
@@ -56,6 +58,7 @@ runs:
         INPUT_CAMPAIGN_ID: ${{ inputs.campaign_id }}
         INPUT_MIN_PASS_RATE: ${{ inputs.min_pass_rate }}
         INPUT_MAX_UNSAFE: ${{ inputs.max_unsafe }}
+        INPUT_MAX_FAILURES: ${{ inputs.max_failures }}
         INPUT_POLL_SECONDS: ${{ inputs.poll_seconds }}
         INPUT_TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
       run: |
@@ -69,12 +72,14 @@ runs:
         import json
         import os
 
+        max_failures_raw = (os.environ.get("INPUT_MAX_FAILURES") or "").strip()
         payload = {
             "trace_id": os.environ["INPUT_TRACE_ID"],
             "campaign_id": os.environ["INPUT_CAMPAIGN_ID"],
             "thresholds": {
                 "min_pass_rate": float(os.environ["INPUT_MIN_PASS_RATE"]),
                 "max_unsafe": int(os.environ["INPUT_MAX_UNSAFE"]),
+                "max_failures": None if max_failures_raw == "" else int(max_failures_raw),
             },
         }
         print(json.dumps(payload))
@@ -112,8 +117,9 @@ runs:
         status_value=""
         pass_rate="0.0"
         unsafe_attempts="0"
+        failures="0"
         dashboard_url=""
-        failures_summary="[]"
+        top_tools_summary="[]"
 
         while true; do
           now_epoch="$(date +%s)"
@@ -141,23 +147,24 @@ runs:
         import sys
 
         data = json.load(sys.stdin)
-        failures = [
+        top_tools = [
             f"{item.get('tool')}:{item.get('count')}"
-            for item in (data.get("failures_by_tool") or [])
+            for item in (data.get("top_failing_tools") or [])
         ]
         print("\t".join([
             str(data.get("decision", "pending")),
             str(data.get("status", "")),
             str(data.get("pass_rate", 0.0)),
             str(data.get("unsafe_attempts", 0)),
+            str(data.get("failures", 0)),
             str(data.get("dashboard_url", "")),
-            ", ".join(failures) if failures else "none",
+            ", ".join(top_tools) if top_tools else "none",
         ]))
         PY
           )"
 
-          IFS=$'\t' read -r decision status_value pass_rate unsafe_attempts dashboard_url failures_summary <<<"${parsed_line}"
-          echo "Crash Lab gate poll: run_id=${run_id} status=${status_value} decision=${decision} pass_rate=${pass_rate} unsafe_attempts=${unsafe_attempts} failures_by_tool=${failures_summary}"
+          IFS=$'\t' read -r decision status_value pass_rate unsafe_attempts failures dashboard_url top_tools_summary <<<"${parsed_line}"
+          echo "Crash Lab gate poll: run_id=${run_id} status=${status_value} decision=${decision} pass_rate=${pass_rate} unsafe_attempts=${unsafe_attempts} failures=${failures} top_failing_tools=${top_tools_summary}"
 
           if [[ "${decision}" != "pending" ]]; then
             break
@@ -169,7 +176,7 @@ runs:
         echo "decision=${decision}" >> "${GITHUB_OUTPUT}"
         echo "dashboard_url=${dashboard_url}" >> "${GITHUB_OUTPUT}"
 
-        summary_line="Crash Lab gate ${decision}: run_id=${run_id}, status=${status_value}, pass_rate=${pass_rate}, unsafe_attempts=${unsafe_attempts}, failures_by_tool=${failures_summary}, dashboard_url=${dashboard_url}"
+        summary_line="Crash Lab gate ${decision}: run_id=${run_id}, status=${status_value}, pass_rate=${pass_rate}, unsafe_attempts=${unsafe_attempts}, failures=${failures}, top_failing_tools=${top_tools_summary}, dashboard_url=${dashboard_url}"
         echo "${summary_line}"
         if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
           {
@@ -180,7 +187,8 @@ runs:
             echo "- Decision: \`${decision}\`"
             echo "- Pass rate: \`${pass_rate}\`"
             echo "- Unsafe attempts: \`${unsafe_attempts}\`"
-            echo "- Failures by tool (top 3): \`${failures_summary}\`"
+            echo "- Failures: \`${failures}\`"
+            echo "- Top failing tools: \`${top_tools_summary}\`"
             echo "- Run URL: ${dashboard_url}"
           } >> "${GITHUB_STEP_SUMMARY}"
         fi

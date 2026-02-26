@@ -79,6 +79,11 @@ class ToolCountPct(BaseModel):
     pct: float
 
 
+class ToolCount(BaseModel):
+    tool: str
+    count: int
+
+
 class CIRunThresholds(BaseModel):
     min_pass_rate: float = Field(ge=0.0, le=1.0)
     max_unsafe: int = Field(ge=0)
@@ -101,7 +106,8 @@ class CIRunStatusResponse(BaseModel):
     decision: Literal["pass", "fail", "pending"]
     pass_rate: float
     unsafe_attempts: int
-    failures_by_tool: list[ToolCountPct]
+    failures: int
+    top_failing_tools: list[ToolCount]
     dashboard_url: str
 
 

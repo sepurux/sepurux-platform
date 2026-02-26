@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -17,7 +18,7 @@ from sqlalchemy.orm import Session
 router = APIRouter(prefix="/v1/ci", tags=["ci"])
 
 DbSession = Annotated[Session, Depends(get_db)]
-_DONE_STATUSES = {"completed", "done"}
+_TERMINAL_STATUSES = {"completed", "done", "failed"}
 CIDecision = Literal["pass", "fail", "pending"]
 
 
@@ -63,11 +64,12 @@ def get_ci_run(run_id: UUID, request: Request, db: DbSession) -> CIRunStatusResp
 
     return CIRunStatusResponse(
         run_id=run.run_id,
-        status=run.status,
+        status=_public_ci_status(run.status),
         decision=decision,
         pass_rate=float(metrics["pass_rate"]),
-        unsafe_attempts=int(metrics["unsafe_count"]),
-        failures_by_tool=metrics["failures_by_tool"][:3],
+        unsafe_attempts=int(metrics["unsafe_attempts"]),
+        failures=int(metrics["failures"]),
+        top_failing_tools=metrics["top_failing_tools"],
         dashboard_url=_build_dashboard_url(request, run.run_id),
     )
 
@@ -92,7 +94,7 @@ def _ci_decision(
     failures: int,
     thresholds: dict[str, Any],
 ) -> CIDecision:
-    if (status or "").lower() not in _DONE_STATUSES:
+    if (status or "").lower() not in _TERMINAL_STATUSES:
         return "pending"
 
     min_pass_rate = float(thresholds["min_pass_rate"])
@@ -110,5 +112,14 @@ def _ci_decision(
 
 
 def _build_dashboard_url(request: Request, run_id: UUID) -> str:
+    ui_base = os.getenv("CRASHLAB_UI_BASE_URL")
+    if ui_base:
+        return f"{ui_base.rstrip('/')}/runs/{run_id}"
     base = str(request.base_url).rstrip("/")
-    return f"{base}/v1/runs/{run_id}"
+    return f"{base}/runs/{run_id}"
+
+
+def _public_ci_status(status: str) -> str:
+    if (status or "").lower() == "completed":
+        return "done"
+    return status

@@ -99,7 +99,7 @@ Get a single counterfactual result:
 curl -sS http://localhost:8000/v1/counterfactuals/<counterfactual_id>
 ```
 
-## GitHub PR Gate (Crash Lab CI)
+## Enable Strict PR Gate
 
 Crash Lab exposes CI gate endpoints under `/v1/ci/*` so a GitHub workflow can block a PR until a replay run finishes and meets thresholds.
 
@@ -129,15 +129,19 @@ jobs:
           campaign_id: ${{ vars.CRASHLAB_CAMPAIGN_ID }}
           min_pass_rate: "0.80"
           max_unsafe: "0"
+          max_failures: "0"
           poll_seconds: "10"
           timeout_seconds: "900"
 ```
 
+A copy-paste starter workflow also lives at `examples/github/workflows/crashlab-gate.yml`.
+
 What it does:
 
-- `POST /v1/ci/runs` with thresholds
+- `POST /v1/ci/runs` with thresholds (including optional `max_failures`)
 - polls `GET /v1/ci/runs/{run_id}` until decision is `pass` or `fail`
-- prints a run summary and exits non-zero on `fail` (or timeout)
+- prints a strict gate summary (`pass_rate`, `unsafe_attempts`, `failures`, top failing tools)
+- exits non-zero on `fail` or timeout
 
 ### Local Gate Simulation (curl)
 
@@ -165,4 +169,9 @@ curl -sS http://localhost:8000/v1/ci/runs/<run_id> \
   -H 'X-CrashLab-Token: local-ci-token'
 ```
 
-The CI status response includes `decision` (`pending|pass|fail`), `pass_rate`, `unsafe_attempts`, top failure tools, and a run URL.
+The CI status response includes `decision` (`pending|pass|fail`), `pass_rate`, `unsafe_attempts`, `failures`, top failing tools, and a UI-style run URL (`/runs/<run_id>`). Set `CRASHLAB_UI_BASE_URL` on the API to point `dashboard_url` at your deployed UI host.
+
+Strict gate behavior:
+
+- high thresholds (for example `min_pass_rate=1.0`, `max_unsafe=0`, `max_failures=0`) will fail a run unless it is perfect
+- lower thresholds allow the action to pass once the run finishes and metrics stay within limits
