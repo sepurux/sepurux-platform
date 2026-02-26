@@ -12,9 +12,13 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from .conftest import auth_headers, seed_tenant_project_and_key
+
 
 @pytest.fixture()
-def trace_test_context(monkeypatch: pytest.MonkeyPatch) -> Generator[tuple[TestClient, sessionmaker[Session], list[tuple[str, object]]], None, None]:
+def trace_test_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[tuple[TestClient, sessionmaker[Session], list[tuple[str, object]]], None, None]:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -22,6 +26,8 @@ def trace_test_context(monkeypatch: pytest.MonkeyPatch) -> Generator[tuple[TestC
     )
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
+    with testing_session_local() as db:
+        _, project_id, _, api_key_plaintext = seed_tenant_project_and_key(db)
 
     uploads: list[tuple[str, object]] = []
 
@@ -38,11 +44,15 @@ def trace_test_context(monkeypatch: pytest.MonkeyPatch) -> Generator[tuple[TestC
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
 
     with TestClient(app) as client:
+        client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
         yield client, testing_session_local, uploads
 
     app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
@@ -65,11 +75,14 @@ def test_post_trace_accepts_any_json_and_persists_metadata(
 
     with testing_session_local() as db:
         row = db.execute(select(Trace).where(Trace.trace_id == trace_id)).scalar_one()
+        assert row.project_id is not None
         assert row.source == "api"
         assert row.s3_key == data["s3_key"]
 
 
-def test_get_trace_returns_metadata(trace_test_context: tuple[TestClient, sessionmaker[Session], list[tuple[str, object]]]) -> None:
+def test_get_trace_returns_metadata(
+    trace_test_context: tuple[TestClient, sessionmaker[Session], list[tuple[str, object]]],
+) -> None:
     client, _, _ = trace_test_context
     create_response = client.post("/v1/traces", json={"foo": "bar"})
     trace_id = create_response.json()["trace_id"]

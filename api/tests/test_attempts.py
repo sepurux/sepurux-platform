@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from app.db import get_db
@@ -13,11 +13,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from .conftest import auth_headers, seed_tenant_project_and_key
+
 
 @pytest.fixture()
 def attempts_test_context(
     monkeypatch: pytest.MonkeyPatch,
-) -> Generator[tuple[TestClient, sessionmaker[Session]], None, None]:
+) -> Generator[tuple[TestClient, sessionmaker[Session], str], None, None]:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -25,6 +27,8 @@ def attempts_test_context(
     )
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
+    with testing_session_local() as db:
+        _, project_id, _, api_key_plaintext = seed_tenant_project_and_key(db)
 
     def override_get_db() -> Generator[Session, None, None]:
         db = testing_session_local()
@@ -34,26 +38,38 @@ def attempts_test_context(
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
 
     with TestClient(app) as client:
-        yield client, testing_session_local
+        client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+        yield client, testing_session_local, project_id
 
     app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
-def _seed_run_with_attempts(db: Session) -> tuple[str, str, str, str]:
+def _seed_run_with_attempts(db: Session, *, project_id: UUID) -> tuple[str, str, str, str]:
     trace_id = uuid4()
     campaign_id = uuid4()
     run_id = uuid4()
     attempt_ok_id = uuid4()
     attempt_fail_id = uuid4()
 
-    db.add(Trace(trace_id=trace_id, source="test", s3_key=f"traces/{trace_id}.json"))
+    db.add(
+        Trace(
+            trace_id=trace_id,
+            project_id=project_id,
+            source="test",
+            s3_key=f"traces/{trace_id}.json",
+        )
+    )
     db.add(
         Campaign(
             campaign_id=campaign_id,
+            project_id=project_id,
             name="Inspector Campaign",
             mutation_set=[{"mutation_id": "m1"}],
             eval_set={},
@@ -62,6 +78,7 @@ def _seed_run_with_attempts(db: Session) -> tuple[str, str, str, str]:
     db.add(
         Run(
             run_id=run_id,
+            project_id=project_id,
             trace_id=trace_id,
             campaign_id=campaign_id,
             status="completed",
@@ -71,6 +88,7 @@ def _seed_run_with_attempts(db: Session) -> tuple[str, str, str, str]:
     db.add(
         ReplayAttempt(
             attempt_id=attempt_ok_id,
+            project_id=project_id,
             run_id=run_id,
             mutation_id="m-ok",
             result="passed",
@@ -84,6 +102,7 @@ def _seed_run_with_attempts(db: Session) -> tuple[str, str, str, str]:
     db.add(
         ReplayAttempt(
             attempt_id=attempt_fail_id,
+            project_id=project_id,
             run_id=run_id,
             mutation_id="m-fail",
             result="failed",
@@ -99,13 +118,17 @@ def _seed_run_with_attempts(db: Session) -> tuple[str, str, str, str]:
 
 
 def test_list_attempts_filters_and_returns_failure_fields(
-    attempts_test_context: tuple[TestClient, sessionmaker[Session]],
+    attempts_test_context: tuple[TestClient, sessionmaker[Session], UUID],
 ) -> None:
-    client, testing_session_local = attempts_test_context
+    client, testing_session_local, project_id = attempts_test_context
     with testing_session_local() as db:
-        run_id, _, failed_attempt_id, failed_tool = _seed_run_with_attempts(db)
+        run_id, _, failed_attempt_id, failed_tool = _seed_run_with_attempts(
+            db, project_id=project_id
+        )
 
-    response = client.get(f"/v1/runs/{run_id}/attempts", params={"result": "failed", "limit": 50, "offset": 0})
+    response = client.get(
+        f"/v1/runs/{run_id}/attempts", params={"result": "failed", "limit": 50, "offset": 0}
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -119,11 +142,11 @@ def test_list_attempts_filters_and_returns_failure_fields(
 
 
 def test_get_attempt_details_returns_artifact_key_and_failure_metadata(
-    attempts_test_context: tuple[TestClient, sessionmaker[Session]],
+    attempts_test_context: tuple[TestClient, sessionmaker[Session], UUID],
 ) -> None:
-    client, testing_session_local = attempts_test_context
+    client, testing_session_local, project_id = attempts_test_context
     with testing_session_local() as db:
-        _, _, failed_attempt_id, _ = _seed_run_with_attempts(db)
+        _, _, failed_attempt_id, _ = _seed_run_with_attempts(db, project_id=project_id)
 
     response = client.get(f"/v1/attempts/{failed_attempt_id}")
 
@@ -136,12 +159,12 @@ def test_get_attempt_details_returns_artifact_key_and_failure_metadata(
 
 
 def test_get_attempt_timeline_returns_json(
-    attempts_test_context: tuple[TestClient, sessionmaker[Session]],
+    attempts_test_context: tuple[TestClient, sessionmaker[Session], UUID],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    client, testing_session_local = attempts_test_context
+    client, testing_session_local, project_id = attempts_test_context
     with testing_session_local() as db:
-        _, _, failed_attempt_id, _ = _seed_run_with_attempts(db)
+        _, _, failed_attempt_id, _ = _seed_run_with_attempts(db, project_id=project_id)
 
     monkeypatch.setattr(
         "app.services.attempt_service.get_json_object",

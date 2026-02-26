@@ -20,6 +20,7 @@ class Trace(Base):
     __tablename__ = "traces"
 
     trace_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     source: Mapped[str] = mapped_column(Text, nullable=False)
     s3_key: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -31,6 +32,7 @@ class Campaign(Base):
     __tablename__ = "campaigns"
 
     campaign_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     mutation_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     eval_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
@@ -43,6 +45,7 @@ class Run(Base):
     __tablename__ = "runs"
 
     run_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     trace_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     campaign_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
@@ -56,6 +59,7 @@ class ReplayAttempt(Base):
     __tablename__ = "replay_attempts"
 
     attempt_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     run_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     mutation_id: Mapped[str] = mapped_column(Text, nullable=False)
     result: Mapped[str] = mapped_column(Text, nullable=False)
@@ -72,6 +76,7 @@ class Counterfactual(Base):
     __tablename__ = "counterfactuals"
 
     counterfactual_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     attempt_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     strategy: Mapped[str] = mapped_column(Text, nullable=False)
     result: Mapped[str] = mapped_column(Text, nullable=False)

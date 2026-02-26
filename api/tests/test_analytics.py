@@ -13,9 +13,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from .conftest import auth_headers, seed_tenant_project_and_key
+
 
 @pytest.fixture()
-def analytics_test_context() -> Generator[tuple[TestClient, sessionmaker[Session]], None, None]:
+def analytics_test_context() -> (
+    Generator[tuple[TestClient, sessionmaker[Session], object], None, None]
+):
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -23,6 +27,8 @@ def analytics_test_context() -> Generator[tuple[TestClient, sessionmaker[Session
     )
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
+    with testing_session_local() as db:
+        _, project_id, _, api_key_plaintext = seed_tenant_project_and_key(db)
 
     def override_get_db() -> Generator[Session, None, None]:
         db = testing_session_local()
@@ -32,16 +38,20 @@ def analytics_test_context() -> Generator[tuple[TestClient, sessionmaker[Session
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
 
     with TestClient(app) as client:
-        yield client, testing_session_local
+        client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+        yield client, testing_session_local, project_id
 
     app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
-def _seed_analytics_data(db: Session) -> tuple[str, str]:
+def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
     now = datetime.now(UTC)
 
     trace_id = uuid4()
@@ -49,10 +59,18 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
     run_stats_id = uuid4()
     run_other_id = uuid4()
 
-    db.add(Trace(trace_id=trace_id, source="test", s3_key=f"traces/{trace_id}.json"))
+    db.add(
+        Trace(
+            trace_id=trace_id,
+            project_id=project_id,
+            source="test",
+            s3_key=f"traces/{trace_id}.json",
+        )
+    )
     db.add(
         Campaign(
             campaign_id=campaign_id,
+            project_id=project_id,
             name="Analytics Campaign",
             mutation_set=[],
             eval_set={},
@@ -61,6 +79,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
     db.add(
         Run(
             run_id=run_stats_id,
+            project_id=project_id,
             trace_id=trace_id,
             campaign_id=campaign_id,
             status="completed",
@@ -71,6 +90,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
     db.add(
         Run(
             run_id=run_other_id,
+            project_id=project_id,
             trace_id=trace_id,
             campaign_id=campaign_id,
             status="completed",
@@ -82,6 +102,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
     attempts = [
         ReplayAttempt(
             attempt_id=uuid4(),
+            project_id=project_id,
             run_id=run_stats_id,
             mutation_id="m-ok",
             result="passed",
@@ -92,6 +113,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
         ),
         ReplayAttempt(
             attempt_id=uuid4(),
+            project_id=project_id,
             run_id=run_stats_id,
             mutation_id="m-timeout",
             result="failed",
@@ -102,6 +124,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
         ),
         ReplayAttempt(
             attempt_id=uuid4(),
+            project_id=project_id,
             run_id=run_stats_id,
             mutation_id="m-permission",
             result="failed",
@@ -112,6 +135,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
         ),
         ReplayAttempt(
             attempt_id=uuid4(),
+            project_id=project_id,
             run_id=run_stats_id,
             mutation_id="m-slack",
             result="failed",
@@ -122,6 +146,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
         ),
         ReplayAttempt(
             attempt_id=uuid4(),
+            project_id=project_id,
             run_id=run_other_id,
             mutation_id="m-jira-extra",
             result="failed",
@@ -132,6 +157,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
         ),
         ReplayAttempt(
             attempt_id=uuid4(),
+            project_id=project_id,
             run_id=run_other_id,
             mutation_id="m-gh",
             result="failed",
@@ -142,6 +168,7 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
         ),
         ReplayAttempt(
             attempt_id=uuid4(),
+            project_id=project_id,
             run_id=run_other_id,
             mutation_id="m-old",
             result="failed",
@@ -158,11 +185,11 @@ def _seed_analytics_data(db: Session) -> tuple[str, str]:
 
 
 def test_get_run_stats_returns_correct_breakdowns(
-    analytics_test_context: tuple[TestClient, sessionmaker[Session]],
+    analytics_test_context: tuple[TestClient, sessionmaker[Session], object],
 ) -> None:
-    client, testing_session_local = analytics_test_context
+    client, testing_session_local, project_id = analytics_test_context
     with testing_session_local() as db:
-        run_stats_id, _ = _seed_analytics_data(db)
+        run_stats_id, _ = _seed_analytics_data(db, project_id=project_id)
 
     response = client.get(f"/v1/runs/{run_stats_id}/stats")
 
@@ -180,7 +207,11 @@ def test_get_run_stats_returns_correct_breakdowns(
     assert data["failures_by_tool"][1] == {"tool": "slack.send_message", "count": 1, "pct": 0.3333}
 
     assert data["top_failure_reasons"][0] == {"reason": "timeout", "count": 2, "pct": 0.6667}
-    assert data["top_failure_reasons"][1] == {"reason": "permission_denied", "count": 1, "pct": 0.3333}
+    assert data["top_failure_reasons"][1] == {
+        "reason": "permission_denied",
+        "count": 1,
+        "pct": 0.3333,
+    }
 
     assert data["first_failure_step_distribution"] == [
         {"event_index": 2, "count": 1},
@@ -189,11 +220,11 @@ def test_get_run_stats_returns_correct_breakdowns(
 
 
 def test_get_tools_fragility_orders_by_failures_and_respects_window(
-    analytics_test_context: tuple[TestClient, sessionmaker[Session]],
+    analytics_test_context: tuple[TestClient, sessionmaker[Session], object],
 ) -> None:
-    client, testing_session_local = analytics_test_context
+    client, testing_session_local, project_id = analytics_test_context
     with testing_session_local() as db:
-        _seed_analytics_data(db)
+        _seed_analytics_data(db, project_id=project_id)
 
     response = client.get("/v1/tools/fragility", params={"window_days": 7, "limit": 10})
 
@@ -218,4 +249,3 @@ def test_get_tools_fragility_orders_by_failures_and_respects_window(
     assert jira["top_reasons"][1] == {"reason": "permission_denied", "count": 1}
     assert {"mutation_id": "m-jira-extra", "count": 1} in jira["top_mutations"]
     assert all(tool["tool"] != "legacy.tool" for tool in tools)
-

@@ -169,3 +169,29 @@ class CounterfactualListItem(BaseModel):
     metrics: Any | None
     diff: Any | None
     created_at: datetime
+
+
+class ProjectCreateRequest(BaseModel):
+    name: str
+
+
+class ProjectMetadata(BaseModel):
+    project_id: UUID
+    tenant_id: UUID
+    name: str
+    created_at: datetime
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str
+
+
+class ApiKeyMetadata(BaseModel):
+    api_key_id: UUID
+    tenant_id: UUID
+    name: str
+    created_at: datetime
+
+
+class ApiKeyCreateResponse(ApiKeyMetadata):
+    api_key: str
