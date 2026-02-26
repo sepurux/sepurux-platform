@@ -66,6 +66,8 @@ class ReplayAttempt(Base):
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     first_failure_event_index: Mapped[int | None] = mapped_column(nullable=True)
     first_failure_tool: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tools_touched: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    tool_call_counts: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     artifacts_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

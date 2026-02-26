@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
+from typing import Any
 from uuid import UUID, uuid4
 
 import redis
@@ -14,6 +16,29 @@ from replayer import build_attempt_replay_outcome, iter_mutations
 from storage import put_json_object
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_tool_usage_metadata(
+    timeline_artifact: dict[str, Any],
+) -> tuple[list[str], dict[str, int]]:
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        return [], {}
+
+    ordered_tools: OrderedDict[str, None] = OrderedDict()
+    tool_call_counts: dict[str, int] = {}
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "tool_call":
+            continue
+        tool = event.get("tool")
+        if not isinstance(tool, str) or not tool:
+            continue
+        ordered_tools.setdefault(tool, None)
+        tool_call_counts[tool] = tool_call_counts.get(tool, 0) + 1
+
+    return list(ordered_tools.keys()), tool_call_counts
 
 
 def _is_unsafe_failure_reason(failure_reason: str | None) -> bool:
@@ -56,6 +81,9 @@ def execute_run(run_id: str) -> None:
             )
             artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"
             put_json_object(artifact_key, outcome.timeline_artifact)
+            tools_touched, tool_call_counts = _extract_tool_usage_metadata(
+                outcome.timeline_artifact
+            )
 
             attempt_record = ReplayAttempt(
                 attempt_id=attempt_id,
@@ -66,6 +94,8 @@ def execute_run(run_id: str) -> None:
                 failure_reason=outcome.failure_reason,
                 first_failure_event_index=outcome.first_failure_event_index,
                 first_failure_tool=outcome.first_failure_tool,
+                tools_touched=tools_touched,
+                tool_call_counts=tool_call_counts,
                 artifacts_s3_key=artifact_key,
             )
             db.add(attempt_record)
