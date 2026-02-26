@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
 from app.db import get_db
 from app.schemas import CounterfactualListItem, CounterfactualMetadata
 from app.services.counterfactual_service import (
@@ -13,6 +10,8 @@ from app.services.counterfactual_service import (
     get_counterfactual_or_raise,
     list_counterfactuals_for_attempt,
 )
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1", tags=["counterfactuals"])
 

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from app.models import Counterfactual
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from app.models import Counterfactual
 
 
 class CounterfactualNotFoundError(Exception):
