@@ -57,14 +57,14 @@ export function TimelineViewer({
   const events = Array.isArray(timeline?.events) ? timeline.events : [];
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>
           {description ?? "Tool calls, results, model summaries, and error checkpoints for the replay attempt."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="min-w-0 space-y-4">
         {timeline?.first_failure ? (
           <div className="rounded-md border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
             <span className="font-medium">First failure:</span>{" "}
@@ -78,22 +78,27 @@ export function TimelineViewer({
             No timeline events available.
           </div>
         ) : (
-          <div className={cn("space-y-3", compact ? "max-h-[360px] overflow-auto pr-1" : "max-h-[640px] overflow-auto pr-1")}>
+          <div
+            className={cn(
+              "min-w-0 space-y-3",
+              compact ? "max-h-[360px] overflow-auto pr-1" : "max-h-[640px] overflow-auto pr-1"
+            )}
+          >
             {events.map((event) => {
               const Icon = eventIcon(event.type);
               const preview = toJsonPreview(event.error ?? event.result ?? event.args);
               return (
-                <div key={`${event.index}-${event.type}`} className="rounded-md border border-border/60 bg-card/50 p-3">
+                <div key={`${event.index}-${event.type}`} className="min-w-0 rounded-md border border-border/60 bg-card/50 p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="grid h-7 w-7 place-items-center rounded-md border border-border/60 bg-muted/20">
                       <Icon className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <Badge variant={badgeVariant(event.type)}>{event.type}</Badge>
                     <span className="text-sm font-medium text-foreground">#{event.index}</span>
-                    {event.tool ? <span className="text-sm text-muted-foreground">{event.tool}</span> : null}
+                    {event.tool ? <span className="min-w-0 break-all text-sm text-muted-foreground">{event.tool}</span> : null}
                   </div>
                   {preview ? (
-                    <pre className="mt-3 overflow-x-auto rounded-md border border-border/40 bg-muted/20 p-3 text-xs leading-relaxed text-muted-foreground">
+                    <pre className="mt-3 max-w-full overflow-x-auto rounded-md border border-border/40 bg-muted/20 p-3 text-xs leading-relaxed text-muted-foreground">
                       {preview}
                     </pre>
                   ) : null}
