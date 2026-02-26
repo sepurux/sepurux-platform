@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any, cast
 from uuid import UUID
 
 from app.models import ReplayAttempt
@@ -42,11 +43,13 @@ def get_attempt_or_raise(db: Session, attempt_id: UUID) -> ReplayAttempt:
     return attempt
 
 
-def get_attempt_timeline_json(db: Session, attempt_id: UUID, *, max_bytes: int = 1_000_000):
+def get_attempt_timeline_json(
+    db: Session, attempt_id: UUID, *, max_bytes: int = 1_000_000
+) -> dict[str, Any]:
     attempt = get_attempt_or_raise(db, attempt_id)
     if not attempt.artifacts_s3_key:
         raise FileNotFoundError("Timeline artifact not available")
-    return get_json_object(attempt.artifacts_s3_key, max_bytes=max_bytes)
+    return cast(dict[str, Any], get_json_object(attempt.artifacts_s3_key, max_bytes=max_bytes))
 
 
 __all__ = [

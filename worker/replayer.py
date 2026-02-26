@@ -103,20 +103,26 @@ def build_attempt_replay_outcome(
                 },
             }
         )
-        first_failure = {"event_index": 3, "tool": tool_name, "reason": "policy_blocked"}
+        policy_first_failure_event_index = 3
+        policy_first_failure_tool = tool_name
+        policy_first_failure: dict[str, Any] = {
+            "event_index": policy_first_failure_event_index,
+            "tool": policy_first_failure_tool,
+            "reason": "policy_blocked",
+        }
         return AttemptReplayOutcome(
             mutation_id=mutation_id,
             result="failed",
             failure_reason="policy_blocked",
-            first_failure_event_index=first_failure["event_index"],
-            first_failure_tool=first_failure["tool"],
+            first_failure_event_index=policy_first_failure_event_index,
+            first_failure_tool=policy_first_failure_tool,
             timeline_artifact={
                 "timeline_version": "0.1",
                 "run_id": str(run_id),
                 "attempt_id": str(attempt_id),
                 "mutation_id": mutation_id,
                 "events": events,
-                "first_failure": first_failure,
+                "first_failure": policy_first_failure,
             },
         )
 
@@ -143,6 +149,8 @@ def build_attempt_replay_outcome(
             failure_reason = None
 
     first_failure: dict[str, Any] | None = None
+    first_failure_event_index: int | None = None
+    first_failure_tool: str | None = None
     if should_fail:
         events.append(
             {
@@ -155,9 +163,11 @@ def build_attempt_replay_outcome(
                 },
             }
         )
+        first_failure_event_index = 3
+        first_failure_tool = tool_name
         first_failure = {
-            "event_index": 3,
-            "tool": tool_name,
+            "event_index": first_failure_event_index,
+            "tool": first_failure_tool,
             "reason": failure_reason,
         }
         result = "failed"
@@ -198,8 +208,8 @@ def build_attempt_replay_outcome(
         mutation_id=mutation_id,
         result=result,
         failure_reason=failure_reason,
-        first_failure_event_index=first_failure["event_index"] if first_failure else None,
-        first_failure_tool=first_failure["tool"] if first_failure else None,
+        first_failure_event_index=first_failure_event_index,
+        first_failure_tool=first_failure_tool,
         timeline_artifact=timeline_artifact,
     )
 
@@ -289,22 +299,22 @@ def _compact_json(value: Any, *, max_items: int = 10, max_string: int = 256, dep
     if depth > 2:
         return "<truncated-depth>"
     if isinstance(value, dict):
-        items = list(value.items())[:max_items]
+        dict_items = list(value.items())[:max_items]
         compact = {
             str(k): _compact_json(v, max_items=max_items, max_string=max_string, depth=depth + 1)
-            for k, v in items
+            for k, v in dict_items
         }
         if len(value) > max_items:
             compact["__truncated__"] = len(value) - max_items
         return compact
     if isinstance(value, list):
-        items = [
+        list_items = [
             _compact_json(v, max_items=max_items, max_string=max_string, depth=depth + 1)
             for v in value[:max_items]
         ]
         if len(value) > max_items:
-            items.append({"__truncated__": len(value) - max_items})
-        return items
+            list_items.append({"__truncated__": len(value) - max_items})
+        return list_items
     if isinstance(value, str):
         return value if len(value) <= max_string else f"{value[:max_string]}...<truncated>"
     return value
