@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
+from app.auth import ProjectScope, require_project_scope
 from app.db import get_db
 from app.schemas import ReplayAttemptDetail
 from app.services.attempt_service import (
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Session
 router = APIRouter(prefix="/v1/attempts", tags=["attempts"])
 
 DbSession = Annotated[Session, Depends(get_db)]
+ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 
 
 def _to_attempt_detail(attempt) -> ReplayAttemptDetail:
@@ -34,18 +36,29 @@ def _to_attempt_detail(attempt) -> ReplayAttemptDetail:
 
 
 @router.get("/{attempt_id}", response_model=ReplayAttemptDetail)
-def get_attempt(attempt_id: UUID, db: DbSession) -> ReplayAttemptDetail:
+def get_attempt(
+    attempt_id: UUID, db: DbSession, project_scope: ProjectScopeDep
+) -> ReplayAttemptDetail:
     try:
-        attempt = get_attempt_or_raise(db, attempt_id)
+        attempt = get_attempt_or_raise(
+            db, project_id=project_scope.project_id, attempt_id=attempt_id
+        )
     except AttemptNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _to_attempt_detail(attempt)
 
 
 @router.get("/{attempt_id}/timeline")
-def get_attempt_timeline(attempt_id: UUID, db: DbSession) -> dict[str, Any]:
+def get_attempt_timeline(
+    attempt_id: UUID, db: DbSession, project_scope: ProjectScopeDep
+) -> dict[str, Any]:
     try:
-        return get_attempt_timeline_json(db, attempt_id, max_bytes=1_000_000)
+        return get_attempt_timeline_json(
+            db,
+            project_id=project_scope.project_id,
+            attempt_id=attempt_id,
+            max_bytes=1_000_000,
+        )
     except AttemptNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except FileNotFoundError as exc:

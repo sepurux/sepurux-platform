@@ -26,10 +26,50 @@ class PlaceholderRecord(Base):
     )
 
 
+class Tenant(Base):
+    __tablename__ = "tenants"
+
+    tenant_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    project_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.tenant_id"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    api_key_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.tenant_id"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    key_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class Trace(Base):
     __tablename__ = "traces"
 
     trace_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     source: Mapped[str] = mapped_column(Text, nullable=False)
     s3_key: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -43,6 +83,7 @@ class Campaign(Base):
     __tablename__ = "campaigns"
 
     campaign_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     mutation_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     eval_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
@@ -57,6 +98,7 @@ class Run(Base):
     __tablename__ = "runs"
 
     run_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     trace_id: Mapped[UUID] = mapped_column(ForeignKey("traces.trace_id"), nullable=False)
     campaign_id: Mapped[UUID] = mapped_column(ForeignKey("campaigns.campaign_id"), nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
@@ -72,6 +114,7 @@ class ReplayAttempt(Base):
     __tablename__ = "replay_attempts"
 
     attempt_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     run_id: Mapped[UUID] = mapped_column(ForeignKey("runs.run_id"), nullable=False)
     mutation_id: Mapped[str] = mapped_column(Text, nullable=False)
     result: Mapped[str] = mapped_column(Text, nullable=False)
@@ -90,6 +133,7 @@ class Counterfactual(Base):
     __tablename__ = "counterfactuals"
 
     counterfactual_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     attempt_id: Mapped[UUID] = mapped_column(
         ForeignKey("replay_attempts.attempt_id"), nullable=False
     )

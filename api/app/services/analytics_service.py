@@ -14,12 +14,19 @@ class RunNotFoundError(Exception):
     pass
 
 
-def get_run_stats(db: Session, *, run_id: UUID) -> dict[str, Any]:
-    run = db.get(Run, run_id)
+def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, Any]:
+    run = db.scalar(select(Run).where(Run.run_id == run_id, Run.project_id == project_id))
     if run is None:
         raise RunNotFoundError("Run not found")
 
-    attempts = list(db.scalars(select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)))
+    attempts = list(
+        db.scalars(
+            select(ReplayAttempt).where(
+                ReplayAttempt.run_id == run_id,
+                ReplayAttempt.project_id == project_id,
+            )
+        )
+    )
     total = len(attempts)
     passed_attempts = [attempt for attempt in attempts if _is_pass_result(attempt.result)]
     failed_attempts = [attempt for attempt in attempts if _is_fail_result(attempt.result)]
@@ -68,13 +75,14 @@ def get_run_stats(db: Session, *, run_id: UUID) -> dict[str, Any]:
 def get_tool_fragility(
     db: Session,
     *,
+    project_id: UUID,
     window_days: int = 7,
     limit: int = 20,
 ) -> dict[str, Any]:
     generated_at = datetime.now(UTC)
     cutoff = generated_at - timedelta(days=window_days)
 
-    attempts = _recent_attempts(db, cutoff=cutoff)
+    attempts = _recent_attempts(db, project_id=project_id, cutoff=cutoff)
     failed_attempts_with_tool = [
         attempt
         for attempt in attempts
@@ -120,13 +128,14 @@ def get_tool_fragility(
 def get_mutation_summary(
     db: Session,
     *,
+    project_id: UUID,
     window_days: int = 7,
     limit: int = 20,
 ) -> dict[str, Any]:
     cutoff = datetime.now(UTC) - timedelta(days=window_days)
     attempts = [
         attempt
-        for attempt in _recent_attempts(db, cutoff=cutoff)
+        for attempt in _recent_attempts(db, project_id=project_id, cutoff=cutoff)
         if _is_fail_result(attempt.result)
     ]
 
@@ -161,8 +170,8 @@ def get_mutation_summary(
     return {"window_days": window_days, "mutations": mutations[:limit]}
 
 
-def _recent_attempts(db: Session, *, cutoff: datetime) -> list[ReplayAttempt]:
-    attempts = list(db.scalars(select(ReplayAttempt)))
+def _recent_attempts(db: Session, *, project_id: UUID, cutoff: datetime) -> list[ReplayAttempt]:
+    attempts = list(db.scalars(select(ReplayAttempt).where(ReplayAttempt.project_id == project_id)))
     return [attempt for attempt in attempts if _normalize_dt(attempt.created_at) >= cutoff]
 
 
