@@ -16,7 +16,11 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
     const upstream = await fetch(targetUrl, {
       method: "GET",
       headers: {
-        Accept: request.headers.get("accept") ?? "application/json"
+        Accept: request.headers.get("accept") ?? "application/json",
+        ...(request.headers.get("x-api-key") ? { "X-API-Key": request.headers.get("x-api-key") as string } : {}),
+        ...(request.headers.get("x-project-id")
+          ? { "X-Project-Id": request.headers.get("x-project-id") as string }
+          : {})
       },
       cache: "no-store"
     });
