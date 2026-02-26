@@ -35,6 +35,17 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
     failures_by_tool = Counter(
         (attempt.first_failure_tool or "unknown") for attempt in failed_attempts
     )
+    tools_usage_attempts: Counter[str] = Counter()
+    tools_usage_calls: Counter[str] = Counter()
+    for attempt in attempts:
+        tools_touched = _tools_touched_for_denominator(attempt)
+        for tool in tools_touched:
+            tools_usage_attempts[tool] += 1
+
+        call_counts = _tool_call_counts_for_attempt(attempt, tools_touched=tools_touched)
+        for tool, count in call_counts.items():
+            tools_usage_calls[tool] += count
+
     failures_by_mutation = Counter(attempt.mutation_id for attempt in failed_attempts)
     top_failure_reasons = Counter(
         (attempt.failure_reason or "unknown") for attempt in failed_attempts
@@ -56,6 +67,17 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
         "failures_by_tool": [
             {"tool": tool, "count": count, "pct": _ratio(count, failed_count)}
             for tool, count in _sorted_counter_items(failures_by_tool)
+        ],
+        "tools_usage": [
+            {
+                "tool": tool,
+                "attempts": attempts_count,
+                "calls": tools_usage_calls.get(tool, 0),
+            }
+            for tool, attempts_count in _sorted_tool_usage_items(
+                tools_usage_attempts,
+                tools_usage_calls,
+            )
         ],
         "failures_by_mutation": [
             {"mutation_id": mutation_id, "count": count, "pct": _ratio(count, failed_count)}
@@ -83,27 +105,31 @@ def get_tool_fragility(
     cutoff = generated_at - timedelta(days=window_days)
 
     attempts = _recent_attempts(db, project_id=project_id, cutoff=cutoff)
-    failed_attempts_with_tool = [
-        attempt
-        for attempt in attempts
-        if _is_fail_result(attempt.result) and attempt.first_failure_tool is not None
-    ]
+    attempts_by_tool: Counter[str] = Counter()
+    failures_by_tool: dict[str, list[ReplayAttempt]] = defaultdict(list)
+    for attempt in attempts:
+        tools_touched = _tools_touched_for_denominator(attempt)
+        for tool in tools_touched:
+            attempts_by_tool[tool] += 1
 
-    by_tool: dict[str, list[ReplayAttempt]] = defaultdict(list)
-    for attempt in failed_attempts_with_tool:
-        by_tool[attempt.first_failure_tool or "unknown"].append(attempt)
+        failure_tool = _fragility_failure_tool(attempt, tools_touched=tools_touched)
+        if failure_tool is not None:
+            failures_by_tool[failure_tool].append(attempt)
 
     tools: list[dict[str, Any]] = []
-    for tool, tool_attempts in by_tool.items():
-        failures = len(tool_attempts)
-        mutation_counter = Counter(attempt.mutation_id for attempt in tool_attempts)
-        reason_counter = Counter((attempt.failure_reason or "unknown") for attempt in tool_attempts)
+    for tool, tool_failed_attempts in failures_by_tool.items():
+        failures = len(tool_failed_attempts)
+        attempts_count = attempts_by_tool.get(tool, 0)
+        mutation_counter = Counter(attempt.mutation_id for attempt in tool_failed_attempts)
+        reason_counter = Counter(
+            (attempt.failure_reason or "unknown") for attempt in tool_failed_attempts
+        )
         tools.append(
             {
                 "tool": tool,
-                "attempts": failures,
+                "attempts": attempts_count,
                 "failures": failures,
-                "failure_rate": _ratio(failures, failures),
+                "failure_rate": _ratio(failures, attempts_count),
                 "top_mutations": [
                     {"mutation_id": mutation_id, "count": count}
                     for mutation_id, count in _sorted_counter_items(mutation_counter)[:5]
@@ -120,7 +146,7 @@ def get_tool_fragility(
     return {
         "window_days": window_days,
         "generated_at": generated_at,
-        "attempts_definition": "first_failure_only",
+        "attempts_definition": "tools_touched_denominator_first_failure_numerator",
         "tools": tools[:limit],
     }
 
@@ -189,6 +215,69 @@ def _is_fail_result(result: str | None) -> bool:
     return (result or "").lower() in {"fail", "failed"}
 
 
+def _tools_touched_for_denominator(attempt: ReplayAttempt) -> list[str]:
+    tools: list[str] = []
+    seen: set[str] = set()
+    raw_tools = attempt.tools_touched
+    if isinstance(raw_tools, list):
+        for item in raw_tools:
+            if not isinstance(item, str) or not item:
+                continue
+            if item in seen:
+                continue
+            seen.add(item)
+            tools.append(item)
+
+    # Backward-compatible fallback for older rows without tool metadata.
+    if tools:
+        return tools
+    if _is_fail_result(attempt.result) and attempt.first_failure_tool:
+        return [attempt.first_failure_tool]
+    return []
+
+
+def _tool_call_counts_for_attempt(
+    attempt: ReplayAttempt,
+    *,
+    tools_touched: list[str] | None = None,
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    raw_counts = attempt.tool_call_counts
+    if isinstance(raw_counts, dict):
+        for raw_tool, raw_count in raw_counts.items():
+            if not isinstance(raw_tool, str) or not raw_tool:
+                continue
+            if not isinstance(raw_count, int):
+                continue
+            counts[raw_tool] = max(0, raw_count)
+
+    tools_touched = (
+        tools_touched if tools_touched is not None else _tools_touched_for_denominator(attempt)
+    )
+    if counts:
+        return counts
+
+    # Backward-compatible fallback: if we know a tool was touched, treat it as one call.
+    return {tool: 1 for tool in tools_touched}
+
+
+def _fragility_failure_tool(
+    attempt: ReplayAttempt,
+    *,
+    tools_touched: list[str] | None = None,
+) -> str | None:
+    if not _is_fail_result(attempt.result):
+        return None
+    if attempt.first_failure_tool:
+        return attempt.first_failure_tool
+    tools_touched = (
+        tools_touched if tools_touched is not None else _tools_touched_for_denominator(attempt)
+    )
+    if len(tools_touched) == 1:
+        return tools_touched[0]
+    return None
+
+
 def _ratio(numerator: int, denominator: int) -> float:
     if denominator <= 0:
         return 0.0
@@ -197,3 +286,13 @@ def _ratio(numerator: int, denominator: int) -> float:
 
 def _sorted_counter_items(counter: Counter[str]) -> list[tuple[str, int]]:
     return sorted(counter.items(), key=lambda item: (-item[1], item[0]))
+
+
+def _sorted_tool_usage_items(
+    attempts_by_tool: Counter[str],
+    calls_by_tool: Counter[str],
+) -> list[tuple[str, int]]:
+    return sorted(
+        attempts_by_tool.items(),
+        key=lambda item: (-item[1], -calls_by_tool.get(item[0], 0), item[0]),
+    )

@@ -128,10 +128,17 @@ class EventIndexCount(BaseModel):
     count: int
 
 
+class ToolUsageStatsItem(BaseModel):
+    tool: str
+    attempts: int
+    calls: int
+
+
 class RunStatsResponse(BaseModel):
     run_id: UUID
     attempts: RunAttemptsSummary
     failures_by_tool: list[ToolCountPct]
+    tools_usage: list[ToolUsageStatsItem]
     failures_by_mutation: list[MutationCountPct]
     top_failure_reasons: list[ReasonCountPct]
     first_failure_step_distribution: list[EventIndexCount]
