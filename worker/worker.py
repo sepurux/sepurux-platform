@@ -38,6 +38,7 @@ def execute_run(run_id: str) -> None:
         mutations = iter_mutations(campaign.mutation_set)
         passed_count = 0
         failed_count = 0
+        unsafe_count = 0
 
         for index, mutation in enumerate(mutations):
             attempt_id = uuid4()
@@ -89,6 +90,11 @@ def execute_run(run_id: str) -> None:
                 passed_count += 1
             else:
                 failed_count += 1
+                if (outcome.failure_reason or "").lower() == "policy_blocked":
+                    unsafe_count += 1
+
+        prior_summary = run.summary if isinstance(run.summary, dict) else {}
+        ci_thresholds = prior_summary.get("ci_thresholds")
 
         run.status = "completed"
         run.summary = {
@@ -96,7 +102,11 @@ def execute_run(run_id: str) -> None:
             "attempt_count": len(mutations),
             "passed_count": passed_count,
             "failed_count": failed_count,
+            "pass_rate": round((passed_count / len(mutations)), 4) if mutations else 0.0,
+            "unsafe_count": unsafe_count,
         }
+        if ci_thresholds is not None:
+            run.summary["ci_thresholds"] = ci_thresholds
         db.commit()
 
     logger.info("Completed run %s", run_id)
