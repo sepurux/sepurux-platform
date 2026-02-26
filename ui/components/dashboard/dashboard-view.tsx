@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
-  CheckCircle2,
   Clock3,
   Flame,
   RefreshCcw,
@@ -26,6 +25,7 @@ import {
 import { api, type ReplayAttemptListItem, type RunMetadata, type RunStats, type ToolFragilityResponse } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { CounterfactualInspector } from "@/components/dashboard/counterfactual-inspector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -186,7 +186,7 @@ function DashboardPanels({ data }: { data: DashboardData }) {
 
         <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
           <TopFragileToolsCard fragility={data.fragility} />
-          <PlaceholderInspectorCards />
+          <CounterfactualInspector runs={dashboardRuns} failedAttemptsByRunId={data.failedAttemptsByRunId} compact />
         </div>
       </TabsContent>
 
@@ -195,7 +195,7 @@ function DashboardPanels({ data }: { data: DashboardData }) {
       </TabsContent>
 
       <TabsContent value="diagnostics" className="space-y-6">
-        <PlaceholderInspectorCards detailed />
+        <CounterfactualInspector runs={dashboardRuns} failedAttemptsByRunId={data.failedAttemptsByRunId} />
       </TabsContent>
     </Tabs>
   );
@@ -461,49 +461,6 @@ function HeatmapRow({
         );
       })}
     </>
-  );
-}
-
-function PlaceholderInspectorCards({ detailed = false }: { detailed?: boolean }) {
-  return (
-    <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Counterfactual Inspector</CardTitle>
-          <CardDescription>
-            Run + attempt selector and strategy comparisons will be wired in the counterfactual inspector commit.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-md border border-border/60 bg-muted/20 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Original Outcome</p>
-              <p className="mt-2 text-sm text-foreground">Select a run and failed attempt to compare what-if strategy results.</p>
-            </div>
-            <div className="rounded-md border border-border/60 bg-muted/20 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Counterfactual Strategies</p>
-              <p className="mt-2 text-sm text-foreground">schema_adapter_v1 • retry_cap_v1 • policy_gate_v1</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Attempt Timeline Panel</CardTitle>
-          <CardDescription>
-            Timeline event viewer for the selected attempt will land in the next dashboard iteration.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
-            {detailed
-              ? "Timeline panel placeholder: tool calls, tool results, model summaries, and error markers."
-              : "Timeline viewer placeholder."}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
   );
 }
 

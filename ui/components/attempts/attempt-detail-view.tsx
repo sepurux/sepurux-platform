@@ -4,18 +4,29 @@ import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
 
-import { api, type AttemptTimeline, type ReplayAttemptDetail } from "@/lib/api";
+import {
+  api,
+  type AttemptTimeline,
+  type CounterfactualListItem,
+  type ReplayAttemptDetail,
+} from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CounterfactualResultsCard } from "@/components/counterfactuals/counterfactual-results-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimelineViewer } from "@/components/diagnostics/timeline-viewer";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; attempt: ReplayAttemptDetail; timeline: AttemptTimeline | null };
+  | {
+      status: "ready";
+      attempt: ReplayAttemptDetail;
+      timeline: AttemptTimeline | null;
+      counterfactuals: CounterfactualListItem[];
+    };
 
 export function AttemptDetailView({ attemptId }: { attemptId: string }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -23,11 +34,12 @@ export function AttemptDetailView({ attemptId }: { attemptId: string }) {
   async function load() {
     setState({ status: "loading" });
     try {
-      const [attempt, timeline] = await Promise.all([
+      const [attempt, timeline, counterfactuals] = await Promise.all([
         api.getAttempt(attemptId),
         api.getAttemptTimeline(attemptId).catch(() => null),
+        api.listAttemptCounterfactuals(attemptId).catch(() => []),
       ]);
-      setState({ status: "ready", attempt, timeline });
+      setState({ status: "ready", attempt, timeline, counterfactuals });
     } catch (error) {
       setState({ status: "error", message: error instanceof Error ? error.message : "Failed to load attempt" });
     }
@@ -57,13 +69,21 @@ export function AttemptDetailView({ attemptId }: { attemptId: string }) {
       ) : state.status === "error" ? (
         <Card className="border-rose-400/20"><CardContent className="p-5 text-sm text-rose-100">{state.message}</CardContent></Card>
       ) : (
-        <AttemptDetailPanels attempt={state.attempt} timeline={state.timeline} />
+        <AttemptDetailPanels attempt={state.attempt} timeline={state.timeline} counterfactuals={state.counterfactuals} />
       )}
     </div>
   );
 }
 
-function AttemptDetailPanels({ attempt, timeline }: { attempt: ReplayAttemptDetail; timeline: AttemptTimeline | null }) {
+function AttemptDetailPanels({
+  attempt,
+  timeline,
+  counterfactuals,
+}: {
+  attempt: ReplayAttemptDetail;
+  timeline: AttemptTimeline | null;
+  counterfactuals: CounterfactualListItem[];
+}) {
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
       <div className="space-y-6">
@@ -86,19 +106,11 @@ function AttemptDetailPanels({ attempt, timeline }: { attempt: ReplayAttemptDeta
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Counterfactual Results</CardTitle>
-            <CardDescription>
-              Counterfactual strategy results panel will be added in the next commit.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
-              Placeholder for pass/fail badges, strategy diffs, and metrics from the counterfactuals endpoint.
-            </div>
-          </CardContent>
-        </Card>
+        <CounterfactualResultsCard
+          items={counterfactuals}
+          title="Counterfactual Results"
+          description="Strategy outcomes from /attempts/{attempt_id}/counterfactuals."
+        />
       </div>
 
       <TimelineViewer timeline={timeline} />
