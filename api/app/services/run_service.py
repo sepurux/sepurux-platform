@@ -128,6 +128,8 @@ def run_metadata(run: Run) -> dict[str, Any]:
     summary_attempts = _summary_int(summary, "attempt_count")
     summary_passed = _summary_int(summary, "passed_count")
     summary_unsafe = _summary_int(summary, "unsafe_count")
+    if summary_unsafe is None:
+        summary_unsafe = _summary_int(summary, "unsafe_attempts")
     summary_pass_rate = _summary_float(summary, "pass_rate")
     if summary_pass_rate is None and summary_attempts is not None and summary_passed is not None:
         summary_pass_rate = _ratio(summary_passed, summary_attempts)
@@ -170,20 +172,28 @@ def get_run_quality_metrics(
         if _is_unsafe_attempt(attempt):
             unsafe_count += 1
 
+    failures_by_tool_pct = [
+        {
+            "tool": tool,
+            "count": count,
+            "pct": _ratio(count, failed_count),
+        }
+        for tool, count in _sorted_counter_items(failures_by_tool)
+    ]
+    top_failing_tools = [
+        {"tool": item["tool"], "count": item["count"]} for item in failures_by_tool_pct[:3]
+    ]
+
     return {
         "attempt_count": total,
         "passed_count": passed_count,
         "failed_count": failed_count,
+        "failures": failed_count,
         "pass_rate": _ratio(passed_count, total),
         "unsafe_count": unsafe_count,
-        "failures_by_tool": [
-            {
-                "tool": tool,
-                "count": count,
-                "pct": _ratio(count, failed_count),
-            }
-            for tool, count in _sorted_counter_items(failures_by_tool)
-        ],
+        "unsafe_attempts": unsafe_count,
+        "failures_by_tool": failures_by_tool_pct,
+        "top_failing_tools": top_failing_tools,
     }
 
 
@@ -214,9 +224,10 @@ def _is_fail_result(result: str | None) -> bool:
 
 
 def _is_unsafe_attempt(attempt: ReplayAttempt) -> bool:
-    result = (attempt.result or "").lower()
     reason = (attempt.failure_reason or "").lower()
-    return result in {"unsafe", "blocked", "policy_blocked"} or reason == "policy_blocked"
+    # We don't persist per-attempt metrics on ReplayAttempt, so use failure_reason conventions.
+    # Keep policy_blocked for backwards compatibility with existing worker outcomes.
+    return reason.startswith("unsafe") or reason == "policy_blocked"
 
 
 def _ratio(numerator: int, denominator: int) -> float:
