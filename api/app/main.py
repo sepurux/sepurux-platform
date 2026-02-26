@@ -54,6 +54,8 @@ async def ci_token_auth_middleware(request: Request, call_next):
         )
 
     return await call_next(request)
+
+
 app.include_router(api_keys_router)
 app.include_router(analytics_router)
 app.include_router(attempts_router)
