@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+from app.db import get_db
+from app.main import app
+from app.models import Base, Campaign, Run, Trace
+from conftest import auth_headers, seed_tenant_project_and_key
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
-
-from app.db import get_db
-from app.main import app
-from app.models import Base, Campaign, Run, Trace
 
 
 class FakeQueue:
@@ -27,7 +27,7 @@ class FakeQueue:
 @pytest.fixture()
 def run_test_context(
     monkeypatch: pytest.MonkeyPatch,
-) -> Generator[tuple[TestClient, sessionmaker[Session], FakeQueue], None, None]:
+) -> Generator[tuple[TestClient, sessionmaker[Session], FakeQueue, UUID], None, None]:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -35,6 +35,8 @@ def run_test_context(
     )
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
+    with testing_session_local() as db:
+        _, project_id, _, api_key_plaintext = seed_tenant_project_and_key(db)
 
     fake_queue = FakeQueue()
     monkeypatch.setattr("app.services.run_service.get_run_queue", lambda: fake_queue)
@@ -47,22 +49,34 @@ def run_test_context(
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
 
     with TestClient(app) as client:
-        yield client, testing_session_local, fake_queue
+        client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+        yield client, testing_session_local, fake_queue, project_id
 
     app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
-def seed_trace_and_campaign(db: Session) -> tuple[UUID, UUID]:
+def seed_trace_and_campaign(db: Session, *, project_id: UUID) -> tuple[UUID, UUID]:
     trace_id = uuid4()
     campaign_id = uuid4()
-    db.add(Trace(trace_id=trace_id, source="test", s3_key=f"traces/{trace_id}.json"))
+    db.add(
+        Trace(
+            trace_id=trace_id,
+            project_id=project_id,
+            source="test",
+            s3_key=f"traces/{trace_id}.json",
+        )
+    )
     db.add(
         Campaign(
             campaign_id=campaign_id,
+            project_id=project_id,
             name="Seed Campaign",
             mutation_set=[{"type": "noop"}],
             eval_set={"checks": ["status"]},
@@ -73,14 +87,16 @@ def seed_trace_and_campaign(db: Session) -> tuple[UUID, UUID]:
 
 
 def test_post_run_queues_job_and_persists_queued_status(
-    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue],
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
 ) -> None:
-    client, testing_session_local, fake_queue = run_test_context
+    client, testing_session_local, fake_queue, project_id = run_test_context
 
     with testing_session_local() as db:
-        trace_id, campaign_id = seed_trace_and_campaign(db)
+        trace_id, campaign_id = seed_trace_and_campaign(db, project_id=project_id)
 
-    response = client.post("/v1/runs", json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)})
+    response = client.post(
+        "/v1/runs", json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)}
+    )
 
     assert response.status_code == 201
     data = response.json()
@@ -93,23 +109,34 @@ def test_post_run_queues_job_and_persists_queued_status(
 
     with testing_session_local() as db:
         row = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+        assert row.project_id == project_id
         assert row.status == "queued"
         assert row.trace_id == trace_id
         assert row.campaign_id == campaign_id
 
 
-def test_get_run_and_list_runs(run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue]) -> None:
-    client, testing_session_local, _ = run_test_context
+def test_get_run_and_list_runs(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, _, project_id = run_test_context
     trace_id = uuid4()
     campaign_id = uuid4()
     older = uuid4()
     newer = uuid4()
 
     with testing_session_local() as db:
-        db.add(Trace(trace_id=trace_id, source="test", s3_key=f"traces/{trace_id}.json"))
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
         db.add(
             Campaign(
                 campaign_id=campaign_id,
+                project_id=project_id,
                 name="Campaign A",
                 mutation_set=[],
                 eval_set=[],
@@ -118,21 +145,23 @@ def test_get_run_and_list_runs(run_test_context: tuple[TestClient, sessionmaker[
         db.add(
             Run(
                 run_id=older,
+                project_id=project_id,
                 trace_id=trace_id,
                 campaign_id=campaign_id,
                 status="done",
                 summary={"score": 1},
-                created_at=datetime(2026, 2, 24, 20, 0, tzinfo=timezone.utc),
+                created_at=datetime(2026, 2, 24, 20, 0, tzinfo=UTC),
             )
         )
         db.add(
             Run(
                 run_id=newer,
+                project_id=project_id,
                 trace_id=trace_id,
                 campaign_id=campaign_id,
                 status="queued",
                 summary=None,
-                created_at=datetime(2026, 2, 24, 20, 1, tzinfo=timezone.utc),
+                created_at=datetime(2026, 2, 24, 20, 1, tzinfo=UTC),
             )
         )
         db.commit()
@@ -151,9 +180,9 @@ def test_get_run_and_list_runs(run_test_context: tuple[TestClient, sessionmaker[
 
 
 def test_post_run_returns_404_when_related_records_missing(
-    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue],
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
 ) -> None:
-    client, _, fake_queue = run_test_context
+    client, _, fake_queue, _ = run_test_context
 
     response = client.post("/v1/runs", json={"trace_id": str(uuid4()), "campaign_id": str(uuid4())})
 
