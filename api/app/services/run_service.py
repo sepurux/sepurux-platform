@@ -111,6 +111,8 @@ def get_run(db: Session, *, project_id: UUID, run_id: UUID) -> Run | None:
 
 def get_run_unscoped(db: Session, *, run_id: UUID) -> Run | None:
     return db.scalar(select(Run).where(Run.run_id == run_id))
+
+
 def list_recent_runs(db: Session, *, project_id: UUID, limit: int = 20) -> list[Run]:
     stmt = (
         select(Run)
@@ -127,11 +129,7 @@ def run_metadata(run: Run) -> dict[str, Any]:
     summary_passed = _summary_int(summary, "passed_count")
     summary_unsafe = _summary_int(summary, "unsafe_count")
     summary_pass_rate = _summary_float(summary, "pass_rate")
-    if (
-        summary_pass_rate is None
-        and summary_attempts is not None
-        and summary_passed is not None
-    ):
+    if summary_pass_rate is None and summary_attempts is not None and summary_passed is not None:
         summary_pass_rate = _ratio(summary_passed, summary_attempts)
 
     return {
