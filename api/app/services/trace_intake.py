@@ -5,24 +5,26 @@ from uuid import UUID, uuid4
 
 from app.models import Trace
 from app.storage import put_json_object
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-def create_trace(db: Session, payload: Any, source: str = "api") -> Trace:
+def create_trace(db: Session, *, project_id: UUID, payload: Any, source: str = "api") -> Trace:
     trace_id = uuid4()
     s3_key = f"traces/{trace_id}.json"
 
     put_json_object(s3_key, payload)
 
-    trace = Trace(trace_id=trace_id, source=source, s3_key=s3_key)
+    trace = Trace(trace_id=trace_id, project_id=project_id, source=source, s3_key=s3_key)
     db.add(trace)
     db.commit()
     db.refresh(trace)
     return trace
 
 
-def get_trace(db: Session, trace_id: UUID) -> Trace | None:
-    return db.get(Trace, trace_id)
+def get_trace(db: Session, *, project_id: UUID, trace_id: UUID) -> Trace | None:
+    stmt = select(Trace).where(Trace.trace_id == trace_id, Trace.project_id == project_id)
+    return db.scalar(stmt)
 
 
 def trace_metadata(trace: Trace) -> dict[str, Any]:

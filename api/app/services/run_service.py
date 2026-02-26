@@ -13,14 +13,26 @@ class RelatedRecordNotFoundError(Exception):
     pass
 
 
-def create_run(db: Session, *, trace_id: UUID, campaign_id: UUID) -> Run:
-    if db.get(Trace, trace_id) is None:
+def create_run(db: Session, *, project_id: UUID, trace_id: UUID, campaign_id: UUID) -> Run:
+    if (
+        db.scalar(select(Trace).where(Trace.trace_id == trace_id, Trace.project_id == project_id))
+        is None
+    ):
         raise RelatedRecordNotFoundError("Trace not found")
-    if db.get(Campaign, campaign_id) is None:
+    if (
+        db.scalar(
+            select(Campaign).where(
+                Campaign.campaign_id == campaign_id,
+                Campaign.project_id == project_id,
+            )
+        )
+        is None
+    ):
         raise RelatedRecordNotFoundError("Campaign not found")
 
     run = Run(
         run_id=uuid4(),
+        project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
         status="queued",
@@ -37,18 +49,26 @@ def enqueue_execute_run(run: Run) -> None:
     get_run_queue().enqueue("worker.execute_run", str(run.run_id))
 
 
-def create_run_and_enqueue(db: Session, *, trace_id: UUID, campaign_id: UUID) -> Run:
-    run = create_run(db=db, trace_id=trace_id, campaign_id=campaign_id)
+def create_run_and_enqueue(
+    db: Session, *, project_id: UUID, trace_id: UUID, campaign_id: UUID
+) -> Run:
+    run = create_run(db=db, project_id=project_id, trace_id=trace_id, campaign_id=campaign_id)
     enqueue_execute_run(run)
     return run
 
 
-def get_run(db: Session, run_id: UUID) -> Run | None:
-    return db.get(Run, run_id)
+def get_run(db: Session, *, project_id: UUID, run_id: UUID) -> Run | None:
+    stmt = select(Run).where(Run.run_id == run_id, Run.project_id == project_id)
+    return db.scalar(stmt)
 
 
-def list_recent_runs(db: Session, *, limit: int = 20) -> list[Run]:
-    stmt = select(Run).order_by(Run.created_at.desc(), Run.run_id.desc()).limit(limit)
+def list_recent_runs(db: Session, *, project_id: UUID, limit: int = 20) -> list[Run]:
+    stmt = (
+        select(Run)
+        .where(Run.project_id == project_id)
+        .order_by(Run.created_at.desc(), Run.run_id.desc())
+        .limit(limit)
+    )
     return list(db.scalars(stmt))
 
 

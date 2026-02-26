@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Search } from "lucide-react";
+import { Bell, ChevronDown, FolderKanban, Search } from "lucide-react";
 
+import { api, type ProjectMetadata } from "@/lib/api";
+import { getStoredProjectId, setStoredProjectId } from "@/lib/tenant-settings";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -15,6 +19,45 @@ const tabs = [
 
 export function TopBar() {
   const pathname = usePathname();
+  const [projects, setProjects] = useState<ProjectMetadata[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProjects() {
+      try {
+        const records = await api.listProjects();
+        if (cancelled) return;
+        setProjects(records);
+        setProjectsError(null);
+
+        const stored = getStoredProjectId();
+        const fallback = records[0]?.project_id ?? "";
+        const next = records.some((project) => project.project_id == stored) ? (stored ?? "") : fallback;
+        setSelectedProjectId(next);
+        if (next) {
+          setStoredProjectId(next);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setProjectsError(error instanceof Error ? error.message : "Failed to load projects");
+      }
+    }
+
+    void loadProjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function handleProjectChange(nextProjectId: string) {
+    setSelectedProjectId(nextProjectId);
+    setStoredProjectId(nextProjectId);
+    window.location.reload();
+  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur">
@@ -51,6 +94,27 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
+            <FolderKanban className="h-4 w-4 text-cyan-200" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
+              <select
+                className="mt-0.5 w-full truncate bg-transparent text-sm text-foreground outline-none"
+                value={selectedProjectId}
+                onChange={(event) => handleProjectChange(event.target.value)}
+                disabled={!projects.length}
+              >
+                {!projects.length ? (
+                  <option value="">{projectsError ? "Projects unavailable" : "Loading projects..."}</option>
+                ) : null}
+                {projects.map((project) => (
+                  <option key={project.project_id} value={project.project_id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </label>
           <div className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground lg:flex">
             <Search className="h-4 w-4" />
             <span>Search runs, tools, attempts</span>

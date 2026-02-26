@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+from typing import Annotated
+
+from app.auth import TenantAuthContext, get_tenant_auth
+from app.db import get_db
+from app.schemas import ApiKeyCreateRequest, ApiKeyCreateResponse
+from app.services.api_key_service import create_api_key_for_tenant
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+
+router = APIRouter(prefix="/v1/api-keys", tags=["api-keys"])
+
+DbSession = Annotated[Session, Depends(get_db)]
+TenantAuth = Annotated[TenantAuthContext, Depends(get_tenant_auth)]
+
+
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=ApiKeyCreateResponse)
+def post_api_key(
+    payload: ApiKeyCreateRequest, db: DbSession, tenant_auth: TenantAuth
+) -> ApiKeyCreateResponse:
+    record, plaintext = create_api_key_for_tenant(
+        db, tenant_id=tenant_auth.tenant_id, name=payload.name
+    )
+    return ApiKeyCreateResponse(
+        api_key_id=record.api_key_id,
+        tenant_id=record.tenant_id,
+        name=record.name,
+        created_at=record.created_at,
+        api_key=plaintext,
+    )

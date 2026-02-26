@@ -11,6 +11,7 @@ def test_policy_gate_strategy_blocks_irreversible_call_without_confirmation_toke
     attempt_id = uuid4()
     attempt = ReplayAttempt(
         attempt_id=attempt_id,
+        project_id=uuid4(),
         run_id=run_id,
         mutation_id="m-jira-timeout",
         result="failed",

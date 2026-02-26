@@ -66,6 +66,13 @@ export type CounterfactualDetail = CounterfactualListItem & {
   attempt_id: string;
 };
 
+export type ProjectMetadata = {
+  project_id: string;
+  tenant_id: string;
+  name: string;
+  created_at: string;
+};
+
 export type TimelineEvent = {
   index: number;
   type: "tool_call" | "tool_result" | "model" | "error" | string;
@@ -101,7 +108,20 @@ export class ApiError extends Error {
 }
 
 const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const PUBLIC_API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
+const PUBLIC_PROJECT_ID = process.env.NEXT_PUBLIC_PROJECT_ID ?? "";
 const BROWSER_PROXY_BASE = "/api/backend";
+
+async function getTenantSettingsHelpers() {
+  if (typeof window === "undefined") {
+    return {
+      getStoredApiKey: () => null,
+      getStoredProjectId: () => null
+    };
+  }
+
+  return import("@/lib/tenant-settings");
+}
 
 function resolveApiBaseUrl() {
   if (typeof window === "undefined") {
@@ -137,12 +157,30 @@ function buildUrl(path: string, query?: Record<string, string | number | undefin
   return isAbsolute ? url.toString() : `${url.pathname}${url.search}`;
 }
 
-async function requestJson<T>(path: string, query?: Record<string, string | number | undefined | null>): Promise<T> {
+async function buildHeaders(options?: { requireProjectHeader?: boolean }) {
+  const helpers = await getTenantSettingsHelpers();
+  const apiKey = helpers.getStoredApiKey?.() || PUBLIC_API_KEY;
+  const projectId = helpers.getStoredProjectId?.() || PUBLIC_PROJECT_ID;
+  const headers: Record<string, string> = {
+    Accept: "application/json"
+  };
+  if (apiKey) {
+    headers["X-API-Key"] = apiKey;
+  }
+  if (options?.requireProjectHeader !== false && projectId) {
+    headers["X-Project-Id"] = projectId;
+  }
+  return headers;
+}
+
+async function requestJson<T>(
+  path: string,
+  query?: Record<string, string | number | undefined | null>,
+  options?: { requireProjectHeader?: boolean }
+): Promise<T> {
   const response = await fetch(buildUrl(path, query), {
     method: "GET",
-    headers: {
-      Accept: "application/json"
-    },
+    headers: await buildHeaders(options),
     cache: "no-store"
   });
 
@@ -161,7 +199,40 @@ async function requestJson<T>(path: string, query?: Record<string, string | numb
   return payload as T;
 }
 
+async function postJson<TResponse, TBody>(
+  path: string,
+  body: TBody,
+  options?: { requireProjectHeader?: boolean }
+): Promise<TResponse> {
+  const headers = await buildHeaders(options);
+  headers["Content-Type"] = "application/json";
+
+  const response = await fetch(buildUrl(path), {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+
+  const text = await response.text();
+  let payload: unknown = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = text;
+  }
+
+  if (!response.ok) {
+    throw new ApiError(`Request failed: ${response.status}`, response.status, payload);
+  }
+
+  return payload as TResponse;
+}
+
 export const api = {
+  listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
+  createProject: (name: string) =>
+    postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),
   listRuns: (limit = 50) => requestJson<RunMetadata[]>("/v1/runs", { limit }),
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),

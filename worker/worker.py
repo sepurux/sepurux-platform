@@ -53,6 +53,7 @@ def execute_run(run_id: str) -> None:
 
             attempt_record = ReplayAttempt(
                 attempt_id=attempt_id,
+                project_id=run.project_id,
                 run_id=run.run_id,
                 mutation_id=outcome.mutation_id,
                 result=outcome.result,
@@ -74,6 +75,7 @@ def execute_run(run_id: str) -> None:
                     db.add(
                         Counterfactual(
                             counterfactual_id=uuid4(),
+                            project_id=run.project_id,
                             attempt_id=attempt_record.attempt_id,
                             strategy=counterfactual.strategy,
                             result=counterfactual.result,
