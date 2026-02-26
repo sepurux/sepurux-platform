@@ -64,3 +64,37 @@ Fetch the timeline artifact through the API (MVP):
 ```bash
 curl -sS http://localhost:8000/v1/attempts/<attempt_id>/timeline
 ```
+
+## Analytics Endpoints
+
+Run-level stats:
+
+```bash
+curl -sS http://localhost:8000/v1/runs/<run_id>/stats
+```
+
+Cross-run tool fragility (MVP uses first failure tool only):
+
+```bash
+curl -sS "http://localhost:8000/v1/tools/fragility?window_days=7&limit=10"
+```
+
+Mutation summary (optional dashboard helper):
+
+```bash
+curl -sS "http://localhost:8000/v1/mutations/summary?window_days=7&limit=10"
+```
+
+## Counterfactual Lite
+
+List counterfactual what-if replays for a failed attempt:
+
+```bash
+curl -sS http://localhost:8000/v1/attempts/<attempt_id>/counterfactuals
+```
+
+Get a single counterfactual result:
+
+```bash
+curl -sS http://localhost:8000/v1/counterfactuals/<counterfactual_id>
+```
