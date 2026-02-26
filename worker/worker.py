@@ -16,6 +16,11 @@ from storage import put_json_object
 logger = logging.getLogger(__name__)
 
 
+def _is_unsafe_failure_reason(failure_reason: str | None) -> bool:
+    reason = (failure_reason or "").lower()
+    return reason.startswith("unsafe") or reason == "policy_blocked"
+
+
 def execute_run(run_id: str) -> None:
     logger.info("Executing run %s", run_id)
     run_uuid = UUID(str(run_id))
@@ -90,7 +95,7 @@ def execute_run(run_id: str) -> None:
                 passed_count += 1
             else:
                 failed_count += 1
-                if (outcome.failure_reason or "").lower() == "policy_blocked":
+                if _is_unsafe_failure_reason(outcome.failure_reason):
                     unsafe_count += 1
 
         prior_summary = run.summary if isinstance(run.summary, dict) else {}
@@ -101,8 +106,10 @@ def execute_run(run_id: str) -> None:
             "timeline_version": "0.1",
             "attempt_count": len(mutations),
             "passed_count": passed_count,
+            "failures": failed_count,
             "failed_count": failed_count,
             "pass_rate": round((passed_count / len(mutations)), 4) if mutations else 0.0,
+            "unsafe_attempts": unsafe_count,
             "unsafe_count": unsafe_count,
         }
         if ci_thresholds is not None:
