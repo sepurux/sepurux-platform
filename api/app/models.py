@@ -96,6 +96,21 @@ class Campaign(Base):
     )
 
 
+class PolicyPack(Base):
+    __tablename__ = "policy_packs"
+
+    policy_pack_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    version: Mapped[str] = mapped_column(Text, nullable=False)
+    policy: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class Run(Base):
     __tablename__ = "runs"
 
@@ -103,6 +118,9 @@ class Run(Base):
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     trace_id: Mapped[UUID] = mapped_column(ForeignKey("traces.trace_id"), nullable=False)
     campaign_id: Mapped[UUID] = mapped_column(ForeignKey("campaigns.campaign_id"), nullable=False)
+    policy_pack_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("policy_packs.policy_pack_id"), nullable=True
+    )
     status: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -146,6 +164,26 @@ class Counterfactual(Base):
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     metrics: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     diff: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class PolicyEvent(Base):
+    __tablename__ = "policy_events"
+
+    policy_event_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("runs.run_id"), nullable=False)
+    attempt_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("replay_attempts.attempt_id"), nullable=True
+    )
+    event_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tool: Mapped[str] = mapped_column(Text, nullable=False)
+    action: Mapped[str] = mapped_column(Text, nullable=False)
+    decision: Mapped[str] = mapped_column(Text, nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
