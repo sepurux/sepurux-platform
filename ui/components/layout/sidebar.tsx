@@ -50,7 +50,7 @@ export function Sidebar() {
         {primaryItems.map((item) => {
           const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
-          const disabled = ["/traces", "/campaigns", "/reports", "/policies", "/settings"].includes(item.href);
+          const disabled = ["/traces", "/campaigns", "/reports", "/settings"].includes(item.href);
 
           return (
             <Link

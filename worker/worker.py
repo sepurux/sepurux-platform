@@ -11,7 +11,8 @@ from rq import Queue, Worker
 from config import get_settings
 from counterfactuals import run_counterfactual_replays
 from db import get_session
-from models import Campaign, Counterfactual, ReplayAttempt, Run, Trace
+from models import Campaign, Counterfactual, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
+from policy_engine import evaluate_policy
 from replayer import build_attempt_replay_outcome, iter_mutations
 from storage import put_json_object
 
@@ -46,6 +47,38 @@ def _is_unsafe_failure_reason(failure_reason: str | None) -> bool:
     return reason.startswith("unsafe") or reason == "policy_blocked"
 
 
+def _policy_blocked_mutation(
+    mutation: Any,
+    *,
+    failure_reason: str,
+    error_type: str,
+    error_message: str,
+) -> dict[str, Any]:
+    mutation_obj = mutation if isinstance(mutation, dict) else {"value": mutation}
+    blocked_mutation = dict(mutation_obj)
+    blocked_mutation["force_fail"] = True
+    blocked_mutation["failure_reason"] = failure_reason
+    blocked_mutation.setdefault("error_type", error_type)
+    blocked_mutation.setdefault("error_message", error_message)
+    return blocked_mutation
+
+
+def _mutation_tool_name(mutation: Any) -> str:
+    mutation_obj = mutation if isinstance(mutation, dict) else {}
+    tool = mutation_obj.get("tool")
+    if isinstance(tool, str) and tool:
+        return tool
+    return "replay.execute"
+
+
+def _mutation_tool_args(mutation: Any) -> dict[str, Any]:
+    mutation_obj = mutation if isinstance(mutation, dict) else {}
+    args = mutation_obj.get("args")
+    if isinstance(args, dict):
+        return args
+    return {}
+
+
 def execute_run(run_id: str) -> None:
     logger.info("Executing run %s", run_id)
     run_uuid = UUID(str(run_id))
@@ -61,6 +94,16 @@ def execute_run(run_id: str) -> None:
             raise ValueError(f"Trace not found for run {run_id}")
         if campaign is None:
             raise ValueError(f"Campaign not found for run {run_id}")
+        policy_pack: PolicyPack | None = None
+        if run.policy_pack_id is not None:
+            policy_pack = db.get(PolicyPack, run.policy_pack_id)
+            if policy_pack is None:
+                raise ValueError(f"Policy pack not found for run {run_id}")
+            if policy_pack.project_id != run.project_id:
+                raise ValueError(f"Policy pack project mismatch for run {run_id}")
+        policy_document: dict[str, Any] | None = None
+        if policy_pack is not None and isinstance(policy_pack.policy, dict):
+            policy_document = policy_pack.policy
 
         run.status = "running"
         db.commit()
@@ -69,13 +112,54 @@ def execute_run(run_id: str) -> None:
         passed_count = 0
         failed_count = 0
         unsafe_count = 0
+        policy_denied_count = 0
+        policy_requires_approval_count = 0
+        policy_events_count = 0
 
         for index, mutation in enumerate(mutations):
             attempt_id = uuid4()
+            mutation_for_replay = mutation
+            if isinstance(policy_document, dict):
+                tool_name = _mutation_tool_name(mutation)
+                evaluation = evaluate_policy(
+                    policy_document,
+                    tool=tool_name,
+                    args=_mutation_tool_args(mutation),
+                )
+                db.add(
+                    PolicyEvent(
+                        policy_event_id=uuid4(),
+                        run_id=run.run_id,
+                        attempt_id=attempt_id,
+                        event_index=2,
+                        tool=tool_name,
+                        action="tool_call",
+                        decision=evaluation.decision,
+                        reason=evaluation.reason,
+                    )
+                )
+                policy_events_count += 1
+                if evaluation.decision == "deny":
+                    policy_denied_count += 1
+                    mutation_for_replay = _policy_blocked_mutation(
+                        mutation,
+                        failure_reason="policy_denied",
+                        error_type="PolicyDeniedError",
+                        error_message=evaluation.reason,
+                    )
+                elif evaluation.decision == "require_approval":
+                    policy_requires_approval_count += 1
+                    mutation_for_replay = _policy_blocked_mutation(
+                        mutation,
+                        failure_reason="policy_requires_approval",
+                        error_type="PolicyApprovalRequiredError",
+                        error_message=evaluation.reason,
+                    )
+
             outcome = build_attempt_replay_outcome(
                 run_id=run.run_id,
                 attempt_id=attempt_id,
-                mutation=mutation,
+                mutation=mutation_for_replay,
                 trace_s3_key=trace.s3_key,
                 default_mutation_id=f"mutation-{index}",
             )
@@ -141,6 +225,9 @@ def execute_run(run_id: str) -> None:
             "pass_rate": round((passed_count / len(mutations)), 4) if mutations else 0.0,
             "unsafe_attempts": unsafe_count,
             "unsafe_count": unsafe_count,
+            "policy_denied_count": policy_denied_count,
+            "policy_requires_approval_count": policy_requires_approval_count,
+            "policy_events_count": policy_events_count,
         }
         if ci_thresholds is not None:
             run.summary["ci_thresholds"] = ci_thresholds

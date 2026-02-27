@@ -31,12 +31,14 @@ class CampaignMetadata(BaseModel):
 class RunCreateRequest(BaseModel):
     trace_id: UUID
     campaign_id: UUID
+    policy_pack_id: UUID | None = None
 
 
 class RunMetadata(BaseModel):
     run_id: UUID
     trace_id: UUID
     campaign_id: UUID
+    policy_pack_id: UUID | None = None
     status: str
     summary: Any | None
     pass_rate: float | None = None
@@ -238,3 +240,30 @@ class ApiKeyMetadata(BaseModel):
 
 class ApiKeyCreateResponse(ApiKeyMetadata):
     api_key: str
+
+
+class PolicyPackCreateRequest(BaseModel):
+    name: str
+    version: str
+    policy: Any
+
+
+class PolicyPackMetadata(BaseModel):
+    policy_pack_id: UUID
+    project_id: UUID
+    name: str
+    version: str
+    policy: Any
+    created_at: datetime
+
+
+class PolicyEventListItem(BaseModel):
+    policy_event_id: UUID
+    run_id: UUID
+    attempt_id: UUID | None
+    event_index: int | None
+    tool: str
+    action: str
+    decision: str
+    reason: str | None
+    created_at: datetime

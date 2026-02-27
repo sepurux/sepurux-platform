@@ -4,7 +4,7 @@ from collections import Counter
 from typing import Any
 from uuid import UUID, uuid4
 
-from app.models import Campaign, ReplayAttempt, Run, Trace
+from app.models import Campaign, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
 from app.queue import get_run_queue
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,7 +14,14 @@ class RelatedRecordNotFoundError(Exception):
     pass
 
 
-def create_run(db: Session, *, project_id: UUID, trace_id: UUID, campaign_id: UUID) -> Run:
+def create_run(
+    db: Session,
+    *,
+    project_id: UUID,
+    trace_id: UUID,
+    campaign_id: UUID,
+    policy_pack_id: UUID | None = None,
+) -> Run:
     if (
         db.scalar(select(Trace).where(Trace.trace_id == trace_id, Trace.project_id == project_id))
         is None
@@ -30,12 +37,23 @@ def create_run(db: Session, *, project_id: UUID, trace_id: UUID, campaign_id: UU
         is None
     ):
         raise RelatedRecordNotFoundError("Campaign not found")
+    if policy_pack_id is not None and (
+        db.scalar(
+            select(PolicyPack).where(
+                PolicyPack.policy_pack_id == policy_pack_id,
+                PolicyPack.project_id == project_id,
+            )
+        )
+        is None
+    ):
+        raise RelatedRecordNotFoundError("Policy pack not found")
 
     return _create_run_record(
         db,
         project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
+        policy_pack_id=policy_pack_id,
         summary=None,
     )
 
@@ -46,6 +64,7 @@ def _create_run_record(
     project_id: UUID,
     trace_id: UUID,
     campaign_id: UUID,
+    policy_pack_id: UUID | None,
     summary: Any | None,
 ) -> Run:
     run = Run(
@@ -53,6 +72,7 @@ def _create_run_record(
         project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
+        policy_pack_id=policy_pack_id,
         status="queued",
         summary=summary,
     )
@@ -68,9 +88,20 @@ def enqueue_execute_run(run: Run) -> None:
 
 
 def create_run_and_enqueue(
-    db: Session, *, project_id: UUID, trace_id: UUID, campaign_id: UUID
+    db: Session,
+    *,
+    project_id: UUID,
+    trace_id: UUID,
+    campaign_id: UUID,
+    policy_pack_id: UUID | None = None,
 ) -> Run:
-    run = create_run(db=db, project_id=project_id, trace_id=trace_id, campaign_id=campaign_id)
+    run = create_run(
+        db=db,
+        project_id=project_id,
+        trace_id=trace_id,
+        campaign_id=campaign_id,
+        policy_pack_id=policy_pack_id,
+    )
     enqueue_execute_run(run)
     return run
 
@@ -98,6 +129,7 @@ def create_ci_run_and_enqueue(
         project_id=trace.project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
+        policy_pack_id=None,
         summary={"ci_thresholds": thresholds},
     )
     enqueue_execute_run(run)
@@ -138,6 +170,7 @@ def run_metadata(run: Run) -> dict[str, Any]:
         "run_id": run.run_id,
         "trace_id": run.trace_id,
         "campaign_id": run.campaign_id,
+        "policy_pack_id": run.policy_pack_id,
         "status": run.status,
         "summary": run.summary,
         "pass_rate": summary_pass_rate,
@@ -195,6 +228,28 @@ def get_run_quality_metrics(
         "failures_by_tool": failures_by_tool_pct,
         "top_failing_tools": top_failing_tools,
     }
+
+
+def list_policy_events_for_run(
+    db: Session,
+    *,
+    run_id: UUID,
+    project_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[PolicyEvent]:
+    stmt = (
+        select(PolicyEvent)
+        .join(Run, Run.run_id == PolicyEvent.run_id)
+        .where(
+            PolicyEvent.run_id == run_id,
+            Run.project_id == project_id,
+        )
+        .order_by(PolicyEvent.created_at.asc(), PolicyEvent.policy_event_id.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(db.scalars(stmt))
 
 
 def _summary_int(summary: dict[str, Any] | None, key: str) -> int | None:
