@@ -115,9 +115,106 @@ def test_policy_pack_requires_approval_and_records_policy_event(
     assert policy_event.decision == "require_approval"
     assert policy_event.tool == "payments.refund"
     assert policy_event.event_index == 2
-    assert "requires approval" in (policy_event.reason or "")
+    assert "approval token" in (policy_event.reason or "")
 
     summary = run.summary or {}
-    assert summary.get("policy_denied_count") == 0
-    assert summary.get("policy_requires_approval_count") == 1
+    assert summary.get("policy_violations_total") == 1
+    assert summary.get("policy_denies") == 0
+    assert summary.get("policy_requires_approval") == 1
     assert summary.get("policy_events_count") == 1
+
+
+def test_policy_pack_blocks_jira_commit_like_and_allows_draft(
+    worker_db_context: sessionmaker[Session],
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    run_id = uuid4()
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Jira Policy Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "jira-commit-without-token",
+                        "tool": "jira.create_issue(commit)",
+                        "args": {"title": "Committed issue"},
+                    },
+                    {
+                        "mutation_id": "jira-draft",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Draft issue"},
+                    },
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="Jira Commit Policy",
+                version="0.1.0",
+                policy={
+                    "version": "0.1",
+                    "defaults": {"unknown_tools": "deny"},
+                    "rules": [
+                        {"match": {"tool": "jira.*"}, "effect": "allow"},
+                    ],
+                    "approval": {"token_field": "confirmation_token"},
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempts = list(
+            db.scalars(
+                select(ReplayAttempt)
+                .where(ReplayAttempt.run_id == run_id)
+                .order_by(ReplayAttempt.mutation_id.asc())
+            )
+        )
+        policy_events = list(
+            db.scalars(
+                select(PolicyEvent)
+                .where(PolicyEvent.run_id == run_id)
+                .order_by(PolicyEvent.policy_event_id.asc())
+            )
+        )
+
+    by_mutation = {attempt.mutation_id: attempt for attempt in attempts}
+    assert by_mutation["jira-commit-without-token"].failure_reason == "policy_requires_approval"
+    assert by_mutation["jira-commit-without-token"].result == "failed"
+    assert by_mutation["jira-draft"].result == "passed"
+
+    assert len(policy_events) == 2
+    decision_by_tool = {event.tool: event.decision for event in policy_events}
+    assert decision_by_tool["jira.create_issue(commit)"] == "require_approval"
+    assert decision_by_tool["jira.create_issue"] == "allow"

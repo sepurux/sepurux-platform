@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from policy_engine import has_confirmation_token, normalize_action
+
 
 @dataclass(frozen=True)
 class ReplayAdapterConfig:
@@ -222,14 +224,29 @@ def _should_block_by_policy(
 ) -> bool:
     if policy_gate is None:
         return False
-    if tool_name not in policy_gate.irreversible_tools:
+    args = mutation_obj.get("args")
+    args_obj = dict(args) if isinstance(args, dict) else {}
+    top_level_confirmation_token = mutation_obj.get("confirmation_token")
+    if (
+        isinstance(top_level_confirmation_token, str)
+        and top_level_confirmation_token
+        and "confirmation_token" not in args_obj
+    ):
+        args_obj["confirmation_token"] = top_level_confirmation_token
+    top_level_approval_token = mutation_obj.get("approval_token")
+    if (
+        isinstance(top_level_approval_token, str)
+        and top_level_approval_token
+        and "approval_token" not in args_obj
+    ):
+        args_obj["approval_token"] = top_level_approval_token
+
+    normalized_tool_name, _ = normalize_action(tool_name, args_obj)
+    if normalized_tool_name not in policy_gate.irreversible_tools:
         return False
     if not policy_gate.require_confirmation_token:
         return False
-    args = mutation_obj.get("args")
-    if isinstance(args, dict) and args.get("confirmation_token"):
-        return False
-    return not bool(mutation_obj.get("confirmation_token"))
+    return not has_confirmation_token(args_obj)
 
 
 def _required_retries_for_failure(failure_reason: str, mutation_obj: dict[str, Any]) -> int:
