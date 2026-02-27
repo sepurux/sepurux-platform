@@ -85,6 +85,63 @@ Mutation summary (optional dashboard helper):
 curl -sS "http://localhost:8000/v1/mutations/summary?window_days=7&limit=10"
 ```
 
+## Mutation Packs (Seeded Chaos Library)
+
+Create a project-scoped mutation pack:
+
+```bash
+curl -sS -X POST http://localhost:8000/v1/mutation-packs \
+  -H 'Content-Type: application/json' \
+  -H 'X-API-Key: <api_key>' \
+  -H 'X-Project-Id: <project_id>' \
+  -d '{
+    "name":"Chaos Starter",
+    "description":"seeded fuzzing defaults",
+    "config":{
+      "max_mutations_per_attempt":2,
+      "mutations":[
+        {
+          "mutation_id":"rename-status",
+          "type":"schema.rename_field",
+          "target":{"tool":"jira.*"},
+          "params":{"from":"status","to":"state"},
+          "probability":1.0,
+          "weight":1.0
+        },
+        {
+          "mutation_id":"timeout-payments",
+          "type":"fault.timeout",
+          "target":{"tool":"payments.*"},
+          "probability":0.25,
+          "weight":1.0
+        }
+      ]
+    }
+  }'
+```
+
+Create a campaign that references a mutation pack:
+
+```bash
+curl -sS -X POST http://localhost:8000/v1/campaigns \
+  -H 'Content-Type: application/json' \
+  -H 'X-API-Key: <api_key>' \
+  -H 'X-Project-Id: <project_id>' \
+  -d '{
+    "name":"Chaos Campaign",
+    "mutation_pack_id":"<mutation_pack_id>",
+    "mutation_set":[{"mutation_id":"baseline","tool":"jira.create_issue"}],
+    "eval_set":{"checks":["status"]}
+  }'
+```
+
+When a run executes with that campaign, each replay attempt persists:
+
+- `seed`: deterministic per attempt
+- `mutation_trace`: applied mutations + event indices/tools
+
+Read it from the attempt detail API (`GET /v1/attempts/<attempt_id>`) or UI pages (`/mutation-packs`, `/attempts/<attempt_id>`).
+
 ## Counterfactual Lite
 
 List counterfactual what-if replays for a failed attempt:

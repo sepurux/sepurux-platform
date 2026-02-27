@@ -85,6 +85,9 @@ function AttemptDetailPanels({
   counterfactuals: CounterfactualListItem[];
 }) {
   const isPolicyBlocked = (attempt.failure_reason ?? "").startsWith("policy_");
+  const mutationTraceApplied = Array.isArray(attempt.mutation_trace?.applied)
+    ? attempt.mutation_trace.applied.length
+    : 0;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
@@ -104,6 +107,11 @@ function AttemptDetailPanels({
             <MetadataRow label="Failure Reason" value={attempt.failure_reason ?? "--"} />
             <MetadataRow label="First Failure Tool" value={attempt.first_failure_tool ?? "--"} />
             <MetadataRow label="First Failure Step" value={attempt.first_failure_event_index ?? "--"} />
+            <MetadataRow label="Mutation Seed" value={attempt.seed ?? "--"} />
+            <MetadataRow
+              label="Mutation Trace"
+              value={attempt.seed === null ? "--" : `${mutationTraceApplied} applied mutation(s)`}
+            />
             <MetadataRow
               label="Policy Blocked"
               value={
