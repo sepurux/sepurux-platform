@@ -12,7 +12,7 @@ from config import get_settings
 from counterfactuals import run_counterfactual_replays
 from db import get_session
 from models import Campaign, Counterfactual, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
-from policy_engine import evaluate_policy
+from policy_engine import evaluate_policy, has_confirmation_token
 from replayer import build_attempt_replay_outcome, iter_mutations
 from storage import put_json_object
 
@@ -79,6 +79,49 @@ def _mutation_tool_args(mutation: Any) -> dict[str, Any]:
     return {}
 
 
+def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | None]:
+    mutation_obj = mutation if isinstance(mutation, dict) else {}
+    event_obj = mutation_obj.get("event")
+    if isinstance(event_obj, dict) and event_obj.get("type") == "tool_call":
+        event_tool = event_obj.get("tool")
+        event_args = event_obj.get("args")
+        tool_name = event_tool if isinstance(event_tool, str) and event_tool else _mutation_tool_name(mutation)
+        args = event_args if isinstance(event_args, dict) else _mutation_tool_args(mutation)
+        event_index = event_obj.get("index")
+        index = event_index if isinstance(event_index, int) else None
+    else:
+        tool_name = _mutation_tool_name(mutation)
+        args = _mutation_tool_args(mutation)
+        mutation_event_index = mutation_obj.get("event_index")
+        index = mutation_event_index if isinstance(mutation_event_index, int) else 2
+
+    merged_args = dict(args)
+    top_level_confirmation_token = mutation_obj.get("confirmation_token")
+    if (
+        isinstance(top_level_confirmation_token, str)
+        and top_level_confirmation_token
+        and "confirmation_token" not in merged_args
+    ):
+        merged_args["confirmation_token"] = top_level_confirmation_token
+
+    if not merged_args:
+        fallback_keys = (
+            "commit",
+            "mode",
+            "action",
+            "finalize",
+            "dry_run",
+            "confirm",
+            "confirmation_token",
+            "approval_token",
+        )
+        for key in fallback_keys:
+            if key in mutation_obj:
+                merged_args[key] = mutation_obj[key]
+
+    return tool_name, merged_args, index
+
+
 def execute_run(run_id: str) -> None:
     logger.info("Executing run %s", run_id)
     run_uuid = UUID(str(run_id))
@@ -112,43 +155,48 @@ def execute_run(run_id: str) -> None:
         passed_count = 0
         failed_count = 0
         unsafe_count = 0
-        policy_denied_count = 0
-        policy_requires_approval_count = 0
+        policy_denies = 0
+        policy_requires_approval = 0
         policy_events_count = 0
 
         for index, mutation in enumerate(mutations):
             attempt_id = uuid4()
             mutation_for_replay = mutation
             if isinstance(policy_document, dict):
-                tool_name = _mutation_tool_name(mutation)
+                tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
                 evaluation = evaluate_policy(
                     policy_document,
-                    tool=tool_name,
-                    args=_mutation_tool_args(mutation),
+                    tool_name=tool_name,
+                    args=policy_args,
+                    event_index=event_index,
+                )
+                requires_approval_without_token = (
+                    evaluation.decision == "require_approval"
+                    and not has_confirmation_token(policy_args)
                 )
                 db.add(
                     PolicyEvent(
                         policy_event_id=uuid4(),
                         run_id=run.run_id,
                         attempt_id=attempt_id,
-                        event_index=2,
+                        event_index=event_index,
                         tool=tool_name,
-                        action="tool_call",
+                        action="commit" if evaluation.is_commit_like else "tool_call",
                         decision=evaluation.decision,
                         reason=evaluation.reason,
                     )
                 )
                 policy_events_count += 1
                 if evaluation.decision == "deny":
-                    policy_denied_count += 1
+                    policy_denies += 1
                     mutation_for_replay = _policy_blocked_mutation(
                         mutation,
                         failure_reason="policy_denied",
                         error_type="PolicyDeniedError",
                         error_message=evaluation.reason,
                     )
-                elif evaluation.decision == "require_approval":
-                    policy_requires_approval_count += 1
+                elif requires_approval_without_token:
+                    policy_requires_approval += 1
                     mutation_for_replay = _policy_blocked_mutation(
                         mutation,
                         failure_reason="policy_requires_approval",
@@ -225,8 +273,12 @@ def execute_run(run_id: str) -> None:
             "pass_rate": round((passed_count / len(mutations)), 4) if mutations else 0.0,
             "unsafe_attempts": unsafe_count,
             "unsafe_count": unsafe_count,
-            "policy_denied_count": policy_denied_count,
-            "policy_requires_approval_count": policy_requires_approval_count,
+            "policy_violations_total": policy_denies + policy_requires_approval,
+            "policy_denies": policy_denies,
+            "policy_requires_approval": policy_requires_approval,
+            # Backward-compatible aliases.
+            "policy_denied_count": policy_denies,
+            "policy_requires_approval_count": policy_requires_approval,
             "policy_events_count": policy_events_count,
         }
         if ci_thresholds is not None:
