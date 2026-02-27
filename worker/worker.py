@@ -85,7 +85,11 @@ def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | No
     if isinstance(event_obj, dict) and event_obj.get("type") == "tool_call":
         event_tool = event_obj.get("tool")
         event_args = event_obj.get("args")
-        tool_name = event_tool if isinstance(event_tool, str) and event_tool else _mutation_tool_name(mutation)
+        tool_name = (
+            event_tool
+            if isinstance(event_tool, str) and event_tool
+            else _mutation_tool_name(mutation)
+        )
         args = event_args if isinstance(event_args, dict) else _mutation_tool_args(mutation)
         event_index = event_obj.get("index")
         index = event_index if isinstance(event_index, int) else None

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 PolicyDecision = Literal["allow", "deny", "require_approval"]
 
@@ -17,6 +17,11 @@ class PolicyEvaluation:
     normalized_tool_name: str
     is_commit_like: bool
     matched_rule_index: int | None = None
+
+
+class _SafeActionDecision(TypedDict):
+    decision: PolicyDecision
+    reason: str
 
 
 def normalize_action(tool_name: str, args: dict[str, Any] | None) -> tuple[str, bool]:
@@ -130,7 +135,7 @@ def _safe_action_gate(
     *,
     normalized_tool_name: str,
     is_commit_like: bool,
-) -> dict[str, str] | None:
+) -> _SafeActionDecision | None:
     if normalized_tool_name == "payments.refund":
         return {
             "decision": "require_approval",
@@ -193,7 +198,7 @@ def _is_subset(*, expected: Any, actual: Any) -> bool:
             if not _is_subset(expected=expected_value, actual=actual[key]):
                 return False
         return True
-    return expected == actual
+    return bool(expected == actual)
 
 
 def _unknown_tools_default(policy: dict[str, Any]) -> Literal["allow", "deny"]:
