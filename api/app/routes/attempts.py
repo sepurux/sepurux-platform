@@ -31,6 +31,8 @@ def _to_attempt_detail(attempt) -> ReplayAttemptDetail:
         artifacts_s3_key=attempt.artifacts_s3_key,
         first_failure_event_index=attempt.first_failure_event_index,
         first_failure_tool=attempt.first_failure_tool,
+        seed=attempt.seed,
+        mutation_trace=attempt.mutation_trace,
         created_at=attempt.created_at,
     )
 

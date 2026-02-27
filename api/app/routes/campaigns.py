@@ -8,6 +8,7 @@ from app.db import get_db
 from app.schemas import CampaignCreateRequest, CampaignMetadata
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
+from app.services.mutation_pack_service import get_mutation_pack
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -20,6 +21,7 @@ ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 def _to_campaign_metadata(campaign) -> CampaignMetadata:
     return CampaignMetadata(
         campaign_id=campaign.campaign_id,
+        mutation_pack_id=campaign.mutation_pack_id,
         name=campaign.name,
         mutation_set=campaign.mutation_set,
         eval_set=campaign.eval_set,
@@ -33,12 +35,23 @@ def post_campaign(
     db: DbSession,
     project_scope: ProjectScopeDep,
 ) -> CampaignMetadata:
+    if payload.mutation_pack_id is not None and (
+        get_mutation_pack(
+            db,
+            project_id=project_scope.project_id,
+            mutation_pack_id=payload.mutation_pack_id,
+        )
+        is None
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found")
+
     campaign = create_campaign(
         db,
         project_id=project_scope.project_id,
         name=payload.name,
         mutation_set=payload.mutation_set,
         eval_set=payload.eval_set,
+        mutation_pack_id=payload.mutation_pack_id,
     )
     return _to_campaign_metadata(campaign)
 

@@ -11,7 +11,17 @@ from rq import Queue, Worker
 from config import get_settings
 from counterfactuals import run_counterfactual_replays
 from db import get_session
-from models import Campaign, Counterfactual, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
+from models import (
+    Campaign,
+    Counterfactual,
+    MutationPack,
+    PolicyEvent,
+    PolicyPack,
+    ReplayAttempt,
+    Run,
+    Trace,
+)
+from mutation_engine import apply_mutation_pack
 from policy_engine import evaluate_policy, has_confirmation_token
 from replayer import build_attempt_replay_outcome, iter_mutations
 from storage import put_json_object
@@ -152,6 +162,22 @@ def execute_run(run_id: str) -> None:
         if policy_pack is not None and isinstance(policy_pack.policy, dict):
             policy_document = policy_pack.policy
 
+        mutation_pack: MutationPack | None = None
+        mutation_pack_config: dict[str, Any] | None = None
+        if campaign.mutation_pack_id is not None:
+            mutation_pack = db.get(MutationPack, campaign.mutation_pack_id)
+            if mutation_pack is None:
+                raise ValueError(
+                    f"Mutation pack not found for campaign {campaign.campaign_id} in run {run_id}"
+                )
+            if mutation_pack.project_id != run.project_id:
+                raise ValueError(
+                    f"Mutation pack project mismatch for campaign {campaign.campaign_id} in run {run_id}"
+                )
+            mutation_pack_config = (
+                mutation_pack.config if isinstance(mutation_pack.config, dict) else {}
+            )
+
         run.status = "running"
         db.commit()
 
@@ -215,21 +241,47 @@ def execute_run(run_id: str) -> None:
                 trace_s3_key=trace.s3_key,
                 default_mutation_id=f"mutation-{index}",
             )
+            result = outcome.result
+            failure_reason = outcome.failure_reason
+            first_failure_event_index = outcome.first_failure_event_index
+            first_failure_tool = outcome.first_failure_tool
+            timeline_artifact = outcome.timeline_artifact
+            mutation_seed: int | None = None
+            mutation_trace: dict[str, Any] | None = None
+
+            if mutation_pack_config is not None:
+                mutation_result = apply_mutation_pack(
+                    mutation_pack_config,
+                    run_id=run.run_id,
+                    attempt_id=attempt_id,
+                    attempt_index=index,
+                    timeline_artifact=timeline_artifact,
+                )
+                mutation_seed = mutation_result.seed
+                mutation_trace = mutation_result.mutation_trace
+                timeline_artifact = mutation_result.timeline_artifact
+
+                if mutation_result.forced_failure_reason is not None:
+                    result = "failed"
+                    failure_reason = mutation_result.forced_failure_reason
+                    first_failure_event_index = mutation_result.first_failure_event_index
+                    first_failure_tool = mutation_result.first_failure_tool
+
             artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"
-            put_json_object(artifact_key, outcome.timeline_artifact)
-            tools_touched, tool_call_counts = _extract_tool_usage_metadata(
-                outcome.timeline_artifact
-            )
+            put_json_object(artifact_key, timeline_artifact)
+            tools_touched, tool_call_counts = _extract_tool_usage_metadata(timeline_artifact)
 
             attempt_record = ReplayAttempt(
                 attempt_id=attempt_id,
                 project_id=run.project_id,
                 run_id=run.run_id,
                 mutation_id=outcome.mutation_id,
-                result=outcome.result,
-                failure_reason=outcome.failure_reason,
-                first_failure_event_index=outcome.first_failure_event_index,
-                first_failure_tool=outcome.first_failure_tool,
+                result=result,
+                failure_reason=failure_reason,
+                first_failure_event_index=first_failure_event_index,
+                first_failure_tool=first_failure_tool,
+                seed=mutation_seed,
+                mutation_trace=mutation_trace,
                 tools_touched=tools_touched,
                 tool_call_counts=tool_call_counts,
                 artifacts_s3_key=artifact_key,
@@ -237,7 +289,7 @@ def execute_run(run_id: str) -> None:
             db.add(attempt_record)
             db.flush()
 
-            if outcome.result == "failed":
+            if result == "failed":
                 for counterfactual in run_counterfactual_replays(
                     run_id=run.run_id,
                     attempt=attempt_record,
@@ -257,11 +309,11 @@ def execute_run(run_id: str) -> None:
                         )
                     )
 
-            if outcome.result == "passed":
+            if result == "passed":
                 passed_count += 1
             else:
                 failed_count += 1
-                if _is_unsafe_failure_reason(outcome.failure_reason):
+                if _is_unsafe_failure_reason(failure_reason):
                     unsafe_count += 1
 
         prior_summary = run.summary if isinstance(run.summary, dict) else {}

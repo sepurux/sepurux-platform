@@ -33,6 +33,7 @@ class Campaign(Base):
 
     campaign_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    mutation_pack_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     mutation_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     eval_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
@@ -49,6 +50,19 @@ class PolicyPack(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     version: Mapped[str] = mapped_column(Text, nullable=False)
     policy: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class MutationPack(Base):
+    __tablename__ = "mutation_packs"
+
+    mutation_pack_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    config: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -80,6 +94,8 @@ class ReplayAttempt(Base):
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     first_failure_event_index: Mapped[int | None] = mapped_column(nullable=True)
     first_failure_tool: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seed: Mapped[int | None] = mapped_column(nullable=True)
+    mutation_trace: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     tools_touched: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     tool_call_counts: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     artifacts_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
