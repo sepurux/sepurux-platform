@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
 
-import { api, type ReplayAttemptListItem, type RunMetadata, type RunStats } from "@/lib/api";
+import {
+  api,
+  type PolicyEventListItem,
+  type ReplayAttemptListItem,
+  type RunMetadata,
+  type RunStats,
+} from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +21,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; run: RunMetadata; stats: RunStats | null; attempts: ReplayAttemptListItem[] };
+  | {
+      status: "ready";
+      run: RunMetadata;
+      stats: RunStats | null;
+      attempts: ReplayAttemptListItem[];
+      policyEvents: PolicyEventListItem[];
+    };
 
 export function RunDetailView({ runId }: { runId: string }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -23,12 +35,13 @@ export function RunDetailView({ runId }: { runId: string }) {
   async function load() {
     setState({ status: "loading" });
     try {
-      const [run, statsResult, attempts] = await Promise.all([
+      const [run, statsResult, attempts, policyEvents] = await Promise.all([
         api.getRun(runId),
         api.getRunStats(runId).catch(() => null),
         api.listRunAttempts(runId, { limit: 200, offset: 0 }),
+        api.listRunPolicyEvents(runId, { limit: 200, offset: 0 }).catch(() => []),
       ]);
-      setState({ status: "ready", run, stats: statsResult, attempts });
+      setState({ status: "ready", run, stats: statsResult, attempts, policyEvents });
     } catch (error) {
       setState({ status: "error", message: error instanceof Error ? error.message : "Failed to load run" });
     }
@@ -58,14 +71,33 @@ export function RunDetailView({ runId }: { runId: string }) {
       ) : state.status === "error" ? (
         <Card className="border-rose-400/20"><CardContent className="p-5 text-sm text-rose-100">{state.message}</CardContent></Card>
       ) : (
-        <RunDetailPanels run={state.run} stats={state.stats} attempts={state.attempts} />
+        <RunDetailPanels
+          run={state.run}
+          stats={state.stats}
+          attempts={state.attempts}
+          policyEvents={state.policyEvents}
+        />
       )}
     </div>
   );
 }
 
-function RunDetailPanels({ run, stats, attempts }: { run: RunMetadata; stats: RunStats | null; attempts: ReplayAttemptListItem[] }) {
+function RunDetailPanels({
+  run,
+  stats,
+  attempts,
+  policyEvents,
+}: {
+  run: RunMetadata;
+  stats: RunStats | null;
+  attempts: ReplayAttemptListItem[];
+  policyEvents: PolicyEventListItem[];
+}) {
   const derived = useMemo(() => deriveRunOverview(run, stats, attempts), [run, stats, attempts]);
+  const policyViolationCount = useMemo(
+    () => derivePolicyViolationCount(run, policyEvents),
+    [run, policyEvents]
+  );
 
   return (
     <>
@@ -80,11 +112,12 @@ function RunDetailPanels({ run, stats, attempts }: { run: RunMetadata; stats: Ru
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <StatTile label="Attempts" value={String(derived.total)} />
             <StatTile label="Passed" value={String(derived.passed)} tone="success" />
             <StatTile label="Failed" value={String(derived.failed)} tone="danger" />
             <StatTile label="Pass Rate" value={derived.passRateLabel} tone="cyan" />
+            <StatTile label="Policy Violations" value={String(policyViolationCount)} tone={policyViolationCount > 0 ? "danger" : "default"} />
           </div>
         </CardContent>
       </Card>
@@ -93,6 +126,8 @@ function RunDetailPanels({ run, stats, attempts }: { run: RunMetadata; stats: Ru
         <RunStatsCards stats={stats} />
         <AttemptsTable attempts={attempts} />
       </div>
+
+      <PolicyEventsTable policyEvents={policyEvents} />
     </>
   );
 }
@@ -196,6 +231,67 @@ function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
   );
 }
 
+function PolicyEventsTable({ policyEvents }: { policyEvents: PolicyEventListItem[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Policy Events</CardTitle>
+        <CardDescription>Policy decisions recorded for replayed tool calls.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Decision</TableHead>
+              <TableHead>Tool</TableHead>
+              <TableHead>Reason</TableHead>
+              <TableHead>Event Index</TableHead>
+              <TableHead>Attempt</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {policyEvents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                  No policy events recorded for this run.
+                </TableCell>
+              </TableRow>
+            ) : (
+              policyEvents.map((event) => (
+                <TableRow key={event.policy_event_id}>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        event.decision === "allow"
+                          ? "success"
+                          : event.decision === "deny"
+                            ? "danger"
+                            : "warning"
+                      }
+                    >
+                      {event.decision}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[220px] truncate text-foreground" title={event.tool}>
+                    {event.tool}
+                  </TableCell>
+                  <TableCell className="max-w-[360px] truncate text-muted-foreground" title={event.reason ?? ""}>
+                    {event.reason ?? "--"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{event.event_index ?? "--"}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {event.attempt_id ? shortId(event.attempt_id, 10) : "--"}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
 function deriveRunOverview(run: RunMetadata, stats: RunStats | null, attempts: ReplayAttemptListItem[]) {
   if (stats) {
     return {
@@ -216,6 +312,18 @@ function deriveRunOverview(run: RunMetadata, stats: RunStats | null, attempts: R
     failed,
     passRateLabel: total > 0 ? formatPercent(passed / total, 1) : "--",
   };
+}
+
+function derivePolicyViolationCount(run: RunMetadata, policyEvents: PolicyEventListItem[]) {
+  const byEvents = policyEvents.filter((item) => item.decision !== "allow").length;
+  if (byEvents > 0) return byEvents;
+  const summary = (run.summary ?? {}) as Record<string, unknown>;
+  const denied = typeof summary.policy_denied_count === "number" ? summary.policy_denied_count : 0;
+  const approval =
+    typeof summary.policy_requires_approval_count === "number"
+      ? summary.policy_requires_approval_count
+      : 0;
+  return denied + approval;
 }
 
 function StatTile({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "danger" | "cyan" }) {

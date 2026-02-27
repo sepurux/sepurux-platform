@@ -2,6 +2,7 @@ export type RunMetadata = {
   run_id: string;
   trace_id: string;
   campaign_id: string;
+  policy_pack_id: string | null;
   status: string;
   summary: Record<string, unknown> | null;
   created_at: string;
@@ -70,6 +71,27 @@ export type ProjectMetadata = {
   project_id: string;
   tenant_id: string;
   name: string;
+  created_at: string;
+};
+
+export type PolicyPackMetadata = {
+  policy_pack_id: string;
+  project_id: string;
+  name: string;
+  version: string;
+  policy: Record<string, unknown>;
+  created_at: string;
+};
+
+export type PolicyEventListItem = {
+  policy_event_id: string;
+  run_id: string;
+  attempt_id: string | null;
+  event_index: number | null;
+  tool: string;
+  action: string;
+  decision: "allow" | "deny" | "require_approval" | string;
+  reason: string | null;
   created_at: string;
 };
 
@@ -234,9 +256,17 @@ export const api = {
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),
+  listPolicyPacks: () => requestJson<PolicyPackMetadata[]>("/v1/policy-packs"),
+  getPolicyPack: (policyPackId: string) =>
+    requestJson<PolicyPackMetadata>(`/v1/policy-packs/${policyPackId}`),
   listRuns: (limit = 50) => requestJson<RunMetadata[]>("/v1/runs", { limit }),
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
+  listRunPolicyEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
+    requestJson<PolicyEventListItem[]>(`/v1/runs/${runId}/policy-events`, {
+      limit: options?.limit ?? 200,
+      offset: options?.offset ?? 0,
+    }),
   listRunAttempts: (runId: string, options?: { limit?: number; offset?: number; result?: string }) =>
     requestJson<ReplayAttemptListItem[]>(`/v1/runs/${runId}/attempts`, {
       limit: options?.limit ?? 50,

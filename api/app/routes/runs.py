@@ -5,13 +5,14 @@ from uuid import UUID
 
 from app.auth import ProjectScope, require_project_scope
 from app.db import get_db
-from app.models import ReplayAttempt
-from app.schemas import ReplayAttemptListItem, RunCreateRequest, RunMetadata
+from app.models import PolicyEvent, ReplayAttempt
+from app.schemas import PolicyEventListItem, ReplayAttemptListItem, RunCreateRequest, RunMetadata
 from app.services.attempt_service import list_attempts_for_run
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_run_and_enqueue,
     get_run_quality_metrics,
+    list_policy_events_for_run,
     list_recent_runs,
     run_metadata,
 )
@@ -47,6 +48,20 @@ def _to_attempt_list_item(attempt: ReplayAttempt) -> ReplayAttemptListItem:
     )
 
 
+def _to_policy_event_list_item(policy_event: PolicyEvent) -> PolicyEventListItem:
+    return PolicyEventListItem(
+        policy_event_id=policy_event.policy_event_id,
+        run_id=policy_event.run_id,
+        attempt_id=policy_event.attempt_id,
+        event_index=policy_event.event_index,
+        tool=policy_event.tool,
+        action=policy_event.action,
+        decision=policy_event.decision,
+        reason=policy_event.reason,
+        created_at=policy_event.created_at,
+    )
+
+
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RunMetadata)
 def post_run(
     payload: RunCreateRequest, db: DbSession, project_scope: ProjectScopeDep
@@ -57,6 +72,7 @@ def post_run(
             project_id=project_scope.project_id,
             trace_id=payload.trace_id,
             campaign_id=payload.campaign_id,
+            policy_pack_id=payload.policy_pack_id,
         )
     except RelatedRecordNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -102,3 +118,24 @@ def get_run_attempts(
         result=result,
     )
     return [_to_attempt_list_item(attempt) for attempt in attempts]
+
+
+@router.get("/{run_id}/policy-events", response_model=list[PolicyEventListItem])
+def get_run_policy_events(
+    run_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> list[PolicyEventListItem]:
+    run = get_run_record(db, project_id=project_scope.project_id, run_id=run_id)
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+    policy_events = list_policy_events_for_run(
+        db,
+        project_id=project_scope.project_id,
+        run_id=run_id,
+        limit=limit,
+        offset=offset,
+    )
+    return [_to_policy_event_list_item(item) for item in policy_events]
