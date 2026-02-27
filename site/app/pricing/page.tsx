@@ -1,4 +1,5 @@
 import { PricingTable } from "@/components/sections/pricing-table";
+import { WaitlistForm } from "@/components/waitlist-form";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function PricingPage() {
@@ -25,9 +26,9 @@ export default function PricingPage() {
             <p className="mt-3 text-muted-foreground">
               Tell us your volume, deployment model, and security requirements. We will tailor an enterprise rollout.
             </p>
-            <p className="mt-5 text-sm text-muted-foreground">
-              Waitlist form will be enabled here in the next implementation step.
-            </p>
+            <div className="mt-6">
+              <WaitlistForm />
+            </div>
           </CardContent>
         </Card>
       </section>

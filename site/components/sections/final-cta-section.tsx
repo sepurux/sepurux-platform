@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { WaitlistForm } from "@/components/waitlist-form";
 
 export function FinalCtaSection() {
   return (
@@ -12,13 +12,8 @@ export function FinalCtaSection() {
           Join the waitlist to get early access to replay diagnostics, mutation packs, policy packs,
           and CI gates.
         </p>
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Button asChild size="lg">
-            <a href="/pricing">Request access</a>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <a href="/docs">Read docs</a>
-          </Button>
+        <div className="mt-8">
+          <WaitlistForm />
         </div>
       </div>
     </section>
