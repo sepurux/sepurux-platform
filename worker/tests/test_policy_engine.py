@@ -1,59 +1,80 @@
 from __future__ import annotations
 
-from policy_engine import evaluate_policy
+from policy_engine import evaluate_policy, normalize_action
 
 
-def test_evaluate_policy_allows_exact_rule_match() -> None:
-    policy = {
-        "version": "0.1",
-        "defaults": {"unknown_tools": "deny"},
-        "rules": [
-            {"match": {"tool": "payments.refund"}, "effect": "allow"},
-        ],
-    }
+def test_normalize_action_marks_commit_like_for_parenthesized_tool_name() -> None:
+    normalized_tool, commit_like = normalize_action("jira.create_issue(commit)", args={})
 
-    evaluation = evaluate_policy(policy, tool="payments.refund", args={"amount": 10})
-
-    assert evaluation.decision == "allow"
-    assert "allowed" in evaluation.reason
+    assert normalized_tool == "jira.create_issue"
+    assert commit_like is True
 
 
-def test_evaluate_policy_denies_wildcard_rule_match() -> None:
+def test_normalize_action_marks_commit_like_for_commit_tool_suffix() -> None:
+    normalized_tool, commit_like = normalize_action("jira.create_issue_commit", args={})
+
+    assert normalized_tool == "jira.create_issue"
+    assert commit_like is True
+
+
+def test_normalize_action_marks_commit_like_for_args_commit_true() -> None:
+    normalized_tool, commit_like = normalize_action("jira.create_issue", args={"commit": True})
+
+    assert normalized_tool == "jira.create_issue"
+    assert commit_like is True
+
+
+def test_normalize_action_marks_commit_like_for_args_mode_commit() -> None:
+    normalized_tool, commit_like = normalize_action("jira.create_issue", args={"mode": "commit"})
+
+    assert normalized_tool == "jira.create_issue"
+    assert commit_like is True
+
+
+def test_evaluate_policy_supports_wildcard_and_args_subset_match() -> None:
     policy = {
         "version": "0.1",
         "defaults": {"unknown_tools": "allow"},
         "rules": [
             {
-                "match": {"tool": "db.write.*"},
+                "match": {
+                    "tool": "db.write.*",
+                    "args": {"table": "users", "mode": "shadow"},
+                },
                 "effect": "deny",
                 "reason": "no writes in replay",
             }
         ],
     }
 
-    evaluation = evaluate_policy(policy, tool="db.write.users", args={"name": "alice"})
+    evaluation = evaluate_policy(
+        policy,
+        tool_name="db.write.users",
+        args={"table": "users", "mode": "shadow", "dry_run": True},
+    )
 
     assert evaluation.decision == "deny"
     assert evaluation.reason == "no writes in replay"
 
 
-def test_evaluate_policy_requires_approval_without_token() -> None:
+def test_evaluate_policy_safe_gate_blocks_jira_commit_like_without_token() -> None:
     policy = {
         "version": "0.1",
         "defaults": {"unknown_tools": "allow"},
-        "rules": [
-            {"match": {"tool": "payments.refund"}, "effect": "require_approval"},
-        ],
-        "approval": {"token_field": "confirmation_token"},
+        "rules": [{"match": {"tool": "jira.*"}, "effect": "allow"}],
     }
 
-    missing_token = evaluate_policy(policy, tool="payments.refund", args={"amount": 99})
-    present_token = evaluate_policy(
+    commit_like = evaluate_policy(
         policy,
-        tool="payments.refund",
-        args={"amount": 99, "confirmation_token": "ok"},
+        tool_name="jira.create_issue(commit)",
+        args={"title": "Issue from replay"},
+    )
+    draft = evaluate_policy(
+        policy,
+        tool_name="jira.create_issue",
+        args={"title": "Draft issue"},
     )
 
-    assert missing_token.decision == "require_approval"
-    assert "requires approval" in missing_token.reason
-    assert present_token.decision == "allow"
+    assert commit_like.decision == "require_approval"
+    assert "requires explicit approval token" in commit_like.reason
+    assert draft.decision == "allow"
