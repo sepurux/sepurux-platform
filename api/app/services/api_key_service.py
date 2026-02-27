@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 from app.auth import generate_api_key, hash_api_key
 from app.models import ApiKey
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
@@ -24,3 +25,12 @@ def create_api_key_for_tenant(
     db.commit()
     db.refresh(record)
     return record, plaintext
+
+
+def list_api_keys_for_tenant(db: Session, *, tenant_id: UUID) -> list[ApiKey]:
+    stmt = (
+        select(ApiKey)
+        .where(ApiKey.tenant_id == tenant_id)
+        .order_by(ApiKey.created_at.desc(), ApiKey.api_key_id.desc())
+    )
+    return list(db.scalars(stmt))
