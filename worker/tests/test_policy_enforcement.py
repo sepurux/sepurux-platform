@@ -115,7 +115,7 @@ def test_policy_pack_requires_approval_and_records_policy_event(
     assert policy_event.decision == "require_approval"
     assert policy_event.tool == "payments.refund"
     assert policy_event.event_index == 2
-    assert "requires approval" in (policy_event.reason or "")
+    assert "approval token" in (policy_event.reason or "")
 
     summary = run.summary or {}
     assert summary.get("policy_violations_total") == 1
