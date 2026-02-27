@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { buildPageMetadata } from "@/lib/site";
 
 const quickstart = `# 1) create trace
 curl -X POST http://localhost:8000/v1/traces \\
@@ -18,6 +20,13 @@ curl -X POST http://localhost:8000/v1/runs ...
 
 # 4) inspect stats
 curl http://localhost:8000/v1/runs/<run_id>/stats`;
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Docs",
+  description:
+    "Crash Lab quickstart snippets and links to API docs, OpenAPI schema, and reliability workflows.",
+  path: "/docs",
+});
 
 export default function DocsPage() {
   return (

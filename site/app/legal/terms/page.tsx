@@ -1,3 +1,13 @@
+import type { Metadata } from "next";
+
+import { buildPageMetadata } from "@/lib/site";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Terms of Service",
+  description: "Crash Lab terms of service for acceptable use, liability, and legal contact.",
+  path: "/legal/terms",
+});
+
 export default function TermsPage() {
   return (
     <div className="site-container py-16 md:py-24">

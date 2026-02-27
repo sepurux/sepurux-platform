@@ -12,6 +12,22 @@ Run DB migrations in the API container:
 docker compose -f infra/docker-compose.yml exec api alembic upgrade head
 ```
 
+## Marketing Site (`/site`)
+
+Run the standalone startup marketing website:
+
+```bash
+cd site
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000`.
+
+Optional environment variables:
+
+- `NEXT_PUBLIC_SITE_URL` (default: `https://crashlab.ai`) for canonical/OG URL generation
+
 ## API Quick Start
 
 Create a trace:

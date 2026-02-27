@@ -51,6 +51,15 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Keep marketing site source tracked
+!site/lib/
+!site/lib/**
+
 # Translations
 *.mo
 *.pot

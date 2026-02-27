@@ -3,12 +3,38 @@ import type { ReactNode } from "react";
 
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
+import { siteConfig } from "@/lib/site";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Crash Lab",
-  description: "Chaos engineering for AI agents.",
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: "Crash Lab | Chaos engineering for AI agents",
+    template: "%s | Crash Lab",
+  },
+  description: siteConfig.description,
+  openGraph: {
+    title: "Crash Lab | Chaos engineering for AI agents",
+    description: siteConfig.description,
+    type: "website",
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+        alt: "Crash Lab",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Crash Lab | Chaos engineering for AI agents",
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

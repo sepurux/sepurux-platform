@@ -1,3 +1,13 @@
+import type { Metadata } from "next";
+
+import { buildPageMetadata } from "@/lib/site";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Privacy Policy",
+  description: "Crash Lab privacy policy for data collection, processing, retention, and contact.",
+  path: "/legal/privacy",
+});
+
 export default function PrivacyPage() {
   return (
     <div className="site-container py-16 md:py-24">

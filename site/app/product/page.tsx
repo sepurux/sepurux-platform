@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import { CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildPageMetadata } from "@/lib/site";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Product",
+  description:
+    "Deep dive into Crash Lab replay, mutation packs, counterfactuals, policy packs, and CI gate workflows.",
+  path: "/product",
+});
 
 const modules = [
   {

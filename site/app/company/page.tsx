@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildPageMetadata } from "@/lib/site";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Company",
+  description:
+    "About Crash Lab and contact information for platform engineering, security, and partnerships.",
+  path: "/company",
+});
 
 export default function CompanyPage() {
   return (

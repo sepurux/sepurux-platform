@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
+
 import { PricingTable } from "@/components/sections/pricing-table";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { Card, CardContent } from "@/components/ui/card";
+import { buildPageMetadata } from "@/lib/site";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Pricing",
+  description:
+    "Simple pricing for Crash Lab with Starter, Team, and Enterprise tiers for AI agent reliability programs.",
+  path: "/pricing",
+});
 
 export default function PricingPage() {
   return (

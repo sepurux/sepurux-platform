@@ -53,6 +53,10 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isWaitlistRole(value: string): value is WaitlistRole {
+  return allowedRoles.has(value as WaitlistRole);
+}
+
 async function loadEntries(filePath: string): Promise<WaitlistEntry[]> {
   try {
     const raw = await readFile(filePath, "utf8");
@@ -81,14 +85,14 @@ export async function POST(request: Request) {
   }
 
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-  const role = typeof body.role === "string" ? (body.role.trim() as WaitlistRole) : "";
+  const roleValue = typeof body.role === "string" ? body.role.trim() : "";
   const company = typeof body.company === "string" ? body.company.trim() : "";
 
   if (!isValidEmail(email)) {
     return NextResponse.json({ message: "Please provide a valid email." }, { status: 400 });
   }
 
-  if (!allowedRoles.has(role)) {
+  if (!isWaitlistRole(roleValue)) {
     return NextResponse.json({ message: "Please select a valid role." }, { status: 400 });
   }
 
@@ -103,7 +107,7 @@ export async function POST(request: Request) {
   const nextEntry: WaitlistEntry = {
     id: randomUUID(),
     email,
-    role,
+    role: roleValue,
     company: company || null,
     created_at: new Date().toISOString(),
     ip,
