@@ -31,6 +31,30 @@ def test_normalize_action_marks_commit_like_for_args_mode_commit() -> None:
     assert commit_like is True
 
 
+def test_normalize_action_marks_commit_like_for_args_action_commit() -> None:
+    normalized_tool, commit_like = normalize_action("jira.create_issue", args={"action": "commit"})
+
+    assert normalized_tool == "jira.create_issue"
+    assert commit_like is True
+
+
+def test_normalize_action_marks_commit_like_for_args_finalize_true() -> None:
+    normalized_tool, commit_like = normalize_action("jira.create_issue", args={"finalize": True})
+
+    assert normalized_tool == "jira.create_issue"
+    assert commit_like is True
+
+
+def test_normalize_action_marks_commit_like_for_dry_run_false_and_confirm_true() -> None:
+    normalized_tool, commit_like = normalize_action(
+        "jira.create_issue",
+        args={"dry_run": False, "confirm": True},
+    )
+
+    assert normalized_tool == "jira.create_issue"
+    assert commit_like is True
+
+
 def test_evaluate_policy_supports_wildcard_and_args_subset_match() -> None:
     policy = {
         "version": "0.1",
