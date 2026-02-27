@@ -33,6 +33,7 @@ async def api_key_auth_middleware(request: Request, call_next):
     if not isinstance(auth_ctx, TenantAuthContext):
         return JSONResponse(status_code=401, content={"detail": "Invalid API key"})
 
+    request.state.tenant_id = auth_ctx.tenant_id
     request.state.tenant_auth = auth_ctx
     return await call_next(request)
 
