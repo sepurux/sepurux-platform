@@ -15,6 +15,7 @@ export type ReplayAttemptListItem = {
   failure_reason: string | null;
   first_failure_event_index: number | null;
   first_failure_tool: string | null;
+  seed: number | null;
   created_at: string;
 };
 
@@ -27,6 +28,8 @@ export type ReplayAttemptDetail = {
   artifacts_s3_key: string | null;
   first_failure_event_index: number | null;
   first_failure_tool: string | null;
+  seed: number | null;
+  mutation_trace: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -34,6 +37,7 @@ export type RunStats = {
   run_id: string;
   attempts: { total: number; passed: number; failed: number; pass_rate: number };
   failures_by_tool: Array<{ tool: string; count: number; pct: number }>;
+  tools_usage: Array<{ tool: string; attempts: number; calls: number }>;
   failures_by_mutation: Array<{ mutation_id: string; count: number; pct: number }>;
   top_failure_reasons: Array<{ reason: string; count: number; pct: number }>;
   first_failure_step_distribution: Array<{ event_index: number; count: number }>;
@@ -80,6 +84,15 @@ export type PolicyPackMetadata = {
   name: string;
   version: string;
   policy: Record<string, unknown>;
+  created_at: string;
+};
+
+export type MutationPackMetadata = {
+  mutation_pack_id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  config: Record<string, unknown>;
   created_at: string;
 };
 
@@ -256,6 +269,9 @@ export const api = {
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),
+  listMutationPacks: () => requestJson<MutationPackMetadata[]>("/v1/mutation-packs"),
+  getMutationPack: (mutationPackId: string) =>
+    requestJson<MutationPackMetadata>(`/v1/mutation-packs/${mutationPackId}`),
   listPolicyPacks: () => requestJson<PolicyPackMetadata[]>("/v1/policy-packs"),
   getPolicyPack: (policyPackId: string) =>
     requestJson<PolicyPackMetadata>(`/v1/policy-packs/${policyPackId}`),

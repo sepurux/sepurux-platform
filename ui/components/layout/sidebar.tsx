@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  Bug,
   FileSearch,
   FlaskConical,
   Home,
@@ -27,6 +28,7 @@ const primaryItems: NavItem[] = [
   { href: "/campaigns", label: "Campaigns", icon: FlaskConical },
   { href: "/runs", label: "Runs", icon: PlayCircle },
   { href: "/reports", label: "Reports", icon: ScrollText },
+  { href: "/mutation-packs", label: "Mutation Packs", icon: Bug },
   { href: "/policies", label: "Policies", icon: Shield },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

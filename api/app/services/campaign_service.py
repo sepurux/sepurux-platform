@@ -14,10 +14,12 @@ def create_campaign(
     name: str,
     mutation_set: object,
     eval_set: object,
+    mutation_pack_id: UUID | None = None,
 ) -> Campaign:
     campaign = Campaign(
         campaign_id=uuid4(),
         project_id=project_id,
+        mutation_pack_id=mutation_pack_id,
         name=name,
         mutation_set=mutation_set,
         eval_set=eval_set,

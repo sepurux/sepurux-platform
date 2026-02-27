@@ -4,7 +4,7 @@ from collections import Counter
 from typing import Any
 from uuid import UUID, uuid4
 
-from app.models import Campaign, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
+from app.models import Campaign, MutationPack, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
 from app.queue import get_run_queue
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,16 +27,24 @@ def create_run(
         is None
     ):
         raise RelatedRecordNotFoundError("Trace not found")
-    if (
+    campaign = db.scalar(
+        select(Campaign).where(
+            Campaign.campaign_id == campaign_id,
+            Campaign.project_id == project_id,
+        )
+    )
+    if campaign is None:
+        raise RelatedRecordNotFoundError("Campaign not found")
+    if campaign.mutation_pack_id is not None and (
         db.scalar(
-            select(Campaign).where(
-                Campaign.campaign_id == campaign_id,
-                Campaign.project_id == project_id,
+            select(MutationPack).where(
+                MutationPack.mutation_pack_id == campaign.mutation_pack_id,
+                MutationPack.project_id == project_id,
             )
         )
         is None
     ):
-        raise RelatedRecordNotFoundError("Campaign not found")
+        raise RelatedRecordNotFoundError("Campaign mutation pack not found")
     if policy_pack_id is not None and (
         db.scalar(
             select(PolicyPack).where(

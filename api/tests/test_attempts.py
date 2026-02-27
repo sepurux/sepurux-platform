@@ -109,6 +109,13 @@ def _seed_run_with_attempts(db: Session, *, project_id: UUID) -> tuple[str, str,
             failure_reason="timeout",
             first_failure_event_index=12,
             first_failure_tool="jira.create_issue",
+            seed=4242,
+            mutation_trace={
+                "seed": 4242,
+                "applied": [
+                    {"mutation_id": "timeout-jira", "tool": "jira.create_issue", "event_index": 2}
+                ],
+            },
             artifacts_s3_key=f"runs/{run_id}/attempts/{attempt_fail_id}.timeline.json",
             created_at=datetime(2026, 2, 25, 12, 1, tzinfo=UTC),
         )
@@ -156,6 +163,9 @@ def test_get_attempt_details_returns_artifact_key_and_failure_metadata(
     assert data["artifacts_s3_key"].endswith(f"{failed_attempt_id}.timeline.json")
     assert data["first_failure_event_index"] == 12
     assert data["first_failure_tool"] == "jira.create_issue"
+    assert data["seed"] == 4242
+    assert data["mutation_trace"]["seed"] == 4242
+    assert data["mutation_trace"]["applied"][0]["mutation_id"] == "timeout-jira"
 
 
 def test_get_attempt_timeline_returns_json(
