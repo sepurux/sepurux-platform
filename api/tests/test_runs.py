@@ -130,7 +130,9 @@ def test_get_run_and_list_runs(
     other_run_id = uuid4()
 
     with testing_session_local() as db:
-        current_project = db.execute(select(Project).where(Project.project_id == project_id)).scalar_one()
+        current_project = db.execute(
+            select(Project).where(Project.project_id == project_id)
+        ).scalar_one()
         db.add(
             Trace(
                 trace_id=trace_id,
