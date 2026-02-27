@@ -232,6 +232,8 @@ class ApiKeyMetadata(BaseModel):
     tenant_id: UUID
     name: str
     created_at: datetime
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
 
 
 class ApiKeyCreateResponse(ApiKeyMetadata):

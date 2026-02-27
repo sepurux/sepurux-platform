@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, ReplayAttempt, Run, Trace
+from app.models import Base, Campaign, Project, ReplayAttempt, Run, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -124,8 +124,15 @@ def test_get_run_and_list_runs(
     campaign_id = uuid4()
     older = uuid4()
     newer = uuid4()
+    other_project_id = uuid4()
+    other_trace_id = uuid4()
+    other_campaign_id = uuid4()
+    other_run_id = uuid4()
 
     with testing_session_local() as db:
+        current_project = db.execute(
+            select(Project).where(Project.project_id == project_id)
+        ).scalar_one()
         db.add(
             Trace(
                 trace_id=trace_id,
@@ -202,6 +209,41 @@ def test_get_run_and_list_runs(
                 created_at=datetime(2026, 2, 24, 20, 1, tzinfo=UTC),
             )
         )
+        db.add(
+            Project(
+                project_id=other_project_id,
+                tenant_id=current_project.tenant_id,
+                name="Sibling Project",
+            )
+        )
+        db.add(
+            Trace(
+                trace_id=other_trace_id,
+                project_id=other_project_id,
+                source="test",
+                s3_key=f"traces/{other_trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=other_campaign_id,
+                project_id=other_project_id,
+                name="Other Project Campaign",
+                mutation_set=[],
+                eval_set=[],
+            )
+        )
+        db.add(
+            Run(
+                run_id=other_run_id,
+                project_id=other_project_id,
+                trace_id=other_trace_id,
+                campaign_id=other_campaign_id,
+                status="done",
+                summary={"score": 0},
+                created_at=datetime(2026, 2, 24, 20, 2, tzinfo=UTC),
+            )
+        )
         db.commit()
 
     get_response = client.get(f"/v1/runs/{older}")
@@ -217,6 +259,7 @@ def test_get_run_and_list_runs(
     assert list_response.status_code == 200
     items = list_response.json()
     assert [item["run_id"] for item in items] == [str(newer), str(older)]
+    assert str(other_run_id) not in {item["run_id"] for item in items}
 
 
 def test_post_run_returns_404_when_related_records_missing(
