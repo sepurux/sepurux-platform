@@ -68,11 +68,11 @@ services:
       context: ../ui
       args:
         NEXT_PUBLIC_API_BASE_URL: http://api:8000
-        NEXT_PUBLIC_API_KEY: crashlab-dev-key
+        NEXT_PUBLIC_CRASHLAB_API_KEY: crashlab-dev-key
         NEXT_PUBLIC_PROJECT_ID: 22222222-2222-2222-2222-222222222222
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://api:8000
-      NEXT_PUBLIC_API_KEY: crashlab-dev-key
+      NEXT_PUBLIC_CRASHLAB_API_KEY: crashlab-dev-key
       NEXT_PUBLIC_PROJECT_ID: 22222222-2222-2222-2222-222222222222
     ports:
       - "3000:3000"
