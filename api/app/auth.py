@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -72,13 +73,14 @@ def require_project_scope(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid X-Project-Id header") from exc
 
-    stmt = select(Project).where(
-        Project.project_id == project_id,
-        Project.tenant_id == tenant_auth.tenant_id,
-    )
+    stmt = select(Project).where(Project.project_id == project_id)
     project = db.scalar(stmt)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
+    if project.tenant_id != tenant_auth.tenant_id:
+        raise HTTPException(
+            status_code=403, detail="Project does not belong to authenticated tenant"
+        )
 
     project_scope = ProjectScope(
         tenant_id=tenant_auth.tenant_id,
@@ -96,4 +98,9 @@ def authenticate_api_key_value(request: Request, api_key_value: str) -> TenantAu
         record = db.scalar(stmt)
         if record is None:
             return None
+        if record.revoked_at is not None:
+            return None
+        record.last_used_at = datetime.now(UTC)
+        db.add(record)
+        db.commit()
         return TenantAuthContext(tenant_id=record.tenant_id, api_key_id=record.api_key_id)
