@@ -315,15 +315,25 @@ function deriveRunOverview(run: RunMetadata, stats: RunStats | null, attempts: R
 }
 
 function derivePolicyViolationCount(run: RunMetadata, policyEvents: PolicyEventListItem[]) {
-  const byEvents = policyEvents.filter((item) => item.decision !== "allow").length;
-  if (byEvents > 0) return byEvents;
   const summary = (run.summary ?? {}) as Record<string, unknown>;
-  const denied = typeof summary.policy_denied_count === "number" ? summary.policy_denied_count : 0;
+  if (typeof summary.policy_violations_total === "number") {
+    return summary.policy_violations_total;
+  }
+  const denied =
+    typeof summary.policy_denies === "number"
+      ? summary.policy_denies
+      : typeof summary.policy_denied_count === "number"
+        ? summary.policy_denied_count
+        : 0;
   const approval =
-    typeof summary.policy_requires_approval_count === "number"
-      ? summary.policy_requires_approval_count
-      : 0;
-  return denied + approval;
+    typeof summary.policy_requires_approval === "number"
+      ? summary.policy_requires_approval
+      : typeof summary.policy_requires_approval_count === "number"
+        ? summary.policy_requires_approval_count
+        : 0;
+  const bySummary = denied + approval;
+  if (bySummary > 0) return bySummary;
+  return policyEvents.filter((item) => item.decision !== "allow").length;
 }
 
 function StatTile({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "danger" | "cyan" }) {

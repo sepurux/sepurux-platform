@@ -7,6 +7,7 @@ Create Date: 2026-02-27 00:00:09.000000
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -20,6 +21,26 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 JSONB_COMPAT = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
+DEV_PROJECT_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
+DEV_POLICY_PACK_ID = uuid.UUID("44444444-4444-4444-4444-444444444444")
+DEV_DEFAULT_POLICY = {
+    "version": "0.1",
+    "defaults": {"unknown_tools": "deny"},
+    "rules": [
+        {"match": {"tool": "jira.*"}, "effect": "allow"},
+        {
+            "match": {"tool": "payments.refund"},
+            "effect": "require_approval",
+            "reason": "payments.refund requires explicit approval token",
+        },
+        {
+            "match": {"tool": "jira.create_issue", "commit_like": True},
+            "effect": "require_approval",
+            "reason": "jira.create_issue commit-like action requires explicit approval token",
+        },
+    ],
+    "approval": {"token_field": "confirmation_token"},
+}
 
 
 def upgrade() -> None:
@@ -35,6 +56,26 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("policy_pack_id"),
     )
     op.create_index("ix_policy_packs_project_id", "policy_packs", ["project_id"])
+    policy_packs_table = sa.table(
+        "policy_packs",
+        sa.column("policy_pack_id", sa.Uuid()),
+        sa.column("project_id", sa.Uuid()),
+        sa.column("name", sa.Text()),
+        sa.column("version", sa.Text()),
+        sa.column("policy", JSONB_COMPAT),
+    )
+    op.bulk_insert(
+        policy_packs_table,
+        [
+            {
+                "policy_pack_id": DEV_POLICY_PACK_ID,
+                "project_id": DEV_PROJECT_ID,
+                "name": "Demo Safe Actions",
+                "version": "0.1.0",
+                "policy": DEV_DEFAULT_POLICY,
+            }
+        ],
+    )
 
     op.add_column("runs", sa.Column("policy_pack_id", sa.Uuid(), nullable=True))
     op.create_foreign_key(

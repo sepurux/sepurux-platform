@@ -84,6 +84,8 @@ function AttemptDetailPanels({
   timeline: AttemptTimeline | null;
   counterfactuals: CounterfactualListItem[];
 }) {
+  const isPolicyBlocked = (attempt.failure_reason ?? "").startsWith("policy_");
+
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
       <div className="space-y-6">
@@ -102,6 +104,18 @@ function AttemptDetailPanels({
             <MetadataRow label="Failure Reason" value={attempt.failure_reason ?? "--"} />
             <MetadataRow label="First Failure Tool" value={attempt.first_failure_tool ?? "--"} />
             <MetadataRow label="First Failure Step" value={attempt.first_failure_event_index ?? "--"} />
+            <MetadataRow
+              label="Policy Blocked"
+              value={
+                isPolicyBlocked ? (
+                  <Badge variant="danger">
+                    yes {attempt.first_failure_event_index !== null ? `@ #${attempt.first_failure_event_index}` : ""}
+                  </Badge>
+                ) : (
+                  <Badge variant="default">no</Badge>
+                )
+              }
+            />
             <MetadataRow label="Artifact Key" value={attempt.artifacts_s3_key ?? "--"} />
           </CardContent>
         </Card>

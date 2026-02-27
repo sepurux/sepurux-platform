@@ -2,84 +2,203 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 PolicyDecision = Literal["allow", "deny", "require_approval"]
+
+_COMMIT_ACTION_VALUES = {"commit", "final", "finalize", "apply"}
+_CONFIRM_ACTION_VALUES = {"commit", "finalize", "apply"}
 
 
 @dataclass(frozen=True)
 class PolicyEvaluation:
     decision: PolicyDecision
     reason: str
+    normalized_tool_name: str
+    is_commit_like: bool
     matched_rule_index: int | None = None
 
 
-def evaluate_policy(policy: Any, *, tool: str, args: dict[str, Any] | None) -> PolicyEvaluation:
+class _SafeActionDecision(TypedDict):
+    decision: PolicyDecision
+    reason: str
+
+
+def normalize_action(tool_name: str, args: dict[str, Any] | None) -> tuple[str, bool]:
+    raw_tool = (tool_name or "").strip()
+    normalized_tool = raw_tool
+    commit_like = False
+
+    lower_tool = raw_tool.lower()
+    if lower_tool.endswith("(commit)"):
+        normalized_tool = raw_tool[: -len("(commit)")].strip()
+        commit_like = True
+    elif lower_tool.endswith("_commit"):
+        normalized_tool = raw_tool[: -len("_commit")]
+        commit_like = True
+
+    args_obj = args if isinstance(args, dict) else {}
+    if args_obj.get("commit") is True:
+        commit_like = True
+
+    mode_value = args_obj.get("mode")
+    if isinstance(mode_value, str) and mode_value.lower() in _COMMIT_ACTION_VALUES:
+        commit_like = True
+
+    action_value = args_obj.get("action")
+    if isinstance(action_value, str) and action_value.lower() in _CONFIRM_ACTION_VALUES:
+        commit_like = True
+
+    if args_obj.get("finalize") is True:
+        commit_like = True
+
+    if "dry_run" in args_obj and "confirm" in args_obj:
+        if args_obj.get("dry_run") is False and args_obj.get("confirm") is True:
+            commit_like = True
+
+    return normalized_tool or raw_tool or "replay.execute", commit_like
+
+
+def has_confirmation_token(args: dict[str, Any] | None) -> bool:
+    args_obj = args if isinstance(args, dict) else {}
+    return bool(args_obj.get("confirmation_token") or args_obj.get("approval_token"))
+
+
+def evaluate_policy(
+    policy: Any,
+    *,
+    tool_name: str,
+    args: dict[str, Any] | None,
+    event_index: int | None = None,
+) -> PolicyEvaluation:
     policy_obj = policy if isinstance(policy, dict) else {}
+    normalized_tool_name, is_commit_like = normalize_action(tool_name, args)
+
+    # Safe-action gates are always checked first.
+    safe_action = _safe_action_gate(
+        normalized_tool_name=normalized_tool_name,
+        is_commit_like=is_commit_like,
+    )
+    if safe_action is not None:
+        return PolicyEvaluation(
+            decision=safe_action["decision"],
+            reason=safe_action["reason"],
+            normalized_tool_name=normalized_tool_name,
+            is_commit_like=is_commit_like,
+            matched_rule_index=None,
+        )
+
     rules = policy_obj.get("rules")
     rule_items = rules if isinstance(rules, list) else []
-    approval = policy_obj.get("approval")
-    approval_obj = approval if isinstance(approval, dict) else {}
-    token_field = approval_obj.get("token_field")
-    token_field_name = (
-        token_field if isinstance(token_field, str) and token_field else "confirmation_token"
-    )
-
     for index, item in enumerate(rule_items):
         if not isinstance(item, dict):
             continue
-        if not _rule_matches_tool(item, tool=tool):
+        if not _rule_matches(
+            item,
+            normalized_tool_name=normalized_tool_name,
+            is_commit_like=is_commit_like,
+            args=args,
+            event_index=event_index,
+        ):
             continue
         effect = item.get("effect")
         if effect not in {"allow", "deny", "require_approval"}:
             continue
 
-        reason = _rule_reason(item, effect=effect, tool=tool)
-        if effect == "require_approval":
-            if _has_approval_token(args=args, token_field=token_field_name):
-                return PolicyEvaluation(
-                    decision="allow",
-                    reason=f"approval token accepted via '{token_field_name}'",
-                    matched_rule_index=index,
-                )
-            return PolicyEvaluation(
-                decision="require_approval",
-                reason=reason,
-                matched_rule_index=index,
-            )
-        return PolicyEvaluation(decision=effect, reason=reason, matched_rule_index=index)
+        return PolicyEvaluation(
+            decision=effect,
+            reason=_rule_reason(item, effect=effect, tool=normalized_tool_name),
+            normalized_tool_name=normalized_tool_name,
+            is_commit_like=is_commit_like,
+            matched_rule_index=index,
+        )
 
     unknown_tools_default = _unknown_tools_default(policy_obj)
     if unknown_tools_default == "deny":
         return PolicyEvaluation(
             decision="deny",
-            reason=f"unknown tool '{tool}' denied by defaults.unknown_tools",
+            reason=f"unknown tool '{normalized_tool_name}' denied by defaults.unknown_tools",
+            normalized_tool_name=normalized_tool_name,
+            is_commit_like=is_commit_like,
             matched_rule_index=None,
         )
     return PolicyEvaluation(
         decision="allow",
-        reason=f"unknown tool '{tool}' allowed by defaults.unknown_tools",
+        reason=f"unknown tool '{normalized_tool_name}' allowed by defaults.unknown_tools",
+        normalized_tool_name=normalized_tool_name,
+        is_commit_like=is_commit_like,
         matched_rule_index=None,
     )
 
 
-def _rule_matches_tool(rule: dict[str, Any], *, tool: str) -> bool:
+def _safe_action_gate(
+    *,
+    normalized_tool_name: str,
+    is_commit_like: bool,
+) -> _SafeActionDecision | None:
+    if normalized_tool_name == "payments.refund":
+        return {
+            "decision": "require_approval",
+            "reason": "payments.refund requires explicit approval token",
+        }
+    if normalized_tool_name == "jira.create_issue" and is_commit_like:
+        return {
+            "decision": "require_approval",
+            "reason": "jira.create_issue commit-like action requires explicit approval token",
+        }
+    return None
+
+
+def _rule_matches(
+    rule: dict[str, Any],
+    *,
+    normalized_tool_name: str,
+    is_commit_like: bool,
+    args: dict[str, Any] | None,
+    event_index: int | None,
+) -> bool:
     match = rule.get("match")
     if not isinstance(match, dict):
         return False
+
     tool_pattern = match.get("tool")
-    if not isinstance(tool_pattern, str) or not tool_pattern:
+    if isinstance(tool_pattern, str) and tool_pattern:
+        if "*" in tool_pattern:
+            if not fnmatchcase(normalized_tool_name, tool_pattern):
+                return False
+        elif normalized_tool_name != tool_pattern:
+            return False
+
+    if "commit_like" in match and bool(match.get("commit_like")) != is_commit_like:
         return False
-    if "*" in tool_pattern:
-        return fnmatchcase(tool, tool_pattern)
-    return tool == tool_pattern
+
+    expected_event_index = match.get("event_index")
+    if expected_event_index is not None:
+        if not isinstance(expected_event_index, int) or expected_event_index != event_index:
+            return False
+
+    args_match = match.get("args")
+    if args_match is not None:
+        if not isinstance(args_match, dict):
+            return False
+        args_obj = args if isinstance(args, dict) else {}
+        if not _is_subset(expected=args_match, actual=args_obj):
+            return False
+
+    return True
 
 
-def _has_approval_token(*, args: dict[str, Any] | None, token_field: str) -> bool:
-    if not isinstance(args, dict):
-        return False
-    value = args.get(token_field)
-    return bool(value)
+def _is_subset(*, expected: Any, actual: Any) -> bool:
+    if isinstance(expected, dict):
+        if not isinstance(actual, dict):
+            return False
+        for key, expected_value in expected.items():
+            if key not in actual:
+                return False
+            if not _is_subset(expected=expected_value, actual=actual[key]):
+                return False
+        return True
+    return bool(expected == actual)
 
 
 def _unknown_tools_default(policy: dict[str, Any]) -> Literal["allow", "deny"]:
