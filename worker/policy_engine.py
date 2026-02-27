@@ -21,7 +21,9 @@ def evaluate_policy(policy: Any, *, tool: str, args: dict[str, Any] | None) -> P
     approval = policy_obj.get("approval")
     approval_obj = approval if isinstance(approval, dict) else {}
     token_field = approval_obj.get("token_field")
-    token_field_name = token_field if isinstance(token_field, str) and token_field else "confirmation_token"
+    token_field_name = (
+        token_field if isinstance(token_field, str) and token_field else "confirmation_token"
+    )
 
     for index, item in enumerate(rule_items):
         if not isinstance(item, dict):

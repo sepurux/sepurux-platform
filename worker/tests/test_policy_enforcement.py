@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from uuid import uuid4
 
 import pytest
-import worker as worker_module
-from models import Base, Campaign, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
+
+import worker as worker_module
+from models import Base, Campaign, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
 
 
 @pytest.fixture()
 def worker_db_context(
     monkeypatch: pytest.MonkeyPatch,
-) -> sessionmaker[Session]:
+) -> Generator[sessionmaker[Session], None, None]:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -101,7 +103,9 @@ def test_policy_pack_requires_approval_and_records_policy_event(
         attempt = db.execute(
             select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
         ).scalar_one()
-        policy_event = db.execute(select(PolicyEvent).where(PolicyEvent.run_id == run_id)).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
         run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
 
     assert attempt.result == "failed"
