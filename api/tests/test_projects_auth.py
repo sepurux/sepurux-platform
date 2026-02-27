@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -127,3 +128,77 @@ def test_post_api_keys_returns_plaintext_once_and_stores_hash(
             select(ApiKey).where(ApiKey.api_key_id == UUID(payload["api_key_id"]))
         ).scalar_one()
         assert row.key_hash != payload["api_key"]
+
+
+def test_get_api_keys_returns_metadata_without_plaintext_and_scopes_tenant(
+    auth_test_context: tuple[TestClient, sessionmaker[Session], UUID, str],
+) -> None:
+    client, testing_session_local, _, _ = auth_test_context
+    other_tenant_id = uuid4()
+    other_api_key_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(Tenant(tenant_id=other_tenant_id, name="Other Tenant"))
+        db.add(
+            ApiKey(
+                api_key_id=other_api_key_id,
+                tenant_id=other_tenant_id,
+                name="Other Tenant Key",
+                key_hash=f"other-{uuid4().hex}",
+            )
+        )
+        db.commit()
+
+    create_response = client.post("/v1/api-keys", json={"name": "CI Key"})
+    assert create_response.status_code == 201
+
+    list_response = client.get("/v1/api-keys")
+    assert list_response.status_code == 200
+    items = list_response.json()
+    assert len(items) >= 1
+    assert all("api_key" not in item for item in items)
+    assert all(item["tenant_id"] != str(other_tenant_id) for item in items)
+    assert all(item["api_key_id"] != str(other_api_key_id) for item in items)
+
+
+def test_cross_tenant_project_scope_returns_403(
+    auth_test_context: tuple[TestClient, sessionmaker[Session], UUID, str],
+) -> None:
+    client, testing_session_local, project_id, _ = auth_test_context
+    other_tenant_id = uuid4()
+    other_project_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(Tenant(tenant_id=other_tenant_id, name="Other Tenant"))
+        db.add(
+            Project(
+                project_id=other_project_id,
+                tenant_id=other_tenant_id,
+                name="Other Tenant Project",
+            )
+        )
+        db.commit()
+
+    client.headers["X-Project-Id"] = str(other_project_id)
+    response = client.get("/v1/runs")
+    client.headers["X-Project-Id"] = str(project_id)
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Project does not belong to authenticated tenant"}
+
+
+def test_revoked_api_key_returns_401(
+    auth_test_context: tuple[TestClient, sessionmaker[Session], UUID, str],
+) -> None:
+    client, testing_session_local, _, _ = auth_test_context
+
+    with testing_session_local() as db:
+        record = db.execute(select(ApiKey)).scalar_one()
+        record.revoked_at = datetime.now(UTC)
+        db.add(record)
+        db.commit()
+
+    response = client.get("/v1/projects")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid API key"}
