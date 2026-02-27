@@ -44,6 +44,7 @@ def _to_attempt_list_item(attempt: ReplayAttempt) -> ReplayAttemptListItem:
         failure_reason=attempt.failure_reason,
         first_failure_event_index=attempt.first_failure_event_index,
         first_failure_tool=attempt.first_failure_tool,
+        seed=attempt.seed,
         created_at=attempt.created_at,
     )
 

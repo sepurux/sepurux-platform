@@ -18,10 +18,12 @@ class CampaignCreateRequest(BaseModel):
     name: str
     mutation_set: Any
     eval_set: Any
+    mutation_pack_id: UUID | None = None
 
 
 class CampaignMetadata(BaseModel):
     campaign_id: UUID
+    mutation_pack_id: UUID | None = None
     name: str
     mutation_set: Any
     eval_set: Any
@@ -53,6 +55,7 @@ class ReplayAttemptListItem(BaseModel):
     failure_reason: str | None
     first_failure_event_index: int | None
     first_failure_tool: str | None
+    seed: int | None = None
     created_at: datetime
 
 
@@ -65,6 +68,8 @@ class ReplayAttemptDetail(BaseModel):
     artifacts_s3_key: str | None
     first_failure_event_index: int | None
     first_failure_tool: str | None
+    seed: int | None = None
+    mutation_trace: Any | None = None
     created_at: datetime
 
 
@@ -254,6 +259,21 @@ class PolicyPackMetadata(BaseModel):
     name: str
     version: str
     policy: Any
+    created_at: datetime
+
+
+class MutationPackCreateRequest(BaseModel):
+    name: str
+    description: str | None = None
+    config: Any
+
+
+class MutationPackMetadata(BaseModel):
+    mutation_pack_id: UUID
+    project_id: UUID
+    name: str
+    description: str | None = None
+    config: Any
     created_at: datetime
 
 
