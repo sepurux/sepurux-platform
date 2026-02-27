@@ -88,9 +88,8 @@ export function PolicyPacksView() {
                       | { unknown_tools?: string }
                       | undefined;
                     const unknownTools = defaults?.unknown_tools ?? "allow";
-                    const rules = Array.isArray(record.policy?.rules)
-                      ? record.policy.rules.length
-                      : 0;
+                    const rulesValue = record.policy?.rules;
+                    const rules = Array.isArray(rulesValue) ? rulesValue.length : 0;
                     return (
                       <TableRow key={record.policy_pack_id}>
                         <TableCell className="font-medium text-foreground">{record.name}</TableCell>
