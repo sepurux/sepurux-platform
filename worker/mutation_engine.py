@@ -30,7 +30,9 @@ class _MutationDefinition:
 
 
 def derive_seed(run_id: UUID | str, attempt_id: UUID | str, attempt_index: int) -> int:
-    payload = f"{run_id}:{attempt_id}:{attempt_index}".encode()
+    # Keep the signature backward compatible, but only derive from run + index
+    # so replays are stable across regenerated attempt UUIDs.
+    payload = f"{run_id}:{attempt_index}".encode()
     digest = hashlib.sha256(payload).digest()
     # Keep it in 31-bit range for JSON/db portability.
     return int.from_bytes(digest[:8], "big") & 0x7FFFFFFF
@@ -102,9 +104,10 @@ def _normalize_mutation_definitions(mutation_pack_config: Any) -> list[_Mutation
     for index, item in enumerate(raw_mutations):
         if not isinstance(item, dict):
             continue
-        mutation_type = item.get("type")
-        if not isinstance(mutation_type, str) or not mutation_type:
+        mutation_type = _mutation_type(item)
+        if mutation_type is None:
             continue
+        params = _extract_params(item)
         mutation_id_value = item.get("mutation_id")
         if not isinstance(mutation_id_value, str) or not mutation_id_value:
             fallback_id = item.get("id")
@@ -114,9 +117,8 @@ def _normalize_mutation_definitions(mutation_pack_config: Any) -> list[_Mutation
                 mutation_id_value = f"{mutation_type}-{index}"
 
         target_tool_pattern = _target_tool_pattern(item)
-        probability = _clamp_probability(item.get("probability"), default=1.0)
+        probability = _mutation_probability(item, params=params)
         weight = _coerce_weight(item.get("weight"), default=1.0)
-        params = _extract_params(item)
 
         normalized.append(
             _MutationDefinition(
@@ -131,10 +133,45 @@ def _normalize_mutation_definitions(mutation_pack_config: Any) -> list[_Mutation
     return normalized
 
 
+def _mutation_type(item: dict[str, Any]) -> str | None:
+    mutation_type = item.get("type")
+    if isinstance(mutation_type, str) and mutation_type:
+        return mutation_type
+    fallback_id = item.get("id")
+    if isinstance(fallback_id, str) and fallback_id:
+        # Support configs where `id` carries mutation type.
+        return fallback_id
+    return None
+
+
+def _mutation_probability(item: dict[str, Any], *, params: dict[str, Any]) -> float:
+    probability_sources = (
+        item.get("probability"),
+        item.get("prob"),
+        params.get("probability"),
+        params.get("prob"),
+    )
+    for value in probability_sources:
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int | float):
+            return _clamp_probability(value, default=1.0)
+    return 1.0
+
+
 def _extract_params(item: dict[str, Any]) -> dict[str, Any]:
     params = item.get("params")
     params_obj = dict(params) if isinstance(params, dict) else {}
-    for key in ("from", "to", "field", "payload", "error_message"):
+    for key in (
+        "from",
+        "to",
+        "field",
+        "payload",
+        "error_message",
+        "prob",
+        "probability",
+        "timeout_ms",
+    ):
         if key in item and key not in params_obj:
             params_obj[key] = item[key]
     return params_obj
@@ -327,6 +364,10 @@ def _apply_fault(
     error_message = definition.params.get("error_message")
     if not isinstance(error_message, str) or not error_message:
         error_message = default_error_message
+    timeout_ms = definition.params.get("timeout_ms")
+    timeout_ms_value: int | None = None
+    if isinstance(timeout_ms, int | float) and not isinstance(timeout_ms, bool):
+        timeout_ms_value = max(0, int(timeout_ms))
 
     for index, event in enumerate(events):
         if event.get("type") != "tool_call":
@@ -355,6 +396,12 @@ def _apply_fault(
                     "type": definition.mutation_type,
                     "failure_reason": failure_reason,
                     "error_type": error_type,
+                    **({"timeout_ms": timeout_ms_value} if timeout_ms_value else {}),
+                    **(
+                        {"http_status": 429}
+                        if definition.mutation_type == "fault.rate_limit"
+                        else {}
+                    ),
                 },
             },
             {
@@ -404,7 +451,7 @@ def _event_index(event: dict[str, Any]) -> int | None:
 def _resolve_text_field(result: dict[str, Any], explicit_field: str | None) -> str:
     if explicit_field:
         return explicit_field
-    for field_name in ("text", "content"):
+    for field_name in ("text", "content", "message"):
         value = result.get(field_name)
         if isinstance(value, str):
             return field_name
