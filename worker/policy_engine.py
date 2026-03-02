@@ -148,32 +148,14 @@ def evaluate_policy(
     )
 
 
-def _safe_action_gate(
-    *,
-    normalized_tool_name: str,
-    is_commit_like: bool,
-) -> _SafeActionDecision | None:
-    if normalized_tool_name == "payments.refund":
-        return {
-            "decision": "require_approval",
-            "reason": "payments.refund requires explicit approval token",
-        }
-    if normalized_tool_name == "jira.create_issue" and is_commit_like:
-        return {
-            "decision": "require_approval",
-            "reason": "jira.create_issue commit-like action requires explicit approval token",
-        }
-    return None
-
-
 def _irreversible_gate(
     *,
     policy_obj: dict[str, Any],
     normalized_tool_name: str,
     is_commit_like: bool,
 ) -> _SafeActionDecision | None:
-    irreversible_tools = policy_obj.get("irreversible_tools")
-    if isinstance(irreversible_tools, list):
+    irreversible_tools = _configured_irreversible_tools(policy_obj)
+    if irreversible_tools is not None:
         for item in irreversible_tools:
             if not isinstance(item, str):
                 continue
@@ -193,13 +175,20 @@ def _irreversible_gate(
                     candidate_commit_like=candidate_commit_like,
                 ),
             }
-        return None
+    return None
 
-    # Backward compatibility for existing policy packs created before irreversible_tools.
-    return _safe_action_gate(
-        normalized_tool_name=normalized_tool_name,
-        is_commit_like=is_commit_like,
-    )
+
+def _configured_irreversible_tools(policy_obj: dict[str, Any]) -> list[str] | None:
+    irreversible_obj = policy_obj.get("irreversible")
+    if isinstance(irreversible_obj, dict):
+        tools = irreversible_obj.get("tools")
+        if isinstance(tools, list):
+            return [item for item in tools if isinstance(item, str)]
+
+    legacy = policy_obj.get("irreversible_tools")
+    if isinstance(legacy, list):
+        return [item for item in legacy if isinstance(item, str)]
+    return None
 
 
 def _irreversible_reason(

@@ -82,7 +82,7 @@ export type PolicyPackMetadata = {
   policy_pack_id: string;
   project_id: string;
   name: string;
-  version: string;
+  engine: string;
   policy: Record<string, unknown>;
   created_at: string;
 };
@@ -105,6 +105,7 @@ export type PolicyEventListItem = {
   action: string;
   decision: "allow" | "deny" | "require_approval" | string;
   reason: string | null;
+  input: Record<string, unknown> | null;
   created_at: string;
 };
 

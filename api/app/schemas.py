@@ -249,7 +249,7 @@ class ApiKeyCreateResponse(ApiKeyMetadata):
 
 class PolicyPackCreateRequest(BaseModel):
     name: str
-    version: str
+    engine: Literal["builtin", "opa"] = "builtin"
     policy: Any
 
 
@@ -257,7 +257,7 @@ class PolicyPackMetadata(BaseModel):
     policy_pack_id: UUID
     project_id: UUID
     name: str
-    version: str
+    engine: str
     policy: Any
     created_at: datetime
 
@@ -286,4 +286,5 @@ class PolicyEventListItem(BaseModel):
     action: str
     decision: str
     reason: str | None
+    input: Any | None = None
     created_at: datetime
