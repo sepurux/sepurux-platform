@@ -85,12 +85,18 @@ def test_evaluate_policy_irreversible_tools_gate_blocks_jira_commit_like_without
     policy = {
         "version": "0.1",
         "defaults": {"unknown_tools": "allow"},
-        "irreversible_tools": [
-            "payments.refund",
-            "jira.create_issue(commit)",
-            "jira.create_issue_commit",
-        ],
+        "irreversible": {
+            "tools": [
+                "payments.refund",
+                "jira.create_issue(commit)",
+                "jira.create_issue_commit",
+            ]
+        },
         "approval": {"token_field": "confirmation_token"},
+        "opa": {
+            "package": "crashlab.policy",
+            "query": "data.crashlab.policy.decision",
+        },
     }
 
     commit_like = evaluate_policy(

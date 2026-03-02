@@ -124,6 +124,10 @@ function AttemptDetailPanels({
                 )
               }
             />
+            <MetadataRow
+              label="Policy Offending Tool"
+              value={isPolicyBlocked ? (attempt.first_failure_tool ?? "--") : "--"}
+            />
             <MetadataRow label="Artifact Key" value={attempt.artifacts_s3_key ?? "--"} />
           </CardContent>
         </Card>

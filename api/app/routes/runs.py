@@ -59,6 +59,7 @@ def _to_policy_event_list_item(policy_event: PolicyEvent) -> PolicyEventListItem
         action=policy_event.action,
         decision=policy_event.decision,
         reason=policy_event.reason,
+        input=policy_event.input,
         created_at=policy_event.created_at,
     )
 
