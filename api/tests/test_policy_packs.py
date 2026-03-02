@@ -77,8 +77,12 @@ def test_policy_pack_crud_is_project_scoped(
             "version": "0.1.0",
             "policy": {
                 "version": "0.1",
-                "defaults": {"unknown_tools": "deny"},
-                "rules": [{"match": {"tool": "jira.*"}, "effect": "allow"}],
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible_tools": [
+                    "payments.refund",
+                    "jira.create_issue(commit)",
+                    "jira.create_issue_commit",
+                ],
                 "approval": {"token_field": "confirmation_token"},
             },
         },
@@ -105,7 +109,7 @@ def test_policy_pack_crud_is_project_scoped(
                 project_id=other_project_id,
                 name="Other Project Pack",
                 version="0.1.0",
-                policy={"version": "0.1", "defaults": {"unknown_tools": "allow"}, "rules": []},
+                policy={"version": "0.1", "defaults": {"unknown_tools": "allow"}, "irreversible_tools": []},
             )
         )
         db.commit()
@@ -173,9 +177,11 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
             "version": "0.2.0",
             "policy": {
                 "version": "0.1",
-                "defaults": {"unknown_tools": "deny"},
-                "rules": [
-                    {"match": {"tool": "payments.refund"}, "effect": "require_approval"},
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible_tools": [
+                    "payments.refund",
+                    "jira.create_issue(commit)",
+                    "jira.create_issue_commit",
                 ],
                 "approval": {"token_field": "confirmation_token"},
             },
