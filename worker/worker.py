@@ -22,7 +22,12 @@ from models import (
     Trace,
 )
 from mutation_engine import apply_mutation_pack
-from policy_engine import approval_token_field, evaluate_policy, has_confirmation_token
+from policy_engine import (
+    approval_token_field,
+    evaluate_policy,
+    has_confirmation_token,
+    normalize_action,
+)
 from replayer import build_attempt_replay_outcome, iter_mutations
 from storage import put_json_object
 
@@ -111,11 +116,7 @@ def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | No
 
     merged_args = dict(args)
     top_level_confirmation_token = mutation_obj.get("confirmation_token")
-    if (
-        isinstance(top_level_confirmation_token, str)
-        and top_level_confirmation_token
-        and "confirmation_token" not in merged_args
-    ):
+    if top_level_confirmation_token and "confirmation_token" not in merged_args:
         merged_args["confirmation_token"] = top_level_confirmation_token
 
     if not merged_args:
@@ -134,6 +135,31 @@ def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | No
                 merged_args[key] = mutation_obj[key]
 
     return tool_name, merged_args, index
+
+
+def _build_policy_event_input(
+    *,
+    tool_name: str,
+    tool_args: dict[str, Any],
+    run_id: UUID,
+    attempt_id: UUID,
+    project_id: UUID,
+    event_index: int | None,
+) -> dict[str, Any]:
+    return {
+        "tool": {
+            "name": tool_name,
+            "args": tool_args,
+        },
+        "context": {
+            "run_id": str(run_id),
+            "attempt_id": str(attempt_id),
+            "project_id": str(project_id),
+        },
+        "metadata": {
+            "event_index": event_index,
+        },
+    }
 
 
 def execute_run(run_id: str) -> None:
@@ -159,8 +185,10 @@ def execute_run(run_id: str) -> None:
             if policy_pack.project_id != run.project_id:
                 raise ValueError(f"Policy pack project mismatch for run {run_id}")
         policy_document: dict[str, Any] | None = None
+        policy_engine_name = "builtin"
         if policy_pack is not None and isinstance(policy_pack.policy, dict):
             policy_document = policy_pack.policy
+            policy_engine_name = policy_pack.engine or "builtin"
         policy_token_field = approval_token_field(policy_document)
 
         mutation_pack: MutationPack | None = None
@@ -195,19 +223,55 @@ def execute_run(run_id: str) -> None:
             mutation_for_replay = mutation
             if isinstance(policy_document, dict):
                 tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
-                evaluation = evaluate_policy(
-                    policy_document,
+                normalized_tool_name, commit_like = normalize_action(tool_name, policy_args)
+                policy_input = _build_policy_event_input(
                     tool_name=tool_name,
-                    args=policy_args,
+                    tool_args=policy_args,
+                    run_id=run.run_id,
+                    attempt_id=attempt_id,
+                    project_id=run.project_id,
                     event_index=event_index,
                 )
-                requires_approval_without_token = (
-                    evaluation.decision == "require_approval"
-                    and not has_confirmation_token(
-                        policy_args,
-                        token_field=policy_token_field,
+
+                event_decision = "allow"
+                event_reason = "allowed"
+                blocked_failure_reason: str | None = None
+                blocked_error_type = "PolicyDeniedError"
+                blocked_error_message = "Policy denied the tool call"
+
+                if policy_engine_name == "builtin":
+                    evaluation = evaluate_policy(
+                        policy_document,
+                        tool_name=tool_name,
+                        args=policy_args,
+                        event_index=event_index,
                     )
-                )
+                    event_decision = evaluation.decision
+                    event_reason = evaluation.reason
+
+                    if evaluation.decision == "require_approval":
+                        token_present = has_confirmation_token(
+                            policy_args,
+                            token_field=policy_token_field,
+                        )
+                        if token_present:
+                            event_decision = "allow"
+                            event_reason = f"{evaluation.reason}; approval token '{policy_token_field}' provided"
+                        else:
+                            policy_requires_approval += 1
+                            blocked_failure_reason = "policy_requires_approval"
+                            blocked_error_type = "PolicyApprovalRequiredError"
+                            blocked_error_message = evaluation.reason
+                    else:
+                        event_decision = "allow"
+                        event_reason = "allowed by builtin policy"
+                else:
+                    event_decision = "allow"
+                    event_reason = (
+                        f"policy engine '{policy_engine_name}' not implemented in worker; "
+                        "defaulting to allow"
+                    )
+
                 db.add(
                     PolicyEvent(
                         policy_event_id=uuid4(),
@@ -215,27 +279,19 @@ def execute_run(run_id: str) -> None:
                         attempt_id=attempt_id,
                         event_index=event_index,
                         tool=tool_name,
-                        action="commit" if evaluation.is_commit_like else "tool_call",
-                        decision=evaluation.decision,
-                        reason=evaluation.reason,
+                        action="commit" if commit_like else "tool_call",
+                        decision=event_decision,
+                        reason=event_reason,
+                        input=policy_input,
                     )
                 )
                 policy_events_count += 1
-                if evaluation.decision == "deny":
-                    policy_denies += 1
+                if blocked_failure_reason is not None:
                     mutation_for_replay = _policy_blocked_mutation(
                         mutation,
-                        failure_reason="policy_denied",
-                        error_type="PolicyDeniedError",
-                        error_message=evaluation.reason,
-                    )
-                elif requires_approval_without_token:
-                    policy_requires_approval += 1
-                    mutation_for_replay = _policy_blocked_mutation(
-                        mutation,
-                        failure_reason="policy_requires_approval",
-                        error_type="PolicyApprovalRequiredError",
-                        error_message=evaluation.reason,
+                        failure_reason=blocked_failure_reason,
+                        error_type=blocked_error_type,
+                        error_message=blocked_error_message,
                     )
 
             outcome = build_attempt_replay_outcome(

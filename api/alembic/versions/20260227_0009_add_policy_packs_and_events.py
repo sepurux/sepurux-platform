@@ -26,12 +26,18 @@ DEV_POLICY_PACK_ID = uuid.UUID("44444444-4444-4444-4444-444444444444")
 DEV_DEFAULT_POLICY = {
     "version": "0.1",
     "defaults": {"unknown_tools": "allow"},
-    "irreversible_tools": [
-        "payments.refund",
-        "jira.create_issue(commit)",
-        "jira.create_issue_commit",
-    ],
+    "irreversible": {
+        "tools": [
+            "payments.refund",
+            "jira.create_issue(commit)",
+            "jira.create_issue_commit",
+        ]
+    },
     "approval": {"token_field": "confirmation_token"},
+    "opa": {
+        "package": "crashlab.policy",
+        "query": "data.crashlab.policy.decision",
+    },
 }
 
 

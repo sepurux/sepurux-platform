@@ -74,16 +74,22 @@ def test_policy_pack_crud_is_project_scoped(
         "/v1/policy-packs",
         json={
             "name": "Strict Pack",
-            "version": "0.1.0",
+            "engine": "builtin",
             "policy": {
                 "version": "0.1",
                 "defaults": {"unknown_tools": "allow"},
-                "irreversible_tools": [
-                    "payments.refund",
-                    "jira.create_issue(commit)",
-                    "jira.create_issue_commit",
-                ],
+                "irreversible": {
+                    "tools": [
+                        "payments.refund",
+                        "jira.create_issue(commit)",
+                        "jira.create_issue_commit",
+                    ]
+                },
                 "approval": {"token_field": "confirmation_token"},
+                "opa": {
+                    "package": "crashlab.policy",
+                    "query": "data.crashlab.policy.decision",
+                },
             },
         },
     )
@@ -91,6 +97,7 @@ def test_policy_pack_crud_is_project_scoped(
     created_payload = create_response.json()
     created_pack_id = UUID(created_payload["policy_pack_id"])
     assert created_payload["project_id"] == str(project_id)
+    assert created_payload["engine"] == "builtin"
 
     with testing_session_local() as db:
         current_project = db.execute(
@@ -108,8 +115,12 @@ def test_policy_pack_crud_is_project_scoped(
                 policy_pack_id=other_pack_id,
                 project_id=other_project_id,
                 name="Other Project Pack",
-                version="0.1.0",
-                policy={"version": "0.1", "defaults": {"unknown_tools": "allow"}, "irreversible_tools": []},
+                engine="builtin",
+                policy={
+                    "version": "0.1",
+                    "defaults": {"unknown_tools": "allow"},
+                    "irreversible": {"tools": []},
+                },
             )
         )
         db.commit()
@@ -174,16 +185,22 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
         "/v1/policy-packs",
         json={
             "name": "Require Approval",
-            "version": "0.2.0",
+            "engine": "builtin",
             "policy": {
                 "version": "0.1",
                 "defaults": {"unknown_tools": "allow"},
-                "irreversible_tools": [
-                    "payments.refund",
-                    "jira.create_issue(commit)",
-                    "jira.create_issue_commit",
-                ],
+                "irreversible": {
+                    "tools": [
+                        "payments.refund",
+                        "jira.create_issue(commit)",
+                        "jira.create_issue_commit",
+                    ]
+                },
                 "approval": {"token_field": "confirmation_token"},
+                "opa": {
+                    "package": "crashlab.policy",
+                    "query": "data.crashlab.policy.decision",
+                },
             },
         },
     )
@@ -243,6 +260,15 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
                     action="tool_call",
                     decision="require_approval",
                     reason="tool requires approval token",
+                    input={
+                        "tool": {"name": "payments.refund", "args": {"amount": 10}},
+                        "context": {
+                            "run_id": str(run_id),
+                            "attempt_id": None,
+                            "project_id": str(project_id),
+                        },
+                        "metadata": {"event_index": 2},
+                    },
                     created_at=datetime(2026, 2, 27, 1, 0, tzinfo=UTC),
                 ),
                 PolicyEvent(
@@ -254,6 +280,15 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
                     action="tool_call",
                     decision="allow",
                     reason="allowed",
+                    input={
+                        "tool": {"name": "jira.create_issue", "args": {"title": "Draft"}},
+                        "context": {
+                            "run_id": str(run_id),
+                            "attempt_id": None,
+                            "project_id": str(project_id),
+                        },
+                        "metadata": {"event_index": 2},
+                    },
                     created_at=datetime(2026, 2, 27, 1, 1, tzinfo=UTC),
                 ),
                 PolicyEvent(
@@ -265,6 +300,15 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
                     action="tool_call",
                     decision="deny",
                     reason="no writes in replay",
+                    input={
+                        "tool": {"name": "db.write.users", "args": {"id": "u-1"}},
+                        "context": {
+                            "run_id": str(other_run_id),
+                            "attempt_id": None,
+                            "project_id": str(other_project_id),
+                        },
+                        "metadata": {"event_index": 2},
+                    },
                     created_at=datetime(2026, 2, 27, 1, 2, tzinfo=UTC),
                 ),
             ]
@@ -276,6 +320,7 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
     first_payload = first_page.json()
     assert len(first_payload) == 1
     assert first_payload[0]["tool"] == "payments.refund"
+    assert first_payload[0]["input"]["tool"]["name"] == "payments.refund"
 
     second_page = client.get(f"/v1/runs/{run_id}/policy-events?limit=10&offset=1")
     assert second_page.status_code == 200
