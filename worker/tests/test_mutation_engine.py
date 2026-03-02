@@ -79,6 +79,51 @@ def test_apply_mutation_pack_is_deterministic_for_same_seed_and_trace() -> None:
     assert first.timeline_artifact == second.timeline_artifact
 
 
+def test_apply_mutation_pack_seed_is_stable_for_run_id_and_attempt_index() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "drop-status",
+                "type": "schema.drop_field",
+                "target": {"tool": "jira.*"},
+                "params": {"field": "status"},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+            {
+                "mutation_id": "inject-poison",
+                "type": "poison.inject",
+                "target": {"tool": "jira.*"},
+                "params": {"payload": " ::poison::"},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+        ],
+    }
+    run_id = uuid4()
+    timeline = _timeline_fixture()
+
+    first = apply_mutation_pack(
+        config,
+        run_id=run_id,
+        attempt_id=uuid4(),
+        attempt_index=2,
+        timeline_artifact=copy.deepcopy(timeline),
+    )
+    second = apply_mutation_pack(
+        config,
+        run_id=run_id,
+        attempt_id=uuid4(),
+        attempt_index=2,
+        timeline_artifact=copy.deepcopy(timeline),
+    )
+
+    assert first.seed == second.seed
+    assert first.mutation_trace == second.mutation_trace
+    assert first.timeline_artifact == second.timeline_artifact
+
+
 def test_apply_mutation_pack_uses_seed_to_vary_selection() -> None:
     config = {
         "max_mutations_per_attempt": 1,
@@ -127,6 +172,89 @@ def test_apply_mutation_pack_uses_seed_to_vary_selection() -> None:
             selected_by_seed.add(str(applied[0]["mutation_id"]))
 
     assert len(selected_by_seed) >= 2
+
+
+def test_apply_mutation_pack_varies_across_attempt_indices() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "drop-status",
+                "type": "schema.drop_field",
+                "target": {"tool": "jira.*"},
+                "params": {"field": "status"},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+            {
+                "mutation_id": "inject-poison",
+                "type": "poison.inject",
+                "target": {"tool": "jira.*"},
+                "params": {"payload": " ::poison::"},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+            {
+                "mutation_id": "timeout-tool-call",
+                "type": "fault.timeout",
+                "target": {"tool": "jira.*"},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+        ],
+    }
+    run_id = uuid4()
+    attempt_id = uuid4()
+
+    selected_by_attempt_index: set[str] = set()
+    for attempt_index in range(10):
+        outcome = apply_mutation_pack(
+            config,
+            run_id=run_id,
+            attempt_id=attempt_id,
+            attempt_index=attempt_index,
+            timeline_artifact=copy.deepcopy(_timeline_fixture()),
+        )
+        applied = outcome.mutation_trace["applied"]
+        assert isinstance(applied, list)
+        if applied:
+            selected_by_attempt_index.add(str(applied[0]["mutation_id"]))
+
+    assert len(selected_by_attempt_index) >= 2
+
+
+def test_apply_mutation_pack_supports_id_as_type_and_params_prob() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "id": "schema.drop_field",
+                "target": {"tool": "jira.*"},
+                "params": {"field": "status", "prob": 1.0},
+                "weight": 1.0,
+            }
+        ],
+    }
+    outcome = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=0,
+        timeline_artifact=copy.deepcopy(_timeline_fixture()),
+    )
+
+    applied = outcome.mutation_trace["applied"]
+    assert isinstance(applied, list)
+    assert len(applied) == 1
+    assert applied[0]["mutation_id"] == "schema.drop_field"
+
+    events = outcome.timeline_artifact["events"]
+    assert isinstance(events, list)
+    tool_results = [event for event in events if event.get("type") == "tool_result"]
+    assert tool_results
+    result = tool_results[0].get("result")
+    assert isinstance(result, dict)
+    assert "status" not in result
 
 
 def test_fault_timeout_forces_failure_and_schema_rename_applies() -> None:
