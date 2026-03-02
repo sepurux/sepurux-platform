@@ -25,19 +25,11 @@ DEV_PROJECT_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
 DEV_POLICY_PACK_ID = uuid.UUID("44444444-4444-4444-4444-444444444444")
 DEV_DEFAULT_POLICY = {
     "version": "0.1",
-    "defaults": {"unknown_tools": "deny"},
-    "rules": [
-        {"match": {"tool": "jira.*"}, "effect": "allow"},
-        {
-            "match": {"tool": "payments.refund"},
-            "effect": "require_approval",
-            "reason": "payments.refund requires explicit approval token",
-        },
-        {
-            "match": {"tool": "jira.create_issue", "commit_like": True},
-            "effect": "require_approval",
-            "reason": "jira.create_issue commit-like action requires explicit approval token",
-        },
+    "defaults": {"unknown_tools": "allow"},
+    "irreversible_tools": [
+        "payments.refund",
+        "jira.create_issue(commit)",
+        "jira.create_issue_commit",
     ],
     "approval": {"token_field": "confirmation_token"},
 }

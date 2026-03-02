@@ -22,7 +22,7 @@ from models import (
     Trace,
 )
 from mutation_engine import apply_mutation_pack
-from policy_engine import evaluate_policy, has_confirmation_token
+from policy_engine import approval_token_field, evaluate_policy, has_confirmation_token
 from replayer import build_attempt_replay_outcome, iter_mutations
 from storage import put_json_object
 
@@ -161,6 +161,7 @@ def execute_run(run_id: str) -> None:
         policy_document: dict[str, Any] | None = None
         if policy_pack is not None and isinstance(policy_pack.policy, dict):
             policy_document = policy_pack.policy
+        policy_token_field = approval_token_field(policy_document)
 
         mutation_pack: MutationPack | None = None
         mutation_pack_config: dict[str, Any] | None = None
@@ -202,7 +203,10 @@ def execute_run(run_id: str) -> None:
                 )
                 requires_approval_without_token = (
                     evaluation.decision == "require_approval"
-                    and not has_confirmation_token(policy_args)
+                    and not has_confirmation_token(
+                        policy_args,
+                        token_field=policy_token_field,
+                    )
                 )
                 db.add(
                     PolicyEvent(
