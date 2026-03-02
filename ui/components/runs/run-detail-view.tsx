@@ -134,6 +134,7 @@ function RunDetailPanels({
 
 function RunStatsCards({ stats }: { stats: RunStats | null }) {
   const lethalMutations = stats?.most_lethal_mutations ?? [];
+  const insights = stats?.insights ?? [];
 
   return (
     <div className="space-y-6">
@@ -205,8 +206,73 @@ function RunStatsCards({ stats }: { stats: RunStats | null }) {
           ))}
           {lethalMutations.length === 0 && (
             <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
-              No mutation-trace lethality data available yet.
+              Run more attempts to compute lethal mutations.
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recommended Fixes</CardTitle>
+          <CardDescription>Auto Insights generated from run failures, mutations, policies, and counterfactuals.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {insights.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
+              Run more attempts to generate recommended fixes.
+            </div>
+          ) : (
+            insights.map((insight) => (
+              <div
+                key={insight.id}
+                className="rounded-md border border-border/60 bg-muted/15 p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground" title={insight.title}>
+                      {insight.title}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{insight.recommendation}</p>
+                  </div>
+                  <Badge variant={insight.confidence >= 0.75 ? "success" : insight.confidence >= 0.6 ? "warning" : "outline"}>
+                    {formatPercent(insight.confidence, 0)}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{insight.why}</p>
+                <details className="mt-2 rounded border border-border/50 bg-background/40 p-2">
+                  <summary className="cursor-pointer text-xs font-medium text-foreground">
+                    View evidence
+                  </summary>
+                  <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+                    <p>
+                      Tools:{" "}
+                      {insight.evidence.top_tools.length > 0
+                        ? insight.evidence.top_tools
+                            .map((item) => `${item.tool} (${item.count})`)
+                            .join(", ")
+                        : "--"}
+                    </p>
+                    <p>
+                      Mutations:{" "}
+                      {insight.evidence.top_mutations.length > 0
+                        ? insight.evidence.top_mutations
+                            .map((item) => `${item.mutation_id} (${item.count})`)
+                            .join(", ")
+                        : "--"}
+                    </p>
+                    <p>
+                      Reasons:{" "}
+                      {insight.evidence.top_reasons.length > 0
+                        ? insight.evidence.top_reasons
+                            .map((item) => `${item.reason} (${item.count})`)
+                            .join(", ")
+                        : "--"}
+                    </p>
+                  </div>
+                </details>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>
