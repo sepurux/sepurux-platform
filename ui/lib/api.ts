@@ -29,8 +29,22 @@ export type ReplayAttemptDetail = {
   first_failure_event_index: number | null;
   first_failure_tool: string | null;
   seed: number | null;
-  mutation_trace: Record<string, unknown> | null;
+  mutation_trace: MutationTrace | null;
   created_at: string;
+};
+
+export type MutationTraceAppliedItem = {
+  mutation_id?: string;
+  tool?: string;
+  event_index?: number;
+  details?: Record<string, unknown> | null;
+  [key: string]: unknown;
+};
+
+export type MutationTrace = {
+  seed?: number;
+  applied?: MutationTraceAppliedItem[];
+  [key: string]: unknown;
 };
 
 export type RunStats = {
@@ -82,7 +96,7 @@ export type PolicyPackMetadata = {
   policy_pack_id: string;
   project_id: string;
   name: string;
-  version: string;
+  engine: string;
   policy: Record<string, unknown>;
   created_at: string;
 };
@@ -105,6 +119,7 @@ export type PolicyEventListItem = {
   action: string;
   decision: "allow" | "deny" | "require_approval" | string;
   reason: string | null;
+  input: Record<string, unknown> | null;
   created_at: string;
 };
 

@@ -8,6 +8,7 @@ import {
   api,
   type AttemptTimeline,
   type CounterfactualListItem,
+  type MutationTraceAppliedItem,
   type ReplayAttemptDetail,
 } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
@@ -86,8 +87,9 @@ function AttemptDetailPanels({
 }) {
   const isPolicyBlocked = (attempt.failure_reason ?? "").startsWith("policy_");
   const mutationTraceApplied = Array.isArray(attempt.mutation_trace?.applied)
-    ? attempt.mutation_trace.applied.length
-    : 0;
+    ? attempt.mutation_trace.applied
+    : [];
+  const mutationTraceAppliedCount = mutationTraceApplied.length;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
@@ -110,7 +112,7 @@ function AttemptDetailPanels({
             <MetadataRow label="Mutation Seed" value={attempt.seed ?? "--"} />
             <MetadataRow
               label="Mutation Trace"
-              value={attempt.seed === null ? "--" : `${mutationTraceApplied} applied mutation(s)`}
+              value={attempt.seed === null ? "--" : `${mutationTraceAppliedCount} applied mutation(s)`}
             />
             <MetadataRow
               label="Policy Blocked"
@@ -124,7 +126,29 @@ function AttemptDetailPanels({
                 )
               }
             />
+            <MetadataRow
+              label="Policy Offending Tool"
+              value={isPolicyBlocked ? (attempt.first_failure_tool ?? "--") : "--"}
+            />
             <MetadataRow label="Artifact Key" value={attempt.artifacts_s3_key ?? "--"} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Applied Mutations</CardTitle>
+            <CardDescription>Mutation trace captured for this replay attempt.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {attempt.seed === null ? (
+              <p className="text-sm text-muted-foreground">No mutation pack applied to this attempt.</p>
+            ) : mutationTraceAppliedCount === 0 ? (
+              <p className="text-sm text-muted-foreground">No mutations were applied for this seed.</p>
+            ) : (
+              mutationTraceApplied.map((entry, index) => (
+                <MutationTraceRow key={buildMutationTraceKey(entry, index)} entry={entry} />
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -136,6 +160,36 @@ function AttemptDetailPanels({
       </div>
 
       <TimelineViewer timeline={timeline} />
+    </div>
+  );
+}
+
+function buildMutationTraceKey(entry: MutationTraceAppliedItem, index: number) {
+  const mutationId = typeof entry.mutation_id === "string" ? entry.mutation_id : "mutation";
+  const tool = typeof entry.tool === "string" ? entry.tool : "tool";
+  const eventIndex = typeof entry.event_index === "number" ? String(entry.event_index) : String(index);
+  return `${mutationId}-${tool}-${eventIndex}-${index}`;
+}
+
+function MutationTraceRow({ entry }: { entry: MutationTraceAppliedItem }) {
+  const mutationId = typeof entry.mutation_id === "string" ? entry.mutation_id : "--";
+  const tool = typeof entry.tool === "string" ? entry.tool : "--";
+  const eventIndex = typeof entry.event_index === "number" ? `#${entry.event_index}` : "--";
+  const details =
+    entry.details && typeof entry.details === "object" ? JSON.stringify(entry.details, null, 2) : null;
+
+  return (
+    <div className="rounded-md border border-border/60 bg-muted/10 px-3 py-2">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="font-mono text-xs text-foreground">{mutationId}</span>
+        <Badge variant="outline">{eventIndex}</Badge>
+      </div>
+      <p className="text-sm text-foreground">Tool: {tool}</p>
+      {details ? (
+        <pre className="mt-2 overflow-x-auto rounded bg-background/80 p-2 text-xs text-muted-foreground">
+          {details}
+        </pre>
+      ) : null}
     </div>
   );
 }
