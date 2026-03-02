@@ -144,6 +144,10 @@ function DashboardPanels({ data }: { data: DashboardData }) {
     () => buildFailureTaxonomyHeatmap(data.failedAttemptsByRunId),
     [data.failedAttemptsByRunId]
   );
+  const lethalMutations = useMemo(
+    () => buildDashboardLethalMutations(data.runStatsById),
+    [data.runStatsById]
+  );
 
   return (
     <Tabs defaultValue="overview" className="space-y-4">
@@ -188,6 +192,8 @@ function DashboardPanels({ data }: { data: DashboardData }) {
           <TopFragileToolsCard fragility={data.fragility} />
           <CounterfactualInspector runs={dashboardRuns} failedAttemptsByRunId={data.failedAttemptsByRunId} compact />
         </div>
+
+        <MostLethalMutationsCard mutations={lethalMutations} />
       </TabsContent>
 
       <TabsContent value="taxonomy" className="space-y-6">
@@ -431,6 +437,54 @@ function FailureTaxonomyHeatmap({ heatmap }: { heatmap: ReturnType<typeof buildF
   );
 }
 
+function MostLethalMutationsCard({
+  mutations,
+}: {
+  mutations: Array<{
+    mutation_id: string;
+    failures: number;
+    attempts_hit: number;
+    failure_rate_when_hit: number;
+    top_tools: Array<{ tool: string; count: number }>;
+  }>;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Most Lethal Mutations</CardTitle>
+        <CardDescription>
+          Top mutation_trace contributors to failures across the current dashboard sample.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {mutations.length === 0 ? (
+          <EmptyPanelMessage>No mutation trace stats available yet.</EmptyPanelMessage>
+        ) : (
+          <div className="space-y-2">
+            {mutations.slice(0, 5).map((item) => (
+              <div
+                key={item.mutation_id}
+                className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-foreground" title={item.mutation_id}>
+                    {item.mutation_id}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.failures}/{item.attempts_hit} •{" "}
+                    {formatPercent(item.failure_rate_when_hit, 1)}
+                  </p>
+                </div>
+                <Badge variant="outline">{item.top_tools[0]?.tool ?? "unknown"}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function HeatmapRow({
   category,
   heatmap,
@@ -621,4 +675,72 @@ function buildFailureTaxonomyHeatmap(failedAttemptsByRunId: Record<string, Repla
   }
 
   return { categories, faultTypes, matrix: normalizedMatrix, maxCount };
+}
+
+function buildDashboardLethalMutations(statsById: Record<string, RunStats>) {
+  const byMutation = new Map<
+    string,
+    {
+      failures: number;
+      attempts_hit: number;
+      topTools: Map<string, number>;
+      topReasons: Map<string, number>;
+    }
+  >();
+
+  for (const stats of Object.values(statsById)) {
+    for (const item of stats.most_lethal_mutations ?? []) {
+      if (!byMutation.has(item.mutation_id)) {
+        byMutation.set(item.mutation_id, {
+          failures: 0,
+          attempts_hit: 0,
+          topTools: new Map(),
+          topReasons: new Map(),
+        });
+      }
+      const current = byMutation.get(item.mutation_id)!;
+      current.failures += item.failures;
+      current.attempts_hit += item.attempts_hit;
+
+      for (const tool of item.top_tools) {
+        current.topTools.set(tool.tool, (current.topTools.get(tool.tool) ?? 0) + tool.count);
+      }
+      for (const reason of item.top_reasons) {
+        current.topReasons.set(
+          reason.reason,
+          (current.topReasons.get(reason.reason) ?? 0) + reason.count
+        );
+      }
+    }
+  }
+
+  return [...byMutation.entries()]
+    .map(([mutation_id, value]) => {
+      const topTools = [...value.topTools.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 3)
+        .map(([tool, count]) => ({ tool, count }));
+      const topReasons = [...value.topReasons.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 3)
+        .map(([reason, count]) => ({ reason, count }));
+      const failureRate =
+        value.attempts_hit > 0 ? Number((value.failures / value.attempts_hit).toFixed(4)) : 0;
+
+      return {
+        mutation_id,
+        failures: value.failures,
+        attempts_hit: value.attempts_hit,
+        failure_rate_when_hit: failureRate,
+        top_tools: topTools,
+        top_reasons: topReasons,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.failures - a.failures ||
+        b.failure_rate_when_hit - a.failure_rate_when_hit ||
+        b.attempts_hit - a.attempts_hit ||
+        a.mutation_id.localeCompare(b.mutation_id)
+    );
 }

@@ -141,6 +141,25 @@ class ToolUsageStatsItem(BaseModel):
     calls: int
 
 
+class LethalMutationTopTool(BaseModel):
+    tool: str
+    count: int
+
+
+class LethalMutationTopReason(BaseModel):
+    reason: str
+    count: int
+
+
+class LethalMutationInsight(BaseModel):
+    mutation_id: str
+    failures: int
+    attempts_hit: int
+    failure_rate_when_hit: float
+    top_tools: list[LethalMutationTopTool]
+    top_reasons: list[LethalMutationTopReason]
+
+
 class RunStatsResponse(BaseModel):
     run_id: UUID
     attempts: RunAttemptsSummary
@@ -149,6 +168,8 @@ class RunStatsResponse(BaseModel):
     failures_by_mutation: list[MutationCountPct]
     top_failure_reasons: list[ReasonCountPct]
     first_failure_step_distribution: list[EventIndexCount]
+    attribution: str
+    most_lethal_mutations: list[LethalMutationInsight]
 
 
 class ToolFragilityTopMutation(BaseModel):

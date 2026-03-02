@@ -133,6 +133,8 @@ function RunDetailPanels({
 }
 
 function RunStatsCards({ stats }: { stats: RunStats | null }) {
+  const lethalMutations = stats?.most_lethal_mutations ?? [];
+
   return (
     <div className="space-y-6">
       <Card>
@@ -170,6 +172,40 @@ function RunStatsCards({ stats }: { stats: RunStats | null }) {
           {(!stats || stats.top_failure_reasons.length === 0) && (
             <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
               No failure reason data available yet.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Most Lethal Mutations</CardTitle>
+          <CardDescription>
+            Multi-attribution from mutation_trace hits to failed attempts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {lethalMutations.slice(0, 5).map((item) => (
+            <div
+              key={item.mutation_id}
+              className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm text-foreground" title={item.mutation_id}>
+                  {item.mutation_id}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {item.failures}/{item.attempts_hit} • {formatPercent(item.failure_rate_when_hit, 1)}
+                </p>
+              </div>
+              <Badge variant="outline">
+                {item.top_tools[0]?.tool ?? "unknown"}
+              </Badge>
+            </div>
+          ))}
+          {lethalMutations.length === 0 && (
+            <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
+              No mutation-trace lethality data available yet.
             </div>
           )}
         </CardContent>

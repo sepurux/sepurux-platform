@@ -55,6 +55,15 @@ export type RunStats = {
   failures_by_mutation: Array<{ mutation_id: string; count: number; pct: number }>;
   top_failure_reasons: Array<{ reason: string; count: number; pct: number }>;
   first_failure_step_distribution: Array<{ event_index: number; count: number }>;
+  attribution: string;
+  most_lethal_mutations: Array<{
+    mutation_id: string;
+    failures: number;
+    attempts_hit: number;
+    failure_rate_when_hit: number;
+    top_tools: Array<{ tool: string; count: number }>;
+    top_reasons: Array<{ reason: string; count: number }>;
+  }>;
 };
 
 export type ToolFragilityResponse = {
