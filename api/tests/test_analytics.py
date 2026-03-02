@@ -226,6 +226,90 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
     return str(run_stats_id), str(run_other_id)
 
 
+def _seed_lethal_mutation_data(db: Session, *, project_id) -> str:
+    now = datetime.now(UTC)
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+
+    db.add(
+        Trace(
+            trace_id=trace_id,
+            project_id=project_id,
+            source="test",
+            s3_key=f"traces/{trace_id}.json",
+        )
+    )
+    db.add(
+        Campaign(
+            campaign_id=campaign_id,
+            project_id=project_id,
+            name="Lethal Mutation Campaign",
+            mutation_set=[],
+            eval_set={},
+        )
+    )
+    db.add(
+        Run(
+            run_id=run_id,
+            project_id=project_id,
+            trace_id=trace_id,
+            campaign_id=campaign_id,
+            status="completed",
+            summary={"attempt_count": 12},
+            created_at=now - timedelta(minutes=40),
+        )
+    )
+
+    definitions = [
+        (["schema.drop_field", "rare.mutation"], "failed", "timeout", "jira.create_issue"),
+        (["schema.drop_field", "rare.mutation"], "passed", None, None),
+        (
+            ["schema.drop_field", "fault.timeout", "schema.drop_field"],
+            "failed",
+            "timeout",
+            "jira.create_issue",
+        ),
+        (["schema.drop_field", "fault.timeout"], "failed", "permission_denied", "slack.send_message"),
+        (["schema.drop_field", "fault.timeout"], "passed", None, None),
+        (["schema.drop_field", "fault.timeout"], "failed", "timeout", "jira.create_issue"),
+        (["fault.timeout"], "failed", "rate_limited", "github.create_pr"),
+        (["fault.timeout", "poison.inject"], "passed", None, None),
+        (["fault.timeout", "poison.inject"], "passed", None, None),
+        (["poison.inject", "rare.mutation"], "failed", "timeout", "slack.send_message"),
+        (["poison.inject", "rare.mutation"], "failed", "permission_denied", "jira.create_issue"),
+        (["poison.inject"], "passed", None, None),
+    ]
+
+    attempts: list[ReplayAttempt] = []
+    for offset, (applied_ids, result, reason, tool) in enumerate(definitions):
+        applied = [
+            {"mutation_id": mutation_id, "tool": tool or "unknown", "event_index": 2 + idx}
+            for idx, mutation_id in enumerate(applied_ids)
+        ]
+        attempts.append(
+            ReplayAttempt(
+                attempt_id=uuid4(),
+                project_id=project_id,
+                run_id=run_id,
+                mutation_id=f"attempt-{offset}",
+                result=result,
+                failure_reason=reason,
+                first_failure_event_index=3 if result == "failed" else None,
+                first_failure_tool=tool,
+                mutation_trace={
+                    "seed": 200 + offset,
+                    "applied": applied,
+                },
+                created_at=now - timedelta(minutes=30 - offset),
+            )
+        )
+
+    db.add_all(attempts)
+    db.commit()
+    return str(run_id)
+
+
 def test_get_run_stats_returns_correct_breakdowns(
     analytics_test_context: tuple[TestClient, sessionmaker[Session], object],
 ) -> None:
@@ -267,6 +351,7 @@ def test_get_run_stats_returns_correct_breakdowns(
         data["attribution"]
         == "mvp_multi_attribution_each_applied_mutation_gets_credit"
     )
+    assert isinstance(data["insights"], list)
 
 
 def test_get_run_stats_includes_most_lethal_mutations_from_mutation_trace(
@@ -281,26 +366,50 @@ def test_get_run_stats_includes_most_lethal_mutations_from_mutation_trace(
     assert response.status_code == 200
     data = response.json()
     lethal = data["most_lethal_mutations"]
-    assert lethal
+    assert lethal == []
+
+
+def test_get_run_stats_most_lethal_mutations_applies_threshold_and_sorting(
+    analytics_test_context: tuple[TestClient, sessionmaker[Session], object],
+) -> None:
+    client, testing_session_local, project_id = analytics_test_context
+    with testing_session_local() as db:
+        run_id = _seed_lethal_mutation_data(db, project_id=project_id)
+
+    response = client.get(f"/v1/runs/{run_id}/stats")
+
+    assert response.status_code == 200
+    data = response.json()
+    lethal = data["most_lethal_mutations"]
+    assert len(lethal) == 3
+    assert [item["mutation_id"] for item in lethal] == [
+        "schema.drop_field",
+        "fault.timeout",
+        "poison.inject",
+    ]
 
     by_id = {item["mutation_id"]: item for item in lethal}
-    assert by_id["schema.drop_field"]["attempts_hit"] == 3
-    assert by_id["schema.drop_field"]["failures"] == 2
+    assert all(item["attempts_hit"] >= 5 for item in lethal)
+    assert "rare.mutation" not in by_id
+
+    assert by_id["schema.drop_field"]["attempts_hit"] == 6
+    assert by_id["schema.drop_field"]["failures"] == 4
     assert by_id["schema.drop_field"]["failure_rate_when_hit"] == 0.6667
     assert by_id["schema.drop_field"]["top_tools"][0] == {
         "tool": "jira.create_issue",
-        "count": 2,
+        "count": 3,
     }
 
-    assert by_id["fault.timeout"]["attempts_hit"] == 1
-    assert by_id["fault.timeout"]["failures"] == 1
-    assert by_id["fault.timeout"]["top_reasons"][0] == {"reason": "timeout", "count": 1}
+    assert by_id["fault.timeout"]["attempts_hit"] == 7
+    assert by_id["fault.timeout"]["failures"] == 4
+    assert by_id["fault.timeout"]["failure_rate_when_hit"] == 0.5714
+    assert by_id["fault.timeout"]["top_reasons"][0] == {"reason": "timeout", "count": 2}
 
-    assert by_id["poison.inject"]["attempts_hit"] == 2
-    assert by_id["poison.inject"]["failures"] == 1
-    assert by_id["poison.inject"]["failure_rate_when_hit"] == 0.5
-
-    assert lethal[0]["mutation_id"] == "schema.drop_field"
+    assert by_id["poison.inject"]["attempts_hit"] == 5
+    assert by_id["poison.inject"]["failures"] == 2
+    assert by_id["poison.inject"]["failure_rate_when_hit"] == 0.4
+    assert data["insights"]
+    assert all("id" in item and "confidence" in item for item in data["insights"])
 
 
 def test_get_tools_fragility_orders_by_failures_and_respects_window(
