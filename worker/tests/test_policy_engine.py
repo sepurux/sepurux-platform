@@ -81,11 +81,16 @@ def test_evaluate_policy_supports_wildcard_and_args_subset_match() -> None:
     assert evaluation.reason == "no writes in replay"
 
 
-def test_evaluate_policy_safe_gate_blocks_jira_commit_like_without_token() -> None:
+def test_evaluate_policy_irreversible_tools_gate_blocks_jira_commit_like_without_token() -> None:
     policy = {
         "version": "0.1",
         "defaults": {"unknown_tools": "allow"},
-        "rules": [{"match": {"tool": "jira.*"}, "effect": "allow"}],
+        "irreversible_tools": [
+            "payments.refund",
+            "jira.create_issue(commit)",
+            "jira.create_issue_commit",
+        ],
+        "approval": {"token_field": "confirmation_token"},
     }
 
     commit_like = evaluate_policy(

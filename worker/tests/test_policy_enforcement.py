@@ -75,10 +75,11 @@ def test_policy_pack_requires_approval_and_records_policy_event(
                 version="0.1.0",
                 policy={
                     "version": "0.1",
-                    "defaults": {"unknown_tools": "deny"},
-                    "rules": [
-                        {"match": {"tool": "jira.*"}, "effect": "allow"},
-                        {"match": {"tool": "payments.refund"}, "effect": "require_approval"},
+                    "defaults": {"unknown_tools": "allow"},
+                    "irreversible_tools": [
+                        "payments.refund",
+                        "jira.create_issue(commit)",
+                        "jira.create_issue_commit",
                     ],
                     "approval": {"token_field": "confirmation_token"},
                 },
@@ -170,9 +171,11 @@ def test_policy_pack_blocks_jira_commit_like_and_allows_draft(
                 version="0.1.0",
                 policy={
                     "version": "0.1",
-                    "defaults": {"unknown_tools": "deny"},
-                    "rules": [
-                        {"match": {"tool": "jira.*"}, "effect": "allow"},
+                    "defaults": {"unknown_tools": "allow"},
+                    "irreversible_tools": [
+                        "payments.refund",
+                        "jira.create_issue(commit)",
+                        "jira.create_issue_commit",
                     ],
                     "approval": {"token_field": "confirmation_token"},
                 },
