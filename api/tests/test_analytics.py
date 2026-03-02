@@ -109,6 +109,13 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason=None,
             first_failure_event_index=None,
             first_failure_tool=None,
+            mutation_trace={
+                "seed": 101,
+                "applied": [
+                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 2},
+                    {"mutation_id": "poison.inject", "tool": "jira.create_issue", "event_index": 3},
+                ],
+            },
             tools_touched=["jira.create_issue", "slack.send_message"],
             tool_call_counts={"jira.create_issue": 1, "slack.send_message": 1},
             created_at=now - timedelta(hours=2, minutes=10),
@@ -122,6 +129,13 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="timeout",
             first_failure_event_index=6,
             first_failure_tool="jira.create_issue",
+            mutation_trace={
+                "seed": 102,
+                "applied": [
+                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 3},
+                    {"mutation_id": "fault.timeout", "tool": "jira.create_issue", "event_index": 4},
+                ],
+            },
             tools_touched=["jira.create_issue"],
             tool_call_counts={"jira.create_issue": 1},
             created_at=now - timedelta(hours=2, minutes=9),
@@ -135,6 +149,14 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="permission_denied",
             first_failure_event_index=2,
             first_failure_tool="jira.create_issue",
+            mutation_trace={
+                "seed": 103,
+                "applied": [
+                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 1},
+                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 2},
+                    {"mutation_id": "fault.rate_limit", "tool": "slack.send_message", "event_index": 3},
+                ],
+            },
             tools_touched=["jira.create_issue", "slack.send_message"],
             tool_call_counts={"jira.create_issue": 1, "slack.send_message": 2},
             created_at=now - timedelta(hours=2, minutes=8),
@@ -148,6 +170,12 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             failure_reason="timeout",
             first_failure_event_index=6,
             first_failure_tool="slack.send_message",
+            mutation_trace={
+                "seed": 104,
+                "applied": [
+                    {"mutation_id": "poison.inject", "tool": "slack.send_message", "event_index": 5},
+                ],
+            },
             tools_touched=["slack.send_message"],
             tool_call_counts={"slack.send_message": 1},
             created_at=now - timedelta(hours=2, minutes=7),
@@ -235,6 +263,44 @@ def test_get_run_stats_returns_correct_breakdowns(
         {"event_index": 2, "count": 1},
         {"event_index": 6, "count": 2},
     ]
+    assert (
+        data["attribution"]
+        == "mvp_multi_attribution_each_applied_mutation_gets_credit"
+    )
+
+
+def test_get_run_stats_includes_most_lethal_mutations_from_mutation_trace(
+    analytics_test_context: tuple[TestClient, sessionmaker[Session], object],
+) -> None:
+    client, testing_session_local, project_id = analytics_test_context
+    with testing_session_local() as db:
+        run_stats_id, _ = _seed_analytics_data(db, project_id=project_id)
+
+    response = client.get(f"/v1/runs/{run_stats_id}/stats")
+
+    assert response.status_code == 200
+    data = response.json()
+    lethal = data["most_lethal_mutations"]
+    assert lethal
+
+    by_id = {item["mutation_id"]: item for item in lethal}
+    assert by_id["schema.drop_field"]["attempts_hit"] == 3
+    assert by_id["schema.drop_field"]["failures"] == 2
+    assert by_id["schema.drop_field"]["failure_rate_when_hit"] == 0.6667
+    assert by_id["schema.drop_field"]["top_tools"][0] == {
+        "tool": "jira.create_issue",
+        "count": 2,
+    }
+
+    assert by_id["fault.timeout"]["attempts_hit"] == 1
+    assert by_id["fault.timeout"]["failures"] == 1
+    assert by_id["fault.timeout"]["top_reasons"][0] == {"reason": "timeout", "count": 1}
+
+    assert by_id["poison.inject"]["attempts_hit"] == 2
+    assert by_id["poison.inject"]["failures"] == 1
+    assert by_id["poison.inject"]["failure_rate_when_hit"] == 0.5
+
+    assert lethal[0]["mutation_id"] == "schema.drop_field"
 
 
 def test_get_tools_fragility_orders_by_failures_and_respects_window(

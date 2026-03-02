@@ -55,6 +55,7 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
     for attempt in failed_attempts:
         if attempt.first_failure_event_index is not None:
             first_failure_step_counter[attempt.first_failure_event_index] += 1
+    most_lethal_mutations = _aggregate_most_lethal_mutations(attempts)
 
     return {
         "run_id": run_id,
@@ -91,6 +92,8 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
             {"event_index": event_index, "count": count}
             for event_index, count in sorted(first_failure_step_counter.items())
         ],
+        "attribution": "mvp_multi_attribution_each_applied_mutation_gets_credit",
+        "most_lethal_mutations": most_lethal_mutations,
     }
 
 
@@ -296,3 +299,81 @@ def _sorted_tool_usage_items(
         attempts_by_tool.items(),
         key=lambda item: (-item[1], -calls_by_tool.get(item[0], 0), item[0]),
     )
+
+
+def _aggregate_most_lethal_mutations(
+    attempts: list[ReplayAttempt], *, limit: int = 20
+) -> list[dict[str, Any]]:
+    attempts_hit: Counter[str] = Counter()
+    failures: Counter[str] = Counter()
+    top_tools_by_mutation: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    top_reasons_by_mutation: defaultdict[str, Counter[str]] = defaultdict(Counter)
+
+    for attempt in attempts:
+        mutation_ids = _mutation_ids_from_trace(attempt)
+        if not mutation_ids:
+            continue
+
+        for mutation_id in mutation_ids:
+            attempts_hit[mutation_id] += 1
+
+        if not _is_fail_result(attempt.result):
+            continue
+
+        failure_tool = attempt.first_failure_tool or "unknown"
+        failure_reason = attempt.failure_reason or "unknown"
+        for mutation_id in mutation_ids:
+            failures[mutation_id] += 1
+            top_tools_by_mutation[mutation_id][failure_tool] += 1
+            top_reasons_by_mutation[mutation_id][failure_reason] += 1
+
+    rows: list[dict[str, Any]] = []
+    for mutation_id, attempts_count in attempts_hit.items():
+        failed_count = failures.get(mutation_id, 0)
+        failure_rate_when_hit = _ratio(failed_count, attempts_count)
+        rows.append(
+            {
+                "mutation_id": mutation_id,
+                "failures": failed_count,
+                "attempts_hit": attempts_count,
+                "failure_rate_when_hit": failure_rate_when_hit,
+                "top_tools": [
+                    {"tool": tool, "count": count}
+                    for tool, count in _sorted_counter_items(top_tools_by_mutation[mutation_id])[:3]
+                ],
+                "top_reasons": [
+                    {"reason": reason, "count": count}
+                    for reason, count in _sorted_counter_items(
+                        top_reasons_by_mutation[mutation_id]
+                    )[:3]
+                ],
+            }
+        )
+
+    rows.sort(
+        key=lambda item: (
+            -item["failures"],
+            -item["failure_rate_when_hit"],
+            -item["attempts_hit"],
+            item["mutation_id"],
+        )
+    )
+    return rows[:limit]
+
+
+def _mutation_ids_from_trace(attempt: ReplayAttempt) -> set[str]:
+    trace = attempt.mutation_trace
+    if not isinstance(trace, dict):
+        return set()
+    applied = trace.get("applied")
+    if not isinstance(applied, list):
+        return set()
+
+    mutation_ids: set[str] = set()
+    for item in applied:
+        if not isinstance(item, dict):
+            continue
+        mutation_id = item.get("mutation_id")
+        if isinstance(mutation_id, str) and mutation_id:
+            mutation_ids.add(mutation_id)
+    return mutation_ids
