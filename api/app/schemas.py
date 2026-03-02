@@ -160,6 +160,36 @@ class LethalMutationInsight(BaseModel):
     top_reasons: list[LethalMutationTopReason]
 
 
+class InsightEvidenceTool(BaseModel):
+    tool: str
+    count: int
+
+
+class InsightEvidenceMutation(BaseModel):
+    mutation_id: str
+    count: int
+
+
+class InsightEvidenceReason(BaseModel):
+    reason: str
+    count: int
+
+
+class RunInsightEvidence(BaseModel):
+    top_tools: list[InsightEvidenceTool] = Field(default_factory=list)
+    top_mutations: list[InsightEvidenceMutation] = Field(default_factory=list)
+    top_reasons: list[InsightEvidenceReason] = Field(default_factory=list)
+
+
+class RunInsight(BaseModel):
+    id: str
+    title: str
+    recommendation: str
+    why: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    evidence: RunInsightEvidence
+
+
 class RunStatsResponse(BaseModel):
     run_id: UUID
     attempts: RunAttemptsSummary
@@ -170,6 +200,7 @@ class RunStatsResponse(BaseModel):
     first_failure_step_distribution: list[EventIndexCount]
     attribution: str
     most_lethal_mutations: list[LethalMutationInsight]
+    insights: list[RunInsight]
 
 
 class ToolFragilityTopMutation(BaseModel):

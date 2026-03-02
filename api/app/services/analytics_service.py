@@ -5,9 +5,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from app.models import ReplayAttempt, Run
+from app.models import Counterfactual, PolicyEvent, ReplayAttempt, Run
+from app.services.insights_service import build_run_insights
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+LETHAL_MUTATIONS_MIN_ATTEMPTS_HIT = 5
+LETHAL_MUTATIONS_MAX_RESULTS = 10
 
 
 class RunNotFoundError(Exception):
@@ -56,6 +60,37 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
         if attempt.first_failure_event_index is not None:
             first_failure_step_counter[attempt.first_failure_event_index] += 1
     most_lethal_mutations = _aggregate_most_lethal_mutations(attempts)
+    policy_metrics = _policy_metrics_for_run(
+        db,
+        run=run,
+    )
+    counterfactual_metrics = _counterfactual_metrics_for_attempts(
+        db,
+        project_id=project_id,
+        attempts=attempts,
+    )
+    insights = build_run_insights(
+        run_id=run_id,
+        failed_attempts=failed_count,
+        failures_by_tool=[
+            {"tool": tool, "count": count, "pct": _ratio(count, failed_count)}
+            for tool, count in _sorted_counter_items(failures_by_tool)
+        ],
+        failures_by_mutation=[
+            {"mutation_id": mutation_id, "count": count, "pct": _ratio(count, failed_count)}
+            for mutation_id, count in _sorted_counter_items(failures_by_mutation)
+        ],
+        top_failure_reasons=[
+            {"reason": reason, "count": count, "pct": _ratio(count, failed_count)}
+            for reason, count in _sorted_counter_items(top_failure_reasons)
+        ],
+        most_lethal_mutations=most_lethal_mutations,
+        policy_violations_total=policy_metrics["policy_violations_total"],
+        policy_requires_approval=policy_metrics["policy_requires_approval"],
+        policy_blocked_tools=policy_metrics["policy_blocked_tools"],
+        counterfactual_total=counterfactual_metrics["total"],
+        counterfactual_passed=counterfactual_metrics["passed"],
+    )
 
     return {
         "run_id": run_id,
@@ -94,6 +129,7 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
         ],
         "attribution": "mvp_multi_attribution_each_applied_mutation_gets_credit",
         "most_lethal_mutations": most_lethal_mutations,
+        "insights": insights,
     }
 
 
@@ -302,7 +338,10 @@ def _sorted_tool_usage_items(
 
 
 def _aggregate_most_lethal_mutations(
-    attempts: list[ReplayAttempt], *, limit: int = 20
+    attempts: list[ReplayAttempt],
+    *,
+    min_attempts_hit: int = LETHAL_MUTATIONS_MIN_ATTEMPTS_HIT,
+    limit: int = LETHAL_MUTATIONS_MAX_RESULTS,
 ) -> list[dict[str, Any]]:
     attempts_hit: Counter[str] = Counter()
     failures: Counter[str] = Counter()
@@ -329,6 +368,8 @@ def _aggregate_most_lethal_mutations(
 
     rows: list[dict[str, Any]] = []
     for mutation_id, attempts_count in attempts_hit.items():
+        if attempts_count < min_attempts_hit:
+            continue
         failed_count = failures.get(mutation_id, 0)
         failure_rate_when_hit = _ratio(failed_count, attempts_count)
         rows.append(
@@ -377,3 +418,87 @@ def _mutation_ids_from_trace(attempt: ReplayAttempt) -> set[str]:
         if isinstance(mutation_id, str) and mutation_id:
             mutation_ids.add(mutation_id)
     return mutation_ids
+
+
+def _policy_metrics_for_run(
+    db: Session,
+    *,
+    run: Run,
+) -> dict[str, Any]:
+    summary = run.summary if isinstance(run.summary, dict) else {}
+
+    summary_requires = _summary_int(
+        summary, keys=("policy_requires_approval", "policy_requires_approval_count")
+    )
+    summary_denies = _summary_int(summary, keys=("policy_denies", "policy_denied_count"))
+    summary_total = _summary_int(summary, keys=("policy_violations_total",))
+    if summary_total <= 0:
+        summary_total = summary_requires + summary_denies
+
+    policy_events = list(
+        db.scalars(
+            select(PolicyEvent).where(
+                PolicyEvent.run_id == run.run_id,
+            )
+        )
+    )
+    requires_count = 0
+    denies_count = 0
+    blocked_tools: Counter[str] = Counter()
+    for event in policy_events:
+        if event.decision == "require_approval":
+            requires_count += 1
+            blocked_tools[event.tool] += 1
+        elif event.decision == "deny":
+            denies_count += 1
+            blocked_tools[event.tool] += 1
+
+    requires = max(summary_requires, requires_count)
+    denies = max(summary_denies, denies_count)
+    total = max(summary_total, requires + denies)
+
+    return {
+        "policy_requires_approval": requires,
+        "policy_denies": denies,
+        "policy_violations_total": total,
+        "policy_blocked_tools": [
+            {"tool": tool, "count": count} for tool, count in _sorted_counter_items(blocked_tools)
+        ],
+    }
+
+
+def _counterfactual_metrics_for_attempts(
+    db: Session,
+    *,
+    project_id: UUID,
+    attempts: list[ReplayAttempt],
+) -> dict[str, int]:
+    attempt_ids = [attempt.attempt_id for attempt in attempts]
+    if not attempt_ids:
+        return {"total": 0, "passed": 0}
+
+    counterfactuals = list(
+        db.scalars(
+            select(Counterfactual).where(
+                Counterfactual.project_id == project_id,
+                Counterfactual.attempt_id.in_(attempt_ids),
+            )
+        )
+    )
+    passed = 0
+    for item in counterfactuals:
+        if _is_pass_result(item.result):
+            passed += 1
+    return {"total": len(counterfactuals), "passed": passed}
+
+
+def _summary_int(summary: dict[str, Any], *, keys: tuple[str, ...]) -> int:
+    for key in keys:
+        value = summary.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return max(0, value)
+        if isinstance(value, float):
+            return max(0, int(value))
+    return 0
