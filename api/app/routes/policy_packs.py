@@ -21,7 +21,7 @@ def _to_policy_pack_metadata(record) -> PolicyPackMetadata:
         policy_pack_id=record.policy_pack_id,
         project_id=record.project_id,
         name=record.name,
-        version=record.version,
+        engine=record.engine,
         policy=record.policy,
         created_at=record.created_at,
     )
@@ -37,7 +37,7 @@ def post_policy_pack(
         db,
         project_id=project_scope.project_id,
         name=payload.name,
-        version=payload.version,
+        engine=payload.engine,
         policy=payload.policy,
     )
     return _to_policy_pack_metadata(record)

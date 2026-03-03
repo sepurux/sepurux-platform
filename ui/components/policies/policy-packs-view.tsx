@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { api, type PolicyPackMetadata } from "@/lib/api";
@@ -68,9 +69,9 @@ export function PolicyPacksView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Version</TableHead>
+                  <TableHead>Engine</TableHead>
                   <TableHead>Unknown Tools</TableHead>
-                  <TableHead>Rules</TableHead>
+                  <TableHead>Irreversible Tools</TableHead>
                   <TableHead>Pack ID</TableHead>
                   <TableHead className="text-right">Created</TableHead>
                 </TableRow>
@@ -88,18 +89,31 @@ export function PolicyPacksView() {
                       | { unknown_tools?: string }
                       | undefined;
                     const unknownTools = defaults?.unknown_tools ?? "allow";
-                    const rulesValue = record.policy?.rules;
-                    const rules = Array.isArray(rulesValue) ? rulesValue.length : 0;
+                    const irreversibleObj = record.policy?.irreversible as
+                      | { tools?: unknown }
+                      | undefined;
+                    const irreversibleTools = Array.isArray(irreversibleObj?.tools)
+                      ? irreversibleObj.tools
+                      : Array.isArray(record.policy?.irreversible_tools)
+                        ? record.policy.irreversible_tools
+                        : [];
                     return (
                       <TableRow key={record.policy_pack_id}>
-                        <TableCell className="font-medium text-foreground">{record.name}</TableCell>
-                        <TableCell>{record.version}</TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          <Link
+                            href={`/policies/${record.policy_pack_id}`}
+                            className="hover:text-cyan-200"
+                          >
+                            {record.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{record.engine}</TableCell>
                         <TableCell>
                           <Badge variant={unknownTools === "deny" ? "danger" : "default"}>
                             {unknownTools}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{rules}</TableCell>
+                        <TableCell className="text-muted-foreground">{irreversibleTools.length}</TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {shortId(record.policy_pack_id, 14)}
                         </TableCell>

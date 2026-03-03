@@ -72,15 +72,22 @@ def test_policy_pack_requires_approval_and_records_policy_event(
                 policy_pack_id=policy_pack_id,
                 project_id=project_id,
                 name="Strict Refund Policy",
-                version="0.1.0",
+                engine="builtin",
                 policy={
                     "version": "0.1",
-                    "defaults": {"unknown_tools": "deny"},
-                    "rules": [
-                        {"match": {"tool": "jira.*"}, "effect": "allow"},
-                        {"match": {"tool": "payments.refund"}, "effect": "require_approval"},
-                    ],
+                    "defaults": {"unknown_tools": "allow"},
+                    "irreversible": {
+                        "tools": [
+                            "payments.refund",
+                            "jira.create_issue(commit)",
+                            "jira.create_issue_commit",
+                        ]
+                    },
                     "approval": {"token_field": "confirmation_token"},
+                    "opa": {
+                        "package": "crashlab.policy",
+                        "query": "data.crashlab.policy.decision",
+                    },
                 },
             )
         )
@@ -116,6 +123,12 @@ def test_policy_pack_requires_approval_and_records_policy_event(
     assert policy_event.tool == "payments.refund"
     assert policy_event.event_index == 2
     assert "approval token" in (policy_event.reason or "")
+    assert isinstance(policy_event.input, dict)
+    assert policy_event.input["tool"]["name"] == "payments.refund"
+    assert policy_event.input["context"]["run_id"] == str(run_id)
+    assert policy_event.input["context"]["attempt_id"] == str(attempt.attempt_id)
+    assert policy_event.input["context"]["project_id"] == str(project_id)
+    assert policy_event.input["metadata"]["event_index"] == 2
 
     summary = run.summary or {}
     assert summary.get("policy_violations_total") == 1
@@ -167,14 +180,22 @@ def test_policy_pack_blocks_jira_commit_like_and_allows_draft(
                 policy_pack_id=policy_pack_id,
                 project_id=project_id,
                 name="Jira Commit Policy",
-                version="0.1.0",
+                engine="builtin",
                 policy={
                     "version": "0.1",
-                    "defaults": {"unknown_tools": "deny"},
-                    "rules": [
-                        {"match": {"tool": "jira.*"}, "effect": "allow"},
-                    ],
+                    "defaults": {"unknown_tools": "allow"},
+                    "irreversible": {
+                        "tools": [
+                            "payments.refund",
+                            "jira.create_issue(commit)",
+                            "jira.create_issue_commit",
+                        ]
+                    },
                     "approval": {"token_field": "confirmation_token"},
+                    "opa": {
+                        "package": "crashlab.policy",
+                        "query": "data.crashlab.policy.decision",
+                    },
                 },
             )
         )
@@ -218,3 +239,85 @@ def test_policy_pack_blocks_jira_commit_like_and_allows_draft(
     decision_by_tool = {event.tool: event.decision for event in policy_events}
     assert decision_by_tool["jira.create_issue(commit)"] == "require_approval"
     assert decision_by_tool["jira.create_issue"] == "allow"
+
+
+def test_policy_pack_allows_non_irreversible_tool(
+    worker_db_context: sessionmaker[Session],
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    run_id = uuid4()
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Allow Non-Irreversible",
+                mutation_set=[
+                    {
+                        "mutation_id": "safe-jira-draft",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Draft issue"},
+                    },
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="Builtin Policy",
+                engine="builtin",
+                policy={
+                    "version": "0.1",
+                    "defaults": {"unknown_tools": "allow"},
+                    "irreversible": {
+                        "tools": [
+                            "payments.refund",
+                            "jira.create_issue(commit)",
+                            "jira.create_issue_commit",
+                        ]
+                    },
+                    "approval": {"token_field": "confirmation_token"},
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "passed"
+    assert attempt.failure_reason is None
+    assert policy_event.decision == "allow"
+    assert policy_event.tool == "jira.create_issue"
