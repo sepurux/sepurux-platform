@@ -12,6 +12,22 @@ Run DB migrations in the API container:
 docker compose -f infra/docker-compose.yml exec api alembic upgrade head
 ```
 
+Seed architecture-aware demo data (tenant/project scoped, mutation packs, policy packs, and runs):
+
+```bash
+chmod +x seed.sh
+./seed.sh
+```
+
+Optional seed controls:
+
+- `RUNS_COUNT` (default `20`)
+- `POLICY_RUNS_COUNT` (default `4`)
+- `WAIT_FOR_COMPLETION` (default `1`)
+- `WAIT_TIMEOUT_SECONDS` (default `360`)
+- `API_KEY` (default `crashlab-dev-key`)
+- `PROJECT_ID` (default `22222222-2222-2222-2222-222222222222`)
+
 ## Marketing Site (`/site`)
 
 Run the standalone startup marketing website:

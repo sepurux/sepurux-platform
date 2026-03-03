@@ -148,6 +148,8 @@ function DashboardPanels({ data }: { data: DashboardData }) {
     () => buildDashboardLethalMutations(data.runStatsById),
     [data.runStatsById]
   );
+  const mostRecentRun = dashboardRuns[0];
+  const recentRunInsights = mostRecentRun ? (data.runStatsById[mostRecentRun.run_id]?.insights ?? []) : [];
 
   return (
     <Tabs defaultValue="overview" className="space-y-4">
@@ -193,7 +195,13 @@ function DashboardPanels({ data }: { data: DashboardData }) {
           <CounterfactualInspector runs={dashboardRuns} failedAttemptsByRunId={data.failedAttemptsByRunId} compact />
         </div>
 
-        <MostLethalMutationsCard mutations={lethalMutations} />
+        <div className="grid gap-6 xl:grid-cols-2">
+          <MostLethalMutationsCard mutations={lethalMutations} />
+          <RecommendedFixesCard
+            runId={mostRecentRun?.run_id ?? null}
+            insights={recentRunInsights.slice(0, 3)}
+          />
+        </div>
       </TabsContent>
 
       <TabsContent value="taxonomy" className="space-y-6">
@@ -458,7 +466,7 @@ function MostLethalMutationsCard({
       </CardHeader>
       <CardContent>
         {mutations.length === 0 ? (
-          <EmptyPanelMessage>No mutation trace stats available yet.</EmptyPanelMessage>
+          <EmptyPanelMessage>Run more attempts to compute lethal mutations.</EmptyPanelMessage>
         ) : (
           <div className="space-y-2">
             {mutations.slice(0, 5).map((item) => (
@@ -476,6 +484,90 @@ function MostLethalMutationsCard({
                   </p>
                 </div>
                 <Badge variant="outline">{item.top_tools[0]?.tool ?? "unknown"}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecommendedFixesCard({
+  runId,
+  insights,
+}: {
+  runId: string | null;
+  insights: RunStats["insights"];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Recommended Fixes</CardTitle>
+        <CardDescription>
+          Top 3 insights from the most recent run{runId ? ` (${shortId(runId, 8)})` : ""}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {insights.length === 0 ? (
+          <EmptyPanelMessage>Run more attempts to generate recommended fixes.</EmptyPanelMessage>
+        ) : (
+          <div className="space-y-3">
+            {insights.map((insight) => (
+              <div
+                key={insight.id}
+                className="rounded-md border border-border/60 bg-muted/15 p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground" title={insight.title}>
+                      {insight.title}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{insight.recommendation}</p>
+                  </div>
+                  <Badge
+                    variant={
+                      insight.confidence >= 0.75
+                        ? "success"
+                        : insight.confidence >= 0.6
+                          ? "warning"
+                          : "outline"
+                    }
+                  >
+                    {formatPercent(insight.confidence, 0)}
+                  </Badge>
+                </div>
+                <details className="mt-2 rounded border border-border/50 bg-background/40 p-2">
+                  <summary className="cursor-pointer text-xs font-medium text-foreground">
+                    View evidence
+                  </summary>
+                  <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+                    <p>
+                      Tools:{" "}
+                      {insight.evidence.top_tools.length > 0
+                        ? insight.evidence.top_tools
+                            .map((item) => `${item.tool} (${item.count})`)
+                            .join(", ")
+                        : "--"}
+                    </p>
+                    <p>
+                      Mutations:{" "}
+                      {insight.evidence.top_mutations.length > 0
+                        ? insight.evidence.top_mutations
+                            .map((item) => `${item.mutation_id} (${item.count})`)
+                            .join(", ")
+                        : "--"}
+                    </p>
+                    <p>
+                      Reasons:{" "}
+                      {insight.evidence.top_reasons.length > 0
+                        ? insight.evidence.top_reasons
+                            .map((item) => `${item.reason} (${item.count})`)
+                            .join(", ")
+                        : "--"}
+                    </p>
+                  </div>
+                </details>
               </div>
             ))}
           </div>
