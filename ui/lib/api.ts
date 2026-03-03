@@ -64,6 +64,18 @@ export type RunStats = {
     top_tools: Array<{ tool: string; count: number }>;
     top_reasons: Array<{ reason: string; count: number }>;
   }>;
+  insights: Array<{
+    id: string;
+    title: string;
+    recommendation: string;
+    why: string;
+    confidence: number;
+    evidence: {
+      top_tools: Array<{ tool: string; count: number }>;
+      top_mutations: Array<{ mutation_id: string; count: number }>;
+      top_reasons: Array<{ reason: string; count: number }>;
+    };
+  }>;
 };
 
 export type ToolFragilityResponse = {
