@@ -10,6 +10,8 @@ POLICY_RUNS_COUNT="${POLICY_RUNS_COUNT:-4}"
 WAIT_FOR_COMPLETION="${WAIT_FOR_COMPLETION:-1}"
 WAIT_TIMEOUT_SECONDS="${WAIT_TIMEOUT_SECONDS:-360}"
 WAIT_POLL_SECONDS="${WAIT_POLL_SECONDS:-5}"
+SEED_TEMPLATES="${SEED_TEMPLATES:-1}"
+APPLY_TEMPLATE_RERUN="${APPLY_TEMPLATE_RERUN:-1}"
 
 json_extract() {
   local path="$1"
@@ -59,6 +61,47 @@ wait_for_api() {
   done
   echo "[seed] ERROR: API did not become ready at $API/healthz" >&2
   return 1
+}
+
+wait_for_runs_completion() {
+  local label="${1:-runs}"
+  shift || true
+  local run_ids_ref=("$@")
+  local deadline=$((SECONDS + WAIT_TIMEOUT_SECONDS))
+  local remaining=${#run_ids_ref[@]}
+
+  if [ "$remaining" -eq 0 ]; then
+    return 0
+  fi
+
+  echo "[seed] waiting for $label completion..."
+  while [ "$remaining" -gt 0 ] && [ "$SECONDS" -lt "$deadline" ]; do
+    remaining=0
+    for run_id in "${run_ids_ref[@]}"; do
+      local status
+      status="$(
+        curl_api GET "/v1/runs/$run_id" \
+          -H "Accept: application/json" \
+          -H "X-API-Key: $API_KEY" \
+          -H "X-Project-Id: $PROJECT_ID" \
+          | json_extract "status"
+      )"
+      if [ "$status" != "completed" ] && [ "$status" != "failed" ]; then
+        remaining=$((remaining + 1))
+      fi
+    done
+    if [ "$remaining" -gt 0 ]; then
+      sleep "$WAIT_POLL_SECONDS"
+    fi
+  done
+
+  if [ "$remaining" -gt 0 ]; then
+    echo "[seed] WARN: timeout waiting for $label; remaining=$remaining"
+    return 1
+  fi
+
+  echo "[seed] $label completed."
+  return 0
 }
 
 echo "[seed] starting services..."
@@ -296,6 +339,27 @@ POLICY_CAMPAIGN_ID="$(
   printf '%s' "$POLICY_CAMPAIGN_JSON" | json_extract "campaign_id"
 )"
 
+echo "[seed] creating template demo campaign..."
+TEMPLATE_CAMPAIGN_JSON="$(
+  curl_api POST "/v1/campaigns" \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: $API_KEY" \
+    -H "X-Project-Id: $PROJECT_ID" \
+    -d '{
+      "name":"Seed Template Demo Campaign",
+      "mutation_set":[
+        {"mutation_id":"tpl-timeout-1","tool":"jira.create_issue","force_fail":true,"failure_reason":"timeout","required_retries":2,"min_backoff_ms":200},
+        {"mutation_id":"tpl-rate-limit-1","tool":"slack.send_message","force_fail":true,"failure_reason":"rate_limited","required_retries":2,"min_backoff_ms":200},
+        {"mutation_id":"tpl-schema-1","tool":"jira.create_issue","force_fail":true,"failure_reason":"missing_field","missing_field":"issueType"},
+        {"mutation_id":"tpl-pass-1","tool":"github.create_pr","args":{"repo":"acme/service","title":"seed-template-demo"}}
+      ],
+      "eval_set":{"checks":["status"]}
+    }'
+)"
+TEMPLATE_CAMPAIGN_ID="$(
+  printf '%s' "$TEMPLATE_CAMPAIGN_JSON" | json_extract "campaign_id"
+)"
+
 echo "[seed] creating $RUNS_COUNT chaos run(s)..."
 RUN_IDS=()
 for _ in $(seq 1 "$RUNS_COUNT"); do
@@ -321,32 +385,105 @@ for _ in $(seq 1 "$POLICY_RUNS_COUNT"); do
   RUN_IDS+=("$(printf '%s' "$RUN_JSON" | json_extract "run_id")")
 done
 
+echo "[seed] creating template baseline run..."
+TEMPLATE_BASELINE_RUN_JSON="$(
+  curl_api POST "/v1/runs" \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: $API_KEY" \
+    -H "X-Project-Id: $PROJECT_ID" \
+    -d "{\"trace_id\":\"$TRACE_ID\",\"campaign_id\":\"$TEMPLATE_CAMPAIGN_ID\"}"
+)"
+TEMPLATE_BASELINE_RUN_ID="$(
+  printf '%s' "$TEMPLATE_BASELINE_RUN_JSON" | json_extract "run_id"
+)"
+RUN_IDS+=("$TEMPLATE_BASELINE_RUN_ID")
+
 if [ "$WAIT_FOR_COMPLETION" = "1" ]; then
-  echo "[seed] waiting for run completion..."
-  deadline=$((SECONDS + WAIT_TIMEOUT_SECONDS))
-  remaining=${#RUN_IDS[@]}
-  while [ "$remaining" -gt 0 ] && [ "$SECONDS" -lt "$deadline" ]; do
-    remaining=0
-    for run_id in "${RUN_IDS[@]}"; do
-      status="$(
-        curl_api GET "/v1/runs/$run_id" \
-          -H "Accept: application/json" \
-          -H "X-API-Key: $API_KEY" \
-          -H "X-Project-Id: $PROJECT_ID" \
-          | json_extract "status"
-      )"
-      if [ "$status" != "completed" ] && [ "$status" != "failed" ]; then
-        remaining=$((remaining + 1))
+  wait_for_runs_completion "initial runs" "${RUN_IDS[@]}" || true
+fi
+
+TEMPLATE_IDS=()
+TEMPLATE_RERUN_ID=""
+
+if [ "$SEED_TEMPLATES" = "1" ]; then
+  echo "[seed] creating hardening templates..."
+  RETRY_TEMPLATE_JSON="$(
+    curl_api POST "/v1/templates" \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: $API_KEY" \
+      -H "X-Project-Id: $PROJECT_ID" \
+      -d '{
+        "name":"Seed Retry Policy",
+        "type":"retry_policy",
+        "config":{"max_retries":3,"backoff_ms":300}
+      }'
+  )"
+  RETRY_TEMPLATE_ID="$(printf '%s' "$RETRY_TEMPLATE_JSON" | json_extract "template_id")"
+  TEMPLATE_IDS+=("$RETRY_TEMPLATE_ID")
+
+  SCHEMA_TEMPLATE_JSON="$(
+    curl_api POST "/v1/templates" \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: $API_KEY" \
+      -H "X-Project-Id: $PROJECT_ID" \
+      -d '{
+        "name":"Seed Schema Adapter",
+        "type":"schema_adapter",
+        "config":{"mappings":{"issueType":"issue_type","status":"state","description":"details"}}
+      }'
+  )"
+  SCHEMA_TEMPLATE_ID="$(printf '%s' "$SCHEMA_TEMPLATE_JSON" | json_extract "template_id")"
+  TEMPLATE_IDS+=("$SCHEMA_TEMPLATE_ID")
+
+  SANITIZER_TEMPLATE_JSON="$(
+    curl_api POST "/v1/templates" \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: $API_KEY" \
+      -H "X-Project-Id: $PROJECT_ID" \
+      -d '{
+        "name":"Seed Output Sanitizer",
+        "type":"sanitizer",
+        "config":{
+          "fields":["text","content","message","summary"],
+          "patterns":["ignore previous instructions","disregard previous instructions","system override"]
+        }
+      }'
+  )"
+  SANITIZER_TEMPLATE_ID="$(printf '%s' "$SANITIZER_TEMPLATE_JSON" | json_extract "template_id")"
+  TEMPLATE_IDS+=("$SANITIZER_TEMPLATE_ID")
+
+  POLICY_TEMPLATE_JSON="$(
+    curl_api POST "/v1/templates" \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: $API_KEY" \
+      -H "X-Project-Id: $PROJECT_ID" \
+      -d @- <<JSON
+{
+  "name":"Seed Policy Pack Template",
+  "type":"policy_pack",
+  "config":{"policy_pack_id":"$POLICY_PACK_ID"}
+}
+JSON
+  )"
+  POLICY_TEMPLATE_ID="$(printf '%s' "$POLICY_TEMPLATE_JSON" | json_extract "template_id")"
+  TEMPLATE_IDS+=("$POLICY_TEMPLATE_ID")
+
+  if [ "$APPLY_TEMPLATE_RERUN" = "1" ]; then
+    echo "[seed] applying retry template to template baseline run..."
+    TEMPLATE_RERUN_JSON="$(
+      curl_api POST "/v1/runs/$TEMPLATE_BASELINE_RUN_ID/apply-template/$RETRY_TEMPLATE_ID" \
+        -H "Content-Type: application/json" \
+        -H "X-API-Key: $API_KEY" \
+        -H "X-Project-Id: $PROJECT_ID" \
+        -d '{}'
+    )"
+    TEMPLATE_RERUN_ID="$(printf '%s' "$TEMPLATE_RERUN_JSON" | json_extract "new_run_id")"
+    if [ -n "$TEMPLATE_RERUN_ID" ]; then
+      RUN_IDS+=("$TEMPLATE_RERUN_ID")
+      if [ "$WAIT_FOR_COMPLETION" = "1" ]; then
+        wait_for_runs_completion "template rerun" "$TEMPLATE_RERUN_ID" || true
       fi
-    done
-    if [ "$remaining" -gt 0 ]; then
-      sleep "$WAIT_POLL_SECONDS"
     fi
-  done
-  if [ "$remaining" -gt 0 ]; then
-    echo "[seed] WARN: timeout waiting for all runs; remaining=$remaining"
-  else
-    echo "[seed] all runs completed."
   fi
 fi
 
@@ -357,6 +494,14 @@ echo "  mutation_pack_id=$MUTATION_PACK_ID"
 echo "  policy_pack_id=$POLICY_PACK_ID"
 echo "  chaos_campaign_id=$CHAOS_CAMPAIGN_ID"
 echo "  policy_campaign_id=$POLICY_CAMPAIGN_ID"
+echo "  template_campaign_id=$TEMPLATE_CAMPAIGN_ID"
+echo "  template_baseline_run_id=$TEMPLATE_BASELINE_RUN_ID"
+if [ "${#TEMPLATE_IDS[@]}" -gt 0 ]; then
+  echo "  templates_seeded=${#TEMPLATE_IDS[@]}"
+fi
+if [ -n "$TEMPLATE_RERUN_ID" ]; then
+  echo "  template_rerun_id=$TEMPLATE_RERUN_ID"
+fi
 echo "  total_runs=${#RUN_IDS[@]}"
 
 echo "[seed] sample run IDs:"

@@ -48,7 +48,7 @@ class PolicyPack(Base):
     policy_pack_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    version: Mapped[str] = mapped_column(Text, nullable=False)
+    engine: Mapped[str] = mapped_column(Text, nullable=False, default="builtin")
     policy: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -68,6 +68,19 @@ class MutationPack(Base):
     )
 
 
+class HardeningTemplate(Base):
+    __tablename__ = "hardening_templates"
+
+    template_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    config: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class Run(Base):
     __tablename__ = "runs"
 
@@ -78,6 +91,16 @@ class Run(Base):
     policy_pack_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class RunTemplateLink(Base):
+    __tablename__ = "run_template_links"
+
+    run_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    template_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -131,6 +154,7 @@ class PolicyEvent(Base):
     action: Mapped[str] = mapped_column(Text, nullable=False)
     decision: Mapped[str] = mapped_column(Text, nullable=False)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    input: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

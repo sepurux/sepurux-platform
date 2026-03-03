@@ -329,6 +329,33 @@ class MutationPackMetadata(BaseModel):
     created_at: datetime
 
 
+HardeningTemplateType = Literal[
+    "policy_pack",
+    "retry_policy",
+    "schema_adapter",
+    "sanitizer",
+]
+
+
+class HardeningTemplateCreateRequest(BaseModel):
+    name: str
+    type: HardeningTemplateType
+    config: Any
+
+
+class HardeningTemplateMetadata(BaseModel):
+    template_id: UUID
+    project_id: UUID
+    name: str
+    type: HardeningTemplateType
+    config: Any
+    created_at: datetime
+
+
+class ApplyTemplateRunResponse(BaseModel):
+    new_run_id: UUID
+
+
 class PolicyEventListItem(BaseModel):
     policy_event_id: UUID
     run_id: UUID

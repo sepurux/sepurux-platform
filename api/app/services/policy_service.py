@@ -12,14 +12,14 @@ def create_policy_pack(
     *,
     project_id: UUID,
     name: str,
-    version: str,
+    engine: str,
     policy: object,
 ) -> PolicyPack:
     record = PolicyPack(
         policy_pack_id=uuid4(),
         project_id=project_id,
         name=name,
-        version=version,
+        engine=engine,
         policy=policy,
     )
     db.add(record)

@@ -6,7 +6,13 @@ from uuid import UUID
 from app.auth import ProjectScope, require_project_scope
 from app.db import get_db
 from app.models import PolicyEvent, ReplayAttempt
-from app.schemas import PolicyEventListItem, ReplayAttemptListItem, RunCreateRequest, RunMetadata
+from app.schemas import (
+    ApplyTemplateRunResponse,
+    PolicyEventListItem,
+    ReplayAttemptListItem,
+    RunCreateRequest,
+    RunMetadata,
+)
 from app.services.attempt_service import list_attempts_for_run
 from app.services.run_service import (
     RelatedRecordNotFoundError,
@@ -18,6 +24,13 @@ from app.services.run_service import (
 )
 from app.services.run_service import (
     get_run as get_run_record,
+)
+from app.services.template_service import (
+    RunNotFoundError as TemplateRunNotFoundError,
+)
+from app.services.template_service import (
+    TemplateNotFoundError,
+    apply_template_and_enqueue,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -59,6 +72,7 @@ def _to_policy_event_list_item(policy_event: PolicyEvent) -> PolicyEventListItem
         action=policy_event.action,
         decision=policy_event.decision,
         reason=policy_event.reason,
+        input=policy_event.input,
         created_at=policy_event.created_at,
     )
 
@@ -140,3 +154,29 @@ def get_run_policy_events(
         offset=offset,
     )
     return [_to_policy_event_list_item(item) for item in policy_events]
+
+
+@router.post(
+    "/{run_id}/apply-template/{template_id}",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ApplyTemplateRunResponse,
+)
+def post_apply_template(
+    run_id: UUID,
+    template_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+) -> ApplyTemplateRunResponse:
+    try:
+        new_run = apply_template_and_enqueue(
+            db,
+            project_id=project_scope.project_id,
+            run_id=run_id,
+            template_id=template_id,
+        )
+    except TemplateRunNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except TemplateNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    return ApplyTemplateRunResponse(new_run_id=new_run.run_id)

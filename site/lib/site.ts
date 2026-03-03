@@ -5,7 +5,8 @@ export const siteConfig = {
   description:
     "Chaos engineering for AI agents. Replay + mutate + score tool-using agents before they ship.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://crashlab.ai",
-  ogImage: "/og-image.png",
+  logo: "/logo.png",
+  ogImage: "/logo.png",
 };
 
 export function buildPageMetadata({
@@ -33,8 +34,6 @@ export function buildPageMetadata({
       images: [
         {
           url: siteConfig.ogImage,
-          width: 1200,
-          height: 630,
           alt: `${siteConfig.name} marketing`,
         },
       ],

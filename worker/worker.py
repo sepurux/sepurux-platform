@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 
 import redis
 from rq import Queue, Worker
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from config import get_settings
 from counterfactuals import run_counterfactual_replays
@@ -14,16 +16,28 @@ from db import get_session
 from models import (
     Campaign,
     Counterfactual,
+    HardeningTemplate,
     MutationPack,
     PolicyEvent,
     PolicyPack,
     ReplayAttempt,
     Run,
+    RunTemplateLink,
     Trace,
 )
 from mutation_engine import apply_mutation_pack
-from policy_engine import evaluate_policy, has_confirmation_token
-from replayer import build_attempt_replay_outcome, iter_mutations
+from policy_engine import (
+    approval_token_field,
+    evaluate_policy,
+    has_confirmation_token,
+    normalize_action,
+)
+from replayer import (
+    ReplayAdapterConfig,
+    RetryPolicyConfig,
+    build_attempt_replay_outcome,
+    iter_mutations,
+)
 from storage import put_json_object
 
 logger = logging.getLogger(__name__)
@@ -111,11 +125,7 @@ def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | No
 
     merged_args = dict(args)
     top_level_confirmation_token = mutation_obj.get("confirmation_token")
-    if (
-        isinstance(top_level_confirmation_token, str)
-        and top_level_confirmation_token
-        and "confirmation_token" not in merged_args
-    ):
+    if top_level_confirmation_token and "confirmation_token" not in merged_args:
         merged_args["confirmation_token"] = top_level_confirmation_token
 
     if not merged_args:
@@ -136,6 +146,212 @@ def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | No
     return tool_name, merged_args, index
 
 
+def _build_policy_event_input(
+    *,
+    tool_name: str,
+    tool_args: dict[str, Any],
+    run_id: UUID,
+    attempt_id: UUID,
+    project_id: UUID,
+    event_index: int | None,
+) -> dict[str, Any]:
+    return {
+        "tool": {
+            "name": tool_name,
+            "args": tool_args,
+        },
+        "context": {
+            "run_id": str(run_id),
+            "attempt_id": str(attempt_id),
+            "project_id": str(project_id),
+        },
+        "metadata": {
+            "event_index": event_index,
+        },
+    }
+
+
+def _template_config_dict(template: HardeningTemplate) -> dict[str, Any]:
+    config = template.config
+    if isinstance(config, dict):
+        return config
+    return {}
+
+
+def _load_run_templates(db: Session, *, run: Run) -> list[HardeningTemplate]:
+    template_ids = list(
+        db.scalars(
+            select(RunTemplateLink.template_id).where(
+                RunTemplateLink.run_id == run.run_id,
+            )
+        )
+    )
+    if not template_ids:
+        return []
+
+    templates = list(
+        db.scalars(
+            select(HardeningTemplate).where(
+                HardeningTemplate.project_id == run.project_id,
+                HardeningTemplate.template_id.in_(template_ids),
+            )
+        )
+    )
+    by_id = {template.template_id: template for template in templates}
+    ordered: list[HardeningTemplate] = []
+    for template_id in template_ids:
+        template = by_id.get(template_id)
+        if template is not None:
+            ordered.append(template)
+    return ordered
+
+
+def _coerce_int(value: Any, *, default: int) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    return default
+
+
+def _merge_retry_policy(
+    *,
+    current: RetryPolicyConfig,
+    config: dict[str, Any],
+) -> RetryPolicyConfig:
+    max_retries = _coerce_int(config.get("max_retries"), default=current.max_retries)
+    backoff_ms = _coerce_int(config.get("backoff_ms"), default=current.backoff_ms)
+    return RetryPolicyConfig(max_retries=max(0, max_retries), backoff_ms=max(0, backoff_ms))
+
+
+def _merge_adapter_config(
+    *,
+    current: ReplayAdapterConfig | None,
+    config: dict[str, Any],
+) -> ReplayAdapterConfig | None:
+    mappings_raw = config.get("mappings")
+    if not isinstance(mappings_raw, dict):
+        mappings_raw = config.get("field_mappings")
+    if not isinstance(mappings_raw, dict):
+        return current
+
+    clean_mappings: dict[str, str] = {}
+    for raw_key, raw_value in mappings_raw.items():
+        if not isinstance(raw_key, str) or not raw_key:
+            continue
+        if not isinstance(raw_value, str) or not raw_value:
+            continue
+        clean_mappings[raw_key] = raw_value
+    if not clean_mappings:
+        return current
+
+    merged = dict(current.mappings or {}) if current is not None else {}
+    merged.update(clean_mappings)
+    return ReplayAdapterConfig(mappings=merged)
+
+
+def _sanitize_text_value(value: str, patterns: list[str]) -> str:
+    sanitized = value
+    lower_value = sanitized.lower()
+    for pattern in patterns:
+        if pattern in lower_value:
+            sanitized = sanitized.replace(pattern, "[redacted]")
+            sanitized = sanitized.replace(pattern.upper(), "[redacted]")
+            sanitized = sanitized.replace(pattern.title(), "[redacted]")
+            lower_value = sanitized.lower()
+    return sanitized
+
+
+def _apply_sanitizer_to_timeline(
+    timeline_artifact: dict[str, Any], config: dict[str, Any] | None
+) -> dict[str, Any]:
+    if not config:
+        return timeline_artifact
+
+    raw_fields = config.get("fields")
+    field_names: list[str] = []
+    if isinstance(raw_fields, list):
+        field_names = [field for field in raw_fields if isinstance(field, str) and field]
+    if not field_names:
+        field_names = ["text", "content", "message", "summary"]
+
+    raw_patterns = config.get("patterns")
+    patterns: list[str] = []
+    if isinstance(raw_patterns, list):
+        patterns = [item.lower() for item in raw_patterns if isinstance(item, str) and item]
+    if not patterns:
+        patterns = [
+            "ignore previous instructions",
+            "disregard previous instructions",
+            "system override",
+        ]
+
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        return timeline_artifact
+
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "tool_result":
+            continue
+        result = event.get("result")
+        if not isinstance(result, dict):
+            continue
+        for field_name in field_names:
+            value = result.get(field_name)
+            if not isinstance(value, str):
+                continue
+            result[field_name] = _sanitize_text_value(value, patterns)
+    return timeline_artifact
+
+
+def _resolve_policy_pack_override(
+    db: Session,
+    *,
+    run: Run,
+    template: HardeningTemplate,
+) -> PolicyPack | None:
+    config = _template_config_dict(template)
+    policy_pack_id_value = config.get("policy_pack_id")
+
+    policy_pack_id: UUID | None = None
+    if isinstance(policy_pack_id_value, UUID):
+        policy_pack_id = policy_pack_id_value
+    elif isinstance(policy_pack_id_value, str):
+        try:
+            policy_pack_id = UUID(policy_pack_id_value)
+        except ValueError as exc:
+            raise ValueError("Invalid policy_pack template policy_pack_id") from exc
+
+    if policy_pack_id is not None:
+        policy_pack = db.get(PolicyPack, policy_pack_id)
+        if policy_pack is None or policy_pack.project_id != run.project_id:
+            raise ValueError("Policy pack override not found for this project")
+        run.policy_pack_id = policy_pack.policy_pack_id
+        return policy_pack
+
+    policy_obj = config.get("policy")
+    if not isinstance(policy_obj, dict):
+        return None
+
+    engine_value = config.get("engine")
+    engine = engine_value if isinstance(engine_value, str) and engine_value else "builtin"
+    policy_pack = PolicyPack(
+        policy_pack_id=uuid4(),
+        project_id=run.project_id,
+        name=f"{template.name} (applied)",
+        engine=engine,
+        policy=policy_obj,
+    )
+    db.add(policy_pack)
+    db.flush()
+    run.policy_pack_id = policy_pack.policy_pack_id
+    return policy_pack
+
+
 def execute_run(run_id: str) -> None:
     logger.info("Executing run %s", run_id)
     run_uuid = UUID(str(run_id))
@@ -151,6 +367,17 @@ def execute_run(run_id: str) -> None:
             raise ValueError(f"Trace not found for run {run_id}")
         if campaign is None:
             raise ValueError(f"Campaign not found for run {run_id}")
+
+        templates = _load_run_templates(db, run=run)
+        applied_templates_summary = [
+            {
+                "template_id": str(template.template_id),
+                "name": template.name,
+                "type": template.type,
+            }
+            for template in templates
+        ]
+
         policy_pack: PolicyPack | None = None
         if run.policy_pack_id is not None:
             policy_pack = db.get(PolicyPack, run.policy_pack_id)
@@ -158,9 +385,31 @@ def execute_run(run_id: str) -> None:
                 raise ValueError(f"Policy pack not found for run {run_id}")
             if policy_pack.project_id != run.project_id:
                 raise ValueError(f"Policy pack project mismatch for run {run_id}")
+
+        retry_policy = RetryPolicyConfig()
+        adapter_config: ReplayAdapterConfig | None = None
+        sanitizer_config: dict[str, Any] | None = None
+
+        for template in templates:
+            config = _template_config_dict(template)
+            template_type = template.type
+            if template_type == "retry_policy":
+                retry_policy = _merge_retry_policy(current=retry_policy, config=config)
+            elif template_type == "schema_adapter":
+                adapter_config = _merge_adapter_config(current=adapter_config, config=config)
+            elif template_type == "sanitizer":
+                sanitizer_config = config
+            elif template_type == "policy_pack":
+                policy_override = _resolve_policy_pack_override(db, run=run, template=template)
+                if policy_override is not None:
+                    policy_pack = policy_override
+
         policy_document: dict[str, Any] | None = None
+        policy_engine_name = "builtin"
         if policy_pack is not None and isinstance(policy_pack.policy, dict):
             policy_document = policy_pack.policy
+            policy_engine_name = policy_pack.engine or "builtin"
+        policy_token_field = approval_token_field(policy_document)
 
         mutation_pack: MutationPack | None = None
         mutation_pack_config: dict[str, Any] | None = None
@@ -194,16 +443,55 @@ def execute_run(run_id: str) -> None:
             mutation_for_replay = mutation
             if isinstance(policy_document, dict):
                 tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
-                evaluation = evaluate_policy(
-                    policy_document,
+                normalized_tool_name, commit_like = normalize_action(tool_name, policy_args)
+                policy_input = _build_policy_event_input(
                     tool_name=tool_name,
-                    args=policy_args,
+                    tool_args=policy_args,
+                    run_id=run.run_id,
+                    attempt_id=attempt_id,
+                    project_id=run.project_id,
                     event_index=event_index,
                 )
-                requires_approval_without_token = (
-                    evaluation.decision == "require_approval"
-                    and not has_confirmation_token(policy_args)
-                )
+
+                event_decision = "allow"
+                event_reason = "allowed"
+                blocked_failure_reason: str | None = None
+                blocked_error_type = "PolicyDeniedError"
+                blocked_error_message = "Policy denied the tool call"
+
+                if policy_engine_name == "builtin":
+                    evaluation = evaluate_policy(
+                        policy_document,
+                        tool_name=tool_name,
+                        args=policy_args,
+                        event_index=event_index,
+                    )
+                    event_decision = evaluation.decision
+                    event_reason = evaluation.reason
+
+                    if evaluation.decision == "require_approval":
+                        token_present = has_confirmation_token(
+                            policy_args,
+                            token_field=policy_token_field,
+                        )
+                        if token_present:
+                            event_decision = "allow"
+                            event_reason = f"{evaluation.reason}; approval token '{policy_token_field}' provided"
+                        else:
+                            policy_requires_approval += 1
+                            blocked_failure_reason = "policy_requires_approval"
+                            blocked_error_type = "PolicyApprovalRequiredError"
+                            blocked_error_message = evaluation.reason
+                    else:
+                        event_decision = "allow"
+                        event_reason = "allowed by builtin policy"
+                else:
+                    event_decision = "allow"
+                    event_reason = (
+                        f"policy engine '{policy_engine_name}' not implemented in worker; "
+                        "defaulting to allow"
+                    )
+
                 db.add(
                     PolicyEvent(
                         policy_event_id=uuid4(),
@@ -211,27 +499,19 @@ def execute_run(run_id: str) -> None:
                         attempt_id=attempt_id,
                         event_index=event_index,
                         tool=tool_name,
-                        action="commit" if evaluation.is_commit_like else "tool_call",
-                        decision=evaluation.decision,
-                        reason=evaluation.reason,
+                        action="commit" if commit_like else "tool_call",
+                        decision=event_decision,
+                        reason=event_reason,
+                        input=policy_input,
                     )
                 )
                 policy_events_count += 1
-                if evaluation.decision == "deny":
-                    policy_denies += 1
+                if blocked_failure_reason is not None:
                     mutation_for_replay = _policy_blocked_mutation(
                         mutation,
-                        failure_reason="policy_denied",
-                        error_type="PolicyDeniedError",
-                        error_message=evaluation.reason,
-                    )
-                elif requires_approval_without_token:
-                    policy_requires_approval += 1
-                    mutation_for_replay = _policy_blocked_mutation(
-                        mutation,
-                        failure_reason="policy_requires_approval",
-                        error_type="PolicyApprovalRequiredError",
-                        error_message=evaluation.reason,
+                        failure_reason=blocked_failure_reason,
+                        error_type=blocked_error_type,
+                        error_message=blocked_error_message,
                     )
 
             outcome = build_attempt_replay_outcome(
@@ -240,6 +520,8 @@ def execute_run(run_id: str) -> None:
                 mutation=mutation_for_replay,
                 trace_s3_key=trace.s3_key,
                 default_mutation_id=f"mutation-{index}",
+                adapter_config=adapter_config,
+                retry_policy=retry_policy,
             )
             result = outcome.result
             failure_reason = outcome.failure_reason
@@ -266,6 +548,11 @@ def execute_run(run_id: str) -> None:
                     failure_reason = mutation_result.forced_failure_reason
                     first_failure_event_index = mutation_result.first_failure_event_index
                     first_failure_tool = mutation_result.first_failure_tool
+
+            timeline_artifact = _apply_sanitizer_to_timeline(
+                timeline_artifact,
+                sanitizer_config,
+            )
 
             artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"
             put_json_object(artifact_key, timeline_artifact)
@@ -336,9 +623,25 @@ def execute_run(run_id: str) -> None:
             "policy_denied_count": policy_denies,
             "policy_requires_approval_count": policy_requires_approval,
             "policy_events_count": policy_events_count,
+            "applied_templates": applied_templates_summary,
+            "applied_template_count": len(applied_templates_summary),
+            "template_overrides": {
+                "retry_policy": {
+                    "max_retries": retry_policy.max_retries,
+                    "backoff_ms": retry_policy.backoff_ms,
+                },
+                "schema_adapter_enabled": adapter_config is not None,
+                "sanitizer_enabled": sanitizer_config is not None,
+                "effective_policy_pack_id": (
+                    str(policy_pack.policy_pack_id) if policy_pack is not None else None
+                ),
+            },
         }
         if ci_thresholds is not None:
             run.summary["ci_thresholds"] = ci_thresholds
+        template_application = prior_summary.get("template_application")
+        if isinstance(template_application, dict):
+            run.summary["template_application"] = template_application
         db.commit()
 
     logger.info("Completed run %s", run_id)

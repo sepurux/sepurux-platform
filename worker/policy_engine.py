@@ -24,6 +24,16 @@ class _SafeActionDecision(TypedDict):
     reason: str
 
 
+def approval_token_field(policy: Any) -> str:
+    policy_obj = policy if isinstance(policy, dict) else {}
+    approval_obj = policy_obj.get("approval")
+    if isinstance(approval_obj, dict):
+        field = approval_obj.get("token_field")
+        if isinstance(field, str) and field.strip():
+            return field.strip()
+    return "confirmation_token"
+
+
 def normalize_action(tool_name: str, args: dict[str, Any] | None) -> tuple[str, bool]:
     raw_tool = (tool_name or "").strip()
     normalized_tool = raw_tool
@@ -59,8 +69,15 @@ def normalize_action(tool_name: str, args: dict[str, Any] | None) -> tuple[str, 
     return normalized_tool or raw_tool or "replay.execute", commit_like
 
 
-def has_confirmation_token(args: dict[str, Any] | None) -> bool:
+def has_confirmation_token(
+    args: dict[str, Any] | None, *, token_field: str = "confirmation_token"
+) -> bool:
     args_obj = args if isinstance(args, dict) else {}
+    token_value = args_obj.get(token_field)
+    if isinstance(token_value, str) and token_value.strip():
+        return True
+    if token_value is not None and bool(token_value):
+        return True
     return bool(args_obj.get("confirmation_token") or args_obj.get("approval_token"))
 
 
@@ -74,15 +91,15 @@ def evaluate_policy(
     policy_obj = policy if isinstance(policy, dict) else {}
     normalized_tool_name, is_commit_like = normalize_action(tool_name, args)
 
-    # Safe-action gates are always checked first.
-    safe_action = _safe_action_gate(
+    irreversible_decision = _irreversible_gate(
+        policy_obj=policy_obj,
         normalized_tool_name=normalized_tool_name,
         is_commit_like=is_commit_like,
     )
-    if safe_action is not None:
+    if irreversible_decision is not None:
         return PolicyEvaluation(
-            decision=safe_action["decision"],
-            reason=safe_action["reason"],
+            decision=irreversible_decision["decision"],
+            reason=irreversible_decision["reason"],
             normalized_tool_name=normalized_tool_name,
             is_commit_like=is_commit_like,
             matched_rule_index=None,
@@ -131,22 +148,58 @@ def evaluate_policy(
     )
 
 
-def _safe_action_gate(
+def _irreversible_gate(
     *,
+    policy_obj: dict[str, Any],
     normalized_tool_name: str,
     is_commit_like: bool,
 ) -> _SafeActionDecision | None:
-    if normalized_tool_name == "payments.refund":
-        return {
-            "decision": "require_approval",
-            "reason": "payments.refund requires explicit approval token",
-        }
-    if normalized_tool_name == "jira.create_issue" and is_commit_like:
-        return {
-            "decision": "require_approval",
-            "reason": "jira.create_issue commit-like action requires explicit approval token",
-        }
+    irreversible_tools = _configured_irreversible_tools(policy_obj)
+    if irreversible_tools is not None:
+        for item in irreversible_tools:
+            if not isinstance(item, str):
+                continue
+            candidate = item.strip()
+            if not candidate:
+                continue
+            normalized_candidate, candidate_commit_like = normalize_action(candidate, args=None)
+            if normalized_candidate != normalized_tool_name:
+                continue
+            if candidate_commit_like and not is_commit_like:
+                continue
+            return {
+                "decision": "require_approval",
+                "reason": _irreversible_reason(
+                    raw_entry=candidate,
+                    normalized_tool_name=normalized_tool_name,
+                    candidate_commit_like=candidate_commit_like,
+                ),
+            }
     return None
+
+
+def _configured_irreversible_tools(policy_obj: dict[str, Any]) -> list[str] | None:
+    irreversible_obj = policy_obj.get("irreversible")
+    if isinstance(irreversible_obj, dict):
+        tools = irreversible_obj.get("tools")
+        if isinstance(tools, list):
+            return [item for item in tools if isinstance(item, str)]
+
+    legacy = policy_obj.get("irreversible_tools")
+    if isinstance(legacy, list):
+        return [item for item in legacy if isinstance(item, str)]
+    return None
+
+
+def _irreversible_reason(
+    *,
+    raw_entry: str,
+    normalized_tool_name: str,
+    candidate_commit_like: bool,
+) -> str:
+    if candidate_commit_like:
+        return f"{normalized_tool_name} commit-like action requires explicit approval token"
+    return f"{raw_entry} requires explicit approval token"
 
 
 def _rule_matches(

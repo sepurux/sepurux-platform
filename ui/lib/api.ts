@@ -5,6 +5,8 @@ export type RunMetadata = {
   policy_pack_id: string | null;
   status: string;
   summary: Record<string, unknown> | null;
+  pass_rate?: number | null;
+  unsafe_count?: number | null;
   created_at: string;
 };
 
@@ -127,6 +129,21 @@ export type MutationPackMetadata = {
   project_id: string;
   name: string;
   description: string | null;
+  config: Record<string, unknown>;
+  created_at: string;
+};
+
+export type HardeningTemplateType =
+  | "policy_pack"
+  | "retry_policy"
+  | "schema_adapter"
+  | "sanitizer";
+
+export type HardeningTemplateMetadata = {
+  template_id: string;
+  project_id: string;
+  name: string;
+  type: HardeningTemplateType;
   config: Record<string, unknown>;
   created_at: string;
 };
@@ -308,6 +325,19 @@ export const api = {
   listMutationPacks: () => requestJson<MutationPackMetadata[]>("/v1/mutation-packs"),
   getMutationPack: (mutationPackId: string) =>
     requestJson<MutationPackMetadata>(`/v1/mutation-packs/${mutationPackId}`),
+  listTemplates: () => requestJson<HardeningTemplateMetadata[]>("/v1/templates"),
+  getTemplate: (templateId: string) =>
+    requestJson<HardeningTemplateMetadata>(`/v1/templates/${templateId}`),
+  createTemplate: (payload: {
+    name: string;
+    type: HardeningTemplateType;
+    config: Record<string, unknown>;
+  }) => postJson<HardeningTemplateMetadata, typeof payload>("/v1/templates", payload),
+  applyTemplateToRun: (runId: string, templateId: string) =>
+    postJson<{ new_run_id: string }, Record<string, never>>(
+      `/v1/runs/${runId}/apply-template/${templateId}`,
+      {}
+    ),
   listPolicyPacks: () => requestJson<PolicyPackMetadata[]>("/v1/policy-packs"),
   getPolicyPack: (policyPackId: string) =>
     requestJson<PolicyPackMetadata>(`/v1/policy-packs/${policyPackId}`),

@@ -46,8 +46,30 @@ export function HeroSection() {
         </div>
 
         <div className="space-y-4">
-          <ScreenshotPlaceholder title="Run Inspector" className="-rotate-1" />
-          <ScreenshotPlaceholder title="Policy + CI Gate" className="rotate-1" />
+          <ScreenshotPlaceholder
+            title="Run Inspector"
+            className="-rotate-1"
+            command="curl -s http://localhost:8000/v1/runs/<run_id>/stats"
+            animateCommand
+            terminalLabel="run-inspector.sh"
+            resultLines={[
+              "status: done",
+              "pass_rate: 0.92",
+              "first_failure_tool: jira.create_issue",
+            ]}
+          />
+          <ScreenshotPlaceholder
+            title="Policy + CI Gate"
+            className="rotate-1"
+            command="curl -s -X POST http://localhost:8000/v1/ci/runs"
+            animateCommand
+            terminalLabel="policy-ci-gate.sh"
+            resultLines={[
+              "decision: fail",
+              "reason: policy_requires_approval",
+              "blocked_tool: payments.refund",
+            ]}
+          />
         </div>
       </div>
 
