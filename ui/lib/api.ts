@@ -3,6 +3,7 @@ export type RunMetadata = {
   trace_id: string;
   campaign_id: string;
   policy_pack_id: string | null;
+  effective_policy_pack_version_id: string | null;
   status: string;
   summary: Record<string, unknown> | null;
   pass_rate?: number | null;
@@ -123,7 +124,19 @@ export type PolicyPackMetadata = {
   name: string;
   engine: string;
   policy: Record<string, unknown>;
+  active_version_id: string | null;
+  active_version_number: number | null;
   created_at: string;
+};
+
+export type PolicyPackVersionMetadata = {
+  version_id: string;
+  policy_pack_id: string;
+  version_number: number;
+  policy: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  is_active: boolean;
 };
 
 export type MutationPackMetadata = {
@@ -394,6 +407,25 @@ export const api = {
   listPolicyPacks: () => requestJson<PolicyPackMetadata[]>("/v1/policy-packs"),
   getPolicyPack: (policyPackId: string) =>
     requestJson<PolicyPackMetadata>(`/v1/policy-packs/${policyPackId}`),
+  updatePolicyPack: (
+    policyPackId: string,
+    payload: {
+      name?: string;
+      engine?: "builtin" | "opa";
+      policy: Record<string, unknown>;
+      created_by?: string;
+    }
+  ) => patchJson<PolicyPackMetadata, typeof payload>(`/v1/policy-packs/${policyPackId}`, payload),
+  rollbackPolicyPack: (
+    policyPackId: string,
+    payload: { version_number: number; created_by?: string }
+  ) =>
+    postJson<PolicyPackMetadata, typeof payload>(
+      `/v1/policy-packs/${policyPackId}/rollback`,
+      payload
+    ),
+  listPolicyPackVersions: (policyPackId: string) =>
+    requestJson<PolicyPackVersionMetadata[]>(`/v1/policy-packs/${policyPackId}/versions`),
   listRuns: (limit = 50) => requestJson<RunMetadata[]>("/v1/runs", { limit }),
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
