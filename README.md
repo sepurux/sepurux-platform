@@ -174,6 +174,95 @@ When a run executes with that campaign, each replay attempt persists:
 
 Read it from the attempt detail API (`GET /v1/attempts/<attempt_id>`) or UI pages (`/mutation-packs`, `/attempts/<attempt_id>`).
 
+## OPA Mode
+
+Crash Lab supports two policy engines:
+
+- `builtin` (in-worker deterministic policy evaluator)
+- `opa` (delegates policy decision to an Open Policy Agent service)
+
+Start local stack with OPA enabled:
+
+```bash
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Worker config:
+
+- `OPA_URL` (default `http://opa:8181`)
+- `OPA_TIMEOUT_SECONDS` (default `2.0`)
+
+Create a policy pack that uses OPA:
+
+```bash
+curl -sS -X POST http://localhost:8000/v1/policy-packs \
+  -H 'Content-Type: application/json' \
+  -H 'X-API-Key: <api_key>' \
+  -H 'X-Project-Id: <project_id>' \
+  -d '{
+    "name":"OPA Safe Actions",
+    "engine":"opa",
+    "policy":{
+      "version":"0.1",
+      "defaults":{"unknown_tools":"allow"},
+      "approval":{"token_field":"confirmation_token"},
+      "irreversible":{"tools":["payments.refund","jira.create_issue(commit)","jira.create_issue_commit"]},
+      "opa":{"package":"crashlab.policy","query":"data.crashlab.policy.decision"}
+    }
+  }'
+```
+
+OPA decision response shape expected by the worker:
+
+```json
+{
+  "result": {
+    "decision": "allow|deny|require_approval",
+    "reason": "human-readable reason"
+  }
+}
+```
+
+With `engine="opa"`:
+
+- every tool call sends OPA input at `/v1/data/crashlab/policy/decision`
+- `require_approval` enforces `approval.token_field` (default `confirmation_token`)
+- OPA unavailability fails the attempt with `failure_reason="opa_unavailable"`
+
+### Live Rego Demo (Hot Reload)
+
+This demo shows: edit Rego policy, rerun the same campaign, and observe changed
+policy behavior immediately in run stats/policy events/dashboard.
+
+1. Start stack with OPA watch enabled:
+
+```bash
+docker compose -f infra/docker-compose.yml up --build
+docker compose -f infra/docker-compose.yml exec api alembic upgrade head
+```
+
+2. Run the helper script to create an OPA policy pack + trace + campaign and execute a baseline run:
+
+```bash
+chmod +x scripts/demo_opa_live.sh
+./scripts/demo_opa_live.sh
+```
+
+3. When prompted by the script, edit `infra/opa-policies/crashlab_policy.rego`:
+
+```rego
+allow_payments_refund := true
+```
+
+4. Save the file (OPA hot-reloads via `--watch`) and press Enter in the script.
+
+5. Script triggers a rerun using the same trace/campaign and prints both run URLs.
+
+6. Open the run pages in UI (`/runs/<run_id>`) and compare:
+   - `policy_events`
+   - `policy_requires_approval` / `policy_violations_total`
+   - pass/fail mix
+
 ## Counterfactual Lite
 
 List counterfactual what-if replays for a failed attempt:

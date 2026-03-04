@@ -140,6 +140,42 @@ def test_policy_pack_crud_is_project_scoped(
     assert get_other.json() == {"detail": "Policy pack not found"}
 
 
+def test_policy_pack_engine_validation_allows_opa_and_rejects_unknown(
+    policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = policy_test_context
+
+    opa_response = client.post(
+        "/v1/policy-packs",
+        json={
+            "name": "OPA Pack",
+            "engine": "opa",
+            "policy": {
+                "version": "0.1",
+                "defaults": {"unknown_tools": "allow"},
+                "approval": {"token_field": "confirmation_token"},
+                "irreversible": {"tools": ["payments.refund"]},
+                "opa": {
+                    "package": "crashlab.policy",
+                    "query": "data.crashlab.policy.decision",
+                },
+            },
+        },
+    )
+    assert opa_response.status_code == 201
+    assert opa_response.json()["engine"] == "opa"
+
+    invalid_response = client.post(
+        "/v1/policy-packs",
+        json={
+            "name": "Invalid Engine Pack",
+            "engine": "rego-direct",
+            "policy": {"version": "0.1"},
+        },
+    )
+    assert invalid_response.status_code == 422
+
+
 def test_run_create_with_policy_pack_and_policy_event_listing(
     policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
 ) -> None:
