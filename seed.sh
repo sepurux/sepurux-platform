@@ -13,6 +13,7 @@ WAIT_TIMEOUT_SECONDS="${WAIT_TIMEOUT_SECONDS:-360}"
 WAIT_POLL_SECONDS="${WAIT_POLL_SECONDS:-5}"
 SEED_TEMPLATES="${SEED_TEMPLATES:-1}"
 APPLY_TEMPLATE_RERUN="${APPLY_TEMPLATE_RERUN:-1}"
+POLICY_ENGINE="${POLICY_ENGINE:-builtin}"
 
 json_extract() {
   local path="$1"
@@ -315,10 +316,10 @@ POLICY_PACK_JSON="$(
     -H "Content-Type: application/json" \
     -H "X-API-Key: $API_KEY" \
     -H "X-Project-Id: $PROJECT_ID" \
-    -d @- <<'JSON'
+    -d @- <<JSON
 {
   "name": "Seed Safe-Action Pack",
-  "engine": "builtin",
+  "engine": "$POLICY_ENGINE",
   "policy": {
     "version": "0.1",
     "defaults": {"unknown_tools": "allow"},

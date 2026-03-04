@@ -14,6 +14,8 @@ class Settings:
     s3_secret_key: str
     s3_bucket: str
     s3_region: str
+    opa_url: str
+    opa_timeout_seconds: float
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -28,9 +30,21 @@ class Settings:
             s3_secret_key=os.getenv("S3_SECRET_KEY", "minio123456"),
             s3_bucket=os.getenv("S3_BUCKET", "crashlab"),
             s3_region=os.getenv("S3_REGION", "us-east-1"),
+            opa_url=os.getenv("OPA_URL", "http://opa:8181"),
+            opa_timeout_seconds=_env_float("OPA_TIMEOUT_SECONDS", default=2.0),
         )
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings.from_env()
+
+
+def _env_float(name: str, *, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default

@@ -174,6 +174,61 @@ When a run executes with that campaign, each replay attempt persists:
 
 Read it from the attempt detail API (`GET /v1/attempts/<attempt_id>`) or UI pages (`/mutation-packs`, `/attempts/<attempt_id>`).
 
+## OPA Mode
+
+Crash Lab supports two policy engines:
+
+- `builtin` (in-worker deterministic policy evaluator)
+- `opa` (delegates policy decision to an Open Policy Agent service)
+
+Start local stack with OPA enabled:
+
+```bash
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Worker config:
+
+- `OPA_URL` (default `http://opa:8181`)
+- `OPA_TIMEOUT_SECONDS` (default `2.0`)
+
+Create a policy pack that uses OPA:
+
+```bash
+curl -sS -X POST http://localhost:8000/v1/policy-packs \
+  -H 'Content-Type: application/json' \
+  -H 'X-API-Key: <api_key>' \
+  -H 'X-Project-Id: <project_id>' \
+  -d '{
+    "name":"OPA Safe Actions",
+    "engine":"opa",
+    "policy":{
+      "version":"0.1",
+      "defaults":{"unknown_tools":"allow"},
+      "approval":{"token_field":"confirmation_token"},
+      "irreversible":{"tools":["payments.refund","jira.create_issue(commit)","jira.create_issue_commit"]},
+      "opa":{"package":"crashlab.policy","query":"data.crashlab.policy.decision"}
+    }
+  }'
+```
+
+OPA decision response shape expected by the worker:
+
+```json
+{
+  "result": {
+    "decision": "allow|deny|require_approval",
+    "reason": "human-readable reason"
+  }
+}
+```
+
+With `engine="opa"`:
+
+- every tool call sends OPA input at `/v1/data/crashlab/policy/decision`
+- `require_approval` enforces `approval.token_field` (default `confirmation_token`)
+- OPA unavailability fails the attempt with `failure_reason="opa_unavailable"`
+
 ## Counterfactual Lite
 
 List counterfactual what-if replays for a failed attempt:
