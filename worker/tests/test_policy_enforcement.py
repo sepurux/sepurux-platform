@@ -618,6 +618,8 @@ def test_opa_unavailable_fails_attempt_and_records_policy_event(
     assert attempt.failure_reason == "opa_unavailable"
     assert policy_event.decision == "deny"
     assert "opa unavailable" in (policy_event.reason or "")
+
+
 def test_run_uses_snapshotted_policy_pack_version_when_active_changes(
     worker_db_context: sessionmaker[Session],
 ) -> None:
