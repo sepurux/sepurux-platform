@@ -31,7 +31,7 @@ services:
 
   opa:
     image: openpolicyagent/opa:latest
-    command: ["run", "--server", "--log-level=error", "/policies"]
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "--watch", "/policies"]
     expose:
       - "8181"
     volumes:

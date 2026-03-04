@@ -1,5 +1,7 @@
 package crashlab.policy
 
+allow_payments_refund := false
+
 default decision := {
   "decision": "allow",
   "reason": "allowed by default policy",
@@ -10,6 +12,7 @@ decision := {
   "reason": "payments.refund requires explicit approval token",
 } if {
   input.tool.name == "payments.refund"
+  not allow_payments_refund
 }
 
 decision := {
