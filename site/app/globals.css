@@ -52,6 +52,50 @@ body {
     background-size: 18px 18px;
     background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.035) 1px, transparent 0);
   }
+
+  .terminal-type-command {
+    width: 0;
+    animation: typing-reveal 2.4s steps(var(--typing-steps, 40), end) 0.2s forwards;
+  }
+
+  .terminal-caret {
+    display: inline-block;
+    width: 1px;
+    height: 1em;
+    background: hsl(var(--primary));
+    animation: caret-blink 1s steps(1, end) infinite;
+  }
+}
+
+@keyframes typing-reveal {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--typing-width, 40ch);
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal-type-command {
+    width: auto;
+    animation: none;
+  }
+
+  .terminal-caret {
+    animation: none;
+  }
 }
 
 ::-webkit-scrollbar {

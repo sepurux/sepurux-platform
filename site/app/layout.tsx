@@ -14,6 +14,17 @@ export const metadata: Metadata = {
     template: "%s | Crash Lab",
   },
   description: siteConfig.description,
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/logo.png", type: "image/png" },
+    ],
+    shortcut: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [
+      { url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
+      { url: "/apple-touch-icon-precomposed.png", type: "image/png", sizes: "180x180" },
+    ],
+  },
   openGraph: {
     title: "Crash Lab | Chaos engineering for AI agents",
     description: siteConfig.description,
@@ -23,8 +34,6 @@ export const metadata: Metadata = {
     images: [
       {
         url: siteConfig.ogImage,
-        width: 1200,
-        height: 630,
         alt: "Crash Lab",
       },
     ],

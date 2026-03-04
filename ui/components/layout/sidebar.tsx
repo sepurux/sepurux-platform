@@ -11,6 +11,7 @@ import {
   PlayCircle,
   ScrollText,
   Settings,
+  ShieldAlert,
   Shield,
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ const primaryItems: NavItem[] = [
   { href: "/reports", label: "Reports", icon: ScrollText },
   { href: "/mutation-packs", label: "Mutation Packs", icon: Bug },
   { href: "/policies", label: "Policies", icon: Shield },
+  { href: "/security", label: "Security", icon: ShieldAlert },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -37,7 +39,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-border/70 bg-card/60 p-4 backdrop-blur xl:flex xl:flex-col">
+    <aside className="hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border/70 bg-card/60 p-4 backdrop-blur xl:flex xl:flex-col">
       <div className="mb-4 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
         <div className="grid h-10 w-10 place-items-center rounded-md border border-cyan-300/20 bg-cyan-400/10 text-cyan-300">
           <Activity className="h-5 w-5" />

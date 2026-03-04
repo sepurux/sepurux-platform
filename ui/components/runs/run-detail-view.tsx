@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
 
 import {
   api,
+  type HardeningTemplateType,
   type PolicyEventListItem,
   type ReplayAttemptListItem,
   type RunMetadata,
@@ -27,10 +29,13 @@ type LoadState =
       stats: RunStats | null;
       attempts: ReplayAttemptListItem[];
       policyEvents: PolicyEventListItem[];
+      baselineRun: RunMetadata | null;
+      baselineStats: RunStats | null;
     };
 
 export function RunDetailView({ runId }: { runId: string }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const router = useRouter();
 
   async function load() {
     setState({ status: "loading" });
@@ -41,7 +46,26 @@ export function RunDetailView({ runId }: { runId: string }) {
         api.listRunAttempts(runId, { limit: 200, offset: 0 }),
         api.listRunPolicyEvents(runId, { limit: 200, offset: 0 }).catch(() => []),
       ]);
-      setState({ status: "ready", run, stats: statsResult, attempts, policyEvents });
+
+      let baselineRun: RunMetadata | null = null;
+      let baselineStats: RunStats | null = null;
+      const sourceRunId = sourceRunIdFromSummary(run.summary);
+      if (sourceRunId) {
+        [baselineRun, baselineStats] = await Promise.all([
+          api.getRun(sourceRunId).catch(() => null),
+          api.getRunStats(sourceRunId).catch(() => null),
+        ]);
+      }
+
+      setState({
+        status: "ready",
+        run,
+        stats: statsResult,
+        attempts,
+        policyEvents,
+        baselineRun,
+        baselineStats,
+      });
     } catch (error) {
       setState({ status: "error", message: error instanceof Error ? error.message : "Failed to load run" });
     }
@@ -76,6 +100,10 @@ export function RunDetailView({ runId }: { runId: string }) {
           stats={state.stats}
           attempts={state.attempts}
           policyEvents={state.policyEvents}
+          baselineRun={state.baselineRun}
+          baselineStats={state.baselineStats}
+          runId={runId}
+          onNavigateToRun={(targetRunId) => router.push(`/runs/${targetRunId}`)}
         />
       )}
     </div>
@@ -87,11 +115,19 @@ function RunDetailPanels({
   stats,
   attempts,
   policyEvents,
+  baselineRun,
+  baselineStats,
+  runId,
+  onNavigateToRun,
 }: {
   run: RunMetadata;
   stats: RunStats | null;
   attempts: ReplayAttemptListItem[];
   policyEvents: PolicyEventListItem[];
+  baselineRun: RunMetadata | null;
+  baselineStats: RunStats | null;
+  runId: string;
+  onNavigateToRun: (targetRunId: string) => void;
 }) {
   const derived = useMemo(() => deriveRunOverview(run, stats, attempts), [run, stats, attempts]);
   const policyViolationCount = useMemo(
@@ -122,8 +158,20 @@ function RunDetailPanels({
         </CardContent>
       </Card>
 
+      <RunComparisonCard
+        baselineRun={baselineRun}
+        baselineStats={baselineStats}
+        currentRun={run}
+        currentStats={stats}
+        currentPolicyViolations={policyViolationCount}
+      />
+
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <RunStatsCards stats={stats} />
+        <RunStatsCards
+          runId={runId}
+          stats={stats}
+          onNavigateToRun={onNavigateToRun}
+        />
         <AttemptsTable attempts={attempts} />
       </div>
 
@@ -132,9 +180,39 @@ function RunDetailPanels({
   );
 }
 
-function RunStatsCards({ stats }: { stats: RunStats | null }) {
+function RunStatsCards({
+  runId,
+  stats,
+  onNavigateToRun,
+}: {
+  runId: string;
+  stats: RunStats | null;
+  onNavigateToRun: (targetRunId: string) => void;
+}) {
   const lethalMutations = stats?.most_lethal_mutations ?? [];
   const insights = stats?.insights ?? [];
+  const [applyingInsightId, setApplyingInsightId] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+
+  async function handleApplyAndRerun(insight: RunStats["insights"][number]) {
+    const templatePayload = templateFromInsight(insight);
+    if (!templatePayload) {
+      setApplyError("No hardening template mapping available for this insight yet.");
+      return;
+    }
+
+    setApplyError(null);
+    setApplyingInsightId(insight.id);
+    try {
+      const template = await api.createTemplate(templatePayload);
+      const result = await api.applyTemplateToRun(runId, template.template_id);
+      onNavigateToRun(result.new_run_id);
+    } catch (error) {
+      setApplyError(error instanceof Error ? error.message : "Failed to apply template");
+    } finally {
+      setApplyingInsightId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -218,6 +296,11 @@ function RunStatsCards({ stats }: { stats: RunStats | null }) {
           <CardDescription>Auto Insights generated from run failures, mutations, policies, and counterfactuals.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {applyError ? (
+            <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-xs text-rose-200">
+              {applyError}
+            </div>
+          ) : null}
           {insights.length === 0 ? (
             <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
               Run more attempts to generate recommended fixes.
@@ -235,9 +318,19 @@ function RunStatsCards({ stats }: { stats: RunStats | null }) {
                     </p>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{insight.recommendation}</p>
                   </div>
-                  <Badge variant={insight.confidence >= 0.75 ? "success" : insight.confidence >= 0.6 ? "warning" : "outline"}>
-                    {formatPercent(insight.confidence, 0)}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant={insight.confidence >= 0.75 ? "success" : insight.confidence >= 0.6 ? "warning" : "outline"}>
+                      {formatPercent(insight.confidence, 0)}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={applyingInsightId === insight.id}
+                      onClick={() => void handleApplyAndRerun(insight)}
+                    >
+                      {applyingInsightId === insight.id ? "Applying..." : "Apply & Rerun"}
+                    </Button>
+                  </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">{insight.why}</p>
                 <details className="mt-2 rounded border border-border/50 bg-background/40 p-2">
@@ -436,6 +529,146 @@ function derivePolicyViolationCount(run: RunMetadata, policyEvents: PolicyEventL
   const bySummary = denied + approval;
   if (bySummary > 0) return bySummary;
   return policyEvents.filter((item) => item.decision !== "allow").length;
+}
+
+function sourceRunIdFromSummary(summary: Record<string, unknown> | null): string | null {
+  const summaryObj = summary ?? {};
+  const templateApplication = summaryObj.template_application;
+  if (!templateApplication || typeof templateApplication !== "object") {
+    return null;
+  }
+  const sourceRunId = (templateApplication as Record<string, unknown>).source_run_id;
+  return typeof sourceRunId === "string" && sourceRunId ? sourceRunId : null;
+}
+
+function templateFromInsight(insight: RunStats["insights"][number]): {
+  name: string;
+  type: HardeningTemplateType;
+  config: Record<string, unknown>;
+} | null {
+  if (insight.id.startsWith("insight.approval_tokens.")) {
+    return {
+      name: "Template: Approval Token Gate",
+      type: "policy_pack",
+      config: {
+        policy: {
+          version: "0.1",
+          defaults: { unknown_tools: "allow" },
+          approval: { token_field: "confirmation_token" },
+          irreversible: {
+            tools: ["payments.refund", "jira.create_issue(commit)", "jira.create_issue_commit"],
+          },
+        },
+        engine: "builtin",
+      },
+    };
+  }
+  if (insight.id.startsWith("insight.schema_adapter.")) {
+    return {
+      name: "Template: Schema Adapter",
+      type: "schema_adapter",
+      config: {
+        mappings: {
+          issueType: "issue_type",
+          status: "state",
+          description: "details",
+        },
+      },
+    };
+  }
+  if (insight.id.startsWith("insight.retry_backoff.") || insight.id.startsWith("insight.tool_hotspot.")) {
+    return {
+      name: "Template: Retry Policy",
+      type: "retry_policy",
+      config: {
+        max_retries: 3,
+        backoff_ms: 300,
+      },
+    };
+  }
+  if (insight.id.startsWith("insight.output_sanitizer.")) {
+    return {
+      name: "Template: Output Sanitizer",
+      type: "sanitizer",
+      config: {
+        fields: ["text", "content", "message", "summary"],
+        patterns: [
+          "ignore previous instructions",
+          "disregard previous instructions",
+          "system override",
+        ],
+      },
+    };
+  }
+  return null;
+}
+
+function RunComparisonCard({
+  baselineRun,
+  baselineStats,
+  currentRun,
+  currentStats,
+  currentPolicyViolations,
+}: {
+  baselineRun: RunMetadata | null;
+  baselineStats: RunStats | null;
+  currentRun: RunMetadata;
+  currentStats: RunStats | null;
+  currentPolicyViolations: number;
+}) {
+  if (!baselineRun) {
+    return null;
+  }
+
+  const baselinePassRate = derivePassRate(baselineRun, baselineStats);
+  const currentPassRate = derivePassRate(currentRun, currentStats);
+  const baselinePolicyViolations = derivePolicyViolationCount(baselineRun, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Baseline Comparison</CardTitle>
+        <CardDescription>
+          Baseline run {shortId(baselineRun.run_id, 10)} vs current run {shortId(currentRun.run_id, 10)}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Pass Rate</p>
+            <p className="mt-2 text-sm text-foreground">
+              {formatPercent(baselinePassRate, 1)} → {formatPercent(currentPassRate, 1)}
+            </p>
+          </div>
+          <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Policy Violations</p>
+            <p className="mt-2 text-sm text-foreground">
+              {baselinePolicyViolations} → {currentPolicyViolations}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function derivePassRate(run: RunMetadata, stats: RunStats | null): number {
+  if (stats) {
+    return stats.attempts.pass_rate;
+  }
+  if (typeof run.pass_rate === "number") {
+    return run.pass_rate;
+  }
+  const summary = (run.summary ?? {}) as Record<string, unknown>;
+  if (typeof summary.pass_rate === "number") {
+    return summary.pass_rate;
+  }
+  const attempts = typeof summary.attempt_count === "number" ? summary.attempt_count : 0;
+  const passed = typeof summary.passed_count === "number" ? summary.passed_count : 0;
+  if (attempts <= 0) {
+    return 0;
+  }
+  return passed / attempts;
 }
 
 function StatTile({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "danger" | "cyan" }) {
