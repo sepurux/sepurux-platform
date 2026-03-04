@@ -129,6 +129,35 @@ class MutationPack(Base):
     )
 
 
+class ToolRegistry(Base):
+    __tablename__ = "tools_registry"
+
+    tool_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    zone: Mapped[str] = mapped_column(Text, nullable=False, default="untrusted")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class HardeningTemplate(Base):
+    __tablename__ = "hardening_templates"
+
+    template_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    config: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class Run(Base):
     __tablename__ = "runs"
 
@@ -141,6 +170,20 @@ class Run(Base):
     )
     status: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class RunTemplateLink(Base):
+    __tablename__ = "run_template_links"
+
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("runs.run_id"), primary_key=True)
+    template_id: Mapped[UUID] = mapped_column(
+        ForeignKey("hardening_templates.template_id"), primary_key=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -205,6 +248,27 @@ class PolicyEvent(Base):
     decision: Mapped[str] = mapped_column(Text, nullable=False)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     input: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class SecurityEvent(Base):
+    __tablename__ = "security_events"
+
+    security_event_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("runs.run_id"), nullable=False)
+    attempt_id: Mapped[UUID] = mapped_column(
+        ForeignKey("replay_attempts.attempt_id"), nullable=False
+    )
+    event_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    tool: Mapped[str] = mapped_column(Text, nullable=False)
+    zone: Mapped[str] = mapped_column(Text, nullable=False)
+    risk_score: Mapped[float] = mapped_column(nullable=False)
+    action: Mapped[str] = mapped_column(Text, nullable=False)
+    matches: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

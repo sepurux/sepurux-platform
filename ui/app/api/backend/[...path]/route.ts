@@ -5,23 +5,31 @@ export const dynamic = "force-dynamic";
 
 const INTERNAL_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://api:8000";
 
-export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
+type RouteContext = { params: { path: string[] } };
+
+async function proxy(request: NextRequest, { params }: RouteContext) {
   const base = INTERNAL_API_BASE_URL.endsWith("/")
     ? INTERNAL_API_BASE_URL.slice(0, -1)
     : INTERNAL_API_BASE_URL;
   const path = params.path.join("/");
   const targetUrl = `${base}/${path}${request.nextUrl.search}`;
+  const requestBody =
+    request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
 
   try {
     const upstream = await fetch(targetUrl, {
-      method: "GET",
+      method: request.method,
       headers: {
         Accept: request.headers.get("accept") ?? "application/json",
+        ...(request.headers.get("content-type")
+          ? { "Content-Type": request.headers.get("content-type") as string }
+          : {}),
         ...(request.headers.get("x-api-key") ? { "X-API-Key": request.headers.get("x-api-key") as string } : {}),
         ...(request.headers.get("x-project-id")
           ? { "X-Project-Id": request.headers.get("x-project-id") as string }
           : {})
       },
+      body: requestBody,
       cache: "no-store"
     });
 
@@ -43,4 +51,24 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
       { status: 502 }
     );
   }
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  return proxy(request, context);
+}
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  return proxy(request, context);
+}
+
+export async function PUT(request: NextRequest, context: RouteContext) {
+  return proxy(request, context);
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  return proxy(request, context);
+}
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  return proxy(request, context);
 }

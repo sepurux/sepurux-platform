@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,18 @@ const navItems = [
 export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-lg">
-      <div className="site-container flex h-16 items-center justify-between">
-        <Link href="/" className="text-lg font-semibold tracking-tight text-foreground">
-          Crash <span className="text-primary">Lab</span>
+      <div className="site-container flex h-20 items-center justify-between">
+        <Link href="/" className="inline-flex items-center gap-0" aria-label="Crash Lab home">
+          <Image
+            src="/logo.png"
+            alt="Crash Lab logo"
+            width={130}
+            height={130}
+            priority
+          />
+          <span className="-ml-6 text-xl font-semibold tracking-tight text-foreground">
+            Crash <span className="text-primary">Lab</span>
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
