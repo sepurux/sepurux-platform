@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal, cast
 from uuid import UUID
 
 from app.auth import ProjectScope, require_project_scope
 from app.db import get_db
-from app.models import PolicyEvent, ReplayAttempt
+from app.models import PolicyEvent, ReplayAttempt, SecurityEvent
 from app.schemas import (
     ApplyTemplateRunResponse,
     PolicyEventListItem,
     ReplayAttemptListItem,
     RunCreateRequest,
     RunMetadata,
+    SecurityEventListItem,
 )
 from app.services.attempt_service import list_attempts_for_run
 from app.services.run_service import (
@@ -20,6 +21,7 @@ from app.services.run_service import (
     get_run_quality_metrics,
     list_policy_events_for_run,
     list_recent_runs,
+    list_security_events_for_run,
     run_metadata,
 )
 from app.services.run_service import (
@@ -74,6 +76,29 @@ def _to_policy_event_list_item(policy_event: PolicyEvent) -> PolicyEventListItem
         reason=policy_event.reason,
         input=policy_event.input,
         created_at=policy_event.created_at,
+    )
+
+
+def _to_security_event_list_item(security_event: SecurityEvent) -> SecurityEventListItem:
+    action: Literal["allow", "sanitize", "block"]
+    if security_event.action in {"allow", "sanitize", "block"}:
+        action = cast(
+            Literal["allow", "sanitize", "block"],
+            security_event.action,
+        )
+    else:
+        action = "allow"
+    return SecurityEventListItem(
+        security_event_id=security_event.security_event_id,
+        run_id=security_event.run_id,
+        attempt_id=security_event.attempt_id,
+        event_index=security_event.event_index,
+        tool=security_event.tool,
+        zone=security_event.zone,
+        risk_score=security_event.risk_score,
+        action=action,
+        matches=security_event.matches,
+        created_at=security_event.created_at,
     )
 
 
@@ -154,6 +179,27 @@ def get_run_policy_events(
         offset=offset,
     )
     return [_to_policy_event_list_item(item) for item in policy_events]
+
+
+@router.get("/{run_id}/security-events", response_model=list[SecurityEventListItem])
+def get_run_security_events(
+    run_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> list[SecurityEventListItem]:
+    run = get_run_record(db, project_id=project_scope.project_id, run_id=run_id)
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+    security_events = list_security_events_for_run(
+        db,
+        project_id=project_scope.project_id,
+        run_id=run_id,
+        limit=limit,
+        offset=offset,
+    )
+    return [_to_security_event_list_item(item) for item in security_events]
 
 
 @router.post(

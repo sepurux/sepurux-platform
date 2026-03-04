@@ -200,6 +200,8 @@ class RunStatsResponse(BaseModel):
     first_failure_step_distribution: list[EventIndexCount]
     attribution: str
     most_lethal_mutations: list[LethalMutationInsight]
+    injection_blocks: int = 0
+    injection_sanitizations: int = 0
     insights: list[RunInsight]
 
 
@@ -366,4 +368,34 @@ class PolicyEventListItem(BaseModel):
     decision: str
     reason: str | None
     input: Any | None = None
+    created_at: datetime
+
+
+class SecurityEventListItem(BaseModel):
+    security_event_id: UUID
+    run_id: UUID
+    attempt_id: UUID
+    event_index: int
+    tool: str
+    zone: str
+    risk_score: float
+    action: Literal["allow", "sanitize", "block"]
+    matches: Any | None = None
+    created_at: datetime
+
+
+class ToolRegistryCreateRequest(BaseModel):
+    name: str
+    zone: str = "untrusted"
+
+
+class ToolRegistryZoneUpdateRequest(BaseModel):
+    zone: str
+
+
+class ToolRegistryMetadata(BaseModel):
+    tool_id: UUID
+    project_id: UUID
+    name: str
+    zone: str
     created_at: datetime

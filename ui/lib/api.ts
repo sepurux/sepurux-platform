@@ -66,6 +66,8 @@ export type RunStats = {
     top_tools: Array<{ tool: string; count: number }>;
     top_reasons: Array<{ reason: string; count: number }>;
   }>;
+  injection_blocks: number;
+  injection_sanitizations: number;
   insights: Array<{
     id: string;
     title: string;
@@ -158,6 +160,27 @@ export type PolicyEventListItem = {
   decision: "allow" | "deny" | "require_approval" | string;
   reason: string | null;
   input: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type SecurityEventListItem = {
+  security_event_id: string;
+  run_id: string;
+  attempt_id: string;
+  event_index: number;
+  tool: string;
+  zone: string;
+  risk_score: number;
+  action: "allow" | "sanitize" | "block" | string;
+  matches: string[] | null;
+  created_at: string;
+};
+
+export type ToolRegistryMetadata = {
+  tool_id: string;
+  project_id: string;
+  name: string;
+  zone: string;
   created_at: string;
 };
 
@@ -318,6 +341,36 @@ async function postJson<TResponse, TBody>(
   return payload as TResponse;
 }
 
+async function patchJson<TResponse, TBody>(
+  path: string,
+  body: TBody,
+  options?: { requireProjectHeader?: boolean }
+): Promise<TResponse> {
+  const headers = await buildHeaders(options);
+  headers["Content-Type"] = "application/json";
+
+  const response = await fetch(buildUrl(path), {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+
+  const text = await response.text();
+  let payload: unknown = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = text;
+  }
+
+  if (!response.ok) {
+    throw new ApiError(`Request failed: ${response.status}`, response.status, payload);
+  }
+
+  return payload as TResponse;
+}
+
 export const api = {
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
@@ -349,12 +402,22 @@ export const api = {
       limit: options?.limit ?? 200,
       offset: options?.offset ?? 0,
     }),
+  listRunSecurityEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
+    requestJson<SecurityEventListItem[]>(`/v1/runs/${runId}/security-events`, {
+      limit: options?.limit ?? 200,
+      offset: options?.offset ?? 0,
+    }),
   listRunAttempts: (runId: string, options?: { limit?: number; offset?: number; result?: string }) =>
     requestJson<ReplayAttemptListItem[]>(`/v1/runs/${runId}/attempts`, {
       limit: options?.limit ?? 50,
       offset: options?.offset ?? 0,
       result: options?.result
     }),
+  listTools: () => requestJson<ToolRegistryMetadata[]>("/v1/tools"),
+  createTool: (payload: { name: string; zone: string }) =>
+    postJson<ToolRegistryMetadata, typeof payload>("/v1/tools", payload),
+  updateToolZone: (toolId: string, zone: string) =>
+    patchJson<ToolRegistryMetadata, { zone: string }>(`/v1/tools/${toolId}`, { zone }),
   getToolsFragility: (windowDays = 7, limit = 20) =>
     requestJson<ToolFragilityResponse>("/v1/tools/fragility", { window_days: windowDays, limit }),
   getAttempt: (attemptId: string) => requestJson<ReplayAttemptDetail>(`/v1/attempts/${attemptId}`),

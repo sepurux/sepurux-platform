@@ -23,6 +23,8 @@ from models import (
     ReplayAttempt,
     Run,
     RunTemplateLink,
+    SecurityEvent,
+    ToolRegistry,
     Trace,
 )
 from mutation_engine import apply_mutation_pack
@@ -38,6 +40,7 @@ from replayer import (
     build_attempt_replay_outcome,
     iter_mutations,
 )
+from security import detect_prompt_injection, sanitize_untrusted_text
 from storage import put_json_object
 
 logger = logging.getLogger(__name__)
@@ -352,6 +355,154 @@ def _resolve_policy_pack_override(
     return policy_pack
 
 
+def _load_tool_zones(db: Session, *, project_id: UUID) -> dict[str, str]:
+    rows = list(
+        db.scalars(
+            select(ToolRegistry).where(
+                ToolRegistry.project_id == project_id,
+            )
+        )
+    )
+    return {
+        row.name: row.zone
+        for row in rows
+        if isinstance(row.name, str) and row.name and isinstance(row.zone, str) and row.zone
+    }
+
+
+def _extract_tool_result_text_fields(result: dict[str, Any]) -> dict[str, str]:
+    text_fields: dict[str, str] = {}
+    for field in ("content", "text", "message"):
+        value = result.get(field)
+        if isinstance(value, str) and value:
+            text_fields[field] = value
+    return text_fields
+
+
+def _coerce_event_index(event: dict[str, Any], fallback: int) -> int:
+    index = event.get("index")
+    if isinstance(index, int):
+        return index
+    return fallback
+
+
+def _max_timeline_event_index(events: list[dict[str, Any]]) -> int:
+    max_index = -1
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        value = event.get("index")
+        if isinstance(value, int):
+            max_index = max(max_index, value)
+    return max_index
+
+
+def _enforce_injection_firewall(
+    *,
+    timeline_artifact: dict[str, Any],
+    tool_zones: dict[str, str],
+) -> tuple[
+    dict[str, Any],
+    list[dict[str, Any]],
+    int,
+    int,
+    str | None,
+    int | None,
+    str | None,
+]:
+    events_obj = timeline_artifact.get("events")
+    if not isinstance(events_obj, list):
+        return timeline_artifact, [], 0, 0, None, None, None
+
+    events = [event for event in events_obj if isinstance(event, dict)]
+    timeline_artifact["events"] = events
+
+    security_event_rows: list[dict[str, Any]] = []
+    injection_blocks = 0
+    injection_sanitizations = 0
+    blocked_failure_reason: str | None = None
+    blocked_event_index: int | None = None
+    blocked_tool: str | None = None
+
+    for position, event in enumerate(events):
+        if event.get("type") != "tool_result":
+            continue
+        result = event.get("result")
+        if not isinstance(result, dict):
+            continue
+        text_fields = _extract_tool_result_text_fields(result)
+        if not text_fields:
+            continue
+
+        raw_tool = event.get("tool")
+        tool_name: str = raw_tool if isinstance(raw_tool, str) else "unknown"
+        zone = tool_zones.get(tool_name, "untrusted")
+        text_blob = "\n".join(text_fields.values())
+        detection = detect_prompt_injection(text_blob)
+
+        action = "allow"
+        if zone == "untrusted":
+            if detection.risk_score >= 0.7:
+                action = "block"
+            elif detection.risk_score >= 0.4:
+                action = "sanitize"
+
+        event_index = _coerce_event_index(event, fallback=position)
+        security_event_rows.append(
+            {
+                "event_index": event_index,
+                "tool": tool_name,
+                "zone": zone,
+                "risk_score": detection.risk_score,
+                "action": action,
+                "matches": detection.matches,
+            }
+        )
+
+        if action == "sanitize":
+            injection_sanitizations += 1
+            for field_name, value in text_fields.items():
+                result[field_name] = sanitize_untrusted_text(value)
+            continue
+
+        if action == "block":
+            injection_blocks += 1
+            blocked_failure_reason = "prompt_injection_blocked"
+            blocked_event_index = event_index
+            blocked_tool = tool_name
+
+            max_index = _max_timeline_event_index(events)
+            error_event_index = max(event_index + 1, max_index + 1)
+            events[:] = events[: position + 1]
+            events.append(
+                {
+                    "index": error_event_index,
+                    "type": "error",
+                    "tool": tool_name,
+                    "error": {
+                        "type": "PromptInjectionBlockedError",
+                        "message": "Blocked untrusted tool output due to prompt injection risk",
+                    },
+                }
+            )
+            timeline_artifact["first_failure"] = {
+                "event_index": blocked_event_index,
+                "tool": blocked_tool,
+                "reason": blocked_failure_reason,
+            }
+            break
+
+    return (
+        timeline_artifact,
+        security_event_rows,
+        injection_blocks,
+        injection_sanitizations,
+        blocked_failure_reason,
+        blocked_event_index,
+        blocked_tool,
+    )
+
+
 def execute_run(run_id: str) -> None:
     logger.info("Executing run %s", run_id)
     run_uuid = UUID(str(run_id))
@@ -367,6 +518,7 @@ def execute_run(run_id: str) -> None:
             raise ValueError(f"Trace not found for run {run_id}")
         if campaign is None:
             raise ValueError(f"Campaign not found for run {run_id}")
+        tool_zones = _load_tool_zones(db, project_id=run.project_id)
 
         templates = _load_run_templates(db, run=run)
         applied_templates_summary = [
@@ -437,10 +589,14 @@ def execute_run(run_id: str) -> None:
         policy_denies = 0
         policy_requires_approval = 0
         policy_events_count = 0
+        security_events_count = 0
+        injection_blocks = 0
+        injection_sanitizations = 0
 
         for index, mutation in enumerate(mutations):
             attempt_id = uuid4()
             mutation_for_replay = mutation
+            pending_policy_events: list[dict[str, Any]] = []
             if isinstance(policy_document, dict):
                 tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
                 normalized_tool_name, commit_like = normalize_action(tool_name, policy_args)
@@ -492,20 +648,16 @@ def execute_run(run_id: str) -> None:
                         "defaulting to allow"
                     )
 
-                db.add(
-                    PolicyEvent(
-                        policy_event_id=uuid4(),
-                        run_id=run.run_id,
-                        attempt_id=attempt_id,
-                        event_index=event_index,
-                        tool=tool_name,
-                        action="commit" if commit_like else "tool_call",
-                        decision=event_decision,
-                        reason=event_reason,
-                        input=policy_input,
-                    )
+                pending_policy_events.append(
+                    {
+                        "event_index": event_index,
+                        "tool": tool_name,
+                        "action": "commit" if commit_like else "tool_call",
+                        "decision": event_decision,
+                        "reason": event_reason,
+                        "input": policy_input,
+                    }
                 )
-                policy_events_count += 1
                 if blocked_failure_reason is not None:
                     mutation_for_replay = _policy_blocked_mutation(
                         mutation,
@@ -549,6 +701,27 @@ def execute_run(run_id: str) -> None:
                     first_failure_event_index = mutation_result.first_failure_event_index
                     first_failure_tool = mutation_result.first_failure_tool
 
+            (
+                timeline_artifact,
+                pending_security_events,
+                attempt_injection_blocks,
+                attempt_injection_sanitizations,
+                injection_failure_reason,
+                injection_failure_event_index,
+                injection_failure_tool,
+            ) = _enforce_injection_firewall(
+                timeline_artifact=timeline_artifact,
+                tool_zones=tool_zones,
+            )
+            injection_blocks += attempt_injection_blocks
+            injection_sanitizations += attempt_injection_sanitizations
+
+            if injection_failure_reason is not None:
+                result = "failed"
+                failure_reason = injection_failure_reason
+                first_failure_event_index = injection_failure_event_index
+                first_failure_tool = injection_failure_tool
+
             timeline_artifact = _apply_sanitizer_to_timeline(
                 timeline_artifact,
                 sanitizer_config,
@@ -575,6 +748,38 @@ def execute_run(run_id: str) -> None:
             )
             db.add(attempt_record)
             db.flush()
+
+            for event_payload in pending_policy_events:
+                db.add(
+                    PolicyEvent(
+                        policy_event_id=uuid4(),
+                        run_id=run.run_id,
+                        attempt_id=attempt_record.attempt_id,
+                        event_index=event_payload["event_index"],
+                        tool=event_payload["tool"],
+                        action=event_payload["action"],
+                        decision=event_payload["decision"],
+                        reason=event_payload["reason"],
+                        input=event_payload["input"],
+                    )
+                )
+            policy_events_count += len(pending_policy_events)
+
+            for event_payload in pending_security_events:
+                db.add(
+                    SecurityEvent(
+                        security_event_id=uuid4(),
+                        run_id=run.run_id,
+                        attempt_id=attempt_record.attempt_id,
+                        event_index=event_payload["event_index"],
+                        tool=event_payload["tool"],
+                        zone=event_payload["zone"],
+                        risk_score=event_payload["risk_score"],
+                        action=event_payload["action"],
+                        matches=event_payload["matches"],
+                    )
+                )
+            security_events_count += len(pending_security_events)
 
             if result == "failed":
                 for counterfactual in run_counterfactual_replays(
@@ -623,6 +828,9 @@ def execute_run(run_id: str) -> None:
             "policy_denied_count": policy_denies,
             "policy_requires_approval_count": policy_requires_approval,
             "policy_events_count": policy_events_count,
+            "security_events_count": security_events_count,
+            "injection_blocks": injection_blocks,
+            "injection_sanitizations": injection_sanitizations,
             "applied_templates": applied_templates_summary,
             "applied_template_count": len(applied_templates_summary),
             "template_overrides": {

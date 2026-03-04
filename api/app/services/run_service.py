@@ -4,7 +4,16 @@ from collections import Counter
 from typing import Any
 from uuid import UUID, uuid4
 
-from app.models import Campaign, MutationPack, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
+from app.models import (
+    Campaign,
+    MutationPack,
+    PolicyEvent,
+    PolicyPack,
+    ReplayAttempt,
+    Run,
+    SecurityEvent,
+    Trace,
+)
 from app.queue import get_run_queue
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -254,6 +263,28 @@ def list_policy_events_for_run(
             Run.project_id == project_id,
         )
         .order_by(PolicyEvent.created_at.asc(), PolicyEvent.policy_event_id.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(db.scalars(stmt))
+
+
+def list_security_events_for_run(
+    db: Session,
+    *,
+    run_id: UUID,
+    project_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[SecurityEvent]:
+    stmt = (
+        select(SecurityEvent)
+        .join(Run, Run.run_id == SecurityEvent.run_id)
+        .where(
+            SecurityEvent.run_id == run_id,
+            Run.project_id == project_id,
+        )
+        .order_by(SecurityEvent.created_at.asc(), SecurityEvent.security_event_id.asc())
         .offset(offset)
         .limit(limit)
     )

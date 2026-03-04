@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from app.models import Counterfactual, PolicyEvent, ReplayAttempt, Run
+from app.models import Counterfactual, PolicyEvent, ReplayAttempt, Run, SecurityEvent
 from app.services.insights_service import build_run_insights
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -61,6 +61,10 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
             first_failure_step_counter[attempt.first_failure_event_index] += 1
     most_lethal_mutations = _aggregate_most_lethal_mutations(attempts)
     policy_metrics = _policy_metrics_for_run(
+        db,
+        run=run,
+    )
+    security_metrics = _security_metrics_for_run(
         db,
         run=run,
     )
@@ -129,6 +133,8 @@ def get_run_stats(db: Session, *, project_id: UUID, run_id: UUID) -> dict[str, A
         ],
         "attribution": "mvp_multi_attribution_each_applied_mutation_gets_credit",
         "most_lethal_mutations": most_lethal_mutations,
+        "injection_blocks": security_metrics["injection_blocks"],
+        "injection_sanitizations": security_metrics["injection_sanitizations"],
         "insights": insights,
     }
 
@@ -490,6 +496,36 @@ def _counterfactual_metrics_for_attempts(
         if _is_pass_result(item.result):
             passed += 1
     return {"total": len(counterfactuals), "passed": passed}
+
+
+def _security_metrics_for_run(
+    db: Session,
+    *,
+    run: Run,
+) -> dict[str, int]:
+    summary = run.summary if isinstance(run.summary, dict) else {}
+    summary_blocks = _summary_int(summary, keys=("injection_blocks",))
+    summary_sanitizations = _summary_int(summary, keys=("injection_sanitizations",))
+
+    events = list(
+        db.scalars(
+            select(SecurityEvent).where(
+                SecurityEvent.run_id == run.run_id,
+            )
+        )
+    )
+    blocks = 0
+    sanitizations = 0
+    for event in events:
+        if event.action == "block":
+            blocks += 1
+        elif event.action == "sanitize":
+            sanitizations += 1
+
+    return {
+        "injection_blocks": max(summary_blocks, blocks),
+        "injection_sanitizations": max(summary_sanitizations, sanitizations),
+    }
 
 
 def _summary_int(summary: dict[str, Any], *, keys: tuple[str, ...]) -> int:

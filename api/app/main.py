@@ -16,6 +16,7 @@ from app.routes.policy_packs import router as policy_packs_router
 from app.routes.projects import router as projects_router
 from app.routes.runs import router as runs_router
 from app.routes.templates import router as templates_router
+from app.routes.tools import router as tools_router
 from app.routes.traces import router as traces_router
 
 app = FastAPI(title="Crash Lab API")
@@ -71,6 +72,7 @@ app.include_router(policy_packs_router)
 app.include_router(projects_router)
 app.include_router(runs_router)
 app.include_router(templates_router)
+app.include_router(tools_router)
 app.include_router(traces_router)
 
 

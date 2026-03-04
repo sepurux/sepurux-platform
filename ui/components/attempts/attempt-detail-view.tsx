@@ -10,6 +10,7 @@ import {
   type CounterfactualListItem,
   type MutationTraceAppliedItem,
   type ReplayAttemptDetail,
+  type SecurityEventListItem,
 } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ type LoadState =
       attempt: ReplayAttemptDetail;
       timeline: AttemptTimeline | null;
       counterfactuals: CounterfactualListItem[];
+      securityEvents: SecurityEventListItem[];
     };
 
 export function AttemptDetailView({ attemptId }: { attemptId: string }) {
@@ -35,12 +37,14 @@ export function AttemptDetailView({ attemptId }: { attemptId: string }) {
   async function load() {
     setState({ status: "loading" });
     try {
-      const [attempt, timeline, counterfactuals] = await Promise.all([
-        api.getAttempt(attemptId),
+      const attempt = await api.getAttempt(attemptId);
+      const [timeline, counterfactuals, runSecurityEvents] = await Promise.all([
         api.getAttemptTimeline(attemptId).catch(() => null),
         api.listAttemptCounterfactuals(attemptId).catch(() => []),
+        api.listRunSecurityEvents(attempt.run_id, { limit: 400, offset: 0 }).catch(() => []),
       ]);
-      setState({ status: "ready", attempt, timeline, counterfactuals });
+      const securityEvents = runSecurityEvents.filter((event) => event.attempt_id === attemptId);
+      setState({ status: "ready", attempt, timeline, counterfactuals, securityEvents });
     } catch (error) {
       setState({ status: "error", message: error instanceof Error ? error.message : "Failed to load attempt" });
     }
@@ -70,7 +74,12 @@ export function AttemptDetailView({ attemptId }: { attemptId: string }) {
       ) : state.status === "error" ? (
         <Card className="border-rose-400/20"><CardContent className="p-5 text-sm text-rose-100">{state.message}</CardContent></Card>
       ) : (
-        <AttemptDetailPanels attempt={state.attempt} timeline={state.timeline} counterfactuals={state.counterfactuals} />
+        <AttemptDetailPanels
+          attempt={state.attempt}
+          timeline={state.timeline}
+          counterfactuals={state.counterfactuals}
+          securityEvents={state.securityEvents}
+        />
       )}
     </div>
   );
@@ -80,10 +89,12 @@ function AttemptDetailPanels({
   attempt,
   timeline,
   counterfactuals,
+  securityEvents,
 }: {
   attempt: ReplayAttemptDetail;
   timeline: AttemptTimeline | null;
   counterfactuals: CounterfactualListItem[];
+  securityEvents: SecurityEventListItem[];
 }) {
   const isPolicyBlocked = (attempt.failure_reason ?? "").startsWith("policy_");
   const mutationTraceApplied = Array.isArray(attempt.mutation_trace?.applied)
@@ -147,6 +158,50 @@ function AttemptDetailPanels({
             ) : (
               mutationTraceApplied.map((entry, index) => (
                 <MutationTraceRow key={buildMutationTraceKey(entry, index)} entry={entry} />
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Security Events</CardTitle>
+            <CardDescription>
+              Trust-zone firewall decisions recorded during replay for this attempt.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {securityEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No security events recorded for this attempt.</p>
+            ) : (
+              securityEvents.map((event) => (
+                <div
+                  key={event.security_event_id}
+                  className="rounded-md border border-border/60 bg-muted/10 px-3 py-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-foreground">{event.tool}</span>
+                    <Badge
+                      variant={
+                        event.action === "block"
+                          ? "danger"
+                          : event.action === "sanitize"
+                            ? "warning"
+                            : "default"
+                      }
+                    >
+                      {event.action}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    zone={event.zone} • risk={Math.round(event.risk_score * 100)}% • event #{event.event_index}
+                  </p>
+                  {Array.isArray(event.matches) && event.matches.length > 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      matches: {event.matches.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
               ))
             )}
           </CardContent>
