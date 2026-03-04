@@ -10,7 +10,16 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import worker as worker_module
-from models import Base, Campaign, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
+from models import (
+    Base,
+    Campaign,
+    PolicyEvent,
+    PolicyPack,
+    PolicyPackVersion,
+    ReplayAttempt,
+    Run,
+    Trace,
+)
 
 
 class _FakeOPAResponse:
@@ -609,3 +618,111 @@ def test_opa_unavailable_fails_attempt_and_records_policy_event(
     assert attempt.failure_reason == "opa_unavailable"
     assert policy_event.decision == "deny"
     assert "opa unavailable" in (policy_event.reason or "")
+
+
+def test_run_uses_snapshotted_policy_pack_version_when_active_changes(
+    worker_db_context: sessionmaker[Session],
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    version_v1_id = uuid4()
+    version_v2_id = uuid4()
+    run_id = uuid4()
+
+    policy_v1 = {
+        "version": "0.1",
+        "defaults": {"unknown_tools": "allow"},
+        "approval": {"token_field": "confirmation_token"},
+        "irreversible": {"tools": []},
+    }
+    policy_v2 = {
+        "version": "0.2",
+        "defaults": {"unknown_tools": "allow"},
+        "approval": {"token_field": "confirmation_token"},
+        "irreversible": {"tools": ["payments.refund"]},
+    }
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Version Snapshot Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund-check",
+                        "tool": "payments.refund",
+                        "args": {"order_id": "ord-123"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="Versioned Policy Pack",
+                engine="builtin",
+                policy=policy_v2,
+                active_version_id=version_v2_id,
+            )
+        )
+        db.add_all(
+            [
+                PolicyPackVersion(
+                    version_id=version_v1_id,
+                    policy_pack_id=policy_pack_id,
+                    version_number=1,
+                    policy=policy_v1,
+                    created_by="test",
+                ),
+                PolicyPackVersion(
+                    version_id=version_v2_id,
+                    policy_pack_id=policy_pack_id,
+                    version_number=2,
+                    policy=policy_v2,
+                    created_by="test",
+                ),
+            ]
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                effective_policy_pack_version_id=version_v1_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert attempt.result == "passed"
+    assert attempt.failure_reason is None
+    assert policy_event.decision == "allow"
+    assert policy_event.tool == "payments.refund"
+    assert run.effective_policy_pack_version_id == version_v1_id
