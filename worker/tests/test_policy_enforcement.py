@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from uuid import uuid4
 
+import httpx
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -10,6 +11,15 @@ from sqlalchemy.pool import StaticPool
 
 import worker as worker_module
 from models import Base, Campaign, PolicyEvent, PolicyPack, ReplayAttempt, Run, Trace
+
+
+class _FakeOPAResponse:
+    def __init__(self, status_code: int, payload: object) -> None:
+        self.status_code = status_code
+        self._payload = payload
+
+    def json(self) -> object:
+        return self._payload
 
 
 @pytest.fixture()
@@ -321,3 +331,281 @@ def test_policy_pack_allows_non_irreversible_tool(
     assert attempt.failure_reason is None
     assert policy_event.decision == "allow"
     assert policy_event.tool == "jira.create_issue"
+
+
+def test_opa_policy_pack_requires_approval_without_token(
+    worker_db_context: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    run_id = uuid4()
+
+    def fake_opa_post(url: str, *, json: object, timeout: float) -> _FakeOPAResponse:
+        assert url.endswith("/v1/data/crashlab/policy/decision")
+        assert isinstance(json, dict)
+        return _FakeOPAResponse(
+            200,
+            {
+                "result": {
+                    "decision": "require_approval",
+                    "reason": "OPA requires approval for refunds",
+                }
+            },
+        )
+
+    monkeypatch.setattr("policy.opa_client.httpx.post", fake_opa_post)
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="OPA Approval Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund-via-opa",
+                        "tool": "payments.refund",
+                        "args": {"order_id": "ord-123"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="OPA Pack",
+                engine="opa",
+                policy={
+                    "version": "0.1",
+                    "defaults": {"unknown_tools": "allow"},
+                    "approval": {"token_field": "confirmation_token"},
+                    "irreversible": {"tools": ["payments.refund"]},
+                    "opa": {
+                        "package": "crashlab.policy",
+                        "query": "data.crashlab.policy.decision",
+                    },
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "failed"
+    assert attempt.failure_reason == "policy_requires_approval"
+    assert policy_event.decision == "require_approval"
+    assert policy_event.tool == "payments.refund"
+    assert "approval" in (policy_event.reason or "").lower()
+
+
+def test_opa_policy_pack_allows_tool_when_opa_returns_allow(
+    worker_db_context: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    run_id = uuid4()
+
+    def fake_opa_post(url: str, *, json: object, timeout: float) -> _FakeOPAResponse:
+        assert url.endswith("/v1/data/crashlab/policy/decision")
+        assert isinstance(json, dict)
+        return _FakeOPAResponse(
+            200,
+            {
+                "result": {
+                    "decision": "allow",
+                    "reason": "OPA allow",
+                }
+            },
+        )
+
+    monkeypatch.setattr("policy.opa_client.httpx.post", fake_opa_post)
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="OPA Allow Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "jira-draft-via-opa",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Draft issue"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="OPA Allow Pack",
+                engine="opa",
+                policy={
+                    "version": "0.1",
+                    "defaults": {"unknown_tools": "allow"},
+                    "approval": {"token_field": "confirmation_token"},
+                    "irreversible": {"tools": ["payments.refund"]},
+                    "opa": {
+                        "package": "crashlab.policy",
+                        "query": "data.crashlab.policy.decision",
+                    },
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "passed"
+    assert attempt.failure_reason is None
+    assert policy_event.decision == "allow"
+    assert policy_event.tool == "jira.create_issue"
+
+
+def test_opa_unavailable_fails_attempt_and_records_policy_event(
+    worker_db_context: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    run_id = uuid4()
+
+    def fake_opa_post(url: str, *, json: object, timeout: float) -> _FakeOPAResponse:
+        raise httpx.ConnectError(
+            "opa down",
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr("policy.opa_client.httpx.post", fake_opa_post)
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="OPA Down Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund-with-opa-down",
+                        "tool": "payments.refund",
+                        "args": {"order_id": "ord-123"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="OPA Pack",
+                engine="opa",
+                policy={
+                    "version": "0.1",
+                    "defaults": {"unknown_tools": "allow"},
+                    "approval": {"token_field": "confirmation_token"},
+                    "irreversible": {"tools": ["payments.refund"]},
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "failed"
+    assert attempt.failure_reason == "opa_unavailable"
+    assert policy_event.decision == "deny"
+    assert "opa unavailable" in (policy_event.reason or "")

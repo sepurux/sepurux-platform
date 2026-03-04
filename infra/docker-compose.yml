@@ -29,6 +29,14 @@ services:
     volumes:
       - miniodata:/data
 
+  opa:
+    image: openpolicyagent/opa:latest
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "--watch", "/policies"]
+    expose:
+      - "8181"
+    volumes:
+      - ./opa-policies:/policies:ro
+
   api:
     build:
       context: ../api
@@ -40,12 +48,14 @@ services:
       S3_SECRET_KEY: minio123456
       S3_BUCKET: crashlab
       S3_REGION: us-east-1
+      OPA_URL: http://opa:8181
     ports:
       - "8000:8000"
     depends_on:
       - postgres
       - redis
       - minio
+      - opa
 
   worker:
     build:
@@ -58,10 +68,12 @@ services:
       S3_SECRET_KEY: minio123456
       S3_BUCKET: crashlab
       S3_REGION: us-east-1
+      OPA_URL: http://opa:8181
     depends_on:
       - postgres
       - redis
       - minio
+      - opa
 
   ui:
     build:

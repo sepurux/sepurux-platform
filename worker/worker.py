@@ -28,6 +28,7 @@ from models import (
     Trace,
 )
 from mutation_engine import apply_mutation_pack
+from policy.opa_client import OPAUnavailableError, evaluate_policy_with_opa
 from policy_engine import (
     approval_token_field,
     evaluate_policy,
@@ -506,6 +507,7 @@ def _enforce_injection_firewall(
 def execute_run(run_id: str) -> None:
     logger.info("Executing run %s", run_id)
     run_uuid = UUID(str(run_id))
+    settings = get_settings()
 
     with get_session() as db:
         run = db.get(Run, run_uuid)
@@ -560,7 +562,7 @@ def execute_run(run_id: str) -> None:
         policy_engine_name = "builtin"
         if policy_pack is not None and isinstance(policy_pack.policy, dict):
             policy_document = policy_pack.policy
-            policy_engine_name = policy_pack.engine or "builtin"
+            policy_engine_name = (policy_pack.engine or "builtin").strip().lower()
         policy_token_field = approval_token_field(policy_document)
 
         mutation_pack: MutationPack | None = None
@@ -638,13 +640,61 @@ def execute_run(run_id: str) -> None:
                             blocked_failure_reason = "policy_requires_approval"
                             blocked_error_type = "PolicyApprovalRequiredError"
                             blocked_error_message = evaluation.reason
+                    elif evaluation.decision == "deny":
+                        policy_denies += 1
+                        blocked_failure_reason = "policy_denied"
+                        blocked_error_type = "PolicyDeniedError"
+                        blocked_error_message = evaluation.reason
                     else:
                         event_decision = "allow"
                         event_reason = "allowed by builtin policy"
+                elif policy_engine_name == "opa":
+                    try:
+                        opa_evaluation = evaluate_policy_with_opa(
+                            policy_input=policy_input,
+                            opa_url=settings.opa_url,
+                            timeout_seconds=settings.opa_timeout_seconds,
+                        )
+                    except OPAUnavailableError as exc:
+                        policy_denies += 1
+                        event_decision = "deny"
+                        event_reason = f"opa unavailable: {exc}"
+                        blocked_failure_reason = "opa_unavailable"
+                        blocked_error_type = "OPAUnavailableError"
+                        blocked_error_message = "OPA policy decision service unavailable"
+                    else:
+                        event_decision = opa_evaluation.decision
+                        event_reason = opa_evaluation.reason
+
+                        if opa_evaluation.decision == "require_approval":
+                            token_present = has_confirmation_token(
+                                policy_args,
+                                token_field=policy_token_field,
+                            )
+                            if token_present:
+                                event_decision = "allow"
+                                event_reason = (
+                                    f"{opa_evaluation.reason}; "
+                                    f"approval token '{policy_token_field}' provided"
+                                )
+                            else:
+                                policy_requires_approval += 1
+                                blocked_failure_reason = "policy_requires_approval"
+                                blocked_error_type = "PolicyApprovalRequiredError"
+                                blocked_error_message = opa_evaluation.reason
+                        elif opa_evaluation.decision == "deny":
+                            policy_denies += 1
+                            blocked_failure_reason = "policy_denied"
+                            blocked_error_type = "PolicyDeniedError"
+                            blocked_error_message = opa_evaluation.reason
+                        else:
+                            event_decision = "allow"
+                            if not event_reason:
+                                event_reason = "allowed by OPA policy"
                 else:
                     event_decision = "allow"
                     event_reason = (
-                        f"policy engine '{policy_engine_name}' not implemented in worker; "
+                        f"policy engine '{policy_engine_name}' not recognized in worker; "
                         "defaulting to allow"
                     )
 
