@@ -229,6 +229,40 @@ With `engine="opa"`:
 - `require_approval` enforces `approval.token_field` (default `confirmation_token`)
 - OPA unavailability fails the attempt with `failure_reason="opa_unavailable"`
 
+### Live Rego Demo (Hot Reload)
+
+This demo shows: edit Rego policy, rerun the same campaign, and observe changed
+policy behavior immediately in run stats/policy events/dashboard.
+
+1. Start stack with OPA watch enabled:
+
+```bash
+docker compose -f infra/docker-compose.yml up --build
+docker compose -f infra/docker-compose.yml exec api alembic upgrade head
+```
+
+2. Run the helper script to create an OPA policy pack + trace + campaign and execute a baseline run:
+
+```bash
+chmod +x scripts/demo_opa_live.sh
+./scripts/demo_opa_live.sh
+```
+
+3. When prompted by the script, edit `infra/opa-policies/crashlab_policy.rego`:
+
+```rego
+allow_payments_refund := true
+```
+
+4. Save the file (OPA hot-reloads via `--watch`) and press Enter in the script.
+
+5. Script triggers a rerun using the same trace/campaign and prints both run URLs.
+
+6. Open the run pages in UI (`/runs/<run_id>`) and compare:
+   - `policy_events`
+   - `policy_requires_approval` / `policy_violations_total`
+   - pass/fail mix
+
 ## Counterfactual Lite
 
 List counterfactual what-if replays for a failed attempt:
