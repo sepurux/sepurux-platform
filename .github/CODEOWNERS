@@ -1,0 +1,24 @@
+# CODEOWNERS — auto-assigns reviewers when a PR touches these paths.
+# Replace @handle with actual GitHub usernames.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything not matched below
+*                   @felixkwasisarpong
+
+# API
+api/                @felixkwasisarpong
+
+# Worker
+worker/             @felixkwasisarpong
+
+# UI / Dashboard
+ui/                 @aasanakey
+
+# Infrastructure & Docker
+infra/              @felixkwasisarpong
+
+# CI / GitHub Actions
+.github/            @felixkwasisarpong
+
+# Marketing site
+site/               @aasankey
