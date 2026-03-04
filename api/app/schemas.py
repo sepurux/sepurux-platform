@@ -41,6 +41,7 @@ class RunMetadata(BaseModel):
     trace_id: UUID
     campaign_id: UUID
     policy_pack_id: UUID | None = None
+    effective_policy_pack_version_id: UUID | None = None
     status: str
     summary: Any | None
     pass_rate: float | None = None
@@ -307,12 +308,36 @@ class PolicyPackCreateRequest(BaseModel):
     policy: Any
 
 
+class PolicyPackUpdateRequest(BaseModel):
+    name: str | None = None
+    engine: Literal["builtin", "opa"] | None = None
+    policy: Any
+    created_by: str | None = None
+
+
+class PolicyPackRollbackRequest(BaseModel):
+    version_number: int = Field(ge=1)
+    created_by: str | None = None
+
+
+class PolicyPackVersionMetadata(BaseModel):
+    version_id: UUID
+    policy_pack_id: UUID
+    version_number: int
+    policy: Any
+    created_by: str | None = None
+    created_at: datetime
+    is_active: bool = False
+
+
 class PolicyPackMetadata(BaseModel):
     policy_pack_id: UUID
     project_id: UUID
     name: str
     engine: str
     policy: Any
+    active_version_id: UUID | None = None
+    active_version_number: int | None = None
     created_at: datetime
 
 
