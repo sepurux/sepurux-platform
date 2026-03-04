@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, PolicyEvent, PolicyPack, Project, Run, Trace
+from app.models import Base, Campaign, PolicyEvent, PolicyPack, PolicyPackVersion, Project, Run, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -363,3 +363,203 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
     second_payload = second_page.json()
     assert len(second_payload) == 1
     assert second_payload[0]["tool"] == "jira.create_issue"
+
+
+def test_policy_pack_update_creates_new_version_and_sets_active(
+    policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = policy_test_context
+    create_response = client.post(
+        "/v1/policy-packs",
+        json={
+            "name": "Versioned Pack",
+            "engine": "builtin",
+            "policy": {
+                "version": "0.1",
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible": {"tools": ["payments.refund"]},
+                "approval": {"token_field": "confirmation_token"},
+            },
+        },
+    )
+    assert create_response.status_code == 201
+    pack_id = create_response.json()["policy_pack_id"]
+    assert create_response.json()["active_version_number"] == 1
+
+    update_response = client.patch(
+        f"/v1/policy-packs/{pack_id}",
+        json={
+            "policy": {
+                "version": "0.2",
+                "defaults": {"unknown_tools": "deny"},
+                "irreversible": {"tools": ["payments.refund", "jira.create_issue(commit)"]},
+                "approval": {"token_field": "confirmation_token"},
+            },
+        },
+    )
+    assert update_response.status_code == 200
+    update_payload = update_response.json()
+    assert update_payload["active_version_number"] == 2
+    assert update_payload["policy"]["version"] == "0.2"
+
+    versions_response = client.get(f"/v1/policy-packs/{pack_id}/versions")
+    assert versions_response.status_code == 200
+    versions = versions_response.json()
+    assert [item["version_number"] for item in versions] == [2, 1]
+    assert versions[0]["is_active"] is True
+    assert versions[1]["is_active"] is False
+
+
+def test_run_snapshots_policy_pack_version_before_updates(
+    policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, testing_session_local, project_id, fake_queue = policy_test_context
+    trace_id = uuid4()
+    campaign_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Snapshot Campaign",
+                mutation_set=[{"mutation_id": "baseline", "tool": "jira.create_issue"}],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.commit()
+
+    pack_response = client.post(
+        "/v1/policy-packs",
+        json={
+            "name": "Snapshot Pack",
+            "engine": "builtin",
+            "policy": {
+                "version": "0.1",
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible": {"tools": ["payments.refund"]},
+                "approval": {"token_field": "confirmation_token"},
+            },
+        },
+    )
+    assert pack_response.status_code == 201
+    pack_id = pack_response.json()["policy_pack_id"]
+    initial_active_version = pack_response.json()["active_version_id"]
+
+    first_run = client.post(
+        "/v1/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "policy_pack_id": pack_id,
+        },
+    )
+    assert first_run.status_code == 201
+    first_run_payload = first_run.json()
+    first_run_id = first_run_payload["run_id"]
+    assert first_run_payload["effective_policy_pack_version_id"] == initial_active_version
+
+    update_response = client.patch(
+        f"/v1/policy-packs/{pack_id}",
+        json={
+            "policy": {
+                "version": "0.2",
+                "defaults": {"unknown_tools": "deny"},
+                "irreversible": {"tools": ["payments.refund", "jira.create_issue(commit)"]},
+                "approval": {"token_field": "confirmation_token"},
+            },
+        },
+    )
+    assert update_response.status_code == 200
+    updated_active_version = update_response.json()["active_version_id"]
+    assert updated_active_version != initial_active_version
+
+    second_run = client.post(
+        "/v1/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "policy_pack_id": pack_id,
+        },
+    )
+    assert second_run.status_code == 201
+    second_run_payload = second_run.json()
+    assert second_run_payload["effective_policy_pack_version_id"] == updated_active_version
+    assert second_run_payload["effective_policy_pack_version_id"] != initial_active_version
+
+    first_run_after_update = client.get(f"/v1/runs/{first_run_id}")
+    assert first_run_after_update.status_code == 200
+    assert first_run_after_update.json()["effective_policy_pack_version_id"] == initial_active_version
+
+    assert len(fake_queue.calls) == 2
+
+
+def test_policy_pack_rollback_sets_active_to_prior_version(
+    policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, testing_session_local, _, _ = policy_test_context
+    create_response = client.post(
+        "/v1/policy-packs",
+        json={
+            "name": "Rollback Pack",
+            "engine": "builtin",
+            "policy": {
+                "version": "0.1",
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible": {"tools": ["payments.refund"]},
+                "approval": {"token_field": "confirmation_token"},
+            },
+        },
+    )
+    assert create_response.status_code == 201
+    pack_id = create_response.json()["policy_pack_id"]
+    v1_id = create_response.json()["active_version_id"]
+
+    v2_response = client.patch(
+        f"/v1/policy-packs/{pack_id}",
+        json={
+            "policy": {
+                "version": "0.2",
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible": {"tools": ["payments.refund", "jira.create_issue(commit)"]},
+                "approval": {"token_field": "confirmation_token"},
+            },
+        },
+    )
+    assert v2_response.status_code == 200
+    assert v2_response.json()["active_version_number"] == 2
+
+    rollback_response = client.post(
+        f"/v1/policy-packs/{pack_id}/rollback",
+        json={"version_number": 1},
+    )
+    assert rollback_response.status_code == 200
+    rollback_payload = rollback_response.json()
+    assert rollback_payload["active_version_number"] == 1
+    assert rollback_payload["active_version_id"] == v1_id
+    assert rollback_payload["policy"]["version"] == "0.1"
+
+    versions_response = client.get(f"/v1/policy-packs/{pack_id}/versions")
+    assert versions_response.status_code == 200
+    versions = versions_response.json()
+    active_versions = [item for item in versions if item["is_active"]]
+    assert len(active_versions) == 1
+    assert active_versions[0]["version_number"] == 1
+
+    with testing_session_local() as db:
+        db_versions = list(
+            db.scalars(
+                select(PolicyPackVersion)
+                .where(PolicyPackVersion.policy_pack_id == UUID(pack_id))
+                .order_by(PolicyPackVersion.version_number.asc())
+            )
+        )
+    assert [item.version_number for item in db_versions] == [1, 2]

@@ -9,12 +9,14 @@ from app.models import (
     MutationPack,
     PolicyEvent,
     PolicyPack,
+    PolicyPackVersion,
     ReplayAttempt,
     Run,
     SecurityEvent,
     Trace,
 )
 from app.queue import get_run_queue
+from app.services.policy_service import get_policy_pack_active_version
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -31,6 +33,9 @@ def create_run(
     campaign_id: UUID,
     policy_pack_id: UUID | None = None,
 ) -> Run:
+    policy_pack: PolicyPack | None = None
+    effective_policy_pack_version_id: UUID | None = None
+
     if (
         db.scalar(select(Trace).where(Trace.trace_id == trace_id, Trace.project_id == project_id))
         is None
@@ -54,16 +59,18 @@ def create_run(
         is None
     ):
         raise RelatedRecordNotFoundError("Campaign mutation pack not found")
-    if policy_pack_id is not None and (
-        db.scalar(
+    if policy_pack_id is not None:
+        policy_pack = db.scalar(
             select(PolicyPack).where(
                 PolicyPack.policy_pack_id == policy_pack_id,
                 PolicyPack.project_id == project_id,
             )
         )
-        is None
-    ):
-        raise RelatedRecordNotFoundError("Policy pack not found")
+        if policy_pack is None:
+            raise RelatedRecordNotFoundError("Policy pack not found")
+        active_version = get_policy_pack_active_version(db, policy_pack=policy_pack)
+        if isinstance(active_version, PolicyPackVersion):
+            effective_policy_pack_version_id = active_version.version_id
 
     return _create_run_record(
         db,
@@ -71,6 +78,7 @@ def create_run(
         trace_id=trace_id,
         campaign_id=campaign_id,
         policy_pack_id=policy_pack_id,
+        effective_policy_pack_version_id=effective_policy_pack_version_id,
         summary=None,
     )
 
@@ -82,6 +90,7 @@ def _create_run_record(
     trace_id: UUID,
     campaign_id: UUID,
     policy_pack_id: UUID | None,
+    effective_policy_pack_version_id: UUID | None,
     summary: Any | None,
 ) -> Run:
     run = Run(
@@ -90,6 +99,7 @@ def _create_run_record(
         trace_id=trace_id,
         campaign_id=campaign_id,
         policy_pack_id=policy_pack_id,
+        effective_policy_pack_version_id=effective_policy_pack_version_id,
         status="queued",
         summary=summary,
     )
@@ -147,6 +157,7 @@ def create_ci_run_and_enqueue(
         trace_id=trace_id,
         campaign_id=campaign_id,
         policy_pack_id=None,
+        effective_policy_pack_version_id=None,
         summary={"ci_thresholds": thresholds},
     )
     enqueue_execute_run(run)
@@ -188,6 +199,7 @@ def run_metadata(run: Run) -> dict[str, Any]:
         "trace_id": run.trace_id,
         "campaign_id": run.campaign_id,
         "policy_pack_id": run.policy_pack_id,
+        "effective_policy_pack_version_id": run.effective_policy_pack_version_id,
         "status": run.status,
         "summary": run.summary,
         "pass_rate": summary_pass_rate,

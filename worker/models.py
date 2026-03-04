@@ -50,6 +50,20 @@ class PolicyPack(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     engine: Mapped[str] = mapped_column(Text, nullable=False, default="builtin")
     policy: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    active_version_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class PolicyPackVersion(Base):
+    __tablename__ = "policy_pack_versions"
+
+    version_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    policy_pack_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    version_number: Mapped[int] = mapped_column(nullable=False)
+    policy: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -101,6 +115,7 @@ class Run(Base):
     trace_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     campaign_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     policy_pack_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    effective_policy_pack_version_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

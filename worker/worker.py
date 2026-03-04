@@ -20,6 +20,7 @@ from models import (
     MutationPack,
     PolicyEvent,
     PolicyPack,
+    PolicyPackVersion,
     ReplayAttempt,
     Run,
     RunTemplateLink,
@@ -317,7 +318,7 @@ def _resolve_policy_pack_override(
     *,
     run: Run,
     template: HardeningTemplate,
-) -> PolicyPack | None:
+) -> tuple[PolicyPack | None, PolicyPackVersion | None]:
     config = _template_config_dict(template)
     policy_pack_id_value = config.get("policy_pack_id")
 
@@ -335,11 +336,13 @@ def _resolve_policy_pack_override(
         if policy_pack is None or policy_pack.project_id != run.project_id:
             raise ValueError("Policy pack override not found for this project")
         run.policy_pack_id = policy_pack.policy_pack_id
-        return policy_pack
+        version = _ensure_policy_pack_active_version(db, policy_pack=policy_pack)
+        run.effective_policy_pack_version_id = version.version_id if version is not None else None
+        return policy_pack, version
 
     policy_obj = config.get("policy")
     if not isinstance(policy_obj, dict):
-        return None
+        return None, None
 
     engine_value = config.get("engine")
     engine = engine_value if isinstance(engine_value, str) and engine_value else "builtin"
@@ -349,11 +352,74 @@ def _resolve_policy_pack_override(
         name=f"{template.name} (applied)",
         engine=engine,
         policy=policy_obj,
+        active_version_id=None,
     )
     db.add(policy_pack)
     db.flush()
+
+    version = PolicyPackVersion(
+        version_id=uuid4(),
+        policy_pack_id=policy_pack.policy_pack_id,
+        version_number=1,
+        policy=policy_obj,
+        created_by="template",
+    )
+    db.add(version)
+    db.flush()
+
+    policy_pack.active_version_id = version.version_id
+    db.add(policy_pack)
+
     run.policy_pack_id = policy_pack.policy_pack_id
-    return policy_pack
+    run.effective_policy_pack_version_id = version.version_id
+    return policy_pack, version
+
+
+def _ensure_policy_pack_active_version(
+    db: Session,
+    *,
+    policy_pack: PolicyPack,
+) -> PolicyPackVersion | None:
+    if policy_pack.active_version_id is not None:
+        active = db.scalar(
+            select(PolicyPackVersion).where(
+                PolicyPackVersion.policy_pack_id == policy_pack.policy_pack_id,
+                PolicyPackVersion.version_id == policy_pack.active_version_id,
+            )
+        )
+        if active is not None:
+            return active
+
+    latest = db.scalar(
+        select(PolicyPackVersion)
+        .where(PolicyPackVersion.policy_pack_id == policy_pack.policy_pack_id)
+        .order_by(PolicyPackVersion.version_number.desc())
+        .limit(1)
+    )
+    if latest is not None:
+        policy_pack.active_version_id = latest.version_id
+        policy_pack.policy = latest.policy
+        db.add(policy_pack)
+        db.flush()
+        return latest
+
+    if policy_pack.policy is None:
+        return None
+
+    created = PolicyPackVersion(
+        version_id=uuid4(),
+        policy_pack_id=policy_pack.policy_pack_id,
+        version_number=1,
+        policy=policy_pack.policy,
+        created_by="worker",
+    )
+    db.add(created)
+    db.flush()
+
+    policy_pack.active_version_id = created.version_id
+    db.add(policy_pack)
+    db.flush()
+    return created
 
 
 def _load_tool_zones(db: Session, *, project_id: UUID) -> dict[str, str]:
@@ -533,12 +599,24 @@ def execute_run(run_id: str) -> None:
         ]
 
         policy_pack: PolicyPack | None = None
+        policy_pack_version: PolicyPackVersion | None = None
+        if run.effective_policy_pack_version_id is not None:
+            policy_pack_version = db.get(PolicyPackVersion, run.effective_policy_pack_version_id)
         if run.policy_pack_id is not None:
             policy_pack = db.get(PolicyPack, run.policy_pack_id)
             if policy_pack is None:
                 raise ValueError(f"Policy pack not found for run {run_id}")
             if policy_pack.project_id != run.project_id:
                 raise ValueError(f"Policy pack project mismatch for run {run_id}")
+            if policy_pack_version is not None and (
+                policy_pack_version.policy_pack_id != policy_pack.policy_pack_id
+            ):
+                raise ValueError(f"Policy pack version mismatch for run {run_id}")
+
+        if policy_pack is not None and policy_pack_version is None:
+            policy_pack_version = _ensure_policy_pack_active_version(db, policy_pack=policy_pack)
+            if policy_pack_version is not None:
+                run.effective_policy_pack_version_id = policy_pack_version.version_id
 
         retry_policy = RetryPolicyConfig()
         adapter_config: ReplayAdapterConfig | None = None
@@ -554,14 +632,22 @@ def execute_run(run_id: str) -> None:
             elif template_type == "sanitizer":
                 sanitizer_config = config
             elif template_type == "policy_pack":
-                policy_override = _resolve_policy_pack_override(db, run=run, template=template)
+                policy_override, policy_override_version = _resolve_policy_pack_override(
+                    db, run=run, template=template
+                )
                 if policy_override is not None:
                     policy_pack = policy_override
+                    policy_pack_version = policy_override_version
 
         policy_document: dict[str, Any] | None = None
         policy_engine_name = "builtin"
-        if policy_pack is not None and isinstance(policy_pack.policy, dict):
+        if policy_pack is not None and isinstance(policy_pack_version, PolicyPackVersion):
+            if isinstance(policy_pack_version.policy, dict):
+                policy_document = policy_pack_version.policy
+        elif policy_pack is not None and isinstance(policy_pack.policy, dict):
+            # Backward-compatible fallback for legacy rows without explicit versions.
             policy_document = policy_pack.policy
+        if policy_pack is not None:
             policy_engine_name = (policy_pack.engine or "builtin").strip().lower()
         policy_token_field = approval_token_field(policy_document)
 
@@ -601,7 +687,7 @@ def execute_run(run_id: str) -> None:
             pending_policy_events: list[dict[str, Any]] = []
             if isinstance(policy_document, dict):
                 tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
-                normalized_tool_name, commit_like = normalize_action(tool_name, policy_args)
+                _, commit_like = normalize_action(tool_name, policy_args)
                 policy_input = _build_policy_event_input(
                     tool_name=tool_name,
                     tool_args=policy_args,
@@ -892,6 +978,11 @@ def execute_run(run_id: str) -> None:
                 "sanitizer_enabled": sanitizer_config is not None,
                 "effective_policy_pack_id": (
                     str(policy_pack.policy_pack_id) if policy_pack is not None else None
+                ),
+                "effective_policy_pack_version_id": (
+                    str(policy_pack_version.version_id)
+                    if isinstance(policy_pack_version, PolicyPackVersion)
+                    else None
                 ),
             },
         }

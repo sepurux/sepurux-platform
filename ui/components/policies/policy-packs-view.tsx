@@ -70,6 +70,7 @@ export function PolicyPacksView() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Engine</TableHead>
+                  <TableHead>Active</TableHead>
                   <TableHead>Unknown Tools</TableHead>
                   <TableHead>Irreversible Tools</TableHead>
                   <TableHead>Pack ID</TableHead>
@@ -79,7 +80,7 @@ export function PolicyPacksView() {
               <TableBody>
                 {state.records.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                       No policy packs found for this project.
                     </TableCell>
                   </TableRow>
@@ -108,6 +109,13 @@ export function PolicyPacksView() {
                           </Link>
                         </TableCell>
                         <TableCell>{record.engine}</TableCell>
+                        <TableCell>
+                          {typeof record.active_version_number === "number" ? (
+                            <Badge variant="default">v{record.active_version_number}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">--</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={unknownTools === "deny" ? "danger" : "default"}>
                             {unknownTools}
