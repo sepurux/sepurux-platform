@@ -83,24 +83,25 @@ def upgrade() -> None:
     )
 
     connection = op.get_bind()
+    insert_policy_pack_version = sa.text(
+        """
+        INSERT INTO policy_pack_versions
+            (version_id, policy_pack_id, version_number, policy, created_by)
+        VALUES
+            (:version_id, :policy_pack_id, :version_number, :policy, :created_by)
+        """
+    ).bindparams(sa.bindparam("policy", type_=JSONB_COMPAT))
 
     policy_pack_rows = connection.execute(
         sa.text("SELECT policy_pack_id, policy FROM policy_packs")
     ).mappings()
 
-    active_version_by_pack: dict[str, str] = {}
+    active_version_by_pack: dict[object, object] = {}
     for row in policy_pack_rows:
-        policy_pack_id = str(row["policy_pack_id"])
-        version_id = str(uuid4())
+        policy_pack_id = row["policy_pack_id"]
+        version_id = uuid4()
         connection.execute(
-            sa.text(
-                """
-                INSERT INTO policy_pack_versions
-                    (version_id, policy_pack_id, version_number, policy, created_by)
-                VALUES
-                    (:version_id, :policy_pack_id, :version_number, :policy, :created_by)
-                """
-            ),
+            insert_policy_pack_version,
             {
                 "version_id": version_id,
                 "policy_pack_id": policy_pack_id,
@@ -128,7 +129,7 @@ def upgrade() -> None:
         sa.text("SELECT run_id, policy_pack_id FROM runs WHERE policy_pack_id IS NOT NULL")
     ).mappings()
     for row in run_rows:
-        policy_pack_id = str(row["policy_pack_id"])
+        policy_pack_id = row["policy_pack_id"]
         active_version_id = active_version_by_pack.get(policy_pack_id)
         if active_version_id is None:
             continue
@@ -142,7 +143,7 @@ def upgrade() -> None:
             ),
             {
                 "effective_policy_pack_version_id": active_version_id,
-                "run_id": str(row["run_id"]),
+                "run_id": row["run_id"],
             },
         )
 
