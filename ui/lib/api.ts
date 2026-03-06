@@ -189,6 +189,35 @@ export type SecurityEventListItem = {
   created_at: string;
 };
 
+export type AuditEventListItem = {
+  audit_event_id: string;
+  project_id: string;
+  event_type: string;
+  actor: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type WebhookMetadata = {
+  webhook_id: string;
+  project_id: string;
+  url: string;
+  is_enabled: boolean;
+  events: string[];
+  created_at: string;
+  last_success_at: string | null;
+  last_error: string | null;
+};
+
+export type WebhookCreateResponse = WebhookMetadata & {
+  secret: string;
+};
+
+export type WebhookRotateSecretResponse = {
+  webhook_id: string;
+  secret: string;
+};
+
 export type ToolRegistryMetadata = {
   tool_id: string;
   project_id: string;
@@ -439,6 +468,27 @@ export const api = {
       limit: options?.limit ?? 200,
       offset: options?.offset ?? 0,
     }),
+  listAuditEvents: (options?: { limit?: number; offset?: number; event_type?: string }) =>
+    requestJson<AuditEventListItem[]>("/v1/audit-events", {
+      limit: options?.limit ?? 50,
+      offset: options?.offset ?? 0,
+      event_type: options?.event_type,
+    }),
+  listWebhooks: () => requestJson<WebhookMetadata[]>("/v1/webhooks"),
+  createWebhook: (payload: {
+    url: string;
+    events: string[];
+    is_enabled?: boolean;
+  }) => postJson<WebhookCreateResponse, typeof payload>("/v1/webhooks", payload),
+  updateWebhook: (
+    webhookId: string,
+    payload: { url?: string; events?: string[]; is_enabled?: boolean }
+  ) => patchJson<WebhookMetadata, typeof payload>(`/v1/webhooks/${webhookId}`, payload),
+  rotateWebhookSecret: (webhookId: string) =>
+    postJson<WebhookRotateSecretResponse, Record<string, never>>(
+      `/v1/webhooks/${webhookId}/rotate-secret`,
+      {}
+    ),
   listRunAttempts: (runId: string, options?: { limit?: number; offset?: number; result?: string }) =>
     requestJson<ReplayAttemptListItem[]>(`/v1/runs/${runId}/attempts`, {
       limit: options?.limit ?? 50,

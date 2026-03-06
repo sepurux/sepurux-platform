@@ -12,6 +12,7 @@ from app.schemas import (
     PolicyPackUpdateRequest,
     PolicyPackVersionMetadata,
 )
+from app.services.audit_service import actor_from_request
 from app.services.policy_service import (
     create_policy_pack,
     get_policy_pack,
@@ -22,7 +23,7 @@ from app.services.policy_service import (
     rollback_policy_pack,
     update_policy_pack,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/policy-packs", tags=["policy-packs"])
@@ -59,6 +60,7 @@ def post_policy_pack(
     payload: PolicyPackCreateRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    request: Request,
 ) -> PolicyPackMetadata:
     record = create_policy_pack(
         db,
@@ -66,6 +68,7 @@ def post_policy_pack(
         name=payload.name,
         engine=payload.engine,
         policy=payload.policy,
+        actor=actor_from_request(request),
     )
     return _to_policy_pack_metadata(db, record)
 
@@ -113,6 +116,7 @@ def patch_policy_pack(
     payload: PolicyPackUpdateRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    request: Request,
 ) -> PolicyPackMetadata:
     record = update_policy_pack(
         db,
@@ -122,6 +126,7 @@ def patch_policy_pack(
         engine=payload.engine,
         policy=payload.policy,
         created_by=payload.created_by,
+        actor=actor_from_request(request),
     )
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy pack not found")
@@ -134,12 +139,14 @@ def post_policy_pack_rollback(
     payload: PolicyPackRollbackRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    request: Request,
 ) -> PolicyPackMetadata:
     record = rollback_policy_pack(
         db,
         project_id=project_scope.project_id,
         policy_pack_id=policy_pack_id,
         version_number=payload.version_number,
+        actor=actor_from_request(request),
     )
     if record is None:
         raise HTTPException(

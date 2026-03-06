@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, Text, Uuid, func
+from sqlalchemy import JSON, Boolean, DateTime, Text, Uuid, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -14,6 +14,35 @@ class Base(DeclarativeBase):
 
 
 JSONB_COMPAT = JSON().with_variant(JSONB(), "postgresql")
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    audit_event_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    event_type: Mapped[str] = mapped_column(Text, nullable=False)
+    actor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_metadata: Mapped[Any] = mapped_column("metadata", JSONB_COMPAT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class Webhook(Base):
+    __tablename__ = "webhooks"
+
+    webhook_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    secret: Mapped[str] = mapped_column(Text, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    events: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class Trace(Base):

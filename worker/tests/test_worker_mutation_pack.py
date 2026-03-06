@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -9,7 +10,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import worker as worker_module
-from models import Base, Campaign, MutationPack, ReplayAttempt, Run, Trace
+from models import AuditEvent, Base, Campaign, MutationPack, ReplayAttempt, Run, Trace, Webhook
+from webhooks import generate_webhook_signature
 
 
 @pytest.fixture()
@@ -135,3 +137,113 @@ def test_execute_run_with_mutation_pack_persists_seed_and_trace(
     result = tool_results[-1].get("result")
     assert isinstance(result, dict)
     assert result.get("state") == "replayed"
+
+
+def test_run_completion_records_audit_event_and_delivers_webhook(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+    webhook_id = uuid4()
+
+    sent_requests: list[dict[str, Any]] = []
+
+    class _Response:
+        status_code = 200
+        text = "ok"
+
+    def fake_post(
+        url: str, *, content: bytes, headers: dict[str, str], timeout: float
+    ) -> _Response:
+        sent_requests.append(
+            {
+                "url": url,
+                "content": content,
+                "headers": headers,
+                "timeout": timeout,
+            }
+        )
+        return _Response()
+
+    monkeypatch.setattr("webhooks.httpx.post", fake_post)
+    monkeypatch.setattr("webhooks.time.sleep", lambda _seconds: None)
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Webhook Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Audit + webhook"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Webhook(
+                webhook_id=webhook_id,
+                project_id=project_id,
+                url="https://example.com/webhooks/crash-lab",
+                secret="whsec_test_secret",
+                is_enabled=True,
+                events=["run.completed"],
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    assert len(sent_requests) == 1
+    sent = sent_requests[0]
+    body = sent["content"]
+    assert isinstance(body, bytes)
+    headers = sent["headers"]
+    assert isinstance(headers, dict)
+    signature = headers["X-CrashLab-Signature"]
+    assert signature == generate_webhook_signature("whsec_test_secret", body)
+
+    with testing_session_local() as db:
+        completed_run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+        assert completed_run.status == "completed"
+
+        audit_events = list(
+            db.scalars(
+                select(AuditEvent).where(
+                    AuditEvent.project_id == project_id,
+                    AuditEvent.event_type == "run.completed",
+                )
+            )
+        )
+        assert len(audit_events) == 1
+        assert audit_events[0].event_metadata["run_id"] == str(run_id)
+
+        webhook = db.execute(select(Webhook).where(Webhook.webhook_id == webhook_id)).scalar_one()
+        assert webhook.last_success_at is not None
+        assert webhook.last_error is None

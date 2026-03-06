@@ -65,6 +65,7 @@ def apply_template_and_enqueue(
     project_id: UUID,
     run_id: UUID,
     template_id: UUID,
+    actor: str | None = None,
 ) -> Run:
     source_run = db.scalar(
         select(Run).where(
@@ -85,6 +86,7 @@ def apply_template_and_enqueue(
         trace_id=source_run.trace_id,
         campaign_id=source_run.campaign_id,
         policy_pack_id=source_run.policy_pack_id,
+        actor=actor,
     )
 
     existing_template_ids = {

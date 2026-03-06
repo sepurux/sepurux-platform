@@ -16,6 +16,7 @@ from app.models import (
     Trace,
 )
 from app.queue import get_run_queue
+from app.services.audit_service import create_audit_event
 from app.services.policy_service import get_policy_pack_active_version
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -32,6 +33,7 @@ def create_run(
     trace_id: UUID,
     campaign_id: UUID,
     policy_pack_id: UUID | None = None,
+    actor: str | None = None,
 ) -> Run:
     policy_pack: PolicyPack | None = None
     effective_policy_pack_version_id: UUID | None = None
@@ -80,6 +82,7 @@ def create_run(
         policy_pack_id=policy_pack_id,
         effective_policy_pack_version_id=effective_policy_pack_version_id,
         summary=None,
+        actor=actor,
     )
 
 
@@ -92,6 +95,7 @@ def _create_run_record(
     policy_pack_id: UUID | None,
     effective_policy_pack_version_id: UUID | None,
     summary: Any | None,
+    actor: str | None,
 ) -> Run:
     run = Run(
         run_id=uuid4(),
@@ -106,6 +110,25 @@ def _create_run_record(
     db.add(run)
     db.commit()
     db.refresh(run)
+    create_audit_event(
+        db,
+        project_id=project_id,
+        event_type="run.created",
+        actor=actor,
+        metadata={
+            "run_id": str(run.run_id),
+            "trace_id": str(run.trace_id),
+            "campaign_id": str(run.campaign_id),
+            "policy_pack_id": str(run.policy_pack_id) if run.policy_pack_id is not None else None,
+            "effective_policy_pack_version_id": (
+                str(run.effective_policy_pack_version_id)
+                if run.effective_policy_pack_version_id is not None
+                else None
+            ),
+            "status": run.status,
+            "summary": run.summary,
+        },
+    )
     return run
 
 
@@ -121,6 +144,7 @@ def create_run_and_enqueue(
     trace_id: UUID,
     campaign_id: UUID,
     policy_pack_id: UUID | None = None,
+    actor: str | None = None,
 ) -> Run:
     run = create_run(
         db=db,
@@ -128,6 +152,7 @@ def create_run_and_enqueue(
         trace_id=trace_id,
         campaign_id=campaign_id,
         policy_pack_id=policy_pack_id,
+        actor=actor,
     )
     enqueue_execute_run(run)
     return run
@@ -139,6 +164,7 @@ def create_ci_run_and_enqueue(
     trace_id: UUID,
     campaign_id: UUID,
     thresholds: dict[str, Any],
+    actor: str | None = "ci",
 ) -> Run:
     trace = db.scalar(select(Trace).where(Trace.trace_id == trace_id))
     if trace is None:
@@ -159,6 +185,7 @@ def create_ci_run_and_enqueue(
         policy_pack_id=None,
         effective_policy_pack_version_id=None,
         summary={"ci_thresholds": thresholds},
+        actor=actor,
     )
     enqueue_execute_run(run)
     return run

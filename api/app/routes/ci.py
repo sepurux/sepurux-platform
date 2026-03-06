@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.db import get_db
 from app.schemas import CIRunCreateRequest, CIRunCreateResponse, CIRunStatusResponse
+from app.services.audit_service import create_audit_event
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_ci_run_and_enqueue,
@@ -61,6 +62,24 @@ def get_ci_run(run_id: UUID, request: Request, db: DbSession) -> CIRunStatusResp
         failures=int(metrics["failed_count"]),
         thresholds=thresholds,
     )
+
+    if decision in {"pass", "fail"}:
+        create_audit_event(
+            db,
+            project_id=run.project_id,
+            event_type=f"ci.decision.{decision}",
+            actor="ci",
+            metadata={
+                "run_id": str(run.run_id),
+                "status": _public_ci_status(run.status),
+                "decision": decision,
+                "thresholds": thresholds,
+                "pass_rate": float(metrics["pass_rate"]),
+                "unsafe_attempts": int(metrics["unsafe_attempts"]),
+                "failures": int(metrics["failures"]),
+                "top_failing_tools": metrics["top_failing_tools"],
+            },
+        )
 
     return CIRunStatusResponse(
         run_id=run.run_id,
