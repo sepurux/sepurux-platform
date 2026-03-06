@@ -1,3 +1,20 @@
+export type TraceMetadata = {
+  trace_id: string;
+  source: string;
+  s3_key: string;
+  payload?: Record<string, unknown> | unknown[] | null;
+  created_at: string;
+};
+
+export type CampaignMetadata = {
+  campaign_id: string;
+  mutation_pack_id: string | null;
+  name: string;
+  mutation_set: unknown;
+  eval_set: unknown;
+  created_at: string;
+};
+
 export type RunMetadata = {
   run_id: string;
   trace_id: string;
@@ -270,28 +287,41 @@ async function getTenantSettingsHelpers() {
   if (typeof window === "undefined") {
     return {
       getStoredApiKey: () => null,
-      getStoredProjectId: () => null
+      getStoredProjectId: () => null,
+      getStoredApiBaseUrl: () => null,
     };
   }
 
   return import("@/lib/tenant-settings");
 }
 
-function resolveApiBaseUrl() {
+function getStoredApiBaseUrlSync() {
   if (typeof window === "undefined") {
-    return PUBLIC_API_BASE_URL;
+    return null;
+  }
+  try {
+    return window.localStorage.getItem("crashlab.apiBaseUrl");
+  } catch {
+    return null;
+  }
+}
+
+function resolveApiBaseUrl() {
+  const configuredBase = getStoredApiBaseUrlSync() || PUBLIC_API_BASE_URL;
+  if (typeof window === "undefined") {
+    return configuredBase;
   }
 
   try {
-    const parsed = new URL(PUBLIC_API_BASE_URL);
+    const parsed = new URL(configuredBase);
     if (parsed.hostname === "api") {
       return BROWSER_PROXY_BASE;
     }
   } catch {
-    return PUBLIC_API_BASE_URL;
+    return configuredBase;
   }
 
-  return PUBLIC_API_BASE_URL;
+  return configuredBase;
 }
 
 function buildUrl(path: string, query?: Record<string, string | number | undefined | null>) {
@@ -417,6 +447,26 @@ export const api = {
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),
+  listTraces: (options?: { limit?: number; offset?: number }) =>
+    requestJson<TraceMetadata[]>("/v1/traces", {
+      limit: options?.limit ?? 50,
+      offset: options?.offset ?? 0,
+    }),
+  getTrace: (traceId: string, options?: { includePayload?: boolean }) =>
+    requestJson<TraceMetadata>(`/v1/traces/${traceId}`, {
+      include_payload: options?.includePayload ? "true" : undefined,
+    }),
+  listCampaigns: (options?: { limit?: number; offset?: number }) =>
+    requestJson<CampaignMetadata[]>("/v1/campaigns", {
+      limit: options?.limit ?? 50,
+      offset: options?.offset ?? 0,
+    }),
+  createCampaign: (payload: {
+    name: string;
+    mutation_set: unknown;
+    eval_set: unknown;
+    mutation_pack_id?: string | null;
+  }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
   listMutationPacks: () => requestJson<MutationPackMetadata[]>("/v1/mutation-packs"),
   getMutationPack: (mutationPackId: string) =>
     requestJson<MutationPackMetadata>(`/v1/mutation-packs/${mutationPackId}`),
@@ -507,5 +557,6 @@ export const api = {
   listAttemptCounterfactuals: (attemptId: string) =>
     requestJson<CounterfactualListItem[]>(`/v1/attempts/${attemptId}/counterfactuals`),
   getCounterfactual: (counterfactualId: string) =>
-    requestJson<CounterfactualDetail>(`/v1/counterfactuals/${counterfactualId}`)
+    requestJson<CounterfactualDetail>(`/v1/counterfactuals/${counterfactualId}`),
+  healthz: () => requestJson<{ status: string }>("/healthz", undefined, { requireProjectHeader: false }),
 };

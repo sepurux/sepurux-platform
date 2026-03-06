@@ -57,24 +57,20 @@ export function Sidebar() {
         {primaryItems.map((item) => {
           const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
-          const disabled = ["/traces", "/campaigns", "/reports", "/settings"].includes(item.href);
 
           return (
             <Link
               key={item.label}
-              href={disabled ? "/dashboard" : item.href}
-              aria-disabled={disabled}
+              href={item.href}
               className={cn(
                 "group flex items-center gap-3 rounded-md border px-3 py-2.5 text-sm transition",
                 active
                   ? "border-cyan-300/20 bg-cyan-400/10 text-cyan-200 shadow-insetSoft"
                   : "border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent/40 hover:text-foreground",
-                disabled && "opacity-80"
               )}
             >
               <Icon className={cn("h-4 w-4", active ? "text-cyan-300" : "text-muted-foreground group-hover:text-foreground")} />
               <span className="flex-1">{item.label}</span>
-              {disabled ? <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Soon</span> : null}
             </Link>
           );
         })}

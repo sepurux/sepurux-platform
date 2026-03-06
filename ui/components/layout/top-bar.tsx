@@ -75,15 +75,13 @@ export function TopBar() {
           <div className="inline-flex w-fit items-center rounded-md border border-border/70 bg-muted/40 p-1">
             {tabs.map((tab) => {
               const active = pathname === tab.href || (tab.href !== "/dashboard" && pathname.startsWith(tab.href + "/"));
-              const disabled = ["/traces", "/campaigns"].includes(tab.href);
               return (
                 <Link
                   key={tab.href}
-                  href={disabled ? "/dashboard" : tab.href}
+                  href={tab.href}
                   className={cn(
                     "rounded px-3 py-1.5 text-xs font-medium transition",
                     active ? "bg-card text-foreground shadow" : "text-muted-foreground hover:text-foreground",
-                    disabled && "opacity-70"
                   )}
                 >
                   {tab.label}

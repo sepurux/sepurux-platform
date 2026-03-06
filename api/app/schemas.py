@@ -11,6 +11,7 @@ class TraceMetadata(BaseModel):
     trace_id: UUID
     source: str
     s3_key: str
+    payload: Any | None = None
     created_at: datetime
 
 
