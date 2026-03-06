@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crashlab-sdk"
+version = "0.1.0"
+description = "Python SDK for Crash Lab trace recording and uploads"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Crash Lab" }
+]
+dependencies = [
+  "httpx>=0.27,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/felixkwasisarpong/Crash-Lab"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["crashlab_sdk*"]
