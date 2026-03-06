@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from app.models import PolicyPack, PolicyPackVersion
+from app.services.audit_service import create_audit_event
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,7 @@ def create_policy_pack(
     engine: str,
     policy: object,
     created_by: str | None = None,
+    actor: str | None = None,
 ) -> PolicyPack:
     record = PolicyPack(
         policy_pack_id=uuid4(),
@@ -41,6 +43,21 @@ def create_policy_pack(
     record.active_version_id = version.version_id
     db.commit()
     db.refresh(record)
+    create_audit_event(
+        db,
+        project_id=project_id,
+        event_type="policy_pack.created",
+        actor=actor,
+        metadata={
+            "policy_pack_id": str(record.policy_pack_id),
+            "name": record.name,
+            "engine": record.engine,
+            "active_version_id": (
+                str(record.active_version_id) if record.active_version_id is not None else None
+            ),
+            "active_version_number": 1,
+        },
+    )
     return record
 
 
@@ -85,6 +102,7 @@ def update_policy_pack(
     engine: str | None,
     policy: Any,
     created_by: str | None = None,
+    actor: str | None = None,
 ) -> PolicyPack | None:
     record = get_policy_pack(db, project_id=project_id, policy_pack_id=policy_pack_id)
     if record is None:
@@ -109,6 +127,21 @@ def update_policy_pack(
     db.add(record)
     db.commit()
     db.refresh(record)
+    create_audit_event(
+        db,
+        project_id=project_id,
+        event_type="policy_pack.updated",
+        actor=actor,
+        metadata={
+            "policy_pack_id": str(record.policy_pack_id),
+            "name": record.name,
+            "engine": record.engine,
+            "active_version_id": (
+                str(record.active_version_id) if record.active_version_id is not None else None
+            ),
+            "active_version_number": next_version,
+        },
+    )
     return record
 
 
@@ -118,6 +151,7 @@ def rollback_policy_pack(
     project_id: UUID,
     policy_pack_id: UUID,
     version_number: int,
+    actor: str | None = None,
 ) -> PolicyPack | None:
     record = get_policy_pack(db, project_id=project_id, policy_pack_id=policy_pack_id)
     if record is None:
@@ -136,6 +170,19 @@ def rollback_policy_pack(
     db.add(record)
     db.commit()
     db.refresh(record)
+    create_audit_event(
+        db,
+        project_id=project_id,
+        event_type="policy_pack.rollback",
+        actor=actor,
+        metadata={
+            "policy_pack_id": str(record.policy_pack_id),
+            "active_version_id": (
+                str(record.active_version_id) if record.active_version_id is not None else None
+            ),
+            "active_version_number": version_number,
+        },
+    )
     return record
 
 

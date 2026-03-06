@@ -25,6 +25,7 @@ DEV_API_KEY_PLAINTEXT = "crashlab-dev-key"
 class TenantAuthContext:
     tenant_id: UUID
     api_key_id: UUID
+    api_key_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -103,4 +104,8 @@ def authenticate_api_key_value(request: Request, api_key_value: str) -> TenantAu
         record.last_used_at = datetime.now(UTC)
         db.add(record)
         db.commit()
-        return TenantAuthContext(tenant_id=record.tenant_id, api_key_id=record.api_key_id)
+        return TenantAuthContext(
+            tenant_id=record.tenant_id,
+            api_key_id=record.api_key_id,
+            api_key_name=record.name,
+        )

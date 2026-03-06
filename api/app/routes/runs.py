@@ -15,6 +15,7 @@ from app.schemas import (
     SecurityEventListItem,
 )
 from app.services.attempt_service import list_attempts_for_run
+from app.services.audit_service import actor_from_request
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_run_and_enqueue,
@@ -34,7 +35,7 @@ from app.services.template_service import (
     TemplateNotFoundError,
     apply_template_and_enqueue,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/runs", tags=["runs"])
@@ -104,7 +105,10 @@ def _to_security_event_list_item(security_event: SecurityEvent) -> SecurityEvent
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RunMetadata)
 def post_run(
-    payload: RunCreateRequest, db: DbSession, project_scope: ProjectScopeDep
+    payload: RunCreateRequest,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    request: Request,
 ) -> RunMetadata:
     try:
         run = create_run_and_enqueue(
@@ -113,6 +117,7 @@ def post_run(
             trace_id=payload.trace_id,
             campaign_id=payload.campaign_id,
             policy_pack_id=payload.policy_pack_id,
+            actor=actor_from_request(request),
         )
     except RelatedRecordNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -212,6 +217,7 @@ def post_apply_template(
     template_id: UUID,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    request: Request,
 ) -> ApplyTemplateRunResponse:
     try:
         new_run = apply_template_and_enqueue(
@@ -219,6 +225,7 @@ def post_apply_template(
             project_id=project_scope.project_id,
             run_id=run_id,
             template_id=template_id,
+            actor=actor_from_request(request),
         )
     except TemplateRunNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

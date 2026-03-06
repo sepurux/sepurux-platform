@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, Project, ReplayAttempt, Run, Trace
+from app.models import AuditEvent, Base, Campaign, Project, ReplayAttempt, Run, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -114,6 +114,16 @@ def test_post_run_queues_job_and_persists_queued_status(
         assert row.status == "queued"
         assert row.trace_id == trace_id
         assert row.campaign_id == campaign_id
+        audit_events = list(
+            db.scalars(
+                select(AuditEvent).where(
+                    AuditEvent.project_id == project_id,
+                    AuditEvent.event_type == "run.created",
+                )
+            )
+        )
+    assert len(audit_events) == 1
+    assert audit_events[0].event_metadata["run_id"] == str(run_id)
 
 
 def test_get_run_and_list_runs(

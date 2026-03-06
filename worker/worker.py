@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections import OrderedDict
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -14,6 +15,7 @@ from config import get_settings
 from counterfactuals import run_counterfactual_replays
 from db import get_session
 from models import (
+    AuditEvent,
     Campaign,
     Counterfactual,
     HardeningTemplate,
@@ -27,6 +29,7 @@ from models import (
     SecurityEvent,
     ToolRegistry,
     Trace,
+    Webhook,
 )
 from mutation_engine import apply_mutation_pack
 from policy.opa_client import OPAUnavailableError, evaluate_policy_with_opa
@@ -44,8 +47,92 @@ from replayer import (
 )
 from security import detect_prompt_injection, sanitize_untrusted_text
 from storage import put_json_object
+from webhooks import is_webhook_subscribed, send_signed_webhook
 
 logger = logging.getLogger(__name__)
+
+
+def _summary_value_as_int(summary: dict[str, Any], key: str) -> int:
+    value = summary.get(key)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int | float):
+        return int(value)
+    return 0
+
+
+def _summary_value_as_float(summary: dict[str, Any], key: str) -> float:
+    value = summary.get(key)
+    if isinstance(value, bool):
+        return float(int(value))
+    if isinstance(value, int | float):
+        return float(value)
+    return 0.0
+
+
+def _record_run_completed_audit_event(db: Session, *, run: Run) -> AuditEvent:
+    summary = run.summary if isinstance(run.summary, dict) else {}
+    created_at = datetime.now(UTC)
+    metadata = {
+        "run_id": str(run.run_id),
+        "status": run.status,
+        "attempt_count": _summary_value_as_int(summary, "attempt_count"),
+        "passed_count": _summary_value_as_int(summary, "passed_count"),
+        "failed_count": _summary_value_as_int(summary, "failed_count"),
+        "unsafe_count": _summary_value_as_int(summary, "unsafe_count"),
+        "pass_rate": _summary_value_as_float(summary, "pass_rate"),
+        "policy_events_count": _summary_value_as_int(summary, "policy_events_count"),
+        "security_events_count": _summary_value_as_int(summary, "security_events_count"),
+    }
+    record = AuditEvent(
+        audit_event_id=uuid4(),
+        project_id=run.project_id,
+        event_type="run.completed",
+        actor="system",
+        event_metadata=metadata,
+        created_at=created_at,
+    )
+    db.add(record)
+    db.flush()
+    return record
+
+
+def _dispatch_project_webhooks_for_event(
+    db: Session,
+    *,
+    project_id: UUID,
+    event_type: str,
+    data: dict[str, Any],
+    created_at: datetime,
+) -> None:
+    webhooks = list(
+        db.scalars(
+            select(Webhook).where(
+                Webhook.project_id == project_id,
+                Webhook.is_enabled.is_(True),
+            )
+        )
+    )
+    payload = {
+        "event_type": event_type,
+        "project_id": str(project_id),
+        "data": data,
+        "created_at": created_at.isoformat(),
+    }
+    for webhook in webhooks:
+        if not is_webhook_subscribed(webhook.events, event_type):
+            continue
+        success, error_message = send_signed_webhook(
+            url=webhook.url,
+            secret=webhook.secret,
+            payload=payload,
+        )
+        if success:
+            webhook.last_success_at = datetime.now(UTC)
+            webhook.last_error = None
+        else:
+            webhook.last_error = error_message
+        db.add(webhook)
 
 
 def _extract_tool_usage_metadata(
@@ -995,6 +1082,19 @@ def execute_run(run_id: str) -> None:
         template_application = prior_summary.get("template_application")
         if isinstance(template_application, dict):
             run.summary["template_application"] = template_application
+        run_completed_event = _record_run_completed_audit_event(db, run=run)
+        db.commit()
+        _dispatch_project_webhooks_for_event(
+            db,
+            project_id=run.project_id,
+            event_type=run_completed_event.event_type,
+            data=(
+                run_completed_event.event_metadata
+                if isinstance(run_completed_event.event_metadata, dict)
+                else {}
+            ),
+            created_at=run_completed_event.created_at,
+        )
         db.commit()
 
     logger.info("Completed run %s", run_id)

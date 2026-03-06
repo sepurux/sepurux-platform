@@ -396,6 +396,15 @@ class PolicyEventListItem(BaseModel):
     created_at: datetime
 
 
+class AuditEventListItem(BaseModel):
+    audit_event_id: UUID
+    project_id: UUID
+    event_type: str
+    actor: str | None = None
+    metadata: Any
+    created_at: datetime
+
+
 class SecurityEventListItem(BaseModel):
     security_event_id: UUID
     run_id: UUID
@@ -407,6 +416,38 @@ class SecurityEventListItem(BaseModel):
     action: Literal["allow", "sanitize", "block"]
     matches: Any | None = None
     created_at: datetime
+
+
+class WebhookCreateRequest(BaseModel):
+    url: str
+    events: list[str] = Field(default_factory=list)
+    is_enabled: bool = True
+
+
+class WebhookUpdateRequest(BaseModel):
+    url: str | None = None
+    events: list[str] | None = None
+    is_enabled: bool | None = None
+
+
+class WebhookMetadata(BaseModel):
+    webhook_id: UUID
+    project_id: UUID
+    url: str
+    is_enabled: bool
+    events: list[str]
+    created_at: datetime
+    last_success_at: datetime | None = None
+    last_error: str | None = None
+
+
+class WebhookCreateResponse(WebhookMetadata):
+    secret: str
+
+
+class WebhookRotateSecretResponse(BaseModel):
+    webhook_id: UUID
+    secret: str
 
 
 class ToolRegistryCreateRequest(BaseModel):
