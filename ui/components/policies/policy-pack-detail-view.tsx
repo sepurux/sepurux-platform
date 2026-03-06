@@ -45,6 +45,9 @@ export function PolicyPackDetailView({
 }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [rollingBackVersion, setRollingBackVersion] = useState<number | null>(null);
+  const [confirmRollbackVersion, setConfirmRollbackVersion] = useState<number | null>(
+    null
+  );
   const [diffFromVersionId, setDiffFromVersionId] = useState<string>("");
   const [diffToVersionId, setDiffToVersionId] = useState<string>("");
 
@@ -94,20 +97,30 @@ export function PolicyPackDetailView({
     setDiffFromVersionId((previous ?? latest).version_id);
   }, [state, diffFromVersionId, diffToVersionId]);
 
-  async function onRollback(versionNumber: number) {
-    const confirmed = window.confirm(
-      `Rollback active policy to version v${versionNumber}?`
-    );
-    if (!confirmed) {
+  function onRequestRollback(versionNumber: number) {
+    setConfirmRollbackVersion(versionNumber);
+  }
+
+  async function onConfirmRollback() {
+    if (confirmRollbackVersion === null) {
       return;
     }
+    const versionNumber = confirmRollbackVersion;
     try {
       setRollingBackVersion(versionNumber);
       await api.rollbackPolicyPack(policyPackId, { version_number: versionNumber });
       await load();
+      setConfirmRollbackVersion(null);
     } finally {
       setRollingBackVersion(null);
     }
+  }
+
+  function onCancelRollback() {
+    if (rollingBackVersion !== null) {
+      return;
+    }
+    setConfirmRollbackVersion(null);
   }
 
   return (
@@ -149,10 +162,50 @@ export function PolicyPackDetailView({
           diffToVersionId={diffToVersionId}
           onChangeDiffFrom={setDiffFromVersionId}
           onChangeDiffTo={setDiffToVersionId}
-          onRollback={onRollback}
+          onRequestRollback={onRequestRollback}
           rollingBackVersion={rollingBackVersion}
         />
       )}
+
+      {confirmRollbackVersion !== null ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/65"
+            onClick={onCancelRollback}
+            aria-hidden="true"
+          />
+          <Card className="relative w-full max-w-md border-border/70 bg-background/95 shadow-2xl">
+            <CardHeader>
+              <CardTitle>Confirm Rollback</CardTitle>
+              <CardDescription>
+                Set active policy pack version to v{confirmRollbackVersion}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                New runs will use this version immediately. Existing runs keep their
+                snapshotted version.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onCancelRollback}
+                  disabled={rollingBackVersion !== null}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => void onConfirmRollback()}
+                  disabled={rollingBackVersion !== null}
+                >
+                  {rollingBackVersion !== null ? "Rolling back..." : "Confirm Rollback"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -164,7 +217,7 @@ function PolicyPackPanels({
   diffToVersionId,
   onChangeDiffFrom,
   onChangeDiffTo,
-  onRollback,
+  onRequestRollback,
   rollingBackVersion,
 }: {
   record: PolicyPackMetadata;
@@ -173,7 +226,7 @@ function PolicyPackPanels({
   diffToVersionId: string;
   onChangeDiffFrom: (value: string) => void;
   onChangeDiffTo: (value: string) => void;
-  onRollback: (versionNumber: number) => void;
+  onRequestRollback: (versionNumber: number) => void;
   rollingBackVersion: number | null;
 }) {
   const defaults = record.policy?.defaults as { unknown_tools?: string } | undefined;
@@ -316,7 +369,7 @@ function PolicyPackPanels({
                         size="sm"
                         variant="outline"
                         disabled={version.is_active || rollingBackVersion === version.version_number}
-                        onClick={() => onRollback(version.version_number)}
+                        onClick={() => onRequestRollback(version.version_number)}
                       >
                         {rollingBackVersion === version.version_number
                           ? "Rolling back..."
