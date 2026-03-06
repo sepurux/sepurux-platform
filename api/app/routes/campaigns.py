@@ -9,8 +9,9 @@ from app.schemas import CampaignCreateRequest, CampaignMetadata
 from app.services.audit_service import actor_from_request
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
+from app.services.campaign_service import list_campaigns as list_campaign_records
 from app.services.mutation_pack_service import get_mutation_pack
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
@@ -57,6 +58,22 @@ def post_campaign(
         actor=actor_from_request(request),
     )
     return _to_campaign_metadata(campaign)
+
+
+@router.get("", response_model=list[CampaignMetadata])
+def get_campaigns(
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> list[CampaignMetadata]:
+    records = list_campaign_records(
+        db,
+        project_id=project_scope.project_id,
+        limit=limit,
+        offset=offset,
+    )
+    return [_to_campaign_metadata(record) for record in records]
 
 
 @router.get("/{campaign_id}", response_model=CampaignMetadata)

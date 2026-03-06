@@ -51,3 +51,20 @@ def get_campaign(db: Session, *, project_id: UUID, campaign_id: UUID) -> Campaig
         Campaign.project_id == project_id,
     )
     return db.scalar(stmt)
+
+
+def list_campaigns(
+    db: Session,
+    *,
+    project_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Campaign]:
+    stmt = (
+        select(Campaign)
+        .where(Campaign.project_id == project_id)
+        .order_by(Campaign.created_at.desc(), Campaign.campaign_id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(db.scalars(stmt))
