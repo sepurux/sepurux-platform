@@ -6,9 +6,9 @@ from fastapi.responses import JSONResponse
 
 from app.auth import TenantAuthContext, authenticate_api_key_value
 from app.routes.analytics import router as analytics_router
-from app.routes.audit_events import router as audit_events_router
 from app.routes.api_keys import router as api_keys_router
 from app.routes.attempts import router as attempts_router
+from app.routes.audit_events import router as audit_events_router
 from app.routes.campaigns import router as campaigns_router
 from app.routes.ci import router as ci_router
 from app.routes.counterfactuals import router as counterfactuals_router

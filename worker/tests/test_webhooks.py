@@ -4,6 +4,8 @@ import hashlib
 import hmac
 from typing import Any
 
+import httpx
+
 from webhooks import generate_webhook_signature, send_signed_webhook, serialize_webhook_payload
 
 
@@ -12,11 +14,14 @@ def test_generate_webhook_signature_matches_hmac_sha256() -> None:
     body = serialize_webhook_payload(payload)
     secret = "whsec_super_secret"
 
-    expected = "sha256=" + hmac.new(
-        secret.encode("utf-8"),
-        body,
-        hashlib.sha256,
-    ).hexdigest()
+    expected = (
+        "sha256="
+        + hmac.new(
+            secret.encode("utf-8"),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+    )
     assert generate_webhook_signature(secret, body) == expected
 
 
@@ -24,12 +29,9 @@ def test_send_signed_webhook_retries_and_succeeds() -> None:
     attempts: list[dict[str, Any]] = []
     responses = [500, 204]
 
-    class _Response:
-        def __init__(self, status_code: int, text: str = "") -> None:
-            self.status_code = status_code
-            self.text = text
-
-    def fake_post(url: str, *, content: bytes, headers: dict[str, str], timeout: float) -> _Response:
+    def fake_post(
+        url: str, *, content: bytes, headers: dict[str, str], timeout: float
+    ) -> httpx.Response:
         attempts.append(
             {
                 "url": url,
@@ -39,7 +41,7 @@ def test_send_signed_webhook_retries_and_succeeds() -> None:
             }
         )
         code = responses.pop(0)
-        return _Response(code, "temporary failure" if code >= 400 else "ok")
+        return httpx.Response(code, text="temporary failure" if code >= 400 else "ok")
 
     sleeps: list[float] = []
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -149,13 +150,15 @@ def test_run_completion_records_audit_event_and_delivers_webhook(
     run_id = uuid4()
     webhook_id = uuid4()
 
-    sent_requests: list[dict[str, object]] = []
+    sent_requests: list[dict[str, Any]] = []
 
     class _Response:
         status_code = 200
         text = "ok"
 
-    def fake_post(url: str, *, content: bytes, headers: dict[str, str], timeout: float) -> _Response:
+    def fake_post(
+        url: str, *, content: bytes, headers: dict[str, str], timeout: float
+    ) -> _Response:
         sent_requests.append(
             {
                 "url": url,
@@ -221,7 +224,9 @@ def test_run_completion_records_audit_event_and_delivers_webhook(
     sent = sent_requests[0]
     body = sent["content"]
     assert isinstance(body, bytes)
-    signature = sent["headers"]["X-CrashLab-Signature"]
+    headers = sent["headers"]
+    assert isinstance(headers, dict)
+    signature = headers["X-CrashLab-Signature"]
     assert signature == generate_webhook_signature("whsec_test_secret", body)
 
     with testing_session_local() as db:

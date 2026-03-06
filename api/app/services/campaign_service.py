@@ -37,9 +37,9 @@ def create_campaign(
         metadata={
             "campaign_id": str(campaign.campaign_id),
             "name": campaign.name,
-            "mutation_pack_id": str(campaign.mutation_pack_id)
-            if campaign.mutation_pack_id is not None
-            else None,
+            "mutation_pack_id": (
+                str(campaign.mutation_pack_id) if campaign.mutation_pack_id is not None else None
+            ),
         },
     )
     return campaign

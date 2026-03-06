@@ -52,9 +52,9 @@ def create_policy_pack(
             "policy_pack_id": str(record.policy_pack_id),
             "name": record.name,
             "engine": record.engine,
-            "active_version_id": str(record.active_version_id)
-            if record.active_version_id is not None
-            else None,
+            "active_version_id": (
+                str(record.active_version_id) if record.active_version_id is not None else None
+            ),
             "active_version_number": 1,
         },
     )
@@ -136,9 +136,9 @@ def update_policy_pack(
             "policy_pack_id": str(record.policy_pack_id),
             "name": record.name,
             "engine": record.engine,
-            "active_version_id": str(record.active_version_id)
-            if record.active_version_id is not None
-            else None,
+            "active_version_id": (
+                str(record.active_version_id) if record.active_version_id is not None else None
+            ),
             "active_version_number": next_version,
         },
     )
@@ -177,9 +177,9 @@ def rollback_policy_pack(
         actor=actor,
         metadata={
             "policy_pack_id": str(record.policy_pack_id),
-            "active_version_id": str(record.active_version_id)
-            if record.active_version_id is not None
-            else None,
+            "active_version_id": (
+                str(record.active_version_id) if record.active_version_id is not None else None
+            ),
             "active_version_number": version_number,
         },
     )

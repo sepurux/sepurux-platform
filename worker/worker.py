@@ -1088,7 +1088,11 @@ def execute_run(run_id: str) -> None:
             db,
             project_id=run.project_id,
             event_type=run_completed_event.event_type,
-            data=run_completed_event.event_metadata if isinstance(run_completed_event.event_metadata, dict) else {},
+            data=(
+                run_completed_event.event_metadata
+                if isinstance(run_completed_event.event_metadata, dict)
+                else {}
+            ),
             created_at=run_completed_event.created_at,
         )
         db.commit()
