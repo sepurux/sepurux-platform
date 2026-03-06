@@ -1,3 +1,11 @@
 """Crash Lab Python SDK."""
 
-__all__: list[str] = []
+from .recorder import TraceRecorder, crashlab_trace, record_trace
+from .trace import TraceBuilder
+
+__all__ = [
+    "TraceBuilder",
+    "TraceRecorder",
+    "crashlab_trace",
+    "record_trace",
+]
