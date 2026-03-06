@@ -84,3 +84,31 @@ def test_get_campaign_returns_404_when_missing(
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Campaign not found"}
+
+
+def test_list_campaigns_returns_records(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _ = campaign_test_context
+    payload_one = {
+        "name": "Campaign One",
+        "mutation_set": [{"mutation_id": "one"}],
+        "eval_set": {"checks": ["status"]},
+    }
+    payload_two = {
+        "name": "Campaign Two",
+        "mutation_set": [{"mutation_id": "two"}],
+        "eval_set": {"checks": ["status"]},
+    }
+    first = client.post("/v1/campaigns", json=payload_one)
+    second = client.post("/v1/campaigns", json=payload_two)
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+    response = client.get("/v1/campaigns?limit=10&offset=0")
+
+    assert response.status_code == 200
+    records = response.json()
+    names = [record["name"] for record in records]
+    assert "Campaign One" in names
+    assert "Campaign Two" in names

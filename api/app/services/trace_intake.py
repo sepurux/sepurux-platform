@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from app.models import Trace
 from app.services.audit_service import create_audit_event
-from app.storage import put_json_object
+from app.storage import get_json_object, put_json_object
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -46,10 +46,35 @@ def get_trace(db: Session, *, project_id: UUID, trace_id: UUID) -> Trace | None:
     return db.scalar(stmt)
 
 
-def trace_metadata(trace: Trace) -> dict[str, Any]:
+def list_traces(
+    db: Session,
+    *,
+    project_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Trace]:
+    stmt = (
+        select(Trace)
+        .where(Trace.project_id == project_id)
+        .order_by(Trace.created_at.desc(), Trace.trace_id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(db.scalars(stmt))
+
+
+def get_trace_payload(trace: Trace) -> Any | None:
+    try:
+        return get_json_object(trace.s3_key)
+    except Exception:
+        return None
+
+
+def trace_metadata(trace: Trace, *, payload: Any | None = None) -> dict[str, Any]:
     return {
         "trace_id": trace.trace_id,
         "source": trace.source,
         "s3_key": trace.s3_key,
+        "payload": payload,
         "created_at": trace.created_at,
     }
