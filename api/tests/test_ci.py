@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, ReplayAttempt, Run, Trace
+from app.models import AuditEvent, Base, Campaign, ReplayAttempt, Run, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -301,3 +301,16 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
     assert pass_payload["unsafe_attempts"] == 0
     assert pass_payload["failures"] == 1
     assert pass_payload["top_failing_tools"][0]["tool"] == "slack.post_message"
+
+    with testing_session_local() as db:
+        decision_events = list(
+            db.scalars(
+                select(AuditEvent).where(
+                    AuditEvent.project_id == project_id,
+                    AuditEvent.event_type.in_(["ci.decision.fail", "ci.decision.pass"]),
+                )
+            )
+        )
+    decision_types = {event.event_type for event in decision_events}
+    assert "ci.decision.fail" in decision_types
+    assert "ci.decision.pass" in decision_types
