@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth import TenantAuthContext, authenticate_api_key_value
 from app.routes.analytics import router as analytics_router
+from app.routes.audit_events import router as audit_events_router
 from app.routes.api_keys import router as api_keys_router
 from app.routes.attempts import router as attempts_router
 from app.routes.campaigns import router as campaigns_router
@@ -18,6 +19,7 @@ from app.routes.runs import router as runs_router
 from app.routes.templates import router as templates_router
 from app.routes.tools import router as tools_router
 from app.routes.traces import router as traces_router
+from app.routes.webhooks import router as webhooks_router
 
 app = FastAPI(title="Crash Lab API")
 
@@ -63,6 +65,7 @@ async def ci_token_auth_middleware(request: Request, call_next):
 
 app.include_router(api_keys_router)
 app.include_router(analytics_router)
+app.include_router(audit_events_router)
 app.include_router(attempts_router)
 app.include_router(campaigns_router)
 app.include_router(ci_router)
@@ -74,6 +77,7 @@ app.include_router(runs_router)
 app.include_router(templates_router)
 app.include_router(tools_router)
 app.include_router(traces_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/healthz", tags=["health"])
