@@ -4,12 +4,20 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from app.models import Trace
+from app.services.audit_service import create_audit_event
 from app.storage import put_json_object
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-def create_trace(db: Session, *, project_id: UUID, payload: Any, source: str = "api") -> Trace:
+def create_trace(
+    db: Session,
+    *,
+    project_id: UUID,
+    payload: Any,
+    source: str = "api",
+    actor: str | None = None,
+) -> Trace:
     trace_id = uuid4()
     s3_key = f"traces/{trace_id}.json"
 
@@ -19,6 +27,17 @@ def create_trace(db: Session, *, project_id: UUID, payload: Any, source: str = "
     db.add(trace)
     db.commit()
     db.refresh(trace)
+    create_audit_event(
+        db,
+        project_id=project_id,
+        event_type="trace.created",
+        actor=actor,
+        metadata={
+            "trace_id": str(trace.trace_id),
+            "source": trace.source,
+            "s3_key": trace.s3_key,
+        },
+    )
     return trace
 
 

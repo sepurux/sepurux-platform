@@ -6,10 +6,11 @@ from uuid import UUID
 from app.auth import ProjectScope, require_project_scope
 from app.db import get_db
 from app.schemas import CampaignCreateRequest, CampaignMetadata
+from app.services.audit_service import actor_from_request
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.mutation_pack_service import get_mutation_pack
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
@@ -34,6 +35,7 @@ def post_campaign(
     payload: CampaignCreateRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    request: Request,
 ) -> CampaignMetadata:
     if payload.mutation_pack_id is not None and (
         get_mutation_pack(
@@ -52,6 +54,7 @@ def post_campaign(
         mutation_set=payload.mutation_set,
         eval_set=payload.eval_set,
         mutation_pack_id=payload.mutation_pack_id,
+        actor=actor_from_request(request),
     )
     return _to_campaign_metadata(campaign)
 
