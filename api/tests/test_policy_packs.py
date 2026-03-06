@@ -368,7 +368,7 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
 def test_policy_pack_update_creates_new_version_and_sets_active(
     policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
 ) -> None:
-    client, _, _, _ = policy_test_context
+    client, testing_session_local, _, _ = policy_test_context
     create_response = client.post(
         "/v1/policy-packs",
         json={
@@ -384,6 +384,7 @@ def test_policy_pack_update_creates_new_version_and_sets_active(
     )
     assert create_response.status_code == 201
     pack_id = create_response.json()["policy_pack_id"]
+    original_policy = create_response.json()["policy"]
     assert create_response.json()["active_version_number"] == 1
 
     update_response = client.patch(
@@ -408,6 +409,12 @@ def test_policy_pack_update_creates_new_version_and_sets_active(
     assert [item["version_number"] for item in versions] == [2, 1]
     assert versions[0]["is_active"] is True
     assert versions[1]["is_active"] is False
+
+    with testing_session_local() as db:
+        persisted_pack = db.execute(
+            select(PolicyPack).where(PolicyPack.policy_pack_id == UUID(pack_id))
+        ).scalar_one()
+    assert persisted_pack.policy == original_policy
 
 
 def test_run_snapshots_policy_pack_version_before_updates(

@@ -726,3 +726,82 @@ def test_run_uses_snapshotted_policy_pack_version_when_active_changes(
     assert policy_event.decision == "allow"
     assert policy_event.tool == "payments.refund"
     assert run.effective_policy_pack_version_id == version_v1_id
+
+
+def test_run_fails_if_snapshotted_policy_pack_version_is_missing(
+    worker_db_context: sessionmaker[Session],
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    run_id = uuid4()
+    active_version_id = uuid4()
+    missing_snapshot_version_id = uuid4()
+
+    policy_v2 = {
+        "version": "0.2",
+        "defaults": {"unknown_tools": "allow"},
+        "approval": {"token_field": "confirmation_token"},
+        "irreversible": {"tools": ["payments.refund"]},
+    }
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Missing Snapshot Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund-check",
+                        "tool": "payments.refund",
+                        "args": {"order_id": "ord-123"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="Versioned Policy Pack",
+                engine="builtin",
+                policy=policy_v2,
+                active_version_id=active_version_id,
+            )
+        )
+        db.add(
+            PolicyPackVersion(
+                version_id=active_version_id,
+                policy_pack_id=policy_pack_id,
+                version_number=2,
+                policy=policy_v2,
+                created_by="test",
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                effective_policy_pack_version_id=missing_snapshot_version_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    with pytest.raises(ValueError, match="Snapshotted policy pack version not found"):
+        worker_module.execute_run(str(run_id))

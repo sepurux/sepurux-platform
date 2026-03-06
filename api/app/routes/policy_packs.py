@@ -15,6 +15,7 @@ from app.schemas import (
 from app.services.policy_service import (
     create_policy_pack,
     get_policy_pack,
+    get_policy_pack_active_version,
     get_policy_pack_active_version_number,
     list_policy_pack_versions,
     list_policy_packs,
@@ -31,12 +32,18 @@ ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 
 
 def _to_policy_pack_metadata(db: Session, record) -> PolicyPackMetadata:
+    active_version = get_policy_pack_active_version(
+        db,
+        policy_pack=record,
+        create_if_missing=False,
+    )
+    policy_payload = active_version.policy if active_version is not None else record.policy
     return PolicyPackMetadata(
         policy_pack_id=record.policy_pack_id,
         project_id=record.project_id,
         name=record.name,
         engine=record.engine,
-        policy=record.policy,
+        policy=policy_payload,
         active_version_id=record.active_version_id,
         active_version_number=get_policy_pack_active_version_number(
             db,

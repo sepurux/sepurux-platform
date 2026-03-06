@@ -398,7 +398,6 @@ def _ensure_policy_pack_active_version(
     )
     if latest is not None:
         policy_pack.active_version_id = latest.version_id
-        policy_pack.policy = latest.policy
         db.add(policy_pack)
         db.flush()
         return latest
@@ -602,6 +601,8 @@ def execute_run(run_id: str) -> None:
         policy_pack_version: PolicyPackVersion | None = None
         if run.effective_policy_pack_version_id is not None:
             policy_pack_version = db.get(PolicyPackVersion, run.effective_policy_pack_version_id)
+            if policy_pack_version is None:
+                raise ValueError(f"Snapshotted policy pack version not found for run {run_id}")
         if run.policy_pack_id is not None:
             policy_pack = db.get(PolicyPack, run.policy_pack_id)
             if policy_pack is None:
@@ -612,6 +613,9 @@ def execute_run(run_id: str) -> None:
                 policy_pack_version.policy_pack_id != policy_pack.policy_pack_id
             ):
                 raise ValueError(f"Policy pack version mismatch for run {run_id}")
+
+        if run.effective_policy_pack_version_id is not None and policy_pack is None:
+            raise ValueError(f"Policy pack snapshot is set without policy pack for run {run_id}")
 
         if policy_pack is not None and policy_pack_version is None:
             policy_pack_version = _ensure_policy_pack_active_version(db, policy_pack=policy_pack)
