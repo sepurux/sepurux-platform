@@ -105,7 +105,6 @@ def update_policy_pack(
         record.name = name.strip()
     if engine is not None and engine.strip():
         record.engine = engine.strip()
-    record.policy = policy
     record.active_version_id = version.version_id
     db.add(record)
     db.commit()
@@ -134,7 +133,6 @@ def rollback_policy_pack(
         return None
 
     record.active_version_id = version.version_id
-    record.policy = version.policy
     db.add(record)
     db.commit()
     db.refresh(record)
@@ -166,7 +164,6 @@ def get_policy_pack_active_version(
     if latest is not None:
         if create_if_missing and policy_pack.active_version_id != latest.version_id:
             policy_pack.active_version_id = latest.version_id
-            policy_pack.policy = latest.policy
             db.add(policy_pack)
             db.flush()
         return latest
