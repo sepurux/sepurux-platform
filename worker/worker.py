@@ -56,7 +56,7 @@ def _summary_value_as_int(summary: dict[str, Any], key: str) -> int:
     value = summary.get(key)
     if isinstance(value, bool):
         return int(value)
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return int(value)
     return 0
 
@@ -65,7 +65,7 @@ def _summary_value_as_float(summary: dict[str, Any], key: str) -> float:
     value = summary.get(key)
     if isinstance(value, bool):
         return float(int(value))
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return float(value)
     return 0.0
 
