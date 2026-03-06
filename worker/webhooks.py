@@ -5,9 +5,30 @@ import hmac
 import json
 import time
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
+
+
+class WebhookPostFn(Protocol):
+    def __call__(
+        self,
+        url: str,
+        *,
+        content: bytes,
+        headers: dict[str, str],
+        timeout: float,
+    ) -> httpx.Response: ...
+
+
+def _default_post(
+    url: str,
+    *,
+    content: bytes,
+    headers: dict[str, str],
+    timeout: float,
+) -> httpx.Response:
+    return httpx.post(url, content=content, headers=headers, timeout=timeout)
 
 
 def serialize_webhook_payload(payload: dict[str, Any]) -> bytes:
@@ -27,12 +48,12 @@ def send_signed_webhook(
     timeout_seconds: float = 5.0,
     attempts: int = 3,
     backoff_seconds: Sequence[float] = (0.5, 1.0, 2.0),
-    post_fn: Callable[..., httpx.Response] | None = None,
+    post_fn: WebhookPostFn | None = None,
     sleep_fn: Callable[[float], None] | None = None,
 ) -> tuple[bool, str | None]:
     if attempts < 1:
         attempts = 1
-    post = post_fn if post_fn is not None else httpx.post
+    post: WebhookPostFn = post_fn if post_fn is not None else _default_post
     sleep = sleep_fn if sleep_fn is not None else time.sleep
 
     body = serialize_webhook_payload(payload)
