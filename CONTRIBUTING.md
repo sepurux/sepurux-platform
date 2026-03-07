@@ -55,7 +55,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/). Every commi
 
 **Types:** `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `ci`, `build`
 
-**Scopes:** `api`, `worker`, `infra`, `ui`, `traces`, `campaigns`, `runs`, `replay`, `mutations`, `eval`
+**Scopes:** `api`, `worker`, `infra`, `ui`, `traces`, `campaigns`, `runs`, `replay`, `mutations`, `eval`, `sdk`
 
 Examples:
 ```
