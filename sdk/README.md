@@ -95,3 +95,15 @@ Optional environment variables:
 - `CRASHLAB_API_KEY`
 - `CRASHLAB_PROJECT_ID`
 - `CRASHLAB_CAMPAIGN_ID` (if provided, script starts a run)
+
+## Publish to PyPI (CI)
+
+This repository includes `.github/workflows/sdk-publish-pypi.yml` to publish the SDK directly to PyPI.
+
+Setup:
+- Add `PYPI_API_TOKEN` in GitHub repository secrets.
+- Ensure the package version in `sdk/pyproject.toml` is new.
+
+Release:
+- Push a tag like `sdk-v0.1.1` to trigger publish.
+- Or run the workflow manually from GitHub Actions.
