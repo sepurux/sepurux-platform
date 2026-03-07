@@ -1,0 +1,3895 @@
+openapi: 3.1.0
+info:
+  title: Crash Lab API
+  version: 0.1.0
+servers:
+- url: /
+paths:
+  /v1/api-keys:
+    get:
+      operationId: get_api_keys_v1_api_keys_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ApiKeyMetadata'
+                type: array
+          description: Successful Response
+      summary: Get Api Keys
+      tags:
+      - api-keys
+    post:
+      operationId: post_api_key_v1_api_keys_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreateResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Api Key
+      tags:
+      - api-keys
+  /v1/runs/{run_id}/stats:
+    get:
+      operationId: get_run_stats_endpoint_v1_runs__run_id__stats_get
+      parameters:
+      - explode: false
+        in: path
+        name: run_id
+        required: true
+        schema:
+          format: uuid
+          title: Run Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunStatsResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Run Stats Endpoint
+      tags:
+      - analytics
+  /v1/tools/fragility:
+    get:
+      operationId: get_tools_fragility_endpoint_v1_tools_fragility_get
+      parameters:
+      - explode: true
+        in: query
+        name: window_days
+        required: false
+        schema:
+          default: 7
+          maximum: 365
+          minimum: 1
+          title: Window Days
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolFragilityResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Tools Fragility Endpoint
+      tags:
+      - analytics
+  /v1/mutations/summary:
+    get:
+      operationId: get_mutations_summary_endpoint_v1_mutations_summary_get
+      parameters:
+      - explode: true
+        in: query
+        name: window_days
+        required: false
+        schema:
+          default: 7
+          maximum: 365
+          minimum: 1
+          title: Window Days
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationSummaryResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Mutations Summary Endpoint
+      tags:
+      - analytics
+  /v1/audit-events:
+    get:
+      operationId: get_audit_events_v1_audit_events_get
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: event_type
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AuditEventListItem'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Audit Events
+      tags:
+      - audit-events
+  /v1/attempts/{attempt_id}:
+    get:
+      operationId: get_attempt_v1_attempts__attempt_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: attempt_id
+        required: true
+        schema:
+          format: uuid
+          title: Attempt Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayAttemptDetail'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Attempt
+      tags:
+      - attempts
+  /v1/attempts/{attempt_id}/timeline:
+    get:
+      operationId: get_attempt_timeline_v1_attempts__attempt_id__timeline_get
+      parameters:
+      - explode: false
+        in: path
+        name: attempt_id
+        required: true
+        schema:
+          format: uuid
+          title: Attempt Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                title: Response Get Attempt Timeline V1 Attempts  Attempt Id  Timeline
+                  Get
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Attempt Timeline
+      tags:
+      - attempts
+  /v1/campaigns:
+    get:
+      operationId: get_campaigns_v1_campaigns_get
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/CampaignMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Campaigns
+      tags:
+      - campaigns
+    post:
+      operationId: post_campaign_v1_campaigns_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Campaign
+      tags:
+      - campaigns
+  /v1/campaigns/{campaign_id}:
+    get:
+      operationId: get_campaign_v1_campaigns__campaign_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Campaign Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Campaign
+      tags:
+      - campaigns
+  /v1/ci/runs:
+    post:
+      operationId: post_ci_run_v1_ci_runs_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CIRunCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIRunCreateResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Ci Run
+      tags:
+      - ci
+  /v1/ci/runs/{run_id}:
+    get:
+      operationId: get_ci_run_v1_ci_runs__run_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: run_id
+        required: true
+        schema:
+          format: uuid
+          title: Run Id
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CIRunStatusResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Ci Run
+      tags:
+      - ci
+  /v1/attempts/{attempt_id}/counterfactuals:
+    get:
+      operationId: get_attempt_counterfactuals_v1_attempts__attempt_id__counterfactuals_get
+      parameters:
+      - explode: false
+        in: path
+        name: attempt_id
+        required: true
+        schema:
+          format: uuid
+          title: Attempt Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/CounterfactualListItem'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Attempt Counterfactuals
+      tags:
+      - counterfactuals
+  /v1/counterfactuals/{counterfactual_id}:
+    get:
+      operationId: get_counterfactual_v1_counterfactuals__counterfactual_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: counterfactual_id
+        required: true
+        schema:
+          format: uuid
+          title: Counterfactual Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterfactualMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Counterfactual
+      tags:
+      - counterfactuals
+  /v1/mutation-packs:
+    get:
+      operationId: get_mutation_packs_v1_mutation_packs_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/MutationPackMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Mutation Packs
+      tags:
+      - mutation-packs
+    post:
+      operationId: post_mutation_pack_v1_mutation_packs_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MutationPackCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Mutation Pack
+      tags:
+      - mutation-packs
+  /v1/mutation-packs/{mutation_pack_id}:
+    get:
+      operationId: get_mutation_pack_by_id_v1_mutation_packs__mutation_pack_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: mutation_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Mutation Pack By Id
+      tags:
+      - mutation-packs
+  /v1/policy-packs:
+    get:
+      operationId: get_policy_packs_v1_policy_packs_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PolicyPackMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Policy Packs
+      tags:
+      - policy-packs
+    post:
+      operationId: post_policy_pack_v1_policy_packs_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyPackCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Policy Pack
+      tags:
+      - policy-packs
+  /v1/policy-packs/{policy_pack_id}:
+    get:
+      operationId: get_policy_pack_by_id_v1_policy_packs__policy_pack_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: policy_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Policy Pack By Id
+      tags:
+      - policy-packs
+    patch:
+      operationId: patch_policy_pack_v1_policy_packs__policy_pack_id__patch
+      parameters:
+      - explode: false
+        in: path
+        name: policy_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyPackUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patch Policy Pack
+      tags:
+      - policy-packs
+    put:
+      operationId: patch_policy_pack_v1_policy_packs__policy_pack_id__put
+      parameters:
+      - explode: false
+        in: path
+        name: policy_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyPackUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patch Policy Pack
+      tags:
+      - policy-packs
+  /v1/policy-packs/{policy_pack_id}/rollback:
+    post:
+      operationId: post_policy_pack_rollback_v1_policy_packs__policy_pack_id__rollback_post
+      parameters:
+      - explode: false
+        in: path
+        name: policy_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyPackRollbackRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Policy Pack Rollback
+      tags:
+      - policy-packs
+  /v1/policy-packs/{policy_pack_id}/versions:
+    get:
+      operationId: get_policy_pack_versions_v1_policy_packs__policy_pack_id__versions_get
+      parameters:
+      - explode: false
+        in: path
+        name: policy_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PolicyPackVersionMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Policy Pack Versions
+      tags:
+      - policy-packs
+  /v1/projects:
+    get:
+      operationId: get_projects_v1_projects_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ProjectMetadata'
+                type: array
+          description: Successful Response
+      summary: Get Projects
+      tags:
+      - projects
+    post:
+      operationId: post_project_v1_projects_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Project
+      tags:
+      - projects
+  /v1/runs:
+    get:
+      operationId: get_runs_v1_runs_get
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/RunMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Runs
+      tags:
+      - runs
+    post:
+      operationId: post_run_v1_runs_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Run
+      tags:
+      - runs
+  /v1/runs/{run_id}:
+    get:
+      operationId: get_run_v1_runs__run_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: run_id
+        required: true
+        schema:
+          format: uuid
+          title: Run Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Run
+      tags:
+      - runs
+  /v1/runs/{run_id}/attempts:
+    get:
+      operationId: get_run_attempts_v1_runs__run_id__attempts_get
+      parameters:
+      - explode: false
+        in: path
+        name: run_id
+        required: true
+        schema:
+          format: uuid
+          title: Run Id
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: result
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ReplayAttemptListItem'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Run Attempts
+      tags:
+      - runs
+  /v1/runs/{run_id}/policy-events:
+    get:
+      operationId: get_run_policy_events_v1_runs__run_id__policy_events_get
+      parameters:
+      - explode: false
+        in: path
+        name: run_id
+        required: true
+        schema:
+          format: uuid
+          title: Run Id
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PolicyEventListItem'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Run Policy Events
+      tags:
+      - runs
+  /v1/runs/{run_id}/security-events:
+    get:
+      operationId: get_run_security_events_v1_runs__run_id__security_events_get
+      parameters:
+      - explode: false
+        in: path
+        name: run_id
+        required: true
+        schema:
+          format: uuid
+          title: Run Id
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/SecurityEventListItem'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Run Security Events
+      tags:
+      - runs
+  /v1/runs/{run_id}/apply-template/{template_id}:
+    post:
+      operationId: post_apply_template_v1_runs__run_id__apply_template__template_id__post
+      parameters:
+      - explode: false
+        in: path
+        name: run_id
+        required: true
+        schema:
+          format: uuid
+          title: Run Id
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: template_id
+        required: true
+        schema:
+          format: uuid
+          title: Template Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplyTemplateRunResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Apply Template
+      tags:
+      - runs
+  /v1/templates:
+    get:
+      operationId: get_templates_v1_templates_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/HardeningTemplateMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Templates
+      tags:
+      - templates
+    post:
+      operationId: post_template_v1_templates_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HardeningTemplateCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HardeningTemplateMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Template
+      tags:
+      - templates
+  /v1/templates/{template_id}:
+    get:
+      operationId: get_template_by_id_v1_templates__template_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: template_id
+        required: true
+        schema:
+          format: uuid
+          title: Template Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HardeningTemplateMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Template By Id
+      tags:
+      - templates
+  /v1/tools:
+    get:
+      operationId: get_tool_registry_entries_v1_tools_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ToolRegistryMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Tool Registry Entries
+      tags:
+      - tools
+    post:
+      operationId: post_tool_registry_entry_v1_tools_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolRegistryCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolRegistryMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Tool Registry Entry
+      tags:
+      - tools
+  /v1/tools/{tool_id}:
+    patch:
+      operationId: patch_tool_registry_entry_v1_tools__tool_id__patch
+      parameters:
+      - explode: false
+        in: path
+        name: tool_id
+        required: true
+        schema:
+          format: uuid
+          title: Tool Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolRegistryZoneUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolRegistryMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patch Tool Registry Entry
+      tags:
+      - tools
+  /v1/traces:
+    get:
+      operationId: get_traces_v1_traces_get
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TraceMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Traces
+      tags:
+      - traces
+    post:
+      operationId: post_trace_v1_traces_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Trace
+      tags:
+      - traces
+  /v1/traces/{trace_id}:
+    get:
+      operationId: get_trace_by_id_v1_traces__trace_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: trace_id
+        required: true
+        schema:
+          format: uuid
+          title: Trace Id
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: include_payload
+        required: false
+        schema:
+          default: false
+          title: Include Payload
+          type: boolean
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Trace By Id
+      tags:
+      - traces
+  /v1/webhooks:
+    get:
+      operationId: get_webhooks_v1_webhooks_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/WebhookMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Webhooks
+      tags:
+      - webhooks
+    post:
+      operationId: post_webhook_v1_webhooks_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookCreateResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Webhook
+      tags:
+      - webhooks
+  /v1/webhooks/{webhook_id}:
+    get:
+      operationId: get_webhook_by_id_v1_webhooks__webhook_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: webhook_id
+        required: true
+        schema:
+          format: uuid
+          title: Webhook Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Webhook By Id
+      tags:
+      - webhooks
+    patch:
+      operationId: patch_webhook_v1_webhooks__webhook_id__patch
+      parameters:
+      - explode: false
+        in: path
+        name: webhook_id
+        required: true
+        schema:
+          format: uuid
+          title: Webhook Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patch Webhook
+      tags:
+      - webhooks
+  /v1/webhooks/{webhook_id}/rotate-secret:
+    post:
+      operationId: post_rotate_webhook_secret_v1_webhooks__webhook_id__rotate_secret_post
+      parameters:
+      - explode: false
+        in: path
+        name: webhook_id
+        required: true
+        schema:
+          format: uuid
+          title: Webhook Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookRotateSecretResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Rotate Webhook Secret
+      tags:
+      - webhooks
+  /healthz:
+    get:
+      operationId: healthz_healthz_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  nullable: true
+                  type: string
+                title: Response Healthz Healthz Get
+          description: Successful Response
+      summary: Healthz
+      tags:
+      - health
+components:
+  schemas:
+    ApiKeyCreateRequest:
+      example:
+        name: name
+      properties:
+        name:
+          title: Name
+          type: string
+      required:
+      - name
+      title: ApiKeyCreateRequest
+    ApiKeyCreateResponse:
+      example:
+        tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        last_used_at: 2000-01-23T04:56:07.000+00:00
+        revoked_at: 2000-01-23T04:56:07.000+00:00
+        api_key: api_key
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        api_key_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        api_key_id:
+          format: uuid
+          title: Api Key Id
+          type: string
+        tenant_id:
+          format: uuid
+          title: Tenant Id
+          type: string
+        name:
+          title: Name
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        last_used_at:
+          format: date-time
+          nullable: true
+          type: string
+        revoked_at:
+          format: date-time
+          nullable: true
+          type: string
+        api_key:
+          title: Api Key
+          type: string
+      required:
+      - api_key
+      - api_key_id
+      - created_at
+      - name
+      - tenant_id
+      title: ApiKeyCreateResponse
+    ApiKeyMetadata:
+      example:
+        tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        last_used_at: 2000-01-23T04:56:07.000+00:00
+        revoked_at: 2000-01-23T04:56:07.000+00:00
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        api_key_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        api_key_id:
+          format: uuid
+          title: Api Key Id
+          type: string
+        tenant_id:
+          format: uuid
+          title: Tenant Id
+          type: string
+        name:
+          title: Name
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        last_used_at:
+          format: date-time
+          nullable: true
+          type: string
+        revoked_at:
+          format: date-time
+          nullable: true
+          type: string
+      required:
+      - api_key_id
+      - created_at
+      - name
+      - tenant_id
+      title: ApiKeyMetadata
+    ApplyTemplateRunResponse:
+      example:
+        new_run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        new_run_id:
+          format: uuid
+          title: New Run Id
+          type: string
+      required:
+      - new_run_id
+      title: ApplyTemplateRunResponse
+    AuditEventListItem:
+      example:
+        actor: actor
+        metadata: ""
+        event_type: event_type
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        audit_event_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+      properties:
+        audit_event_id:
+          format: uuid
+          title: Audit Event Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        event_type:
+          title: Event Type
+          type: string
+        actor:
+          nullable: true
+          type: string
+        metadata: {}
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - audit_event_id
+      - created_at
+      - event_type
+      - metadata
+      - project_id
+      title: AuditEventListItem
+    CIRunCreateRequest:
+      example:
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        thresholds:
+          max_failures: 0
+          min_pass_rate: 0.08008281904610115
+          max_unsafe: 0
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        thresholds:
+          $ref: '#/components/schemas/CIRunThresholds'
+      required:
+      - campaign_id
+      - thresholds
+      - trace_id
+      title: CIRunCreateRequest
+    CIRunCreateResponse:
+      example:
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+      required:
+      - run_id
+      title: CIRunCreateResponse
+    CIRunStatusResponse:
+      example:
+        pass_rate: 0.8008281904610115
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        failures: 1
+        decision: pass
+        unsafe_attempts: 6
+        dashboard_url: dashboard_url
+        status: status
+        top_failing_tools:
+        - count: 5
+          tool: tool
+        - count: 5
+          tool: tool
+      properties:
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        status:
+          title: Status
+          type: string
+        decision:
+          enum:
+          - pass
+          - fail
+          - pending
+          title: Decision
+          type: string
+        pass_rate:
+          title: Pass Rate
+          type: number
+        unsafe_attempts:
+          title: Unsafe Attempts
+          type: integer
+        failures:
+          title: Failures
+          type: integer
+        top_failing_tools:
+          items:
+            $ref: '#/components/schemas/ToolCount'
+          type: array
+        dashboard_url:
+          title: Dashboard Url
+          type: string
+      required:
+      - dashboard_url
+      - decision
+      - failures
+      - pass_rate
+      - run_id
+      - status
+      - top_failing_tools
+      - unsafe_attempts
+      title: CIRunStatusResponse
+    CIRunThresholds:
+      example:
+        max_failures: 0
+        min_pass_rate: 0.08008281904610115
+        max_unsafe: 0
+      properties:
+        min_pass_rate:
+          maximum: 1.0
+          minimum: 0.0
+          title: Min Pass Rate
+          type: number
+        max_unsafe:
+          minimum: 0.0
+          title: Max Unsafe
+          type: integer
+        max_failures:
+          minimum: 0.0
+          nullable: true
+          type: integer
+      required:
+      - max_unsafe
+      - min_pass_rate
+      title: CIRunThresholds
+    CampaignCreateRequest:
+      example:
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        eval_set: ""
+        mutation_set: ""
+        name: name
+      properties:
+        name:
+          title: Name
+          type: string
+        mutation_set: {}
+        eval_set: {}
+        mutation_pack_id:
+          format: uuid
+          nullable: true
+          type: string
+      required:
+      - eval_set
+      - mutation_set
+      - name
+      title: CampaignCreateRequest
+    CampaignMetadata:
+      example:
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        eval_set: ""
+        mutation_set: ""
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        mutation_pack_id:
+          format: uuid
+          nullable: true
+          type: string
+        name:
+          title: Name
+          type: string
+        mutation_set: {}
+        eval_set: {}
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - campaign_id
+      - created_at
+      - eval_set
+      - mutation_set
+      - name
+      title: CampaignMetadata
+    CounterfactualListItem:
+      example:
+        result: result
+        created_at: 2000-01-23T04:56:07.000+00:00
+        diff: ""
+        failure_reason: failure_reason
+        metrics: ""
+        strategy: strategy
+      properties:
+        strategy:
+          title: Strategy
+          type: string
+        result:
+          title: Result
+          type: string
+        failure_reason:
+          nullable: true
+          type: string
+        metrics:
+          anyOf: []
+          nullable: true
+          title: Metrics
+        diff:
+          anyOf: []
+          nullable: true
+          title: Diff
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - diff
+      - failure_reason
+      - metrics
+      - result
+      - strategy
+      title: CounterfactualListItem
+    CounterfactualMetadata:
+      example:
+        result: result
+        attempt_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        diff: ""
+        counterfactual_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        failure_reason: failure_reason
+        metrics: ""
+        strategy: strategy
+      properties:
+        counterfactual_id:
+          format: uuid
+          title: Counterfactual Id
+          type: string
+        attempt_id:
+          format: uuid
+          title: Attempt Id
+          type: string
+        strategy:
+          title: Strategy
+          type: string
+        result:
+          title: Result
+          type: string
+        failure_reason:
+          nullable: true
+          type: string
+        metrics:
+          anyOf: []
+          nullable: true
+          title: Metrics
+        diff:
+          anyOf: []
+          nullable: true
+          title: Diff
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - attempt_id
+      - counterfactual_id
+      - created_at
+      - diff
+      - failure_reason
+      - metrics
+      - result
+      - strategy
+      title: CounterfactualMetadata
+    EventIndexCount:
+      example:
+        count: 1
+        event_index: 1
+      properties:
+        event_index:
+          title: Event Index
+          type: integer
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - event_index
+      title: EventIndexCount
+    HTTPValidationError:
+      example:
+        detail:
+        - msg: msg
+          loc:
+          - ValidationError_loc_inner
+          - ValidationError_loc_inner
+          type: type
+        - msg: msg
+          loc:
+          - ValidationError_loc_inner
+          - ValidationError_loc_inner
+          type: type
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+      title: HTTPValidationError
+    HardeningTemplateCreateRequest:
+      example:
+        name: name
+        type: policy_pack
+        config: ""
+      properties:
+        name:
+          title: Name
+          type: string
+        type:
+          enum:
+          - policy_pack
+          - retry_policy
+          - schema_adapter
+          - sanitizer
+          title: Type
+          type: string
+        config: {}
+      required:
+      - config
+      - name
+      - type
+      title: HardeningTemplateCreateRequest
+    HardeningTemplateMetadata:
+      example:
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        template_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        type: policy_pack
+        config: ""
+      properties:
+        template_id:
+          format: uuid
+          title: Template Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        name:
+          title: Name
+          type: string
+        type:
+          enum:
+          - policy_pack
+          - retry_policy
+          - schema_adapter
+          - sanitizer
+          title: Type
+          type: string
+        config: {}
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - config
+      - created_at
+      - name
+      - project_id
+      - template_id
+      - type
+      title: HardeningTemplateMetadata
+    InsightEvidenceMutation:
+      example:
+        mutation_id: mutation_id
+        count: 8
+      properties:
+        mutation_id:
+          title: Mutation Id
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - mutation_id
+      title: InsightEvidenceMutation
+    InsightEvidenceReason:
+      example:
+        reason: reason
+        count: 9
+      properties:
+        reason:
+          title: Reason
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - reason
+      title: InsightEvidenceReason
+    InsightEvidenceTool:
+      example:
+        count: 6
+        tool: tool
+      properties:
+        tool:
+          title: Tool
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - tool
+      title: InsightEvidenceTool
+    LethalMutationInsight:
+      example:
+        failure_rate_when_hit: 7.457744773683766
+        top_tools:
+        - count: 1
+          tool: tool
+        - count: 1
+          tool: tool
+        top_reasons:
+        - reason: reason
+          count: 4
+        - reason: reason
+          count: 4
+        failures: 1
+        mutation_id: mutation_id
+        attempts_hit: 6
+      properties:
+        mutation_id:
+          title: Mutation Id
+          type: string
+        failures:
+          title: Failures
+          type: integer
+        attempts_hit:
+          title: Attempts Hit
+          type: integer
+        failure_rate_when_hit:
+          title: Failure Rate When Hit
+          type: number
+        top_tools:
+          items:
+            $ref: '#/components/schemas/LethalMutationTopTool'
+          type: array
+        top_reasons:
+          items:
+            $ref: '#/components/schemas/LethalMutationTopReason'
+          type: array
+      required:
+      - attempts_hit
+      - failure_rate_when_hit
+      - failures
+      - mutation_id
+      - top_reasons
+      - top_tools
+      title: LethalMutationInsight
+    LethalMutationTopReason:
+      example:
+        reason: reason
+        count: 4
+      properties:
+        reason:
+          title: Reason
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - reason
+      title: LethalMutationTopReason
+    LethalMutationTopTool:
+      example:
+        count: 1
+        tool: tool
+      properties:
+        tool:
+          title: Tool
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - tool
+      title: LethalMutationTopTool
+    MutationCountPct:
+      example:
+        pct: 2.027123023002322
+        mutation_id: mutation_id
+        count: 3
+      properties:
+        mutation_id:
+          title: Mutation Id
+          type: string
+        count:
+          title: Count
+          type: integer
+        pct:
+          title: Pct
+          type: number
+      required:
+      - count
+      - mutation_id
+      - pct
+      title: MutationCountPct
+    MutationPackCreateRequest:
+      example:
+        name: name
+        description: description
+        config: ""
+      properties:
+        name:
+          title: Name
+          type: string
+        description:
+          nullable: true
+          type: string
+        config: {}
+      required:
+      - config
+      - name
+      title: MutationPackCreateRequest
+    MutationPackMetadata:
+      example:
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        name: name
+        description: description
+        created_at: 2000-01-23T04:56:07.000+00:00
+        config: ""
+      properties:
+        mutation_pack_id:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        name:
+          title: Name
+          type: string
+        description:
+          nullable: true
+          type: string
+        config: {}
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - config
+      - created_at
+      - mutation_pack_id
+      - name
+      - project_id
+      title: MutationPackMetadata
+    MutationSummaryItem:
+      example:
+        top_tools:
+        - count: 1
+          tool: tool
+        - count: 1
+          tool: tool
+        top_reasons:
+        - reason: reason
+          count: 5
+        - reason: reason
+          count: 5
+        failures: 6
+        mutation_id: mutation_id
+      properties:
+        mutation_id:
+          title: Mutation Id
+          type: string
+        failures:
+          title: Failures
+          type: integer
+        top_tools:
+          items:
+            $ref: '#/components/schemas/MutationSummaryTopTool'
+          type: array
+        top_reasons:
+          items:
+            $ref: '#/components/schemas/MutationSummaryTopReason'
+          type: array
+      required:
+      - failures
+      - mutation_id
+      - top_reasons
+      - top_tools
+      title: MutationSummaryItem
+    MutationSummaryResponse:
+      example:
+        mutations:
+        - top_tools:
+          - count: 1
+            tool: tool
+          - count: 1
+            tool: tool
+          top_reasons:
+          - reason: reason
+            count: 5
+          - reason: reason
+            count: 5
+          failures: 6
+          mutation_id: mutation_id
+        - top_tools:
+          - count: 1
+            tool: tool
+          - count: 1
+            tool: tool
+          top_reasons:
+          - reason: reason
+            count: 5
+          - reason: reason
+            count: 5
+          failures: 6
+          mutation_id: mutation_id
+        window_days: 0
+      properties:
+        window_days:
+          title: Window Days
+          type: integer
+        mutations:
+          items:
+            $ref: '#/components/schemas/MutationSummaryItem'
+          type: array
+      required:
+      - mutations
+      - window_days
+      title: MutationSummaryResponse
+    MutationSummaryTopReason:
+      example:
+        reason: reason
+        count: 5
+      properties:
+        reason:
+          title: Reason
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - reason
+      title: MutationSummaryTopReason
+    MutationSummaryTopTool:
+      example:
+        count: 1
+        tool: tool
+      properties:
+        tool:
+          title: Tool
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - tool
+      title: MutationSummaryTopTool
+    PolicyEventListItem:
+      example:
+        policy_event_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        reason: reason
+        input: ""
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        decision: decision
+        attempt_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        action: action
+        created_at: 2000-01-23T04:56:07.000+00:00
+        event_index: 0
+        tool: tool
+      properties:
+        policy_event_id:
+          format: uuid
+          title: Policy Event Id
+          type: string
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        attempt_id:
+          format: uuid
+          nullable: true
+          type: string
+        event_index:
+          nullable: true
+          type: integer
+        tool:
+          title: Tool
+          type: string
+        action:
+          title: Action
+          type: string
+        decision:
+          title: Decision
+          type: string
+        reason:
+          nullable: true
+          type: string
+        input:
+          anyOf: []
+          nullable: true
+          title: Input
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - action
+      - attempt_id
+      - created_at
+      - decision
+      - event_index
+      - policy_event_id
+      - reason
+      - run_id
+      - tool
+      title: PolicyEventListItem
+    PolicyPackCreateRequest:
+      example:
+        engine: builtin
+        name: name
+        policy: ""
+      properties:
+        name:
+          title: Name
+          type: string
+        engine:
+          default: builtin
+          enum:
+          - builtin
+          - opa
+          title: Engine
+          type: string
+        policy: {}
+      required:
+      - name
+      - policy
+      title: PolicyPackCreateRequest
+    PolicyPackMetadata:
+      example:
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        engine: engine
+        active_version_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        active_version_number: 0
+        policy_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        policy: ""
+      properties:
+        policy_pack_id:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        name:
+          title: Name
+          type: string
+        engine:
+          title: Engine
+          type: string
+        policy: {}
+        active_version_id:
+          format: uuid
+          nullable: true
+          type: string
+        active_version_number:
+          nullable: true
+          type: integer
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - engine
+      - name
+      - policy
+      - policy_pack_id
+      - project_id
+      title: PolicyPackMetadata
+    PolicyPackRollbackRequest:
+      example:
+        version_number: 1
+        created_by: created_by
+      properties:
+        version_number:
+          minimum: 1.0
+          title: Version Number
+          type: integer
+        created_by:
+          nullable: true
+          type: string
+      required:
+      - version_number
+      title: PolicyPackRollbackRequest
+    PolicyPackUpdateRequest:
+      example:
+        engine: builtin
+        name: name
+        created_by: created_by
+        policy: ""
+      properties:
+        name:
+          nullable: true
+          type: string
+        engine:
+          enum:
+          - builtin
+          - opa
+          nullable: true
+          type: string
+        policy: {}
+        created_by:
+          nullable: true
+          type: string
+      required:
+      - policy
+      title: PolicyPackUpdateRequest
+    PolicyPackVersionMetadata:
+      example:
+        is_active: false
+        created_at: 2000-01-23T04:56:07.000+00:00
+        version_number: 0
+        version_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_by: created_by
+        policy_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        policy: ""
+      properties:
+        version_id:
+          format: uuid
+          title: Version Id
+          type: string
+        policy_pack_id:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        version_number:
+          title: Version Number
+          type: integer
+        policy: {}
+        created_by:
+          nullable: true
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        is_active:
+          default: false
+          title: Is Active
+          type: boolean
+      required:
+      - created_at
+      - policy
+      - policy_pack_id
+      - version_id
+      - version_number
+      title: PolicyPackVersionMetadata
+    ProjectCreateRequest:
+      example:
+        name: name
+      properties:
+        name:
+          title: Name
+          type: string
+      required:
+      - name
+      title: ProjectCreateRequest
+    ProjectMetadata:
+      example:
+        tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+      properties:
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        tenant_id:
+          format: uuid
+          title: Tenant Id
+          type: string
+        name:
+          title: Name
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - name
+      - project_id
+      - tenant_id
+      title: ProjectMetadata
+    ReasonCountPct:
+      example:
+        pct: 7.386281948385884
+        reason: reason
+        count: 4
+      properties:
+        reason:
+          title: Reason
+          type: string
+        count:
+          title: Count
+          type: integer
+        pct:
+          title: Pct
+          type: number
+      required:
+      - count
+      - pct
+      - reason
+      title: ReasonCountPct
+    ReplayAttemptDetail:
+      example:
+        result: result
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        first_failure_tool: first_failure_tool
+        seed: 6
+        mutation_id: mutation_id
+        first_failure_event_index: 0
+        attempt_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        failure_reason: failure_reason
+        mutation_trace: ""
+        artifacts_s3_key: artifacts_s3_key
+      properties:
+        attempt_id:
+          format: uuid
+          title: Attempt Id
+          type: string
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        mutation_id:
+          title: Mutation Id
+          type: string
+        result:
+          title: Result
+          type: string
+        failure_reason:
+          nullable: true
+          type: string
+        artifacts_s3_key:
+          nullable: true
+          type: string
+        first_failure_event_index:
+          nullable: true
+          type: integer
+        first_failure_tool:
+          nullable: true
+          type: string
+        seed:
+          nullable: true
+          type: integer
+        mutation_trace:
+          anyOf: []
+          nullable: true
+          title: Mutation Trace
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - artifacts_s3_key
+      - attempt_id
+      - created_at
+      - failure_reason
+      - first_failure_event_index
+      - first_failure_tool
+      - mutation_id
+      - result
+      - run_id
+      title: ReplayAttemptDetail
+    ReplayAttemptListItem:
+      example:
+        result: result
+        first_failure_tool: first_failure_tool
+        seed: 6
+        mutation_id: mutation_id
+        first_failure_event_index: 0
+        attempt_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        failure_reason: failure_reason
+      properties:
+        attempt_id:
+          format: uuid
+          title: Attempt Id
+          type: string
+        mutation_id:
+          title: Mutation Id
+          type: string
+        result:
+          title: Result
+          type: string
+        failure_reason:
+          nullable: true
+          type: string
+        first_failure_event_index:
+          nullable: true
+          type: integer
+        first_failure_tool:
+          nullable: true
+          type: string
+        seed:
+          nullable: true
+          type: integer
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - attempt_id
+      - created_at
+      - failure_reason
+      - first_failure_event_index
+      - first_failure_tool
+      - mutation_id
+      - result
+      title: ReplayAttemptListItem
+    RunAttemptsSummary:
+      example:
+        total: 0
+        pass_rate: 5.962133916683182
+        passed: 6
+        failed: 1
+      properties:
+        total:
+          title: Total
+          type: integer
+        passed:
+          title: Passed
+          type: integer
+        failed:
+          title: Failed
+          type: integer
+        pass_rate:
+          title: Pass Rate
+          type: number
+      required:
+      - failed
+      - pass_rate
+      - passed
+      - total
+      title: RunAttemptsSummary
+    RunCreateRequest:
+      example:
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        policy_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        policy_pack_id:
+          format: uuid
+          nullable: true
+          type: string
+      required:
+      - campaign_id
+      - trace_id
+      title: RunCreateRequest
+    RunInsight:
+      example:
+        evidence:
+          top_tools:
+          - count: 6
+            tool: tool
+          - count: 6
+            tool: tool
+          top_reasons:
+          - reason: reason
+            count: 9
+          - reason: reason
+            count: 9
+          top_mutations:
+          - mutation_id: mutation_id
+            count: 8
+          - mutation_id: mutation_id
+            count: 8
+        confidence: 0.9369310271410669
+        recommendation: recommendation
+        why: why
+        id: id
+        title: title
+      properties:
+        id:
+          title: Id
+          type: string
+        title:
+          title: Title
+          type: string
+        recommendation:
+          title: Recommendation
+          type: string
+        why:
+          title: Why
+          type: string
+        confidence:
+          maximum: 1.0
+          minimum: 0.0
+          title: Confidence
+          type: number
+        evidence:
+          $ref: '#/components/schemas/RunInsightEvidence'
+      required:
+      - confidence
+      - evidence
+      - id
+      - recommendation
+      - title
+      - why
+      title: RunInsight
+    RunInsightEvidence:
+      example:
+        top_tools:
+        - count: 6
+          tool: tool
+        - count: 6
+          tool: tool
+        top_reasons:
+        - reason: reason
+          count: 9
+        - reason: reason
+          count: 9
+        top_mutations:
+        - mutation_id: mutation_id
+          count: 8
+        - mutation_id: mutation_id
+          count: 8
+      properties:
+        top_tools:
+          items:
+            $ref: '#/components/schemas/InsightEvidenceTool'
+          type: array
+        top_mutations:
+          items:
+            $ref: '#/components/schemas/InsightEvidenceMutation'
+          type: array
+        top_reasons:
+          items:
+            $ref: '#/components/schemas/InsightEvidenceReason'
+          type: array
+      title: RunInsightEvidence
+    RunMetadata:
+      example:
+        summary: ""
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        pass_rate: 0.8008281904610115
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        unsafe_count: 6
+        effective_policy_pack_version_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        policy_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        status: status
+      properties:
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        policy_pack_id:
+          format: uuid
+          nullable: true
+          type: string
+        effective_policy_pack_version_id:
+          format: uuid
+          nullable: true
+          type: string
+        status:
+          title: Status
+          type: string
+        summary:
+          anyOf: []
+          nullable: true
+          title: Summary
+        pass_rate:
+          nullable: true
+          type: number
+        unsafe_count:
+          nullable: true
+          type: integer
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - campaign_id
+      - created_at
+      - run_id
+      - status
+      - summary
+      - trace_id
+      title: RunMetadata
+    RunStatsResponse:
+      example:
+        first_failure_step_distribution:
+        - count: 1
+          event_index: 1
+        - count: 1
+          event_index: 1
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        top_failure_reasons:
+        - pct: 7.386281948385884
+          reason: reason
+          count: 4
+        - pct: 7.386281948385884
+          reason: reason
+          count: 4
+        insights:
+        - evidence:
+            top_tools:
+            - count: 6
+              tool: tool
+            - count: 6
+              tool: tool
+            top_reasons:
+            - reason: reason
+              count: 9
+            - reason: reason
+              count: 9
+            top_mutations:
+            - mutation_id: mutation_id
+              count: 8
+            - mutation_id: mutation_id
+              count: 8
+          confidence: 0.9369310271410669
+          recommendation: recommendation
+          why: why
+          id: id
+          title: title
+        - evidence:
+            top_tools:
+            - count: 6
+              tool: tool
+            - count: 6
+              tool: tool
+            top_reasons:
+            - reason: reason
+              count: 9
+            - reason: reason
+              count: 9
+            top_mutations:
+            - mutation_id: mutation_id
+              count: 8
+            - mutation_id: mutation_id
+              count: 8
+          confidence: 0.9369310271410669
+          recommendation: recommendation
+          why: why
+          id: id
+          title: title
+        failures_by_tool:
+        - pct: 2.3021358869347655
+          count: 5
+          tool: tool
+        - pct: 2.3021358869347655
+          count: 5
+          tool: tool
+        failures_by_mutation:
+        - pct: 2.027123023002322
+          mutation_id: mutation_id
+          count: 3
+        - pct: 2.027123023002322
+          mutation_id: mutation_id
+          count: 3
+        attribution: attribution
+        injection_blocks: 5
+        most_lethal_mutations:
+        - failure_rate_when_hit: 7.457744773683766
+          top_tools:
+          - count: 1
+            tool: tool
+          - count: 1
+            tool: tool
+          top_reasons:
+          - reason: reason
+            count: 4
+          - reason: reason
+            count: 4
+          failures: 1
+          mutation_id: mutation_id
+          attempts_hit: 6
+        - failure_rate_when_hit: 7.457744773683766
+          top_tools:
+          - count: 1
+            tool: tool
+          - count: 1
+            tool: tool
+          top_reasons:
+          - reason: reason
+            count: 4
+          - reason: reason
+            count: 4
+          failures: 1
+          mutation_id: mutation_id
+          attempts_hit: 6
+        tools_usage:
+        - calls: 9
+          tool: tool
+          attempts: 7
+        - calls: 9
+          tool: tool
+          attempts: 7
+        injection_sanitizations: 9
+        attempts:
+          total: 0
+          pass_rate: 5.962133916683182
+          passed: 6
+          failed: 1
+      properties:
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        attempts:
+          $ref: '#/components/schemas/RunAttemptsSummary'
+        failures_by_tool:
+          items:
+            $ref: '#/components/schemas/ToolCountPct'
+          type: array
+        tools_usage:
+          items:
+            $ref: '#/components/schemas/ToolUsageStatsItem'
+          type: array
+        failures_by_mutation:
+          items:
+            $ref: '#/components/schemas/MutationCountPct'
+          type: array
+        top_failure_reasons:
+          items:
+            $ref: '#/components/schemas/ReasonCountPct'
+          type: array
+        first_failure_step_distribution:
+          items:
+            $ref: '#/components/schemas/EventIndexCount'
+          type: array
+        attribution:
+          title: Attribution
+          type: string
+        most_lethal_mutations:
+          items:
+            $ref: '#/components/schemas/LethalMutationInsight'
+          type: array
+        injection_blocks:
+          default: 0
+          title: Injection Blocks
+          type: integer
+        injection_sanitizations:
+          default: 0
+          title: Injection Sanitizations
+          type: integer
+        insights:
+          items:
+            $ref: '#/components/schemas/RunInsight'
+          type: array
+      required:
+      - attempts
+      - attribution
+      - failures_by_mutation
+      - failures_by_tool
+      - first_failure_step_distribution
+      - insights
+      - most_lethal_mutations
+      - run_id
+      - tools_usage
+      - top_failure_reasons
+      title: RunStatsResponse
+    SecurityEventListItem:
+      example:
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        zone: zone
+        risk_score: 6.027456183070403
+        security_event_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        attempt_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        action: allow
+        created_at: 2000-01-23T04:56:07.000+00:00
+        event_index: 0
+        matches: ""
+        tool: tool
+      properties:
+        security_event_id:
+          format: uuid
+          title: Security Event Id
+          type: string
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        attempt_id:
+          format: uuid
+          title: Attempt Id
+          type: string
+        event_index:
+          title: Event Index
+          type: integer
+        tool:
+          title: Tool
+          type: string
+        zone:
+          title: Zone
+          type: string
+        risk_score:
+          title: Risk Score
+          type: number
+        action:
+          enum:
+          - allow
+          - sanitize
+          - block
+          title: Action
+          type: string
+        matches:
+          anyOf: []
+          nullable: true
+          title: Matches
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - action
+      - attempt_id
+      - created_at
+      - event_index
+      - risk_score
+      - run_id
+      - security_event_id
+      - tool
+      - zone
+      title: SecurityEventListItem
+    ToolCount:
+      example:
+        count: 5
+        tool: tool
+      properties:
+        tool:
+          title: Tool
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - tool
+      title: ToolCount
+    ToolCountPct:
+      example:
+        pct: 2.3021358869347655
+        count: 5
+        tool: tool
+      properties:
+        tool:
+          title: Tool
+          type: string
+        count:
+          title: Count
+          type: integer
+        pct:
+          title: Pct
+          type: number
+      required:
+      - count
+      - pct
+      - tool
+      title: ToolCountPct
+    ToolFragilityItem:
+      example:
+        top_reasons:
+        - reason: reason
+          count: 2
+        - reason: reason
+          count: 2
+        failure_rate: 5.962133916683182
+        failures: 1
+        tool: tool
+        top_mutations:
+        - mutation_id: mutation_id
+          count: 5
+        - mutation_id: mutation_id
+          count: 5
+        attempts: 6
+      properties:
+        tool:
+          title: Tool
+          type: string
+        attempts:
+          title: Attempts
+          type: integer
+        failures:
+          title: Failures
+          type: integer
+        failure_rate:
+          title: Failure Rate
+          type: number
+        top_mutations:
+          items:
+            $ref: '#/components/schemas/ToolFragilityTopMutation'
+          type: array
+        top_reasons:
+          items:
+            $ref: '#/components/schemas/ToolFragilityTopReason'
+          type: array
+      required:
+      - attempts
+      - failure_rate
+      - failures
+      - tool
+      - top_mutations
+      - top_reasons
+      title: ToolFragilityItem
+    ToolFragilityResponse:
+      example:
+        generated_at: 2000-01-23T04:56:07.000+00:00
+        attempts_definition: attempts_definition
+        tools:
+        - top_reasons:
+          - reason: reason
+            count: 2
+          - reason: reason
+            count: 2
+          failure_rate: 5.962133916683182
+          failures: 1
+          tool: tool
+          top_mutations:
+          - mutation_id: mutation_id
+            count: 5
+          - mutation_id: mutation_id
+            count: 5
+          attempts: 6
+        - top_reasons:
+          - reason: reason
+            count: 2
+          - reason: reason
+            count: 2
+          failure_rate: 5.962133916683182
+          failures: 1
+          tool: tool
+          top_mutations:
+          - mutation_id: mutation_id
+            count: 5
+          - mutation_id: mutation_id
+            count: 5
+          attempts: 6
+        window_days: 0
+      properties:
+        window_days:
+          title: Window Days
+          type: integer
+        generated_at:
+          format: date-time
+          title: Generated At
+          type: string
+        attempts_definition:
+          title: Attempts Definition
+          type: string
+        tools:
+          items:
+            $ref: '#/components/schemas/ToolFragilityItem'
+          type: array
+      required:
+      - attempts_definition
+      - generated_at
+      - tools
+      - window_days
+      title: ToolFragilityResponse
+    ToolFragilityTopMutation:
+      example:
+        mutation_id: mutation_id
+        count: 5
+      properties:
+        mutation_id:
+          title: Mutation Id
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - mutation_id
+      title: ToolFragilityTopMutation
+    ToolFragilityTopReason:
+      example:
+        reason: reason
+        count: 2
+      properties:
+        reason:
+          title: Reason
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - reason
+      title: ToolFragilityTopReason
+    ToolRegistryCreateRequest:
+      example:
+        zone: untrusted
+        name: name
+      properties:
+        name:
+          title: Name
+          type: string
+        zone:
+          default: untrusted
+          title: Zone
+          type: string
+      required:
+      - name
+      title: ToolRegistryCreateRequest
+    ToolRegistryMetadata:
+      example:
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        zone: zone
+        name: name
+        tool_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+      properties:
+        tool_id:
+          format: uuid
+          title: Tool Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        name:
+          title: Name
+          type: string
+        zone:
+          title: Zone
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - name
+      - project_id
+      - tool_id
+      - zone
+      title: ToolRegistryMetadata
+    ToolRegistryZoneUpdateRequest:
+      example:
+        zone: zone
+      properties:
+        zone:
+          title: Zone
+          type: string
+      required:
+      - zone
+      title: ToolRegistryZoneUpdateRequest
+    ToolUsageStatsItem:
+      example:
+        calls: 9
+        tool: tool
+        attempts: 7
+      properties:
+        tool:
+          title: Tool
+          type: string
+        attempts:
+          title: Attempts
+          type: integer
+        calls:
+          title: Calls
+          type: integer
+      required:
+      - attempts
+      - calls
+      - tool
+      title: ToolUsageStatsItem
+    TraceMetadata:
+      example:
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        payload: ""
+        s3_key: s3_key
+        created_at: 2000-01-23T04:56:07.000+00:00
+        source: source
+      properties:
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        source:
+          title: Source
+          type: string
+        s3_key:
+          title: S3 Key
+          type: string
+        payload:
+          anyOf: []
+          nullable: true
+          title: Payload
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - s3_key
+      - source
+      - trace_id
+      title: TraceMetadata
+    ValidationError:
+      example:
+        msg: msg
+        loc:
+        - ValidationError_loc_inner
+        - ValidationError_loc_inner
+        type: type
+      properties:
+        loc:
+          items:
+            $ref: '#/components/schemas/ValidationError_loc_inner'
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    WebhookCreateRequest:
+      example:
+        is_enabled: true
+        url: url
+        events:
+        - events
+        - events
+      properties:
+        url:
+          title: Url
+          type: string
+        events:
+          items:
+            type: string
+          type: array
+        is_enabled:
+          default: true
+          title: Is Enabled
+          type: boolean
+      required:
+      - url
+      title: WebhookCreateRequest
+    WebhookCreateResponse:
+      example:
+        is_enabled: true
+        last_success_at: 2000-01-23T04:56:07.000+00:00
+        webhook_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        last_error: last_error
+        secret: secret
+        url: url
+        events:
+        - events
+        - events
+      properties:
+        webhook_id:
+          format: uuid
+          title: Webhook Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        url:
+          title: Url
+          type: string
+        is_enabled:
+          title: Is Enabled
+          type: boolean
+        events:
+          items:
+            type: string
+          type: array
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        last_success_at:
+          format: date-time
+          nullable: true
+          type: string
+        last_error:
+          nullable: true
+          type: string
+        secret:
+          title: Secret
+          type: string
+      required:
+      - created_at
+      - events
+      - is_enabled
+      - project_id
+      - secret
+      - url
+      - webhook_id
+      title: WebhookCreateResponse
+    WebhookMetadata:
+      example:
+        is_enabled: true
+        last_success_at: 2000-01-23T04:56:07.000+00:00
+        webhook_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        last_error: last_error
+        url: url
+        events:
+        - events
+        - events
+      properties:
+        webhook_id:
+          format: uuid
+          title: Webhook Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        url:
+          title: Url
+          type: string
+        is_enabled:
+          title: Is Enabled
+          type: boolean
+        events:
+          items:
+            type: string
+          type: array
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        last_success_at:
+          format: date-time
+          nullable: true
+          type: string
+        last_error:
+          nullable: true
+          type: string
+      required:
+      - created_at
+      - events
+      - is_enabled
+      - project_id
+      - url
+      - webhook_id
+      title: WebhookMetadata
+    WebhookRotateSecretResponse:
+      example:
+        webhook_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        secret: secret
+      properties:
+        webhook_id:
+          format: uuid
+          title: Webhook Id
+          type: string
+        secret:
+          title: Secret
+          type: string
+      required:
+      - secret
+      - webhook_id
+      title: WebhookRotateSecretResponse
+    WebhookUpdateRequest:
+      example:
+        is_enabled: true
+        url: url
+        events:
+        - events
+        - events
+      properties:
+        url:
+          nullable: true
+          type: string
+        events:
+          items:
+            type: string
+          nullable: true
+        is_enabled:
+          nullable: true
+          type: boolean
+      title: WebhookUpdateRequest
+    ValidationError_loc_inner:
+      anyOf:
+      - type: string
+      - type: integer

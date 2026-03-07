@@ -1,0 +1,8 @@
+packageName: crashlabclient
+packageVersion: 0.1.0
+moduleName: github.com/felixkwasisarpong/crash-lab/clients/go
+enumClassPrefix: true
+hideGenerationTimestamp: true
+gitHost: github.com
+gitUserId: felixkwasisarpong
+gitRepoId: crash-lab/clients/go
