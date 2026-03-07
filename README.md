@@ -77,6 +77,50 @@ curl -sS -X POST http://localhost:8000/v1/runs \
   -d '{"trace_id":"<trace_id>","campaign_id":"<campaign_id>"}'
 ```
 
+## Generated API Clients (TypeScript + Go)
+
+Crash Lab keeps generated API clients in-repo:
+
+- TypeScript: [clients/typescript/README.md](clients/typescript/README.md)
+- Go: [clients/go/README.md](clients/go/README.md)
+
+Regenerate both clients from a running API:
+
+```bash
+make gen-clients
+```
+
+TypeScript integration (10-line style snippet):
+
+```ts
+import { Configuration, RunsApi, TracesApi } from "crashlab-client";
+
+const cfg = new Configuration({ basePath: "http://localhost:8000", headers: { "X-API-Key": API_KEY, "X-Project-Id": PROJECT_ID } });
+const traces = new TracesApi(cfg);
+const trace = await traces.postTraceV1TracesPost({ body: { trace_version: "0.1", source: "sdk", task: { name: "demo", input: {} }, events: [] } });
+
+const runs = new RunsApi(cfg);
+const run = await runs.postRunV1RunsPost({ runCreateRequest: { trace_id: trace.trace_id, campaign_id: CAMPAIGN_ID } });
+const latest = await runs.getRunV1RunsRunIdGet({ runId: run.run_id });
+console.log(latest.status);
+```
+
+Go integration (10-line style snippet):
+
+```go
+cfg := crashlabclient.NewConfiguration()
+cfg.Servers = crashlabclient.ServerConfigurations{{URL: "http://localhost:8000"}}
+cfg.AddDefaultHeader("X-API-Key", apiKey)
+client := crashlabclient.NewAPIClient(cfg)
+
+trace, _, _ := client.TracesAPI.PostTraceV1TracesPost(ctx).
+  Body(map[string]interface{}{"trace_version": "0.1", "source": "sdk", "task": map[string]interface{}{"name": "demo", "input": map[string]interface{}{}}, "events": []map[string]interface{}{}}).
+  XProjectId(projectID).Execute()
+runReq := crashlabclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
+run, _, _ := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
+latest, _, _ := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjectId(projectID).Execute()
+```
+
 ## Run Inspector Endpoints
 
 List attempts for a run:
