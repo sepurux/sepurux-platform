@@ -75,4 +75,5 @@ jobs:
             find dist -maxdepth 5 -type f || true
             exit 1
           fi
-          npm publish "${TARBALL}" --access public
+          echo "Publishing tarball: ${TARBALL}"
+          npm publish "./${TARBALL}" --access public
