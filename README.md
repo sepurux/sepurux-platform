@@ -83,6 +83,8 @@ Crash Lab keeps generated API clients in-repo:
 
 - TypeScript: [clients/typescript/README.md](clients/typescript/README.md)
 - Go: [clients/go/README.md](clients/go/README.md)
+- TypeScript recorder helper: [clients/typescript-recorder/README.md](clients/typescript-recorder/README.md)
+- Go recorder helper: [clients/go-recorder/README.md](clients/go-recorder/README.md)
 
 Regenerate both clients from a running API:
 
@@ -90,37 +92,51 @@ Regenerate both clients from a running API:
 make gen-clients
 ```
 
-TypeScript integration (10-line style snippet):
+TypeScript integration with recorder helper:
 
 ```ts
 import { Configuration, RunsApi, TracesApi } from "crashlab-client";
+import { TraceRecorder } from "crashlab-typescript-recorder";
 
-const cfg = new Configuration({ basePath: "http://localhost:8000", headers: { "X-API-Key": API_KEY, "X-Project-Id": PROJECT_ID } });
+const recorder = new TraceRecorder("demo-task", { ticketId: 123 });
+recorder.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
+recorder.toolCall("jira.create_issue", { project: "OPS", title: "Bug" });
+recorder.toolResult("jira.create_issue", { key: "OPS-123" });
+
+const cfg = new Configuration({ basePath: "http://localhost:8000", headers: { "X-API-Key": API_KEY } });
 const traces = new TracesApi(cfg);
-const trace = await traces.postTraceV1TracesPost({ body: { trace_version: "0.1", source: "sdk", task: { name: "demo", input: {} }, events: [] } });
-
+const trace = await traces.postTraceV1TracesPost({ xProjectId: PROJECT_ID, body: recorder.toTrace() });
 const runs = new RunsApi(cfg);
-const run = await runs.postRunV1RunsPost({ runCreateRequest: { trace_id: trace.trace_id, campaign_id: CAMPAIGN_ID } });
+const run = await runs.postRunV1RunsPost({ xProjectId: PROJECT_ID, runCreateRequest: { trace_id: trace.trace_id, campaign_id: CAMPAIGN_ID } });
 const latest = await runs.getRunV1RunsRunIdGet({ runId: run.run_id });
 console.log(latest.status);
 ```
 
-Go integration (10-line style snippet):
+Go integration with recorder helper:
 
 ```go
+recorder := crashlabrecorder.NewRecorder("demo-task", map[string]any{"ticketId": 123})
+recorder.ModelStep("planner", map[string]any{"prompt": "triage issue"}, map[string]any{"plan": "call jira"})
+recorder.ToolCall("jira.create_issue", map[string]any{"project": "OPS", "title": "Bug"})
+recorder.ToolResult("jira.create_issue", map[string]any{"key": "OPS-123"})
 cfg := crashlabclient.NewConfiguration()
 cfg.Servers = crashlabclient.ServerConfigurations{{URL: "http://localhost:8000"}}
 cfg.AddDefaultHeader("X-API-Key", apiKey)
 client := crashlabclient.NewAPIClient(cfg)
 
 trace, _, _ := client.TracesAPI.PostTraceV1TracesPost(ctx).
-  Body(map[string]interface{}{"trace_version": "0.1", "source": "sdk", "task": map[string]interface{}{"name": "demo", "input": map[string]interface{}{}}, "events": []map[string]interface{}{}}).
+  Body(recorder.Trace()).
   XProjectId(projectID).Execute()
 runReq := crashlabclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
 run, _, _ := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
 latest, _, _ := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjectId(projectID).Execute()
 ```
 
+Recorder package release tags:
+
+- PyPI SDK: `sdk-vX.Y.Z` (publishes to PyPI)
+- TypeScript recorder (npm): `ts-recorder-vX.Y.Z` (publishes to npm)
+- Go recorder module: `clients/go-recorder/vX.Y.Z` (creates GitHub release; consumable via `go get ...@vX.Y.Z`)
 ## Run Inspector Endpoints
 
 List attempts for a run:
