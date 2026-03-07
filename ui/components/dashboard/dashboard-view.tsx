@@ -14,8 +14,11 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -148,6 +151,19 @@ function DashboardPanels({ data }: { data: DashboardData }) {
     () => buildDashboardLethalMutations(data.runStatsById),
     [data.runStatsById]
   );
+  const statusMix = useMemo(() => buildRunStatusMix(dashboardRuns), [dashboardRuns]);
+  const failureReasons = useMemo(
+    () => buildFailureReasonSeries(data.runStatsById),
+    [data.runStatsById]
+  );
+  const failureStepSeries = useMemo(
+    () => buildFirstFailureStepSeries(data.runStatsById),
+    [data.runStatsById]
+  );
+  const attemptVolumeSeries = useMemo(
+    () => buildAttemptVolumeSeries(dashboardRuns, data.runStatsById),
+    [dashboardRuns, data.runStatsById]
+  );
   const mostRecentRun = dashboardRuns[0];
   const recentRunInsights = mostRecentRun ? (data.runStatsById[mostRecentRun.run_id]?.insights ?? []) : [];
 
@@ -185,22 +201,28 @@ function DashboardPanels({ data }: { data: DashboardData }) {
           />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
+        <div className="grid gap-6 xl:grid-cols-2">
           <RecentRunsCard runs={dashboardRuns} statsById={data.runStatsById} />
           <PassRateTrendCard series={passRateTrend} />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(20rem,0.95fr)_minmax(0,1.7fr)]">
+        <div className="grid gap-6 xl:grid-cols-3">
           <TopFragileToolsCard fragility={data.fragility} />
-          <CounterfactualInspector runs={dashboardRuns} failedAttemptsByRunId={data.failedAttemptsByRunId} compact />
+          <RunStatusMixCard series={statusMix} />
+          <FailureReasonsCard reasons={failureReasons} />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2">
           <MostLethalMutationsCard mutations={lethalMutations} />
+          <FirstFailureStepCard series={failureStepSeries} />
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
           <RecommendedFixesCard
             runId={mostRecentRun?.run_id ?? null}
             insights={recentRunInsights.slice(0, 3)}
           />
+          <AttemptVolumeCard series={attemptVolumeSeries} />
         </div>
       </TabsContent>
 
@@ -255,7 +277,7 @@ function KpiCard({
 
 function RecentRunsCard({ runs, statsById }: { runs: RunMetadata[]; statsById: Record<string, RunStats> }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Recent Runs</CardTitle>
         <CardDescription>Latest queued/executed runs from the API.</CardDescription>
@@ -279,7 +301,7 @@ function RecentRunsCard({ runs, statsById }: { runs: RunMetadata[]; statsById: R
                 </TableCell>
               </TableRow>
             ) : (
-              runs.slice(0, 8).map((run) => {
+              runs.slice(0, 6).map((run) => {
                 const stats = statsById[run.run_id];
                 const summary = run.summary as Record<string, unknown> | null;
                 const attemptCount = typeof summary?.attempt_count === "number" ? summary.attempt_count : null;
@@ -312,7 +334,7 @@ function RecentRunsCard({ runs, statsById }: { runs: RunMetadata[]; statsById: R
 
 function PassRateTrendCard({ series }: { series: Array<{ name: string; passRate: number }> }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-cyan-300" /> Pass Rate Trend
@@ -323,7 +345,7 @@ function PassRateTrendCard({ series }: { series: Array<{ name: string; passRate:
         {series.length === 0 ? (
           <EmptyPanelMessage>No stats available yet.</EmptyPanelMessage>
         ) : (
-          <div className="h-[240px] w-full">
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -361,7 +383,7 @@ function TopFragileToolsCard({ fragility }: { fragility: ToolFragilityResponse }
   }));
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Top Fragile Tools</CardTitle>
         <CardDescription>
@@ -410,9 +432,205 @@ function TopFragileToolsCard({ fragility }: { fragility: ToolFragilityResponse }
   );
 }
 
+function RunStatusMixCard({
+  series,
+}: {
+  series: Array<{ status: string; count: number }>;
+}) {
+  const palette = ["#3dd9f5", "#22c55e", "#f97316", "#f43f5e", "#a78bfa", "#94a3b8"];
+  const total = series.reduce((sum, item) => sum + item.count, 0);
+
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Run Status Mix</CardTitle>
+        <CardDescription>Distribution of recent run statuses in the dashboard sample.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="h-[220px] rounded-md border border-border/60 bg-card/40 p-2">
+          {series.length === 0 ? (
+            <EmptyPanelMessage>No runs available yet.</EmptyPanelMessage>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={series}
+                  dataKey="count"
+                  nameKey="status"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={52}
+                  outerRadius={84}
+                  paddingAngle={2}
+                >
+                  {series.map((entry, index) => (
+                    <Cell key={entry.status} fill={palette[index % palette.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "#121722",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 12,
+                    color: "#e5e7eb",
+                  }}
+                  formatter={(value: number) => `${value} runs`}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        {series.length > 0 ? (
+          <div className="space-y-2">
+            {series.map((item, index) => {
+              const percent = total > 0 ? Math.round((item.count / total) * 100) : 0;
+              return (
+                <div key={item.status} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: palette[index % palette.length] }}
+                    />
+                    <span>{item.status}</span>
+                  </div>
+                  <span className="text-foreground">
+                    {item.count} ({percent}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FailureReasonsCard({ reasons }: { reasons: Array<{ reason: string; count: number }> }) {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Top Failure Reasons</CardTitle>
+        <CardDescription>Aggregated across run stats in the dashboard sample.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {reasons.length === 0 ? (
+          <EmptyPanelMessage>No failure reason data yet.</EmptyPanelMessage>
+        ) : (
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={reasons} layout="vertical" margin={{ top: 8, right: 10, left: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                <XAxis type="number" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  type="category"
+                  dataKey="reason"
+                  tick={{ fill: "#9ca3af", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={94}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#121722",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 12,
+                    color: "#e5e7eb",
+                  }}
+                />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#f97316" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FirstFailureStepCard({
+  series,
+}: {
+  series: Array<{ step: string; failures: number }>;
+}) {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>First-Failure Step Distribution</CardTitle>
+        <CardDescription>Where failures happen first in event timelines.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {series.length === 0 ? (
+          <EmptyPanelMessage>No failure step data available yet.</EmptyPanelMessage>
+        ) : (
+          <div className="h-[260px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="step" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#121722",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 12,
+                    color: "#e5e7eb",
+                  }}
+                  formatter={(value: number) => `${value} failures`}
+                />
+                <Bar dataKey="failures" radius={[6, 6, 0, 0]} fill="#f43f5e" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AttemptVolumeCard({
+  series,
+}: {
+  series: Array<{ run: string; attempts: number; failed: number }>;
+}) {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Attempt Volume by Run</CardTitle>
+        <CardDescription>Recent run volume split by failed attempts.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {series.length === 0 ? (
+          <EmptyPanelMessage>No attempt metrics available yet.</EmptyPanelMessage>
+        ) : (
+          <div className="h-[260px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="run" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#121722",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 12,
+                    color: "#e5e7eb",
+                  }}
+                />
+                <Bar dataKey="attempts" radius={[6, 6, 0, 0]} fill="#3dd9f5" />
+                <Bar dataKey="failed" radius={[6, 6, 0, 0]} fill="#f43f5e" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function FailureTaxonomyHeatmap({ heatmap }: { heatmap: ReturnType<typeof buildFailureTaxonomyHeatmap> }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Failure Taxonomy Heatmap</CardTitle>
         <CardDescription>
@@ -457,7 +675,7 @@ function MostLethalMutationsCard({
   }>;
 }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Most Lethal Mutations</CardTitle>
         <CardDescription>
@@ -501,7 +719,7 @@ function RecommendedFixesCard({
   insights: RunStats["insights"];
 }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Recommended Fixes</CardTitle>
         <CardDescription>
@@ -632,11 +850,19 @@ function DashboardLoading() {
           </Card>
         ))}
       </div>
-      <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
         <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
       </div>
-      <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
+        <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
+        <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
+      </div>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
+        <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
+      </div>
     </div>
   );
 }
@@ -835,4 +1061,68 @@ function buildDashboardLethalMutations(statsById: Record<string, RunStats>) {
         b.attempts_hit - a.attempts_hit ||
         a.mutation_id.localeCompare(b.mutation_id)
     );
+}
+
+function buildRunStatusMix(runs: RunMetadata[]) {
+  const byStatus = new Map<string, number>();
+  for (const run of runs) {
+    const status = run.status.trim().toLowerCase() || "unknown";
+    byStatus.set(status, (byStatus.get(status) ?? 0) + 1);
+  }
+  return [...byStatus.entries()]
+    .map(([status, count]) => ({ status, count }))
+    .sort((a, b) => b.count - a.count || a.status.localeCompare(b.status));
+}
+
+function buildFailureReasonSeries(statsById: Record<string, RunStats>) {
+  const byReason = new Map<string, number>();
+  for (const stats of Object.values(statsById)) {
+    for (const item of stats.top_failure_reasons ?? []) {
+      byReason.set(item.reason, (byReason.get(item.reason) ?? 0) + item.count);
+    }
+  }
+  return [...byReason.entries()]
+    .map(([reason, count]) => ({
+      reason: reason.length > 18 ? `${reason.slice(0, 16)}...` : reason,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason))
+    .slice(0, 6);
+}
+
+function buildFirstFailureStepSeries(statsById: Record<string, RunStats>) {
+  const byStep = new Map<number, number>();
+  for (const stats of Object.values(statsById)) {
+    for (const item of stats.first_failure_step_distribution ?? []) {
+      byStep.set(item.event_index, (byStep.get(item.event_index) ?? 0) + item.count);
+    }
+  }
+  return [...byStep.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .slice(0, 10)
+    .map(([eventIndex, failures]) => ({ step: `#${eventIndex}`, failures }));
+}
+
+function buildAttemptVolumeSeries(runs: RunMetadata[], statsById: Record<string, RunStats>) {
+  return runs
+    .slice(0, 8)
+    .map((run) => {
+      const stats = statsById[run.run_id];
+      const summary = run.summary as Record<string, unknown> | null;
+      const attemptsFromSummary =
+        typeof summary?.attempt_count === "number" ? summary.attempt_count : null;
+      const failedFromSummary =
+        typeof summary?.failed_count === "number" ? summary.failed_count : null;
+
+      const attempts = stats?.attempts.total ?? attemptsFromSummary ?? 0;
+      const failed = stats?.attempts.failed ?? failedFromSummary ?? 0;
+
+      return {
+        run: shortId(run.run_id, 6),
+        attempts,
+        failed,
+      };
+    })
+    .filter((item) => item.attempts > 0)
+    .reverse();
 }
