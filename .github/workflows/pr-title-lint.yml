@@ -40,6 +40,7 @@ jobs:
             mutations
             eval
             ui
+            sdk
           requireScope: false
           subjectPattern: ^[a-z].+$
           subjectPatternError: "PR title subject must start with a lowercase letter (e.g., 'feat(api): add health endpoint')."
