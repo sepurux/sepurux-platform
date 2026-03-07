@@ -119,7 +119,6 @@ recorder := crashlabrecorder.NewRecorder("demo-task", map[string]any{"ticketId":
 recorder.ModelStep("planner", map[string]any{"prompt": "triage issue"}, map[string]any{"plan": "call jira"})
 recorder.ToolCall("jira.create_issue", map[string]any{"project": "OPS", "title": "Bug"})
 recorder.ToolResult("jira.create_issue", map[string]any{"key": "OPS-123"})
-
 cfg := crashlabclient.NewConfiguration()
 cfg.Servers = crashlabclient.ServerConfigurations{{URL: "http://localhost:8000"}}
 cfg.AddDefaultHeader("X-API-Key", apiKey)
@@ -138,7 +137,6 @@ Recorder package release tags:
 - PyPI SDK: `sdk-vX.Y.Z` (publishes to PyPI)
 - TypeScript recorder (npm): `ts-recorder-vX.Y.Z` (publishes to npm)
 - Go recorder module: `clients/go-recorder/vX.Y.Z` (creates GitHub release; consumable via `go get ...@vX.Y.Z`)
-
 ## Run Inspector Endpoints
 
 List attempts for a run:
