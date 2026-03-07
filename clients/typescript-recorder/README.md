@@ -1,6 +1,6 @@
 # Crash Lab TypeScript Recorder
 
-`@crashlab/typescript-recorder` provides a lightweight helper for building
+`crashlab-typescript-recorder` provides a lightweight helper for building
 Crash Lab trace payloads (`trace_version = 0.1`) in non-Python projects.
 
 ## API
@@ -16,7 +16,7 @@ Crash Lab trace payloads (`trace_version = 0.1`) in non-Python projects.
 
 ```ts
 import { Configuration, RunsApi, TracesApi } from "crashlab-client";
-import { TraceRecorder } from "@crashlab/typescript-recorder";
+import { TraceRecorder } from "crashlab-typescript-recorder";
 
 const recorder = new TraceRecorder("issue-triage", { issueId: 123 });
 recorder.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
@@ -43,3 +43,9 @@ await runsApi.postRunV1RunsPost({
   },
 });
 ```
+
+## Release
+
+- Push a tag in the format `ts-recorder-vX.Y.Z` (must match `package.json` version).
+- GitHub Actions workflow `ts-recorder-publish-npm.yml` will test, pack, and publish to npm.
+- Required repo secret: `NPM_TOKEN`.
