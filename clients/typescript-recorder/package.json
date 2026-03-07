@@ -1,0 +1,23 @@
+{
+  "name": "crashlab-typescript-recorder",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Lightweight TypeScript trace recorder helper for Crash Lab",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "test": "npm run build && node --test test/*.test.cjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
