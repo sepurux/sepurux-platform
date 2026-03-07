@@ -1,0 +1,70 @@
+name: Publish TypeScript Recorder to npm
+
+on:
+  push:
+    tags:
+      - "ts-recorder-v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate tag matches package version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#ts-recorder-v}"
+          PKG_VERSION="$(node -p "require('./clients/typescript-recorder/package.json').version")"
+          if [ "${TAG_VERSION}" != "${PKG_VERSION}" ]; then
+            echo "Tag version (${TAG_VERSION}) does not match package.json version (${PKG_VERSION})"
+            exit 1
+          fi
+
+      - name: Install and test package
+        run: |
+          cd clients/typescript-recorder
+          npm ci
+          npm test
+
+      - name: Pack npm artifact
+        run: |
+          mkdir -p dist
+          cd clients/typescript-recorder
+          npm pack --pack-destination ../../dist
+
+      - name: Upload npm tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-recorder-dist
+          path: dist/*.tgz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download npm tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: ts-recorder-dist
+          path: dist
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish dist/*.tgz --access public

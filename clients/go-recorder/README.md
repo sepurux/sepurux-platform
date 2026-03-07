@@ -43,3 +43,10 @@ _, _, _ = client.RunsAPI.PostRunV1RunsPost(context.Background()).
 	XProjectId("<project_id>").
 	Execute()
 ```
+
+## Release
+
+- Push a tag in the format `clients/go-recorder/vX.Y.Z`.
+- GitHub Actions workflow `go-recorder-release.yml` will run `go test` and create a GitHub release.
+- Consumers can use the tagged module directly:
+  - `go get github.com/felixkwasisarpong/crash-lab/clients/go-recorder@vX.Y.Z`

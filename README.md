@@ -96,7 +96,7 @@ TypeScript integration with recorder helper:
 
 ```ts
 import { Configuration, RunsApi, TracesApi } from "crashlab-client";
-import { TraceRecorder } from "@crashlab/typescript-recorder";
+import { TraceRecorder } from "crashlab-typescript-recorder";
 
 const recorder = new TraceRecorder("demo-task", { ticketId: 123 });
 recorder.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
@@ -132,6 +132,12 @@ runReq := crashlabclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
 run, _, _ := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
 latest, _, _ := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjectId(projectID).Execute()
 ```
+
+Recorder package release tags:
+
+- PyPI SDK: `sdk-vX.Y.Z` (publishes to PyPI)
+- TypeScript recorder (npm): `ts-recorder-vX.Y.Z` (publishes to npm)
+- Go recorder module: `clients/go-recorder/vX.Y.Z` (creates GitHub release; consumable via `go get ...@vX.Y.Z`)
 
 ## Run Inspector Endpoints
 
