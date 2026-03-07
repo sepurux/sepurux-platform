@@ -1,0 +1,87 @@
+# PolicyPackRollbackRequest
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**VersionNumber** | **int32** |  | 
+**CreatedBy** | Pointer to **NullableString** |  | [optional] 
+
+## Methods
+
+### NewPolicyPackRollbackRequest
+
+`func NewPolicyPackRollbackRequest(versionNumber int32, ) *PolicyPackRollbackRequest`
+
+NewPolicyPackRollbackRequest instantiates a new PolicyPackRollbackRequest object
+This constructor will assign default values to properties that have it defined,
+and makes sure properties required by API are set, but the set of arguments
+will change when the set of required properties is changed
+
+### NewPolicyPackRollbackRequestWithDefaults
+
+`func NewPolicyPackRollbackRequestWithDefaults() *PolicyPackRollbackRequest`
+
+NewPolicyPackRollbackRequestWithDefaults instantiates a new PolicyPackRollbackRequest object
+This constructor will only assign default values to properties that have it defined,
+but it doesn't guarantee that properties required by API are set
+
+### GetVersionNumber
+
+`func (o *PolicyPackRollbackRequest) GetVersionNumber() int32`
+
+GetVersionNumber returns the VersionNumber field if non-nil, zero value otherwise.
+
+### GetVersionNumberOk
+
+`func (o *PolicyPackRollbackRequest) GetVersionNumberOk() (*int32, bool)`
+
+GetVersionNumberOk returns a tuple with the VersionNumber field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVersionNumber
+
+`func (o *PolicyPackRollbackRequest) SetVersionNumber(v int32)`
+
+SetVersionNumber sets VersionNumber field to given value.
+
+
+### GetCreatedBy
+
+`func (o *PolicyPackRollbackRequest) GetCreatedBy() string`
+
+GetCreatedBy returns the CreatedBy field if non-nil, zero value otherwise.
+
+### GetCreatedByOk
+
+`func (o *PolicyPackRollbackRequest) GetCreatedByOk() (*string, bool)`
+
+GetCreatedByOk returns a tuple with the CreatedBy field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCreatedBy
+
+`func (o *PolicyPackRollbackRequest) SetCreatedBy(v string)`
+
+SetCreatedBy sets CreatedBy field to given value.
+
+### HasCreatedBy
+
+`func (o *PolicyPackRollbackRequest) HasCreatedBy() bool`
+
+HasCreatedBy returns a boolean if a field has been set.
+
+### SetCreatedByNil
+
+`func (o *PolicyPackRollbackRequest) SetCreatedByNil(b bool)`
+
+ SetCreatedByNil sets the value for CreatedBy to be an explicit nil
+
+### UnsetCreatedBy
+`func (o *PolicyPackRollbackRequest) UnsetCreatedBy()`
+
+UnsetCreatedBy ensures that no value is present for CreatedBy, not even an explicit nil
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+
