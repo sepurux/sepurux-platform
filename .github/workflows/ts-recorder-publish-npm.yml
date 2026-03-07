@@ -43,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ts-recorder-dist
-          path: dist/*.tgz
+          path: dist
 
   publish:
     needs: build
@@ -67,4 +67,12 @@ jobs:
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish dist/*.tgz --access public
+        run: |
+          set -euo pipefail
+          TARBALL="$(find dist -type f -name '*.tgz' | head -n 1)"
+          if [ -z "${TARBALL}" ]; then
+            echo "No npm tarball found under dist/"
+            find dist -maxdepth 5 -type f || true
+            exit 1
+          fi
+          npm publish "${TARBALL}" --access public
