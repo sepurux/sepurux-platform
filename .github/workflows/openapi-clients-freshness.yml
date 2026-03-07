@@ -1,0 +1,73 @@
+name: OpenAPI Clients Freshness
+
+on:
+  pull_request:
+    paths:
+      - "api/app/**"
+      - "api/requirements.txt"
+      - "clients/openapi.json"
+      - "clients/config/**"
+      - "Makefile"
+      - ".github/workflows/openapi-clients-freshness.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "api/app/**"
+      - "api/requirements.txt"
+      - "clients/openapi.json"
+      - "clients/config/**"
+      - "Makefile"
+      - ".github/workflows/openapi-clients-freshness.yml"
+
+jobs:
+  verify-clients:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: api
+      CRASHLAB_OPENAPI_URL: http://127.0.0.1:8000/openapi.json
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install API deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r api/requirements.txt
+
+      - name: Regenerate OpenAPI clients
+        run: |
+          set -euo pipefail
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 >/tmp/crashlab-uvicorn.log 2>&1 &
+          UVICORN_PID=$!
+
+          cleanup() {
+            kill "${UVICORN_PID}" || true
+          }
+          trap cleanup EXIT
+
+          for _ in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -fsS http://127.0.0.1:8000/healthz >/dev/null
+          make gen-clients
+
+      - name: Verify generated files are up to date
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- clients/openapi.json clients/typescript clients/go; then
+            echo "Generated clients are stale. Run 'make gen-clients' and commit results."
+            git status --short -- clients/openapi.json clients/typescript clients/go
+            git diff --stat -- clients/openapi.json clients/typescript clients/go
+            exit 1
+          fi
