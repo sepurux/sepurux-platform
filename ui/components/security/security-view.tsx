@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { api, type SecurityEventListItem } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
@@ -24,6 +25,8 @@ type ToolRiskSummary = {
 };
 
 export function SecurityView() {
+  const searchParams = useSearchParams();
+  const toolFilter = (searchParams.get("tool") ?? "").trim().toLowerCase();
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
   useEffect(() => {
@@ -59,11 +62,17 @@ export function SecurityView() {
     };
   }, []);
 
+  const filteredEvents = useMemo(() => {
+    if (state.status !== "ready") return [] as SecurityEventListItem[];
+    if (!toolFilter) return state.events;
+    return state.events.filter((event) => event.tool.toLowerCase().includes(toolFilter));
+  }, [state, toolFilter]);
+
   const topRiskyTools = useMemo(() => {
     if (state.status !== "ready") return [] as ToolRiskSummary[];
 
     const byTool = new Map<string, ToolRiskSummary>();
-    for (const event of state.events) {
+    for (const event of filteredEvents) {
       const current = byTool.get(event.tool) ?? {
         tool: event.tool,
         blocks: 0,
@@ -91,7 +100,7 @@ export function SecurityView() {
           a.tool.localeCompare(b.tool)
       )
       .slice(0, 12);
-  }, [state]);
+  }, [filteredEvents, state.status]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -118,7 +127,9 @@ export function SecurityView() {
             <CardHeader>
               <CardTitle>Top Risky Tools</CardTitle>
               <CardDescription>
-                Ranked by block count, then sanitizations, from recent security events.
+                {toolFilter
+                  ? `Filtered to tools matching "${toolFilter}".`
+                  : "Ranked by block count, then sanitizations, from recent security events."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -162,7 +173,11 @@ export function SecurityView() {
           <Card>
             <CardHeader>
               <CardTitle>Recent Security Events</CardTitle>
-              <CardDescription>Latest trust-zone actions captured during run replay.</CardDescription>
+              <CardDescription>
+                {toolFilter
+                  ? `Latest trust-zone actions for tools matching "${toolFilter}".`
+                  : "Latest trust-zone actions captured during run replay."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -178,14 +193,16 @@ export function SecurityView() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {state.events.length === 0 ? (
+                  {filteredEvents.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                        No security events recorded yet.
+                        {toolFilter
+                          ? "No security events match this tool filter."
+                          : "No security events recorded yet."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    state.events.slice(0, 20).map((event) => (
+                    filteredEvents.slice(0, 20).map((event) => (
                       <TableRow key={event.security_event_id}>
                         <TableCell>
                           <Badge

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, FolderKanban, Search } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, ChevronDown, FolderKanban, Loader2, Search } from "lucide-react";
 
 import { api, type ProjectMetadata } from "@/lib/api";
 import { getStoredProjectId, setStoredProjectId } from "@/lib/tenant-settings";
@@ -19,9 +19,13 @@ const tabs = [
 
 export function TopBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [projects, setProjects] = useState<ProjectMetadata[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +61,116 @@ export function TopBar() {
     setSelectedProjectId(nextProjectId);
     setStoredProjectId(nextProjectId);
     window.location.reload();
+  }
+
+  async function lookupRun(runId: string) {
+    try {
+      await api.getRun(runId);
+      return `/runs/${runId}`;
+    } catch {
+      return null;
+    }
+  }
+
+  async function lookupTrace(traceId: string) {
+    try {
+      await api.getTrace(traceId);
+      return `/traces/${traceId}`;
+    } catch {
+      return null;
+    }
+  }
+
+  async function lookupAttempt(attemptId: string) {
+    try {
+      await api.getAttempt(attemptId);
+      return `/attempts/${attemptId}`;
+    } catch {
+      return null;
+    }
+  }
+
+  async function resolveSearchTarget(query: string) {
+    const normalized = query.trim();
+    const toolPrefixed = normalized.match(/^tool\s*:\s*(.+)$/i);
+    if (toolPrefixed) {
+      const toolName = toolPrefixed[1].trim();
+      return toolName ? `/security?tool=${encodeURIComponent(toolName)}` : null;
+    }
+
+    const prefixed = normalized.match(/^(run|trace|attempt)\s*:\s*(.+)$/i);
+    if (prefixed) {
+      const target = prefixed[1].toLowerCase();
+      const id = prefixed[2].trim();
+      if (!id) return null;
+      if (target === "run") return lookupRun(id);
+      if (target === "trace") return lookupTrace(id);
+      return lookupAttempt(id);
+    }
+
+    const looksLikeUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized);
+
+    if (looksLikeUuid) {
+      const [runPath, attemptPath, tracePath] = await Promise.all([
+        lookupRun(normalized),
+        lookupAttempt(normalized),
+        lookupTrace(normalized),
+      ]);
+      return runPath ?? attemptPath ?? tracePath;
+    }
+
+    const keyword = normalized.toLowerCase();
+    const [runs, traces] = await Promise.all([
+      api.listRuns(100).catch(() => []),
+      api.listTraces({ limit: 100, offset: 0 }).catch(() => []),
+    ]);
+
+    const runMatch = runs.find((run) => {
+      return (
+        run.run_id.toLowerCase().includes(keyword) ||
+        run.campaign_id.toLowerCase().includes(keyword) ||
+        run.status.toLowerCase().includes(keyword)
+      );
+    });
+    if (runMatch) {
+      return `/runs/${runMatch.run_id}`;
+    }
+
+    const traceMatch = traces.find((trace) => {
+      return (
+        trace.trace_id.toLowerCase().includes(keyword) ||
+        trace.source.toLowerCase().includes(keyword)
+      );
+    });
+    if (traceMatch) {
+      return `/traces/${traceMatch.trace_id}`;
+    }
+
+    return null;
+  }
+
+  async function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query || searching) return;
+
+    setSearching(true);
+    setSearchError(null);
+    try {
+      const path = await resolveSearchTarget(query);
+      if (path) {
+        router.push(path);
+        setSearchQuery("");
+        setSearchError(null);
+        return;
+      }
+      setSearchError("No match found. Try run:/trace:/attempt:/tool: prefixes or paste an id.");
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : "Search failed");
+    } finally {
+      setSearching(false);
+    }
   }
 
   return (
@@ -113,10 +227,23 @@ export function TopBar() {
               </select>
             </div>
           </label>
-          <div className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground lg:flex">
-            <Search className="h-4 w-4" />
-            <span>Search runs, tools, attempts</span>
-          </div>
+          <form
+            className="hidden min-w-[280px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex"
+            onSubmit={handleSearchSubmit}
+          >
+            {searching ? <Loader2 className="h-4 w-4 animate-spin text-cyan-200" /> : <Search className="h-4 w-4 text-cyan-200" />}
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                if (searchError) setSearchError(null);
+              }}
+              className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+              placeholder="Search run:/trace:/attempt:/tool: or paste id"
+              aria-label="Search runs, traces, and attempts"
+            />
+          </form>
           <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/70 text-muted-foreground hover:text-foreground">
             <Bell className="h-4 w-4" />
           </button>
@@ -134,6 +261,9 @@ export function TopBar() {
           </details>
         </div>
       </div>
+      {searchError ? (
+        <p className="mt-2 text-xs text-rose-300 lg:text-right">{searchError}</p>
+      ) : null}
     </header>
   );
 }
