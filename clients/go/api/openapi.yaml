@@ -571,6 +571,15 @@ paths:
     get:
       operationId: get_mutation_packs_v1_mutation_packs_get
       parameters:
+      - explode: true
+        in: query
+        name: include_system
+        required: false
+        schema:
+          default: true
+          title: Include System
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -619,7 +628,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MutationPackMetadata'
+                $ref: '#/components/schemas/MutationPackCreateResponse'
           description: Successful Response
         "422":
           content:
@@ -631,6 +640,38 @@ paths:
       tags:
       - mutation-packs
   /v1/mutation-packs/{mutation_pack_id}:
+    delete:
+      operationId: delete_mutation_pack_by_id_v1_mutation_packs__mutation_pack_id__delete
+      parameters:
+      - explode: false
+        in: path
+        name: mutation_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Mutation Pack By Id
+      tags:
+      - mutation-packs
     get:
       operationId: get_mutation_pack_by_id_v1_mutation_packs__mutation_pack_id__get
       parameters:
@@ -665,6 +706,43 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Get Mutation Pack By Id
+      tags:
+      - mutation-packs
+  /v1/mutation-packs/{mutation_pack_id}/coverage:
+    get:
+      operationId: get_mutation_pack_coverage_v1_mutation_packs__mutation_pack_id__coverage_get
+      parameters:
+      - explode: false
+        in: path
+        name: mutation_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationPackCoverageResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Mutation Pack Coverage
       tags:
       - mutation-packs
   /v1/policy-packs:
@@ -2479,6 +2557,33 @@ components:
       - mutation_id
       - pct
       title: MutationCountPct
+    MutationPackCoverageResponse:
+      example:
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        coverage_score: 0
+        warning: warning
+        categories:
+        - categories
+        - categories
+      properties:
+        mutation_pack_id:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        coverage_score:
+          title: Coverage Score
+          type: integer
+        categories:
+          items:
+            type: string
+          type: array
+        warning:
+          nullable: true
+          type: string
+      required:
+      - coverage_score
+      - mutation_pack_id
+      title: MutationPackCoverageResponse
     MutationPackCreateRequest:
       example:
         name: name
@@ -2496,12 +2601,70 @@ components:
       - config
       - name
       title: MutationPackCreateRequest
-    MutationPackMetadata:
+    MutationPackCreateResponse:
       example:
+        is_system: false
         mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         name: name
         description: description
+        coverage_score: 0
+        created_at: 2000-01-23T04:56:07.000+00:00
+        warning: warning
+        config: ""
+        validation_issues:
+        - validation_issues
+        - validation_issues
+      properties:
+        mutation_pack_id:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        name:
+          title: Name
+          type: string
+        description:
+          nullable: true
+          type: string
+        config: {}
+        is_system:
+          default: false
+          title: Is System
+          type: boolean
+        coverage_score:
+          default: 0
+          title: Coverage Score
+          type: integer
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        warning:
+          nullable: true
+          type: string
+        validation_issues:
+          items:
+            type: string
+          type: array
+      required:
+      - config
+      - created_at
+      - mutation_pack_id
+      - name
+      - project_id
+      title: MutationPackCreateResponse
+    MutationPackMetadata:
+      example:
+        is_system: false
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        name: name
+        description: description
+        coverage_score: 0
         created_at: 2000-01-23T04:56:07.000+00:00
         config: ""
       properties:
@@ -2520,6 +2683,14 @@ components:
           nullable: true
           type: string
         config: {}
+        is_system:
+          default: false
+          title: Is System
+          type: boolean
+        coverage_score:
+          default: 0
+          title: Coverage Score
+          type: integer
         created_at:
           format: date-time
           title: Created At

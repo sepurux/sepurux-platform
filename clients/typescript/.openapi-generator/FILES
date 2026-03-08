@@ -44,7 +44,9 @@ src/models/LethalMutationInsight.ts
 src/models/LethalMutationTopReason.ts
 src/models/LethalMutationTopTool.ts
 src/models/MutationCountPct.ts
+src/models/MutationPackCoverageResponse.ts
 src/models/MutationPackCreateRequest.ts
+src/models/MutationPackCreateResponse.ts
 src/models/MutationPackMetadata.ts
 src/models/MutationSummaryItem.ts
 src/models/MutationSummaryResponse.ts

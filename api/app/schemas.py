@@ -359,7 +359,21 @@ class MutationPackMetadata(BaseModel):
     name: str
     description: str | None = None
     config: Any
+    is_system: bool = False
+    coverage_score: int = 0
     created_at: datetime
+
+
+class MutationPackCreateResponse(MutationPackMetadata):
+    warning: str | None = None
+    validation_issues: list[str] = Field(default_factory=list)
+
+
+class MutationPackCoverageResponse(BaseModel):
+    mutation_pack_id: UUID
+    coverage_score: int
+    categories: list[str] = Field(default_factory=list)
+    warning: str | None = None
 
 
 HardeningTemplateType = Literal[

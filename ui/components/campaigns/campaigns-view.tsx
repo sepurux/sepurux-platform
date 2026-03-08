@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { api, type CampaignMetadata, type MutationPackMetadata } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,12 +25,21 @@ export function CampaignsView() {
   const [name, setName] = useState("");
   const [mutationPackId, setMutationPackId] = useState("");
   const [attemptsCount, setAttemptsCount] = useState(50);
+  const recommendedSystemPackNames = useMemo(
+    () =>
+      new Set([
+        "crashlab.core.reliability",
+        "crashlab.security.injection",
+        "crashlab.max_chaos",
+      ]),
+    []
+  );
 
   async function load() {
     setState({ status: "loading" });
     const [campaignsResult, mutationPacksResult] = await Promise.allSettled([
       api.listCampaigns({ limit: 200, offset: 0 }),
-      api.listMutationPacks(),
+      api.listMutationPacks({ include_system: true }),
     ]);
 
     if (campaignsResult.status === "fulfilled") {
@@ -61,6 +71,30 @@ export function CampaignsView() {
     }
     return mutationPacks.find((record) => record.mutation_pack_id === mutationPackId) ?? null;
   }, [mutationPacks, mutationPackId]);
+
+  const recommendedMutationPacks = useMemo(() => {
+    if (!mutationPacks) {
+      return [];
+    }
+    return mutationPacks.filter(
+      (record) => record.is_system && recommendedSystemPackNames.has(record.name)
+    );
+  }, [mutationPacks, recommendedSystemPackNames]);
+
+  const advancedMutationPacks = useMemo(() => {
+    if (!mutationPacks) {
+      return [];
+    }
+    return mutationPacks.filter(
+      (record) =>
+        !record.is_system || !recommendedSystemPackNames.has(record.name)
+    );
+  }, [mutationPacks, recommendedSystemPackNames]);
+
+  const selectedPackWarning =
+    selectedMutationPack && selectedMutationPack.coverage_score < 40
+      ? "This mutation pack may not detect realistic failures."
+      : null;
 
   async function onCreateCampaign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,16 +229,55 @@ export function CampaignsView() {
                     <select
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
                       value={mutationPackId}
-                      onChange={(event) => setMutationPackId(event.target.value)}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        setMutationPackId(nextValue);
+                        const record = mutationPacks.find(
+                          (item) => item.mutation_pack_id === nextValue
+                        );
+                        const suggestedAttempts = record?.config?.suggested_attempts;
+                        if (typeof suggestedAttempts === "number" && Number.isFinite(suggestedAttempts)) {
+                          setAttemptsCount(Math.max(1, Math.trunc(suggestedAttempts)));
+                        }
+                      }}
                     >
                       <option value="">None</option>
-                      {mutationPacks.map((record) => (
-                        <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
-                          {record.name}
-                        </option>
-                      ))}
+                      {recommendedMutationPacks.length > 0 ? (
+                        <optgroup label="Recommended">
+                          {recommendedMutationPacks.map((record) => (
+                            <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
+                              {record.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ) : null}
+                      {advancedMutationPacks.length > 0 ? (
+                        <optgroup label="Advanced">
+                          {advancedMutationPacks.map((record) => (
+                            <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
+                              {record.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ) : null}
                     </select>
                   </label>
+                ) : null}
+
+                {selectedMutationPack ? (
+                  <div className="rounded-md border border-border/70 bg-background/70 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Coverage Score</span>
+                      <Badge
+                        variant={selectedMutationPack.coverage_score < 40 ? "default" : "warning"}
+                      >
+                        {selectedMutationPack.coverage_score}%
+                      </Badge>
+                    </div>
+                    {selectedPackWarning ? (
+                      <p className="mt-2 text-xs text-amber-300">{selectedPackWarning}</p>
+                    ) : null}
+                  </div>
                 ) : null}
 
                 <label className="block space-y-1 text-sm">

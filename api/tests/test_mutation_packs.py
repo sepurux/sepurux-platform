@@ -93,6 +93,10 @@ def test_mutation_pack_crud_is_project_scoped(
     created_payload = create_response.json()
     created_pack_id = UUID(created_payload["mutation_pack_id"])
     assert created_payload["project_id"] == str(project_id)
+    assert created_payload["is_system"] is False
+    assert isinstance(created_payload["coverage_score"], int)
+    assert created_payload["warning"] == "Mutation pack may be too weak to detect failures"
+    assert isinstance(created_payload["validation_issues"], list)
 
     with testing_session_local() as db:
         current_project = db.execute(
@@ -209,3 +213,100 @@ def test_campaign_can_reference_mutation_pack_and_run_create_still_queues(
             select(Campaign).where(Campaign.campaign_id == campaign_id)
         ).scalar_one()
         assert campaign_row.mutation_pack_id == UUID(mutation_pack_id)
+
+
+def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
+    mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = mutation_pack_test_context
+
+    list_response = client.get("/v1/mutation-packs")
+    assert list_response.status_code == 200
+    payload = list_response.json()
+
+    system_rows = [row for row in payload if row["is_system"]]
+    system_names = {row["name"] for row in system_rows}
+    assert "crashlab.core.reliability" in system_names
+    assert "crashlab.security.injection" in system_names
+    assert "crashlab.api.drift" in system_names
+    assert "crashlab.latency.storm" in system_names
+    assert "crashlab.max_chaos" in system_names
+
+    sample_system_pack_id = system_rows[0]["mutation_pack_id"]
+    delete_response = client.delete(f"/v1/mutation-packs/{sample_system_pack_id}")
+    assert delete_response.status_code == 403
+    assert delete_response.json() == {"detail": "System mutation packs cannot be deleted"}
+
+
+def test_weak_custom_pack_returns_warning_and_include_system_filter_works(
+    mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = mutation_pack_test_context
+
+    create_response = client.post(
+        "/v1/mutation-packs",
+        json={
+            "name": "Weak Pack",
+            "description": "Only one schema mutation",
+            "config": {
+                "mutations": [
+                    {
+                        "mutation_id": "rename-status",
+                        "type": "schema.rename_field",
+                        "target": {"tool": "*"},
+                        "params": {"from": "status", "to": "state"},
+                    }
+                ]
+            },
+        },
+    )
+    assert create_response.status_code == 201
+    created = create_response.json()
+    assert created["warning"] == "Mutation pack may be too weak to detect failures"
+    assert created["coverage_score"] == 20
+    assert "must contain at least one failure mutation (timeout/rate_limit)" in created["validation_issues"]
+    assert "must contain at least one latency mutation" in created["validation_issues"]
+    assert "must contain at least two distinct mutation types" in created["validation_issues"]
+
+    custom_only = client.get("/v1/mutation-packs?include_system=false")
+    assert custom_only.status_code == 200
+    records = custom_only.json()
+    assert all(record["is_system"] is False for record in records)
+    assert any(record["name"] == "Weak Pack" for record in records)
+
+
+def test_mutation_pack_coverage_endpoint_returns_expected_score(
+    mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = mutation_pack_test_context
+    create_response = client.post(
+        "/v1/mutation-packs",
+        json={
+            "name": "Coverage 100 Pack",
+            "description": "Touch all coverage categories",
+            "config": {
+                "mutations": [
+                    {"type": "schema.rename_field"},
+                    {"type": "fault.timeout"},
+                    {"type": "latency_delay"},
+                    {"type": "poison.inject"},
+                    {"type": "malformed_tool_output"},
+                ]
+            },
+        },
+    )
+    assert create_response.status_code == 201
+    pack_id = create_response.json()["mutation_pack_id"]
+
+    coverage_response = client.get(f"/v1/mutation-packs/{pack_id}/coverage")
+    assert coverage_response.status_code == 200
+    payload = coverage_response.json()
+    assert payload["mutation_pack_id"] == pack_id
+    assert payload["coverage_score"] == 100
+    assert set(payload["categories"]) == {
+        "schema",
+        "fault",
+        "latency",
+        "security",
+        "data_corruption",
+    }

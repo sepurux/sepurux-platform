@@ -27,6 +27,8 @@ type MutationPackMetadata struct {
 	Name string `json:"name"`
 	Description NullableString `json:"description,omitempty"`
 	Config interface{} `json:"config"`
+	IsSystem *bool `json:"is_system,omitempty"`
+	CoverageScore *int32 `json:"coverage_score,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -42,6 +44,10 @@ func NewMutationPackMetadata(mutationPackId string, projectId string, name strin
 	this.ProjectId = projectId
 	this.Name = name
 	this.Config = config
+	var isSystem bool = false
+	this.IsSystem = &isSystem
+	var coverageScore int32 = 0
+	this.CoverageScore = &coverageScore
 	this.CreatedAt = createdAt
 	return &this
 }
@@ -51,6 +57,10 @@ func NewMutationPackMetadata(mutationPackId string, projectId string, name strin
 // but it doesn't guarantee that properties required by API are set
 func NewMutationPackMetadataWithDefaults() *MutationPackMetadata {
 	this := MutationPackMetadata{}
+	var isSystem bool = false
+	this.IsSystem = &isSystem
+	var coverageScore int32 = 0
+	this.CoverageScore = &coverageScore
 	return &this
 }
 
@@ -194,6 +204,70 @@ func (o *MutationPackMetadata) SetConfig(v interface{}) {
 	o.Config = v
 }
 
+// GetIsSystem returns the IsSystem field value if set, zero value otherwise.
+func (o *MutationPackMetadata) GetIsSystem() bool {
+	if o == nil || IsNil(o.IsSystem) {
+		var ret bool
+		return ret
+	}
+	return *o.IsSystem
+}
+
+// GetIsSystemOk returns a tuple with the IsSystem field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MutationPackMetadata) GetIsSystemOk() (*bool, bool) {
+	if o == nil || IsNil(o.IsSystem) {
+		return nil, false
+	}
+	return o.IsSystem, true
+}
+
+// HasIsSystem returns a boolean if a field has been set.
+func (o *MutationPackMetadata) HasIsSystem() bool {
+	if o != nil && !IsNil(o.IsSystem) {
+		return true
+	}
+
+	return false
+}
+
+// SetIsSystem gets a reference to the given bool and assigns it to the IsSystem field.
+func (o *MutationPackMetadata) SetIsSystem(v bool) {
+	o.IsSystem = &v
+}
+
+// GetCoverageScore returns the CoverageScore field value if set, zero value otherwise.
+func (o *MutationPackMetadata) GetCoverageScore() int32 {
+	if o == nil || IsNil(o.CoverageScore) {
+		var ret int32
+		return ret
+	}
+	return *o.CoverageScore
+}
+
+// GetCoverageScoreOk returns a tuple with the CoverageScore field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MutationPackMetadata) GetCoverageScoreOk() (*int32, bool) {
+	if o == nil || IsNil(o.CoverageScore) {
+		return nil, false
+	}
+	return o.CoverageScore, true
+}
+
+// HasCoverageScore returns a boolean if a field has been set.
+func (o *MutationPackMetadata) HasCoverageScore() bool {
+	if o != nil && !IsNil(o.CoverageScore) {
+		return true
+	}
+
+	return false
+}
+
+// SetCoverageScore gets a reference to the given int32 and assigns it to the CoverageScore field.
+func (o *MutationPackMetadata) SetCoverageScore(v int32) {
+	o.CoverageScore = &v
+}
+
 // GetCreatedAt returns the CreatedAt field value
 func (o *MutationPackMetadata) GetCreatedAt() time.Time {
 	if o == nil {
@@ -236,6 +310,12 @@ func (o MutationPackMetadata) ToMap() (map[string]interface{}, error) {
 	}
 	if o.Config != nil {
 		toSerialize["config"] = o.Config
+	}
+	if !IsNil(o.IsSystem) {
+		toSerialize["is_system"] = o.IsSystem
+	}
+	if !IsNil(o.CoverageScore) {
+		toSerialize["coverage_score"] = o.CoverageScore
 	}
 	toSerialize["created_at"] = o.CreatedAt
 	return toSerialize, nil

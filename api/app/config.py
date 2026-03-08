@@ -14,6 +14,7 @@ class Settings:
     s3_secret_key: str
     s3_bucket: str
     s3_region: str
+    mutation_pack_validation_mode: str
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -28,6 +29,7 @@ class Settings:
             s3_secret_key=os.getenv("S3_SECRET_KEY", "minio123456"),
             s3_bucket=os.getenv("S3_BUCKET", "crashlab"),
             s3_region=os.getenv("S3_REGION", "us-east-1"),
+            mutation_pack_validation_mode=os.getenv("MUTATION_PACK_VALIDATION_MODE", "warn"),
         )
 
 
