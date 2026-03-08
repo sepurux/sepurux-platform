@@ -7,7 +7,7 @@ import httpx
 
 from policy_engine import PolicyDecision
 
-_OPA_DECISION_PATH = "/v1/data/crashlab/policy/decision"
+_OPA_DECISION_PATH = "/v1/data/sepurux/policy/decision"
 _MAX_ATTEMPTS = 2
 
 

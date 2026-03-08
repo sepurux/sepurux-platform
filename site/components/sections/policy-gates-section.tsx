@@ -7,7 +7,7 @@ const policySnippet = `# Commit token required for irreversible actions
 payments.refund(commit)
 jira.create_issue(commit)
 
-# Crash Lab policy response
+# Sepurux policy response
 {
   "decision": "require_approval",
   "reason": "irreversible_action_missing_commit"

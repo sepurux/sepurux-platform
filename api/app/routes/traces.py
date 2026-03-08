@@ -46,7 +46,7 @@ def post_trace(
             },
         )
 
-    sdk_meta = request.headers.get("X-CrashLab-SDK")
+    sdk_meta = request.headers.get("X-Sepurux-SDK")
     if isinstance(sdk_meta, str):
         sdk_meta = sdk_meta.strip() or None
 

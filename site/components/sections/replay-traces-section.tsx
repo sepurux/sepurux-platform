@@ -9,18 +9,18 @@ const features = [
   { icon: Braces, label: "Inspect tool calls and model outputs" },
 ];
 
-const sdkExample = `from crashlab_sdk import CrashLabClient, crashlab_trace
+const sdkExample = `from sepurux import SepuruxClient, sepurux_trace
 
-client = CrashLabClient(base_url="https://api.crashlab.dev", api_key=os.getenv("CRASHLAB_API_KEY"))
+client = SepuruxClient(base_url="https://api.sepurux.com", api_key=os.getenv("SEPURUX_API_KEY"))
 
-with crashlab_trace("incident_triage", {"incident_id": "INC-4321"}) as rec:
+with sepurux_trace("incident_triage", {"incident_id": "INC-4321"}) as rec:
     rec.tool_call("alerts.fetch_active", {"service": "payments"})
     rec.tool_result("alerts.fetch_active", {"count": 4})
     rec.model_step("triage_llm", {"prompt": "summarize"}, {"severity": "high"})
 
 trace_id = client.upload_trace(rec.to_trace())
 # Optional: trigger replay campaign
-run_id = client.start_run(trace_id=trace_id, campaign_id=os.getenv("CRASHLAB_CAMPAIGN_ID"))`;
+run_id = client.start_run(trace_id=trace_id, campaign_id=os.getenv("SEPURUX_CAMPAIGN_ID"))`;
 
 export function ReplayTracesSection() {
   return (

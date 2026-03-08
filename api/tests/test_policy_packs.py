@@ -7,7 +7,16 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, PolicyEvent, PolicyPack, PolicyPackVersion, Project, Run, Trace
+from app.models import (
+    Base,
+    Campaign,
+    PolicyEvent,
+    PolicyPack,
+    PolicyPackVersion,
+    Project,
+    Run,
+    Trace,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -87,8 +96,8 @@ def test_policy_pack_crud_is_project_scoped(
                 },
                 "approval": {"token_field": "confirmation_token"},
                 "opa": {
-                    "package": "crashlab.policy",
-                    "query": "data.crashlab.policy.decision",
+                    "package": "sepurux.policy",
+                    "query": "data.sepurux.policy.decision",
                 },
             },
         },
@@ -156,8 +165,8 @@ def test_policy_pack_engine_validation_allows_opa_and_rejects_unknown(
                 "approval": {"token_field": "confirmation_token"},
                 "irreversible": {"tools": ["payments.refund"]},
                 "opa": {
-                    "package": "crashlab.policy",
-                    "query": "data.crashlab.policy.decision",
+                    "package": "sepurux.policy",
+                    "query": "data.sepurux.policy.decision",
                 },
             },
         },
@@ -234,8 +243,8 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
                 },
                 "approval": {"token_field": "confirmation_token"},
                 "opa": {
-                    "package": "crashlab.policy",
-                    "query": "data.crashlab.policy.decision",
+                    "package": "sepurux.policy",
+                    "query": "data.sepurux.policy.decision",
                 },
             },
         },

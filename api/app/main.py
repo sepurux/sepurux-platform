@@ -21,7 +21,7 @@ from app.routes.tools import router as tools_router
 from app.routes.traces import router as traces_router
 from app.routes.webhooks import router as webhooks_router
 
-app = FastAPI(title="Crash Lab API")
+app = FastAPI(title="Sepurux API")
 
 
 @app.middleware("http")
@@ -53,11 +53,11 @@ async def ci_token_auth_middleware(request: Request, call_next):
     if not expected_token:
         return await call_next(request)
 
-    provided_token = request.headers.get("X-CrashLab-Token")
+    provided_token = request.headers.get("X-Sepurux-Token")
     if not provided_token or not secrets.compare_digest(provided_token, expected_token):
         return JSONResponse(
             status_code=401,
-            content={"detail": "Invalid or missing X-CrashLab-Token header"},
+            content={"detail": "Invalid or missing X-Sepurux-Token header"},
         )
 
     return await call_next(request)

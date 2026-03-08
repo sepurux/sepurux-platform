@@ -13,4 +13,4 @@ def get_redis_connection() -> Redis:
 
 
 def get_run_queue() -> Queue:
-    return Queue("crashlab", connection=get_redis_connection())
+    return Queue("sepurux", connection=get_redis_connection())
