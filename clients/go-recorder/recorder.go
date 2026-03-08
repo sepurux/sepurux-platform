@@ -1,4 +1,4 @@
-package crashlabrecorder
+package sepuruxrecorder
 
 import "time"
 

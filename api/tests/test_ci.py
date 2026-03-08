@@ -125,14 +125,14 @@ def test_ci_routes_require_ci_token_when_configured_but_not_api_key(
 
     missing = client.get(f"/v1/ci/runs/{uuid4()}")
     assert missing.status_code == 401
-    assert missing.json() == {"detail": "Invalid or missing X-CrashLab-Token header"}
+    assert missing.json() == {"detail": "Invalid or missing X-Sepurux-Token header"}
 
-    wrong = client.get(f"/v1/ci/runs/{uuid4()}", headers={"X-CrashLab-Token": "wrong"})
+    wrong = client.get(f"/v1/ci/runs/{uuid4()}", headers={"X-Sepurux-Token": "wrong"})
     assert wrong.status_code == 401
-    assert wrong.json() == {"detail": "Invalid or missing X-CrashLab-Token header"}
+    assert wrong.json() == {"detail": "Invalid or missing X-Sepurux-Token header"}
 
     # Correct CI token should be sufficient even without X-API-Key/X-Project-Id.
-    allowed = client.get(f"/v1/ci/runs/{uuid4()}", headers={"X-CrashLab-Token": "secret-token"})
+    allowed = client.get(f"/v1/ci/runs/{uuid4()}", headers={"X-Sepurux-Token": "secret-token"})
     assert allowed.status_code == 404
     assert allowed.json() == {"detail": "Run not found"}
 
@@ -266,7 +266,7 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
         )
         db.commit()
 
-    headers = {"X-CrashLab-Token": "secret-token"}
+    headers = {"X-Sepurux-Token": "secret-token"}
 
     pending_response = client.get(f"/v1/ci/runs/{pending_run_id}", headers=headers)
     assert pending_response.status_code == 200

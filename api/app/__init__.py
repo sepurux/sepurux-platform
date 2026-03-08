@@ -1,1 +1,1 @@
-"""Crash Lab API package."""
+"""Sepurux API package."""

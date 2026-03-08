@@ -1,6 +1,6 @@
-export const PROJECT_ID_STORAGE_KEY = "crashlab.projectId";
-export const API_KEY_STORAGE_KEY = "crashlab.apiKey";
-export const API_BASE_URL_STORAGE_KEY = "crashlab.apiBaseUrl";
+export const PROJECT_ID_STORAGE_KEY = "sepurux.projectId";
+export const API_KEY_STORAGE_KEY = "sepurux.apiKey";
+export const API_BASE_URL_STORAGE_KEY = "sepurux.apiBaseUrl";
 
 export function getStoredProjectId(): string | null {
   if (typeof window === "undefined") return null;

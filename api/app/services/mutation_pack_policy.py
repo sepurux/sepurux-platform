@@ -32,15 +32,15 @@ DATA_CORRUPTION_MUTATION_TYPES = {
 }
 
 RECOMMENDED_SYSTEM_PACK_NAMES = {
-    "crashlab.core.reliability",
-    "crashlab.security.injection",
-    "crashlab.max_chaos",
+    "sepurux.core.reliability",
+    "sepurux.security.injection",
+    "sepurux.max_chaos",
 }
 
 
 SYSTEM_MUTATION_PACK_DEFINITIONS: list[dict[str, Any]] = [
     {
-        "name": "crashlab.core.reliability",
+        "name": "sepurux.core.reliability",
         "description": "Detect brittle agents with schema and transient fault chaos.",
         "config": {
             "version": "0.1",
@@ -88,7 +88,7 @@ SYSTEM_MUTATION_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.security.injection",
+        "name": "sepurux.security.injection",
         "description": "Detect prompt injection propagation and unsafe tool output handling.",
         "config": {
             "version": "0.1",
@@ -123,7 +123,7 @@ SYSTEM_MUTATION_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.api.drift",
+        "name": "sepurux.api.drift",
         "description": "Detect API compatibility breaks from schema and enum drift.",
         "config": {
             "version": "0.1",
@@ -166,7 +166,7 @@ SYSTEM_MUTATION_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.latency.storm",
+        "name": "sepurux.latency.storm",
         "description": "Stress retry logic and backoff behavior under latency turbulence.",
         "config": {
             "version": "0.1",
@@ -199,7 +199,7 @@ SYSTEM_MUTATION_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.max_chaos",
+        "name": "sepurux.max_chaos",
         "description": "Stress test with combined schema, latency, fault, and injection mutations.",
         "config": {
             "version": "0.1",

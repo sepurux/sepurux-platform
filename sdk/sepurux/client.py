@@ -7,10 +7,10 @@ import httpx
 
 from .types import RunStatus, TracePayload
 
-SDK_PACKAGE_NAME = "crashlab-sdk"
+SDK_PACKAGE_NAME = "sepurux"
 
 
-class CrashLabClient:
+class SepuruxClient:
     def __init__(
         self,
         base_url: str,
@@ -32,7 +32,7 @@ class CrashLabClient:
         self._client = httpx.Client(
             base_url=self.base_url,
             timeout=timeout,
-            headers={"Accept": "application/json", "X-CrashLab-SDK": self.sdk_header},
+            headers={"Accept": "application/json", "X-Sepurux-SDK": self.sdk_header},
         )
 
     def close(self) -> None:
@@ -141,7 +141,7 @@ class CrashLabClient:
             "summary": summary if isinstance(summary, dict) else None,
         }
 
-    def __enter__(self) -> CrashLabClient:
+    def __enter__(self) -> SepuruxClient:
         return self
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
@@ -154,7 +154,7 @@ class CrashLabClient:
             headers["X-API-Key"] = self.api_key
         if self.project_id:
             headers["X-Project-Id"] = self.project_id
-        headers["X-CrashLab-SDK"] = self.sdk_header
+        headers["X-Sepurux-SDK"] = self.sdk_header
         return headers
 
 

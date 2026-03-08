@@ -18,7 +18,7 @@ from app.models import ApiKey, Project
 DEV_TENANT_ID = UUID("11111111-1111-1111-1111-111111111111")
 DEV_PROJECT_ID = UUID("22222222-2222-2222-2222-222222222222")
 DEV_API_KEY_NAME = "dev-default"
-DEV_API_KEY_PLAINTEXT = "crashlab-dev-key"
+DEV_API_KEY_PLAINTEXT = "sepurux-dev-key"
 
 
 @dataclass(frozen=True)

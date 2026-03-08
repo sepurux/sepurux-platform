@@ -1,12 +1,12 @@
-name: Crash Lab Gate
-description: Start a Crash Lab CI run and block until it passes or fails thresholds
+name: Sepurux Gate
+description: Start a Sepurux CI run and block until it passes or fails thresholds
 
 inputs:
   base_url:
-    description: Crash Lab API base URL
+    description: Sepurux API base URL
     required: true
   token:
-    description: CI token for X-CrashLab-Token
+    description: CI token for X-Sepurux-Token
     required: true
   trace_id:
     description: Trace UUID to replay
@@ -36,19 +36,19 @@ inputs:
 
 outputs:
   run_id:
-    description: Crash Lab run UUID
+    description: Sepurux run UUID
     value: ${{ steps.gate.outputs.run_id }}
   decision:
     description: Gate decision (pass|fail|pending)
     value: ${{ steps.gate.outputs.decision }}
   dashboard_url:
-    description: Crash Lab run URL
+    description: Sepurux run URL
     value: ${{ steps.gate.outputs.dashboard_url }}
 
 runs:
   using: composite
   steps:
-    - name: Start and poll Crash Lab gate
+    - name: Start and poll Sepurux gate
       id: gate
       shell: bash
       env:
@@ -91,12 +91,12 @@ runs:
           curl -sS -o "${post_body_file}" -w "%{http_code}" \
             -X POST "${base_url}/v1/ci/runs" \
             -H "Content-Type: application/json" \
-            -H "X-CrashLab-Token: ${INPUT_TOKEN}" \
+            -H "X-Sepurux-Token: ${INPUT_TOKEN}" \
             -d "${post_payload}"
         )"
 
         if [[ "${post_status}" -lt 200 || "${post_status}" -ge 300 ]]; then
-          echo "Crash Lab gate start failed (HTTP ${post_status})"
+          echo "Sepurux gate start failed (HTTP ${post_status})"
           cat "${post_body_file}"
           exit 1
         fi
@@ -109,7 +109,7 @@ runs:
         PY
         )"
 
-        echo "Started Crash Lab CI run: ${run_id}"
+        echo "Started Sepurux CI run: ${run_id}"
         echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
 
         start_epoch="$(date +%s)"
@@ -125,7 +125,7 @@ runs:
           now_epoch="$(date +%s)"
           elapsed="$((now_epoch - start_epoch))"
           if (( elapsed > timeout_seconds )); then
-            echo "Crash Lab gate timed out after ${timeout_seconds}s (run_id=${run_id})"
+            echo "Sepurux gate timed out after ${timeout_seconds}s (run_id=${run_id})"
             exit 1
           fi
 
@@ -133,10 +133,10 @@ runs:
           get_status="$(
             curl -sS -o "${get_body_file}" -w "%{http_code}" \
               "${base_url}/v1/ci/runs/${run_id}" \
-              -H "X-CrashLab-Token: ${INPUT_TOKEN}"
+              -H "X-Sepurux-Token: ${INPUT_TOKEN}"
           )"
           if [[ "${get_status}" -lt 200 || "${get_status}" -ge 300 ]]; then
-            echo "Crash Lab gate poll failed (HTTP ${get_status})"
+            echo "Sepurux gate poll failed (HTTP ${get_status})"
             cat "${get_body_file}"
             exit 1
           fi
@@ -164,7 +164,7 @@ runs:
           )"
 
           IFS=$'\t' read -r decision status_value pass_rate unsafe_attempts failures dashboard_url top_tools_summary <<<"${parsed_line}"
-          echo "Crash Lab gate poll: run_id=${run_id} status=${status_value} decision=${decision} pass_rate=${pass_rate} unsafe_attempts=${unsafe_attempts} failures=${failures} top_failing_tools=${top_tools_summary}"
+          echo "Sepurux gate poll: run_id=${run_id} status=${status_value} decision=${decision} pass_rate=${pass_rate} unsafe_attempts=${unsafe_attempts} failures=${failures} top_failing_tools=${top_tools_summary}"
 
           if [[ "${decision}" != "pending" ]]; then
             break
@@ -176,11 +176,11 @@ runs:
         echo "decision=${decision}" >> "${GITHUB_OUTPUT}"
         echo "dashboard_url=${dashboard_url}" >> "${GITHUB_OUTPUT}"
 
-        summary_line="Crash Lab gate ${decision}: run_id=${run_id}, status=${status_value}, pass_rate=${pass_rate}, unsafe_attempts=${unsafe_attempts}, failures=${failures}, top_failing_tools=${top_tools_summary}, dashboard_url=${dashboard_url}"
+        summary_line="Sepurux gate ${decision}: run_id=${run_id}, status=${status_value}, pass_rate=${pass_rate}, unsafe_attempts=${unsafe_attempts}, failures=${failures}, top_failing_tools=${top_tools_summary}, dashboard_url=${dashboard_url}"
         echo "${summary_line}"
         if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
           {
-            echo "## Crash Lab Gate"
+            echo "## Sepurux Gate"
             echo
             echo "- Run ID: \`${run_id}\`"
             echo "- Status: \`${status_value}\`"

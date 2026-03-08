@@ -11,9 +11,9 @@ import { FinalCtaSection } from "@/components/sections/final-cta-section";
 import { buildPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Chaos engineering for AI agents",
+  title: "Sepurux",
   description:
-    "Replay + mutate + score tool-using agents before they ship. Block regressions in CI with Crash Lab.",
+    "Replay workflows, inject failures, enforce policies, and block regressions before production.",
   path: "/",
 });
 

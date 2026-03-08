@@ -70,7 +70,7 @@ def _valid_trace_payload(*, source: str = "sdk", trace_version: str = "0.1") -> 
         "task": {
             "name": "jira_sync",
             "input": {
-                "repo": "acme/crash-lab",
+                "repo": "acme/sepurux",
             },
         },
         "events": [
@@ -226,7 +226,7 @@ def test_post_trace_captures_sdk_header(
     client, testing_session_local, _ = trace_test_context
     payload = _valid_trace_payload(source="py-sdk")
     headers = dict(client.headers)
-    headers["X-CrashLab-SDK"] = "py/0.4.0"
+    headers["X-Sepurux-SDK"] = "py/0.4.0"
 
     response = client.post("/v1/traces", json=payload, headers=headers)
 

@@ -1,0 +1,21 @@
+name: Sepurux Strict PR Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sepurux-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: felixkwasisarpong/Sepurux/.github/actions/sepurux-gate@main
+        with:
+          base_url: ${{ vars.SEPURUX_API_BASE_URL }}
+          token: ${{ secrets.SEPURUX_CI_TOKEN }}
+          trace_id: ${{ vars.SEPURUX_TRACE_ID }}
+          campaign_id: ${{ vars.SEPURUX_CAMPAIGN_ID }}
+          min_pass_rate: "0.80"
+          max_unsafe: "0"
+          max_failures: "0"
+          poll_seconds: "10"
+          timeout_seconds: "900"

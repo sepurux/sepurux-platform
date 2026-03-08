@@ -23,7 +23,7 @@ depends_on: str | Sequence[str] | None = None
 DEV_TENANT_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 DEV_PROJECT_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
 DEV_API_KEY_ID = uuid.UUID("33333333-3333-3333-3333-333333333333")
-DEV_API_KEY_PLAINTEXT = "crashlab-dev-key"
+DEV_API_KEY_PLAINTEXT = "sepurux-dev-key"
 DEV_API_KEY_HASH = hashlib.sha256(DEV_API_KEY_PLAINTEXT.encode("utf-8")).hexdigest()
 
 

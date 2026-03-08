@@ -200,7 +200,7 @@ def test_run_completion_records_audit_event_and_delivers_webhook(
             Webhook(
                 webhook_id=webhook_id,
                 project_id=project_id,
-                url="https://example.com/webhooks/crash-lab",
+                url="https://example.com/webhooks/sepurux",
                 secret="whsec_test_secret",
                 is_enabled=True,
                 events=["run.completed"],
@@ -226,7 +226,7 @@ def test_run_completion_records_audit_event_and_delivers_webhook(
     assert isinstance(body, bytes)
     headers = sent["headers"]
     assert isinstance(headers, dict)
-    signature = headers["X-CrashLab-Signature"]
+    signature = headers["X-Sepurux-Signature"]
     assert signature == generate_webhook_signature("whsec_test_secret", body)
 
     with testing_session_local() as db:

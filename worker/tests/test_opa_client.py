@@ -61,7 +61,7 @@ def test_evaluate_policy_with_opa_retries_once_then_succeeds(
     calls = {"count": 0}
 
     def fake_post(url: str, *, json: object, timeout: float) -> _FakeResponse:
-        assert url == "http://opa:8181/v1/data/crashlab/policy/decision"
+        assert url == "http://opa:8181/v1/data/sepurux/policy/decision"
         assert isinstance(json, dict)
         assert timeout == 1.5
         calls["count"] += 1

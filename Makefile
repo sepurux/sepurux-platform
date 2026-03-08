@@ -1,13 +1,13 @@
-CRASHLAB_OPENAPI_URL ?= http://localhost:8000/openapi.json
+SEPURUX_OPENAPI_URL ?= http://localhost:8000/openapi.json
 OPENAPI_FILE ?= clients/openapi.json
 OPENAPI_GENERATOR_IMAGE ?= openapitools/openapi-generator-cli:v7.8.0
-CRASHLAB_GO_MODULE ?= github.com/felixkwasisarpong/crash-lab/clients/go
+SEPURUX_GO_MODULE ?= github.com/sepurux/go-sdk
 
 .PHONY: openapi-export gen-clients gen-typescript-client gen-go-client postprocess-generated-clients
 
 openapi-export:
 	@mkdir -p clients
-	curl -fsSL "$(CRASHLAB_OPENAPI_URL)" -o "$(OPENAPI_FILE)"
+	curl -fsSL "$(SEPURUX_OPENAPI_URL)" -o "$(OPENAPI_FILE)"
 	@echo "Exported OpenAPI spec to $(OPENAPI_FILE)"
 
 gen-typescript-client:
@@ -29,7 +29,7 @@ gen-go-client:
 	@echo "Generated Go client at clients/go"
 
 postprocess-generated-clients:
-	CRASHLAB_GO_MODULE="$(CRASHLAB_GO_MODULE)" ./scripts/sync_generated_clients.sh
+	SEPURUX_GO_MODULE="$(SEPURUX_GO_MODULE)" ./scripts/sync_generated_clients.sh
 	@echo "Postprocessed generated clients"
 
 gen-clients: openapi-export gen-typescript-client gen-go-client postprocess-generated-clients

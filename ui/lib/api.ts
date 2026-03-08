@@ -308,7 +308,7 @@ export class ApiError extends Error {
 
 const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const PUBLIC_API_KEY =
-  process.env.NEXT_PUBLIC_CRASHLAB_API_KEY ?? process.env.NEXT_PUBLIC_API_KEY ?? "";
+  process.env.NEXT_PUBLIC_SEPURUX_API_KEY ?? process.env.NEXT_PUBLIC_API_KEY ?? "";
 const PUBLIC_PROJECT_ID = process.env.NEXT_PUBLIC_PROJECT_ID ?? "";
 const BROWSER_PROXY_BASE = "/api/backend";
 
@@ -329,7 +329,7 @@ function getStoredApiBaseUrlSync() {
     return null;
   }
   try {
-    return window.localStorage.getItem("crashlab.apiBaseUrl");
+    return window.localStorage.getItem("sepurux.apiBaseUrl");
   } catch {
     return null;
   }

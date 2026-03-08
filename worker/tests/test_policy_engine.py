@@ -94,8 +94,8 @@ def test_evaluate_policy_irreversible_tools_gate_blocks_jira_commit_like_without
         },
         "approval": {"token_field": "confirmation_token"},
         "opa": {
-            "package": "crashlab.policy",
-            "query": "data.crashlab.policy.decision",
+            "package": "sepurux.policy",
+            "query": "data.sepurux.policy.decision",
         },
     }
 

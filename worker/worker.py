@@ -1104,7 +1104,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = get_settings()
     connection = redis.from_url(settings.redis_url)
-    queue = Queue("crashlab", connection=connection)
+    queue = Queue("sepurux", connection=connection)
     worker = Worker([queue], connection=connection)
     worker.work()
 
