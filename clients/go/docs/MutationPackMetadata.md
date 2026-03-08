@@ -9,6 +9,8 @@ Name | Type | Description | Notes
 **Name** | **string** |  | 
 **Description** | Pointer to **NullableString** |  | [optional] 
 **Config** | **interface{}** |  | 
+**IsSystem** | Pointer to **bool** |  | [optional] [default to false]
+**CoverageScore** | Pointer to **int32** |  | [optional] [default to 0]
 **CreatedAt** | **time.Time** |  | 
 
 ## Methods
@@ -155,6 +157,56 @@ SetConfig sets Config field to given value.
 `func (o *MutationPackMetadata) UnsetConfig()`
 
 UnsetConfig ensures that no value is present for Config, not even an explicit nil
+### GetIsSystem
+
+`func (o *MutationPackMetadata) GetIsSystem() bool`
+
+GetIsSystem returns the IsSystem field if non-nil, zero value otherwise.
+
+### GetIsSystemOk
+
+`func (o *MutationPackMetadata) GetIsSystemOk() (*bool, bool)`
+
+GetIsSystemOk returns a tuple with the IsSystem field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetIsSystem
+
+`func (o *MutationPackMetadata) SetIsSystem(v bool)`
+
+SetIsSystem sets IsSystem field to given value.
+
+### HasIsSystem
+
+`func (o *MutationPackMetadata) HasIsSystem() bool`
+
+HasIsSystem returns a boolean if a field has been set.
+
+### GetCoverageScore
+
+`func (o *MutationPackMetadata) GetCoverageScore() int32`
+
+GetCoverageScore returns the CoverageScore field if non-nil, zero value otherwise.
+
+### GetCoverageScoreOk
+
+`func (o *MutationPackMetadata) GetCoverageScoreOk() (*int32, bool)`
+
+GetCoverageScoreOk returns a tuple with the CoverageScore field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCoverageScore
+
+`func (o *MutationPackMetadata) SetCoverageScore(v int32)`
+
+SetCoverageScore sets CoverageScore field to given value.
+
+### HasCoverageScore
+
+`func (o *MutationPackMetadata) HasCoverageScore() bool`
+
+HasCoverageScore returns a boolean if a field has been set.
+
 ### GetCreatedAt
 
 `func (o *MutationPackMetadata) GetCreatedAt() time.Time`

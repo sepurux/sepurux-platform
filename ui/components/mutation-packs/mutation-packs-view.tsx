@@ -70,6 +70,8 @@ export function MutationPacksView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Coverage</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Mutations</TableHead>
                   <TableHead>Pack ID</TableHead>
@@ -79,7 +81,7 @@ export function MutationPacksView() {
               <TableBody>
                 {state.records.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                       No mutation packs found for this project.
                     </TableCell>
                   </TableRow>
@@ -90,6 +92,16 @@ export function MutationPacksView() {
                     return (
                       <TableRow key={record.mutation_pack_id}>
                         <TableCell className="font-medium text-foreground">{record.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={record.is_system ? "warning" : "default"}>
+                            {record.is_system ? "System" : "Custom"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={record.coverage_score < 40 ? "default" : "warning"}>
+                            {record.coverage_score}%
+                          </Badge>
+                        </TableCell>
                         <TableCell className="max-w-[260px] truncate text-muted-foreground">
                           {record.description || "--"}
                         </TableCell>
