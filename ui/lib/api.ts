@@ -177,7 +177,21 @@ export type MutationPackMetadata = {
   name: string;
   description: string | null;
   config: Record<string, unknown>;
+  is_system: boolean;
+  coverage_score: number;
   created_at: string;
+};
+
+export type MutationPackCreateResponse = MutationPackMetadata & {
+  warning: string | null;
+  validation_issues: string[];
+};
+
+export type MutationPackCoverageResponse = {
+  mutation_pack_id: string;
+  coverage_score: number;
+  categories: string[];
+  warning: string | null;
 };
 
 export type HardeningTemplateType =
@@ -482,9 +496,14 @@ export const api = {
     eval_set: unknown;
     mutation_pack_id?: string | null;
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
-  listMutationPacks: () => requestJson<MutationPackMetadata[]>("/v1/mutation-packs"),
+  listMutationPacks: (options?: { include_system?: boolean }) =>
+    requestJson<MutationPackMetadata[]>("/v1/mutation-packs", {
+      include_system: options?.include_system === false ? "false" : "true",
+    }),
   getMutationPack: (mutationPackId: string) =>
     requestJson<MutationPackMetadata>(`/v1/mutation-packs/${mutationPackId}`),
+  getMutationPackCoverage: (mutationPackId: string) =>
+    requestJson<MutationPackCoverageResponse>(`/v1/mutation-packs/${mutationPackId}/coverage`),
   listTemplates: () => requestJson<HardeningTemplateMetadata[]>("/v1/templates"),
   getTemplate: (templateId: string) =>
     requestJson<HardeningTemplateMetadata>(`/v1/templates/${templateId}`),
