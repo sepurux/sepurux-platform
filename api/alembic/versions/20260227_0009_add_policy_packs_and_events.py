@@ -35,8 +35,8 @@ DEV_DEFAULT_POLICY = {
     },
     "approval": {"token_field": "confirmation_token"},
     "opa": {
-        "package": "crashlab.policy",
-        "query": "data.crashlab.policy.decision",
+        "package": "sepurux.policy",
+        "query": "data.sepurux.policy.decision",
     },
 }
 

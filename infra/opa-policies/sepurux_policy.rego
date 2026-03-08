@@ -1,4 +1,4 @@
-package crashlab.policy
+package sepurux.policy
 
 allow_payments_refund := false
 

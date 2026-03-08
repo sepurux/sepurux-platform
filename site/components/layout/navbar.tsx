@@ -14,10 +14,10 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-lg">
       <div className="site-container flex h-20 items-center justify-between">
-        <Link href="/" className="inline-flex items-center gap-0" aria-label="Crash Lab home">
+        <Link href="/" className="inline-flex items-center gap-0" aria-label="Sepurux home">
           <Image
             src="/logo.png"
-            alt="Crash Lab logo"
+            alt="Sepurux logo"
             width={130}
             height={130}
             priority

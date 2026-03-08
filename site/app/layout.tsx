@@ -10,8 +10,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: "Crash Lab | Chaos engineering for AI agents",
-    template: "%s | Crash Lab",
+    default: "Sepurux | Reliability infrastructure for AI agents",
+    template: "%s | Sepurux",
   },
   description: siteConfig.description,
   icons: {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "Crash Lab | Chaos engineering for AI agents",
+    title: "Sepurux | Reliability infrastructure for AI agents",
     description: siteConfig.description,
     type: "website",
     url: siteConfig.url,
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
     images: [
       {
         url: siteConfig.ogImage,
-        alt: "Crash Lab",
+        alt: "Sepurux",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Crash Lab | Chaos engineering for AI agents",
+    title: "Sepurux | Reliability infrastructure for AI agents",
     description: siteConfig.description,
     images: [siteConfig.ogImage],
   },

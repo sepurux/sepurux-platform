@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 export const siteConfig = {
-  name: "Crash Lab",
+  name: "Sepurux",
   description:
-    "Chaos engineering for AI agents. Replay + mutate + score tool-using agents before they ship.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://crashlab.ai",
+    "Reliability infrastructure for AI agents. Replay workflows, inject failures, enforce policies, and block regressions before production.",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://sepurux.com",
   logo: "/logo.png",
   ogImage: "/logo.png",
 };

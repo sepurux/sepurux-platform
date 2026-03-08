@@ -6,8 +6,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Crash Lab UI",
-  description: "Agent Crash Lab dashboard"
+  title: "Sepurux UI",
+  description: "Agent Sepurux dashboard"
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

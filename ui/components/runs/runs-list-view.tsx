@@ -51,7 +51,7 @@ export function RunsListView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Runs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Filter and inspect recent runs from the Crash Lab pipeline.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Filter and inspect recent runs from the Sepurux pipeline.</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground">

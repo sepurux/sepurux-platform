@@ -20,10 +20,11 @@ export function HeroSection() {
             Used by platform teams
           </Badge>
           <h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
-            Chaos engineering for AI agents.
+            <span className="block">Sepurux</span>
+            <span className="block text-3xl md:text-5xl">Reliability infrastructure for AI agents</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-            Replay + mutate + score tool-using agents before they ship. Block regressions in CI.
+            Replay workflows, inject failures, enforce policies, and block regressions before production.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">

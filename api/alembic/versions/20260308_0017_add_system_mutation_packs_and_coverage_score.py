@@ -25,7 +25,7 @@ JSONB_COMPAT = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 SYSTEM_PACK_DEFINITIONS: list[dict[str, Any]] = [
     {
-        "name": "crashlab.core.reliability",
+        "name": "sepurux.core.reliability",
         "description": "Built-in reliability pack for brittle-agent detection.",
         "config": {
             "version": "0.1",
@@ -73,7 +73,7 @@ SYSTEM_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.security.injection",
+        "name": "sepurux.security.injection",
         "description": "Built-in security pack for prompt-injection propagation detection.",
         "config": {
             "version": "0.1",
@@ -108,7 +108,7 @@ SYSTEM_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.api.drift",
+        "name": "sepurux.api.drift",
         "description": "Built-in API drift pack for compatibility break detection.",
         "config": {
             "version": "0.1",
@@ -151,7 +151,7 @@ SYSTEM_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.latency.storm",
+        "name": "sepurux.latency.storm",
         "description": "Built-in latency storm pack for retry/backoff resilience testing.",
         "config": {
             "version": "0.1",
@@ -184,7 +184,7 @@ SYSTEM_PACK_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "crashlab.max_chaos",
+        "name": "sepurux.max_chaos",
         "description": "Built-in stress pack combining schema, latency, faults, and injection.",
         "config": {
             "version": "0.1",

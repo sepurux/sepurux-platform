@@ -3,7 +3,7 @@ set -euo pipefail
 
 COMPOSE_FILE="${COMPOSE_FILE:-infra/docker-compose.yml}"
 API="${API:-http://localhost:8000}"
-API_KEY="${API_KEY:-crashlab-dev-key}"
+API_KEY="${API_KEY:-sepurux-dev-key}"
 PROJECT_ID="${PROJECT_ID:-22222222-2222-2222-2222-222222222222}"
 RUNS_COUNT="${RUNS_COUNT:-20}"
 POLICY_RUNS_COUNT="${POLICY_RUNS_COUNT:-4}"
@@ -332,8 +332,8 @@ POLICY_PACK_JSON="$(
       ]
     },
     "opa": {
-      "package": "crashlab.policy",
-      "query": "data.crashlab.policy.decision"
+      "package": "sepurux.policy",
+      "query": "data.sepurux.policy.decision"
     }
   }
 }

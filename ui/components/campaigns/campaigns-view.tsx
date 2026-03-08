@@ -28,9 +28,9 @@ export function CampaignsView() {
   const recommendedSystemPackNames = useMemo(
     () =>
       new Set([
-        "crashlab.core.reliability",
-        "crashlab.security.injection",
-        "crashlab.max_chaos",
+        "sepurux.core.reliability",
+        "sepurux.security.injection",
+        "sepurux.max_chaos",
       ]),
     []
   );

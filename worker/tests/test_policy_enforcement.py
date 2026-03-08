@@ -104,8 +104,8 @@ def test_policy_pack_requires_approval_and_records_policy_event(
                     },
                     "approval": {"token_field": "confirmation_token"},
                     "opa": {
-                        "package": "crashlab.policy",
-                        "query": "data.crashlab.policy.decision",
+                        "package": "sepurux.policy",
+                        "query": "data.sepurux.policy.decision",
                     },
                 },
             )
@@ -212,8 +212,8 @@ def test_policy_pack_blocks_jira_commit_like_and_allows_draft(
                     },
                     "approval": {"token_field": "confirmation_token"},
                     "opa": {
-                        "package": "crashlab.policy",
-                        "query": "data.crashlab.policy.decision",
+                        "package": "sepurux.policy",
+                        "query": "data.sepurux.policy.decision",
                     },
                 },
             )
@@ -353,7 +353,7 @@ def test_opa_policy_pack_requires_approval_without_token(
     run_id = uuid4()
 
     def fake_opa_post(url: str, *, json: object, timeout: float) -> _FakeOPAResponse:
-        assert url.endswith("/v1/data/crashlab/policy/decision")
+        assert url.endswith("/v1/data/sepurux/policy/decision")
         assert isinstance(json, dict)
         return _FakeOPAResponse(
             200,
@@ -403,8 +403,8 @@ def test_opa_policy_pack_requires_approval_without_token(
                     "approval": {"token_field": "confirmation_token"},
                     "irreversible": {"tools": ["payments.refund"]},
                     "opa": {
-                        "package": "crashlab.policy",
-                        "query": "data.crashlab.policy.decision",
+                        "package": "sepurux.policy",
+                        "query": "data.sepurux.policy.decision",
                     },
                 },
             )
@@ -450,7 +450,7 @@ def test_opa_policy_pack_allows_tool_when_opa_returns_allow(
     run_id = uuid4()
 
     def fake_opa_post(url: str, *, json: object, timeout: float) -> _FakeOPAResponse:
-        assert url.endswith("/v1/data/crashlab/policy/decision")
+        assert url.endswith("/v1/data/sepurux/policy/decision")
         assert isinstance(json, dict)
         return _FakeOPAResponse(
             200,
@@ -500,8 +500,8 @@ def test_opa_policy_pack_allows_tool_when_opa_returns_allow(
                     "approval": {"token_field": "confirmation_token"},
                     "irreversible": {"tools": ["payments.refund"]},
                     "opa": {
-                        "package": "crashlab.policy",
-                        "query": "data.crashlab.policy.decision",
+                        "package": "sepurux.policy",
+                        "query": "data.sepurux.policy.decision",
                     },
                 },
             )
