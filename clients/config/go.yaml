@@ -1,5 +1,5 @@
 packageName: sepuruxclient
-packageVersion: 0.1.0
+packageVersion: 0.2.0
 moduleName: github.com/sepurux/go-sdk
 enumClassPrefix: true
 hideGenerationTimestamp: true

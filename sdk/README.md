@@ -108,5 +108,5 @@ Setup:
 - Ensure the package version in `sdk/pyproject.toml` is new.
 
 Release:
-- Push a tag like `sdk-v0.1.1` to trigger publish.
+- Push a tag like `sdk-v0.2.0` to trigger publish.
 - Or run the workflow manually from GitHub Actions.
