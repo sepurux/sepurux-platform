@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from app.models import Trace
 from app.services.audit_service import create_audit_event
+from app.services.trace_validation import normalized_trace_summary
 from app.storage import get_json_object, put_json_object
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,7 +16,12 @@ def create_trace(
     *,
     project_id: UUID,
     payload: Any,
-    source: str = "api",
+    source: str,
+    trace_version: str,
+    sdk_meta: str | None = None,
+    validation_status: str = "valid",
+    validation_errors: list[dict[str, str]] | None = None,
+    normalized_payload: dict[str, Any] | None = None,
     actor: str | None = None,
 ) -> Trace:
     trace_id = uuid4()
@@ -23,7 +29,17 @@ def create_trace(
 
     put_json_object(s3_key, payload)
 
-    trace = Trace(trace_id=trace_id, project_id=project_id, source=source, s3_key=s3_key)
+    trace = Trace(
+        trace_id=trace_id,
+        project_id=project_id,
+        source=source,
+        trace_version=trace_version,
+        sdk_meta=sdk_meta,
+        validation_status=validation_status,
+        validation_errors=validation_errors,
+        normalized_payload=normalized_payload,
+        s3_key=s3_key,
+    )
     db.add(trace)
     db.commit()
     db.refresh(trace)
@@ -36,6 +52,9 @@ def create_trace(
             "trace_id": str(trace.trace_id),
             "source": trace.source,
             "s3_key": trace.s3_key,
+            "trace_version": trace.trace_version,
+            "sdk_meta": trace.sdk_meta,
+            "validation_status": trace.validation_status,
         },
     )
     return trace
@@ -74,6 +93,11 @@ def trace_metadata(trace: Trace, *, payload: Any | None = None) -> dict[str, Any
     return {
         "trace_id": trace.trace_id,
         "source": trace.source,
+        "trace_version": trace.trace_version,
+        "sdk_meta": trace.sdk_meta,
+        "validation_status": trace.validation_status,
+        "validation_errors": trace.validation_errors,
+        "normalized_summary": normalized_trace_summary(trace.normalized_payload),
         "s3_key": trace.s3_key,
         "payload": payload,
         "created_at": trace.created_at,
