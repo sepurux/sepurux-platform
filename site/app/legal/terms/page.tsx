@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Terms of Service",
-  description: "Crash Lab terms of service for acceptable use, liability, and legal contact.",
+  description: "Sepurux terms of service for acceptable use, liability, and legal contact.",
   path: "/legal/terms",
 });
 
@@ -21,7 +21,7 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-lg font-semibold text-foreground">Use of service</h2>
           <p>
-            You may use Crash Lab for lawful internal testing and reliability evaluation of AI agent
+            You may use Sepurux for lawful internal testing and reliability evaluation of AI agent
             systems. You are responsible for compliance with your applicable policies and regulations.
           </p>
         </section>
@@ -44,7 +44,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="mb-2 text-lg font-semibold text-foreground">Contact</h2>
-          <p>For legal inquiries: legal@crashlab.ai</p>
+          <p>For legal inquiries: legal@sepurux.com</p>
         </section>
       </article>
     </div>

@@ -8,7 +8,7 @@ import { buildPageMetadata } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    "Simple pricing for Crash Lab with Starter, Team, and Enterprise tiers for AI agent reliability programs.",
+    "Simple pricing for Sepurux with Starter, Team, and Enterprise tiers for AI agent reliability programs.",
   path: "/pricing",
 });
 
