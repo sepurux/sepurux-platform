@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 import httpx
 
 from .types import RunStatus, TracePayload
+
+SDK_PACKAGE_NAME = "crashlab-sdk"
 
 
 class CrashLabClient:
@@ -14,6 +17,7 @@ class CrashLabClient:
         api_key: str | None = None,
         project_id: str | None = None,
         timeout: float = 30,
+        sdk_header: str | None = None,
     ) -> None:
         normalized = base_url.strip().rstrip("/")
         if not normalized:
@@ -23,11 +27,12 @@ class CrashLabClient:
         self.api_key = api_key
         self.project_id = project_id
         self.timeout = timeout
+        self.sdk_header = (sdk_header or _default_sdk_header()).strip() or _default_sdk_header()
 
         self._client = httpx.Client(
             base_url=self.base_url,
             timeout=timeout,
-            headers={"Accept": "application/json"},
+            headers={"Accept": "application/json", "X-CrashLab-SDK": self.sdk_header},
         )
 
     def close(self) -> None:
@@ -39,7 +44,7 @@ class CrashLabClient:
 
         response = self._client.post(
             "/v1/traces",
-            headers=self._auth_headers(),
+            headers=self._request_headers(),
             json=trace,
         )
         response.raise_for_status()
@@ -68,7 +73,7 @@ class CrashLabClient:
 
         response = self._client.post(
             "/v1/campaigns",
-            headers=self._auth_headers(),
+            headers=self._request_headers(),
             json=payload,
         )
         response.raise_for_status()
@@ -94,7 +99,7 @@ class CrashLabClient:
         # Prefer standard /v1/runs. If unavailable, fallback to CI endpoint.
         response = self._client.post(
             "/v1/runs",
-            headers=self._auth_headers(),
+            headers=self._request_headers(),
             json=run_payload,
         )
 
@@ -110,7 +115,7 @@ class CrashLabClient:
             }
             response = self._client.post(
                 "/v1/ci/runs",
-                headers=self._auth_headers(),
+                headers=self._request_headers(),
                 json=ci_payload,
             )
 
@@ -124,7 +129,7 @@ class CrashLabClient:
     def get_run(self, run_id: str) -> RunStatus:
         response = self._client.get(
             f"/v1/runs/{run_id}",
-            headers=self._auth_headers(),
+            headers=self._request_headers(),
         )
         response.raise_for_status()
 
@@ -143,12 +148,13 @@ class CrashLabClient:
         del exc_type, exc, tb
         self.close()
 
-    def _auth_headers(self) -> dict[str, str]:
+    def _request_headers(self) -> dict[str, str]:
         headers: dict[str, str] = {}
         if self.api_key:
             headers["X-API-Key"] = self.api_key
         if self.project_id:
             headers["X-Project-Id"] = self.project_id
+        headers["X-CrashLab-SDK"] = self.sdk_header
         return headers
 
 
@@ -157,3 +163,11 @@ def _parse_json_response(response: httpx.Response) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("Expected JSON object response")
     return data
+
+
+def _default_sdk_header() -> str:
+    try:
+        sdk_version = version(SDK_PACKAGE_NAME)
+    except PackageNotFoundError:
+        sdk_version = "dev"
+    return f"py/{sdk_version}"
