@@ -33,8 +33,11 @@ print("trace_id:", trace_id)
 ### `CrashLabClient`
 
 ```python
-CrashLabClient(base_url, api_key=None, project_id=None, timeout=30)
+CrashLabClient(base_url, api_key=None, project_id=None, timeout=30, sdk_header=None)
 ```
+
+The SDK automatically sends `X-CrashLab-SDK: py/<version>` on requests.
+Use `sdk_header` only if you need to override it manually.
 
 Methods:
 - `upload_trace(trace: dict) -> str`
