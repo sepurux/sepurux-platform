@@ -24,6 +24,11 @@ var _ MappedNullable = &TraceMetadata{}
 type TraceMetadata struct {
 	TraceId string `json:"trace_id"`
 	Source string `json:"source"`
+	TraceVersion string `json:"trace_version"`
+	SdkMeta NullableString `json:"sdk_meta,omitempty"`
+	ValidationStatus string `json:"validation_status"`
+	ValidationErrors []map[string]string `json:"validation_errors,omitempty"`
+	NormalizedSummary map[string]interface{} `json:"normalized_summary,omitempty"`
 	S3Key string `json:"s3_key"`
 	Payload NullableAnyOf `json:"payload,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
@@ -35,10 +40,12 @@ type _TraceMetadata TraceMetadata
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewTraceMetadata(traceId string, source string, s3Key string, createdAt time.Time) *TraceMetadata {
+func NewTraceMetadata(traceId string, source string, traceVersion string, validationStatus string, s3Key string, createdAt time.Time) *TraceMetadata {
 	this := TraceMetadata{}
 	this.TraceId = traceId
 	this.Source = source
+	this.TraceVersion = traceVersion
+	this.ValidationStatus = validationStatus
 	this.S3Key = s3Key
 	this.CreatedAt = createdAt
 	return &this
@@ -98,6 +105,162 @@ func (o *TraceMetadata) GetSourceOk() (*string, bool) {
 // SetSource sets field value
 func (o *TraceMetadata) SetSource(v string) {
 	o.Source = v
+}
+
+// GetTraceVersion returns the TraceVersion field value
+func (o *TraceMetadata) GetTraceVersion() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.TraceVersion
+}
+
+// GetTraceVersionOk returns a tuple with the TraceVersion field value
+// and a boolean to check if the value has been set.
+func (o *TraceMetadata) GetTraceVersionOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.TraceVersion, true
+}
+
+// SetTraceVersion sets field value
+func (o *TraceMetadata) SetTraceVersion(v string) {
+	o.TraceVersion = v
+}
+
+// GetSdkMeta returns the SdkMeta field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TraceMetadata) GetSdkMeta() string {
+	if o == nil || IsNil(o.SdkMeta.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.SdkMeta.Get()
+}
+
+// GetSdkMetaOk returns a tuple with the SdkMeta field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TraceMetadata) GetSdkMetaOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.SdkMeta.Get(), o.SdkMeta.IsSet()
+}
+
+// HasSdkMeta returns a boolean if a field has been set.
+func (o *TraceMetadata) HasSdkMeta() bool {
+	if o != nil && o.SdkMeta.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetSdkMeta gets a reference to the given NullableString and assigns it to the SdkMeta field.
+func (o *TraceMetadata) SetSdkMeta(v string) {
+	o.SdkMeta.Set(&v)
+}
+// SetSdkMetaNil sets the value for SdkMeta to be an explicit nil
+func (o *TraceMetadata) SetSdkMetaNil() {
+	o.SdkMeta.Set(nil)
+}
+
+// UnsetSdkMeta ensures that no value is present for SdkMeta, not even an explicit nil
+func (o *TraceMetadata) UnsetSdkMeta() {
+	o.SdkMeta.Unset()
+}
+
+// GetValidationStatus returns the ValidationStatus field value
+func (o *TraceMetadata) GetValidationStatus() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.ValidationStatus
+}
+
+// GetValidationStatusOk returns a tuple with the ValidationStatus field value
+// and a boolean to check if the value has been set.
+func (o *TraceMetadata) GetValidationStatusOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.ValidationStatus, true
+}
+
+// SetValidationStatus sets field value
+func (o *TraceMetadata) SetValidationStatus(v string) {
+	o.ValidationStatus = v
+}
+
+// GetValidationErrors returns the ValidationErrors field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TraceMetadata) GetValidationErrors() []map[string]string {
+	if o == nil {
+		var ret []map[string]string
+		return ret
+	}
+	return o.ValidationErrors
+}
+
+// GetValidationErrorsOk returns a tuple with the ValidationErrors field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TraceMetadata) GetValidationErrorsOk() ([]map[string]string, bool) {
+	if o == nil || IsNil(o.ValidationErrors) {
+		return nil, false
+	}
+	return o.ValidationErrors, true
+}
+
+// HasValidationErrors returns a boolean if a field has been set.
+func (o *TraceMetadata) HasValidationErrors() bool {
+	if o != nil && !IsNil(o.ValidationErrors) {
+		return true
+	}
+
+	return false
+}
+
+// SetValidationErrors gets a reference to the given []map[string]string and assigns it to the ValidationErrors field.
+func (o *TraceMetadata) SetValidationErrors(v []map[string]string) {
+	o.ValidationErrors = v
+}
+
+// GetNormalizedSummary returns the NormalizedSummary field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TraceMetadata) GetNormalizedSummary() map[string]interface{} {
+	if o == nil {
+		var ret map[string]interface{}
+		return ret
+	}
+	return o.NormalizedSummary
+}
+
+// GetNormalizedSummaryOk returns a tuple with the NormalizedSummary field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TraceMetadata) GetNormalizedSummaryOk() (map[string]interface{}, bool) {
+	if o == nil || IsNil(o.NormalizedSummary) {
+		return map[string]interface{}{}, false
+	}
+	return o.NormalizedSummary, true
+}
+
+// HasNormalizedSummary returns a boolean if a field has been set.
+func (o *TraceMetadata) HasNormalizedSummary() bool {
+	if o != nil && !IsNil(o.NormalizedSummary) {
+		return true
+	}
+
+	return false
+}
+
+// SetNormalizedSummary gets a reference to the given map[string]interface{} and assigns it to the NormalizedSummary field.
+func (o *TraceMetadata) SetNormalizedSummary(v map[string]interface{}) {
+	o.NormalizedSummary = v
 }
 
 // GetS3Key returns the S3Key field value
@@ -202,6 +365,17 @@ func (o TraceMetadata) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["trace_id"] = o.TraceId
 	toSerialize["source"] = o.Source
+	toSerialize["trace_version"] = o.TraceVersion
+	if o.SdkMeta.IsSet() {
+		toSerialize["sdk_meta"] = o.SdkMeta.Get()
+	}
+	toSerialize["validation_status"] = o.ValidationStatus
+	if o.ValidationErrors != nil {
+		toSerialize["validation_errors"] = o.ValidationErrors
+	}
+	if o.NormalizedSummary != nil {
+		toSerialize["normalized_summary"] = o.NormalizedSummary
+	}
 	toSerialize["s3_key"] = o.S3Key
 	if o.Payload.IsSet() {
 		toSerialize["payload"] = o.Payload.Get()
@@ -217,6 +391,8 @@ func (o *TraceMetadata) UnmarshalJSON(data []byte) (err error) {
 	requiredProperties := []string{
 		"trace_id",
 		"source",
+		"trace_version",
+		"validation_status",
 		"s3_key",
 		"created_at",
 	}

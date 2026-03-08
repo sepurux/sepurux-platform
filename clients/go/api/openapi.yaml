@@ -3674,11 +3674,19 @@ components:
       title: ToolUsageStatsItem
     TraceMetadata:
       example:
+        sdk_meta: sdk_meta
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        normalized_summary:
+          key: ""
+        trace_version: trace_version
         payload: ""
         s3_key: s3_key
         created_at: 2000-01-23T04:56:07.000+00:00
+        validation_errors:
+        - key: validation_errors
+        - key: validation_errors
         source: source
+        validation_status: validation_status
       properties:
         trace_id:
           format: uuid
@@ -3687,6 +3695,23 @@ components:
         source:
           title: Source
           type: string
+        trace_version:
+          title: Trace Version
+          type: string
+        sdk_meta:
+          nullable: true
+          type: string
+        validation_status:
+          title: Validation Status
+          type: string
+        validation_errors:
+          items:
+            additionalProperties:
+              type: string
+          nullable: true
+        normalized_summary:
+          additionalProperties: {}
+          nullable: true
         s3_key:
           title: S3 Key
           type: string
@@ -3703,6 +3728,8 @@ components:
       - s3_key
       - source
       - trace_id
+      - trace_version
+      - validation_status
       title: TraceMetadata
     ValidationError:
       example:

@@ -73,8 +73,10 @@ def validate_and_normalize_trace(
             timestamp = normalized_event.get("timestamp")
             if not isinstance(timestamp, str) or not timestamp.strip():
                 normalized_event["timestamp"] = (
-                    base_timestamp + timedelta(milliseconds=index)
-                ).isoformat().replace("+00:00", "Z")
+                    (base_timestamp + timedelta(milliseconds=index))
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
 
             if event_type == "tool_call":
                 tool = normalized_event.get("tool")

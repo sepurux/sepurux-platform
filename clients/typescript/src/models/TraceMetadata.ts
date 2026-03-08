@@ -36,6 +36,36 @@ export interface TraceMetadata {
      * @type {string}
      * @memberof TraceMetadata
      */
+    trace_version: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TraceMetadata
+     */
+    sdk_meta?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TraceMetadata
+     */
+    validation_status: string;
+    /**
+     * 
+     * @type {Array<{ [key: string]: string; }>}
+     * @memberof TraceMetadata
+     */
+    validation_errors?: Array<{ [key: string]: string; }> | null;
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof TraceMetadata
+     */
+    normalized_summary?: { [key: string]: any; } | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TraceMetadata
+     */
     s3_key: string;
     /**
      * 
@@ -57,6 +87,8 @@ export interface TraceMetadata {
 export function instanceOfTraceMetadata(value: object): value is TraceMetadata {
     if (!('trace_id' in value) || value['trace_id'] === undefined) return false;
     if (!('source' in value) || value['source'] === undefined) return false;
+    if (!('trace_version' in value) || value['trace_version'] === undefined) return false;
+    if (!('validation_status' in value) || value['validation_status'] === undefined) return false;
     if (!('s3_key' in value) || value['s3_key'] === undefined) return false;
     if (!('created_at' in value) || value['created_at'] === undefined) return false;
     return true;
@@ -74,6 +106,11 @@ export function TraceMetadataFromJSONTyped(json: any, ignoreDiscriminator: boole
         
         'trace_id': json['trace_id'],
         'source': json['source'],
+        'trace_version': json['trace_version'],
+        'sdk_meta': json['sdk_meta'] == null ? undefined : json['sdk_meta'],
+        'validation_status': json['validation_status'],
+        'validation_errors': json['validation_errors'] == null ? undefined : json['validation_errors'],
+        'normalized_summary': json['normalized_summary'] == null ? undefined : json['normalized_summary'],
         's3_key': json['s3_key'],
         'payload': json['payload'] == null ? undefined : FromJSON(json['payload']),
         'created_at': (new Date(json['created_at'])),
@@ -88,6 +125,11 @@ export function TraceMetadataToJSON(value?: TraceMetadata | null): any {
         
         'trace_id': value['trace_id'],
         'source': value['source'],
+        'trace_version': value['trace_version'],
+        'sdk_meta': value['sdk_meta'],
+        'validation_status': value['validation_status'],
+        'validation_errors': value['validation_errors'],
+        'normalized_summary': value['normalized_summary'],
         's3_key': value['s3_key'],
         'payload': ToJSON(value['payload']),
         'created_at': ((value['created_at']).toISOString()),
