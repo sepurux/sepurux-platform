@@ -2,22 +2,22 @@ from __future__ import annotations
 
 import os
 
-from crashlab_sdk import CrashLabClient, crashlab_trace
+from sepurux import SepuruxClient, sepurux_trace
 
 
 def main() -> None:
-    base_url = os.getenv("CRASHLAB_API_BASE_URL", "http://localhost:8000")
-    ui_base = os.getenv("CRASHLAB_UI_BASE_URL", "http://localhost:3000").rstrip("/")
-    api_key = os.getenv("CRASHLAB_API_KEY")
-    project_id = os.getenv("CRASHLAB_PROJECT_ID")
-    campaign_id = os.getenv("CRASHLAB_CAMPAIGN_ID")
+    base_url = os.getenv("SEPURUX_API_BASE_URL", "http://localhost:8000")
+    ui_base = os.getenv("SEPURUX_UI_BASE_URL", "http://localhost:3000").rstrip("/")
+    api_key = os.getenv("SEPURUX_API_KEY")
+    project_id = os.getenv("SEPURUX_PROJECT_ID")
+    campaign_id = os.getenv("SEPURUX_CAMPAIGN_ID")
 
-    with CrashLabClient(
+    with SepuruxClient(
         base_url=base_url,
         api_key=api_key,
         project_id=project_id,
     ) as client:
-        with crashlab_trace("sdk_demo_flow", {"intent": "create jira issue"}) as recorder:
+        with sepurux_trace("sdk_demo_flow", {"intent": "create jira issue"}) as recorder:
             recorder.model_step(
                 "analyze_request",
                 {"text": "Please create a bug ticket for checkout timeout"},
@@ -47,7 +47,7 @@ def main() -> None:
             print(f"Started run_id: {run_id}")
             print(f"Run URL: {ui_base}/runs/{run_id}")
         else:
-            print("CRASHLAB_CAMPAIGN_ID not provided; skipping run start.")
+            print("SEPURUX_CAMPAIGN_ID not provided; skipping run start.")
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ export function Sidebar() {
           <Activity className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Agent Crash Lab</p>
+          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Agent Sepurux</p>
           <p className="text-sm font-semibold text-foreground">Control Plane</p>
         </div>
       </div>

@@ -70,7 +70,7 @@ def test_webhook_crud_and_rotate_secret(
     create_response = client.post(
         "/v1/webhooks",
         json={
-            "url": "https://example.com/hooks/crash-lab",
+            "url": "https://example.com/hooks/sepurux",
             "events": ["run.completed"],
             "is_enabled": True,
         },
@@ -86,7 +86,7 @@ def test_webhook_crud_and_rotate_secret(
     listed = list_response.json()
     assert len(listed) == 1
     assert listed[0]["webhook_id"] == webhook_id
-    assert listed[0]["url"] == "https://example.com/hooks/crash-lab"
+    assert listed[0]["url"] == "https://example.com/hooks/sepurux"
 
     patch_response = client.patch(
         f"/v1/webhooks/{webhook_id}",

@@ -131,7 +131,7 @@ def _ci_decision(
 
 
 def _build_dashboard_url(request: Request, run_id: UUID) -> str:
-    ui_base = os.getenv("CRASHLAB_UI_BASE_URL")
+    ui_base = os.getenv("SEPURUX_UI_BASE_URL")
     if ui_base:
         return f"{ui_base.rstrip('/')}/runs/{run_id}"
     base = str(request.base_url).rstrip("/")

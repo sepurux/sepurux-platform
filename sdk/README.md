@@ -1,6 +1,6 @@
-# Crash Lab Python SDK
+# Sepurux Python SDK
 
-Python SDK for recording Crash Lab traces and uploading them to a Crash Lab API.
+Python SDK for recording Sepurux traces and uploading them to a Sepurux API.
 
 ## Install
 
@@ -11,15 +11,15 @@ pip install -e sdk
 ## Quick start
 
 ```python
-from crashlab_sdk import CrashLabClient, crashlab_trace
+from sepurux import SepuruxClient, sepurux_trace
 
-client = CrashLabClient(
+client = SepuruxClient(
     base_url="http://localhost:8000",
-    api_key="crashlab-dev-key",
+    api_key="sepurux-dev-key",
     project_id="22222222-2222-2222-2222-222222222222",
 )
 
-with crashlab_trace("example_task", {"user_id": "u-123"}) as rec:
+with sepurux_trace("example_task", {"user_id": "u-123"}) as rec:
     rec.model_step("plan", {"goal": "create issue"}, output={"ok": True})
     rec.tool_call("jira.create_issue(commit)", {"summary": "SDK test"})
     rec.tool_result("jira.create_issue(commit)", {"issue_id": "OPS-123"})
@@ -30,13 +30,13 @@ print("trace_id:", trace_id)
 
 ## API
 
-### `CrashLabClient`
+### `SepuruxClient`
 
 ```python
-CrashLabClient(base_url, api_key=None, project_id=None, timeout=30, sdk_header=None)
+SepuruxClient(base_url, api_key=None, project_id=None, timeout=30, sdk_header=None)
 ```
 
-The SDK automatically sends `X-CrashLab-SDK: py/<version>` on requests.
+The SDK automatically sends `X-Sepurux-SDK: py/<version>` on requests.
 Use `sdk_header` only if you need to override it manually.
 
 Methods:
@@ -63,9 +63,9 @@ Methods:
 Use a context manager:
 
 ```python
-from crashlab_sdk import crashlab_trace
+from sepurux import sepurux_trace
 
-with crashlab_trace("task_name", {"input": "value"}) as rec:
+with sepurux_trace("task_name", {"input": "value"}) as rec:
     rec.model_step("name", {"foo": "bar"}, output={"ok": True})
     rec.tool_call("tool.name", {"arg": 1})
     rec.tool_result("tool.name", {"result": "ok"})
@@ -75,7 +75,7 @@ with crashlab_trace("task_name", {"input": "value"}) as rec:
 ### Decorator
 
 ```python
-from crashlab_sdk import record_trace
+from sepurux import record_trace
 
 @record_trace(client=client, campaign_id="<campaign_id>")
 def run_business_logic(x: int) -> int:
@@ -93,11 +93,11 @@ python sdk/examples/sdk_demo.py
 ```
 
 Optional environment variables:
-- `CRASHLAB_API_BASE_URL` (default `http://localhost:8000`)
-- `CRASHLAB_UI_BASE_URL` (default `http://localhost:3000`)
-- `CRASHLAB_API_KEY`
-- `CRASHLAB_PROJECT_ID`
-- `CRASHLAB_CAMPAIGN_ID` (if provided, script starts a run)
+- `SEPURUX_API_BASE_URL` (default `http://localhost:8000`)
+- `SEPURUX_UI_BASE_URL` (default `http://localhost:3000`)
+- `SEPURUX_API_KEY`
+- `SEPURUX_PROJECT_ID`
+- `SEPURUX_CAMPAIGN_ID` (if provided, script starts a run)
 
 ## Publish to PyPI (CI)
 
@@ -108,5 +108,5 @@ Setup:
 - Ensure the package version in `sdk/pyproject.toml` is new.
 
 Release:
-- Push a tag like `sdk-v0.1.1` to trigger publish.
+- Push a tag like `sdk-v0.2.0` to trigger publish.
 - Or run the workflow manually from GitHub Actions.

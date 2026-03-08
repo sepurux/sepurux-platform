@@ -59,7 +59,7 @@ def send_signed_webhook(
     body = serialize_webhook_payload(payload)
     headers = {
         "Content-Type": "application/json",
-        "X-CrashLab-Signature": generate_webhook_signature(secret, body),
+        "X-Sepurux-Signature": generate_webhook_signature(secret, body),
     }
 
     last_error: str | None = None

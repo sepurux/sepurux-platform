@@ -10,7 +10,7 @@ from .trace import TraceBuilder
 from .types import TracePayload
 
 if TYPE_CHECKING:
-    from .client import CrashLabClient
+    from .client import SepuruxClient
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -43,7 +43,7 @@ class TraceRecorder:
 
 
 @contextmanager
-def crashlab_trace(
+def sepurux_trace(
     task_name: str,
     task_input: dict[str, Any] | None = None,
 ) -> Iterator[TraceRecorder]:
@@ -53,7 +53,7 @@ def crashlab_trace(
 
 def record_trace(
     *,
-    client: CrashLabClient,
+    client: SepuruxClient,
     campaign_id: str | None = None,
     task_name: str | None = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
@@ -69,7 +69,7 @@ def record_trace(
                 "kwargs": _safe_json_value(dict(kwargs)),
             }
 
-            with crashlab_trace(trace_task_name, task_input=task_input) as recorder:
+            with sepurux_trace(trace_task_name, task_input=task_input) as recorder:
                 recorder.model_step(
                     "function.call",
                     {"qualname": getattr(func, "__qualname__", func.__name__)},

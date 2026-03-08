@@ -3,7 +3,7 @@ set -euo pipefail
 
 API="${API:-http://localhost:8000}"
 UI_BASE_URL="${UI_BASE_URL:-http://localhost:3000}"
-API_KEY="${API_KEY:-crashlab-dev-key}"
+API_KEY="${API_KEY:-sepurux-dev-key}"
 PROJECT_ID="${PROJECT_ID:-22222222-2222-2222-2222-222222222222}"
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-300}"
 RUN_POLL_SECONDS="${RUN_POLL_SECONDS:-3}"
@@ -127,8 +127,8 @@ POLICY_PACK_JSON="$(
       ]
     },
     "opa": {
-      "package": "crashlab.policy",
-      "query": "data.crashlab.policy.decision"
+      "package": "sepurux.policy",
+      "query": "data.sepurux.policy.decision"
     }
   }
 }
@@ -185,7 +185,7 @@ print_run_summary "baseline" "$RUN1_ID"
 
 if [ "$NO_WAIT_FOR_EDIT" != "1" ]; then
   echo
-  echo "[demo] Edit infra/opa-policies/crashlab_policy.rego and set:"
+  echo "[demo] Edit infra/opa-policies/sepurux_policy.rego and set:"
   echo "  allow_payments_refund := true"
   echo "[demo] OPA is running with --watch and should hot-reload automatically."
   read -r -p "Press Enter when ready to rerun campaign... " _

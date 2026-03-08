@@ -24,7 +24,7 @@ curl http://localhost:8000/v1/runs/<run_id>/stats`;
 export const metadata: Metadata = buildPageMetadata({
   title: "Docs",
   description:
-    "Crash Lab quickstart snippets and links to API docs, OpenAPI schema, and reliability workflows.",
+    "Sepurux quickstart snippets and links to API docs, OpenAPI schema, and reliability workflows.",
   path: "/docs",
 });
 
@@ -37,7 +37,7 @@ export default function DocsPage() {
           Developer docs and quickstart.
         </h1>
         <p className="mt-5 text-lg text-muted-foreground">
-          Crash Lab API docs are available from the backend service. Start with OpenAPI, then run your first campaign.
+          Sepurux API docs are available from the backend service. Start with OpenAPI, then run your first campaign.
         </p>
       </header>
 

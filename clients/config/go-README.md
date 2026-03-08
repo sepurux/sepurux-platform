@@ -1,4 +1,4 @@
-# Crash Lab Go Client
+# Sepurux Go Client
 
 Generated from `clients/openapi.json` with OpenAPI Generator (`go`).
 
@@ -18,23 +18,23 @@ import (
 	"fmt"
 	"os"
 
-	crashlabclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	sepuruxclient "github.com/sepurux/go-sdk"
 )
 
 func main() {
-	baseURL := os.Getenv("CRASHLAB_BASE_URL")
+	baseURL := os.Getenv("SEPURUX_BASE_URL")
 	if baseURL == "" {
 		baseURL = "http://localhost:8000"
 	}
 
-	cfg := crashlabclient.NewConfiguration()
-	cfg.Servers = crashlabclient.ServerConfigurations{{URL: baseURL}}
-	cfg.AddDefaultHeader("X-API-Key", os.Getenv("CRASHLAB_API_KEY"))
+	cfg := sepuruxclient.NewConfiguration()
+	cfg.Servers = sepuruxclient.ServerConfigurations{{URL: baseURL}}
+	cfg.AddDefaultHeader("X-API-Key", os.Getenv("SEPURUX_API_KEY"))
 
-	client := crashlabclient.NewAPIClient(cfg)
+	client := sepuruxclient.NewAPIClient(cfg)
 	ctx := context.Background()
-	projectID := os.Getenv("CRASHLAB_PROJECT_ID")
-	campaignID := os.Getenv("CRASHLAB_CAMPAIGN_ID")
+	projectID := os.Getenv("SEPURUX_PROJECT_ID")
+	campaignID := os.Getenv("SEPURUX_CAMPAIGN_ID")
 
 	traceBody := map[string]interface{}{
 		"trace_version": "0.1",
@@ -48,7 +48,7 @@ func main() {
 		panic(err)
 	}
 
-	runReq := crashlabclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
+	runReq := sepuruxclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
 	run, _, err := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
 	if err != nil {
 		panic(err)

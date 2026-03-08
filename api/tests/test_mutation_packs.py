@@ -226,11 +226,11 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
 
     system_rows = [row for row in payload if row["is_system"]]
     system_names = {row["name"] for row in system_rows}
-    assert "crashlab.core.reliability" in system_names
-    assert "crashlab.security.injection" in system_names
-    assert "crashlab.api.drift" in system_names
-    assert "crashlab.latency.storm" in system_names
-    assert "crashlab.max_chaos" in system_names
+    assert "sepurux.core.reliability" in system_names
+    assert "sepurux.security.injection" in system_names
+    assert "sepurux.api.drift" in system_names
+    assert "sepurux.latency.storm" in system_names
+    assert "sepurux.max_chaos" in system_names
 
     sample_system_pack_id = system_rows[0]["mutation_pack_id"]
     delete_response = client.delete(f"/v1/mutation-packs/{sample_system_pack_id}")

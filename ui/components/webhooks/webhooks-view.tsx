@@ -148,7 +148,7 @@ export function WebhooksView() {
           <form className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]" onSubmit={onCreateWebhook}>
             <input
               className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-              placeholder="https://example.com/webhooks/crash-lab"
+              placeholder="https://example.com/webhooks/sepurux"
               value={url}
               onChange={(event) => setUrl(event.target.value)}
               required

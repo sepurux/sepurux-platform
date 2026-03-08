@@ -8,7 +8,7 @@ GO_TEMPLATE="${ROOT_DIR}/clients/config/go-README.md"
 TS_README="${ROOT_DIR}/clients/typescript/README.md"
 GO_README="${ROOT_DIR}/clients/go/README.md"
 GO_MOD_FILE="${ROOT_DIR}/clients/go/go.mod"
-GO_MODULE_PATH="${CRASHLAB_GO_MODULE:-github.com/felixkwasisarpong/crash-lab/clients/go}"
+GO_MODULE_PATH="${SEPURUX_GO_MODULE:-github.com/sepurux/go-sdk}"
 
 cp "${TS_TEMPLATE}" "${TS_README}"
 cp "${GO_TEMPLATE}" "${GO_README}"

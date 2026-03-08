@@ -182,7 +182,7 @@ export function TopBar() {
               CL
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">Agent Crash Lab</p>
+              <p className="truncate text-sm font-semibold text-foreground">Agent Sepurux</p>
               <p className="truncate text-xs text-muted-foreground">Reliability dashboard for replay diagnostics</p>
             </div>
           </div>

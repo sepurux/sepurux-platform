@@ -14,5 +14,5 @@ COPY . /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Start the RQ worker (listening to queue "crashlab")
+# Start the RQ worker (listening to queue "sepurux")
 CMD ["python", "-m", "worker"]

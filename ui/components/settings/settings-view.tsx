@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const ENV_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const ENV_API_KEY =
-  process.env.NEXT_PUBLIC_CRASHLAB_API_KEY ?? process.env.NEXT_PUBLIC_API_KEY ?? "";
+  process.env.NEXT_PUBLIC_SEPURUX_API_KEY ?? process.env.NEXT_PUBLIC_API_KEY ?? "";
 
 export function SettingsView() {
   const [apiBaseUrl, setApiBaseUrl] = useState(ENV_API_BASE_URL);
@@ -150,7 +150,7 @@ export function SettingsView() {
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
                 value={apiKey}
                 onChange={(event) => setApiKey(event.target.value)}
-                placeholder="crashlab-dev-key"
+                placeholder="sepurux-dev-key"
               />
             </label>
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import httpx
-from crashlab_sdk import CrashLabClient
+from sepurux import SepuruxClient
 
 
 class _RequestCapture:
@@ -19,7 +19,7 @@ def test_upload_trace_uses_traces_endpoint_and_headers() -> None:
     capture = _RequestCapture()
     transport = httpx.MockTransport(capture)
 
-    client = CrashLabClient(
+    client = SepuruxClient(
         base_url="http://localhost:8000",
         api_key="key-1",
         project_id="project-1",
@@ -28,7 +28,7 @@ def test_upload_trace_uses_traces_endpoint_and_headers() -> None:
         base_url=client.base_url,
         transport=transport,
         timeout=30,
-        headers={"Accept": "application/json", "X-CrashLab-SDK": client.sdk_header},
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
     )
 
     trace_id = client.upload_trace(
@@ -46,14 +46,14 @@ def test_upload_trace_uses_traces_endpoint_and_headers() -> None:
     assert request.url.path == "/v1/traces"
     assert request.headers.get("X-API-Key") == "key-1"
     assert request.headers.get("X-Project-Id") == "project-1"
-    assert request.headers.get("X-CrashLab-SDK", "").startswith("py/")
+    assert request.headers.get("X-Sepurux-SDK", "").startswith("py/")
 
 
 def test_upload_trace_uses_explicit_sdk_header_override() -> None:
     capture = _RequestCapture()
     transport = httpx.MockTransport(capture)
 
-    client = CrashLabClient(
+    client = SepuruxClient(
         base_url="http://localhost:8000",
         api_key="key-1",
         project_id="project-1",
@@ -63,7 +63,7 @@ def test_upload_trace_uses_explicit_sdk_header_override() -> None:
         base_url=client.base_url,
         transport=transport,
         timeout=30,
-        headers={"Accept": "application/json", "X-CrashLab-SDK": client.sdk_header},
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
     )
 
     trace_id = client.upload_trace(
@@ -78,4 +78,4 @@ def test_upload_trace_uses_explicit_sdk_header_override() -> None:
     assert trace_id == "trace-123"
     assert len(capture.requests) == 1
     request = capture.requests[0]
-    assert request.headers.get("X-CrashLab-SDK") == "py/9.9.9"
+    assert request.headers.get("X-Sepurux-SDK") == "py/9.9.9"

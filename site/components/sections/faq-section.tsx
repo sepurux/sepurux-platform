@@ -7,8 +7,8 @@ import {
 
 const faqs = [
   {
-    q: "What does Crash Lab test?",
-    a: "Crash Lab stress-tests tool-using AI agents by replaying traces and injecting controlled mutations.",
+    q: "What does Sepurux test?",
+    a: "Sepurux stress-tests tool-using AI agents by replaying traces and injecting controlled mutations.",
   },
   {
     q: "Can we gate pull requests?",

@@ -3,7 +3,7 @@ import { GitBranch, ShieldX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-const ciSnippet = `name: crashlab-gate
+const ciSnippet = `name: sepurux-gate
 on: [pull_request]
 
 jobs:
@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: crashlab replay --trace trace.json --campaign core-reliability
-      - run: crashlab gate --min-pass-rate 0.85 --max-unsafe 0`;
+      - run: sepurux replay --trace trace.json --campaign core-reliability
+      - run: sepurux gate --min-pass-rate 0.85 --max-unsafe 0`;
 
 export function CIGuardrailsSection() {
   return (
@@ -24,7 +24,7 @@ export function CIGuardrailsSection() {
             Block Regressions Before Deployment
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Connect Crash Lab to CI so reliability regressions and unsafe runs fail fast before
+            Connect Sepurux to CI so reliability regressions and unsafe runs fail fast before
             they reach production.
           </p>
           <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
