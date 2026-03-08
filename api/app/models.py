@@ -106,6 +106,21 @@ class Trace(Base):
     trace_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     source: Mapped[str] = mapped_column(Text, nullable=False)
+    trace_version: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="0.1",
+        server_default="0.1",
+    )
+    sdk_meta: Mapped[str | None] = mapped_column(Text, nullable=True)
+    validation_status: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="valid",
+        server_default="valid",
+    )
+    validation_errors: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    normalized_payload: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
     s3_key: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
