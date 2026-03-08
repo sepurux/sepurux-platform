@@ -46,6 +46,6 @@ await runsApi.postRunV1RunsPost({
 
 ## Release
 
-- Push a tag in the format `ts-recorder-vX.Y.Z` (must match `package.json` version).
+- Push a tag in the format `ts-recorder-v0.2.0` (must match `package.json` version).
 - GitHub Actions workflow `ts-recorder-publish-npm.yml` will test, pack, and publish to npm.
 - Required repo secret: `NPM_TOKEN`.

@@ -156,9 +156,9 @@ latest, _, _ := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjec
 
 Recorder package release tags:
 
-- PyPI SDK: `sdk-vX.Y.Z` (publishes to PyPI)
-- TypeScript recorder (npm): `ts-recorder-vX.Y.Z` (publishes to npm)
-- Go recorder module: `clients/go-recorder/vX.Y.Z` (creates GitHub release; consumable via `go get ...@vX.Y.Z`)
+- PyPI SDK: `sdk-v0.2.0` (publishes to PyPI)
+- TypeScript recorder (npm): `ts-recorder-v0.2.0` (publishes to npm)
+- Go recorder module: `clients/go-recorder/v0.2.0` (creates GitHub release; consumable via `go get ...@v0.2.0`)
 ## Run Inspector Endpoints
 
 List attempts for a run:
