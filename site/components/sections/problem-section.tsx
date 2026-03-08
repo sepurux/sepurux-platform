@@ -1,57 +1,70 @@
-import { AlertTriangle, KeyRound, ShieldAlert, Waypoints } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 const painPoints = [
-  {
-    icon: Waypoints,
-    title: "Schema drift breaks orchestration",
-    copy: "Tool responses change silently and agents crash mid-run.",
-  },
-  {
-    icon: KeyRound,
-    title: "Permission failures surface late",
-    copy: "Privilege and token issues are only discovered in production workflows.",
-  },
-  {
-    icon: ShieldAlert,
-    title: "Prompt and payload injection risks",
-    copy: "Unsafe instructions and poisoned tool outputs derail decision paths.",
-  },
-  {
-    icon: AlertTriangle,
-    title: "UI and API shape changes",
-    copy: "Minor contract shifts trigger brittle automation behavior across teams.",
-  },
+  "Tool schema changes break workflows",
+  "API responses drift silently",
+  "Latency and retries cascade failures",
+  "Prompt injection corrupts tool execution",
 ];
 
 export function ProblemSection() {
   return (
     <section className="site-container mt-24">
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">The Problem</p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-          Agents fail in the seams between tools.
-        </h2>
-      </div>
+      <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+        <div>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Problem</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            AI Agents Fail in Production
+          </h2>
+          <p className="mt-4 max-w-2xl text-muted-foreground">
+            Agent behavior breaks unpredictably when integrations move underneath you: tools change
+            shape, APIs drift, latency spikes trigger retries, and hostile instructions contaminate
+            execution.
+          </p>
+          <ul className="mt-6 space-y-3">
+            {painPoints.map((point) => (
+              <li key={point} className="flex items-start gap-3 text-sm text-muted-foreground">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {painPoints.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Card key={item.title}>
-              <CardContent className="flex items-start gap-4 pt-6">
-                <div className="rounded-md border border-primary/25 bg-primary/10 p-2.5">
-                  <Icon className="h-5 w-5 text-primary" />
+        <Card className="relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(14,165,233,0.16),transparent_48%),radial-gradient(circle_at_85%_78%,rgba(34,197,94,0.12),transparent_42%)]" />
+          <CardContent className="relative space-y-4 pt-6">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                Failure Path Diagram
+              </p>
+              <Badge variant="danger">Unstable</Badge>
+            </div>
+
+            <div className="rounded-lg border border-border/70 bg-background/70 p-4">
+              <div className="grid gap-3">
+                <div className="rounded-md border border-border/70 bg-card/80 p-3 text-xs text-foreground">
+                  Agent Plan
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.copy}</p>
+                <div className="ml-4 rounded-md border border-border/70 bg-card/80 p-3 text-xs text-foreground">
+                  Tool Schema v1 → v2
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                <div className="ml-8 rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+                  Payload parse failure
+                </div>
+                <div className="ml-4 rounded-md border border-amber-400/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  Retry storm + timeout chain
+                </div>
+                <div className="rounded-md border border-border/70 bg-card/80 p-3 text-xs text-foreground">
+                  Incident triggered
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </section>
   );
