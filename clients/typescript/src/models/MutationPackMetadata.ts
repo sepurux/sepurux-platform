@@ -51,6 +51,18 @@ export interface MutationPackMetadata {
     config: any | null;
     /**
      * 
+     * @type {boolean}
+     * @memberof MutationPackMetadata
+     */
+    is_system?: boolean;
+    /**
+     * 
+     * @type {number}
+     * @memberof MutationPackMetadata
+     */
+    coverage_score?: number;
+    /**
+     * 
      * @type {Date}
      * @memberof MutationPackMetadata
      */
@@ -84,6 +96,8 @@ export function MutationPackMetadataFromJSONTyped(json: any, ignoreDiscriminator
         'name': json['name'],
         'description': json['description'] == null ? undefined : json['description'],
         'config': json['config'],
+        'is_system': json['is_system'] == null ? undefined : json['is_system'],
+        'coverage_score': json['coverage_score'] == null ? undefined : json['coverage_score'],
         'created_at': (new Date(json['created_at'])),
     };
 }
@@ -99,6 +113,8 @@ export function MutationPackMetadataToJSON(value?: MutationPackMetadata | null):
         'name': value['name'],
         'description': value['description'],
         'config': value['config'],
+        'is_system': value['is_system'],
+        'coverage_score': value['coverage_score'],
         'created_at': ((value['created_at']).toISOString()),
     };
 }

@@ -52,7 +52,9 @@ docs/LethalMutationInsight.md
 docs/LethalMutationTopReason.md
 docs/LethalMutationTopTool.md
 docs/MutationCountPct.md
+docs/MutationPackCoverageResponse.md
 docs/MutationPackCreateRequest.md
+docs/MutationPackCreateResponse.md
 docs/MutationPackMetadata.md
 docs/MutationPacksAPI.md
 docs/MutationSummaryItem.md
@@ -129,7 +131,9 @@ model_lethal_mutation_insight.go
 model_lethal_mutation_top_reason.go
 model_lethal_mutation_top_tool.go
 model_mutation_count_pct.go
+model_mutation_pack_coverage_response.go
 model_mutation_pack_create_request.go
+model_mutation_pack_create_response.go
 model_mutation_pack_metadata.go
 model_mutation_summary_item.go
 model_mutation_summary_response.go

@@ -16,24 +16,41 @@
 import * as runtime from '../runtime';
 import type {
   HTTPValidationError,
+  MutationPackCoverageResponse,
   MutationPackCreateRequest,
+  MutationPackCreateResponse,
   MutationPackMetadata,
 } from '../models/index';
 import {
     HTTPValidationErrorFromJSON,
     HTTPValidationErrorToJSON,
+    MutationPackCoverageResponseFromJSON,
+    MutationPackCoverageResponseToJSON,
     MutationPackCreateRequestFromJSON,
     MutationPackCreateRequestToJSON,
+    MutationPackCreateResponseFromJSON,
+    MutationPackCreateResponseToJSON,
     MutationPackMetadataFromJSON,
     MutationPackMetadataToJSON,
 } from '../models/index';
+
+export interface DeleteMutationPackByIdV1MutationPacksMutationPackIdDeleteRequest {
+    mutationPackId: string;
+    xProjectId?: string | null;
+}
 
 export interface GetMutationPackByIdV1MutationPacksMutationPackIdGetRequest {
     mutationPackId: string;
     xProjectId?: string | null;
 }
 
+export interface GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest {
+    mutationPackId: string;
+    xProjectId?: string | null;
+}
+
 export interface GetMutationPacksV1MutationPacksGetRequest {
+    includeSystem?: boolean;
     xProjectId?: string | null;
 }
 
@@ -46,6 +63,42 @@ export interface PostMutationPackV1MutationPacksPostRequest {
  * 
  */
 export class MutationPacksApi extends runtime.BaseAPI {
+
+    /**
+     * Delete Mutation Pack By Id
+     */
+    async deleteMutationPackByIdV1MutationPacksMutationPackIdDeleteRaw(requestParameters: DeleteMutationPackByIdV1MutationPacksMutationPackIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['mutationPackId'] == null) {
+            throw new runtime.RequiredError(
+                'mutationPackId',
+                'Required parameter "mutationPackId" was null or undefined when calling deleteMutationPackByIdV1MutationPacksMutationPackIdDelete().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/mutation-packs/{mutation_pack_id}`.replace(`{${"mutation_pack_id"}}`, encodeURIComponent(String(requestParameters['mutationPackId']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete Mutation Pack By Id
+     */
+    async deleteMutationPackByIdV1MutationPacksMutationPackIdDelete(requestParameters: DeleteMutationPackByIdV1MutationPacksMutationPackIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deleteMutationPackByIdV1MutationPacksMutationPackIdDeleteRaw(requestParameters, initOverrides);
+    }
 
     /**
      * Get Mutation Pack By Id
@@ -85,10 +138,51 @@ export class MutationPacksApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get Mutation Pack Coverage
+     */
+    async getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRaw(requestParameters: GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MutationPackCoverageResponse>> {
+        if (requestParameters['mutationPackId'] == null) {
+            throw new runtime.RequiredError(
+                'mutationPackId',
+                'Required parameter "mutationPackId" was null or undefined when calling getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/mutation-packs/{mutation_pack_id}/coverage`.replace(`{${"mutation_pack_id"}}`, encodeURIComponent(String(requestParameters['mutationPackId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => MutationPackCoverageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Mutation Pack Coverage
+     */
+    async getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet(requestParameters: GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationPackCoverageResponse> {
+        const response = await this.getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Get Mutation Packs
      */
     async getMutationPacksV1MutationPacksGetRaw(requestParameters: GetMutationPacksV1MutationPacksGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<MutationPackMetadata>>> {
         const queryParameters: any = {};
+
+        if (requestParameters['includeSystem'] != null) {
+            queryParameters['include_system'] = requestParameters['includeSystem'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -117,7 +211,7 @@ export class MutationPacksApi extends runtime.BaseAPI {
     /**
      * Post Mutation Pack
      */
-    async postMutationPackV1MutationPacksPostRaw(requestParameters: PostMutationPackV1MutationPacksPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MutationPackMetadata>> {
+    async postMutationPackV1MutationPacksPostRaw(requestParameters: PostMutationPackV1MutationPacksPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MutationPackCreateResponse>> {
         if (requestParameters['mutationPackCreateRequest'] == null) {
             throw new runtime.RequiredError(
                 'mutationPackCreateRequest',
@@ -143,13 +237,13 @@ export class MutationPacksApi extends runtime.BaseAPI {
             body: MutationPackCreateRequestToJSON(requestParameters['mutationPackCreateRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => MutationPackMetadataFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => MutationPackCreateResponseFromJSON(jsonValue));
     }
 
     /**
      * Post Mutation Pack
      */
-    async postMutationPackV1MutationPacksPost(requestParameters: PostMutationPackV1MutationPacksPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationPackMetadata> {
+    async postMutationPackV1MutationPacksPost(requestParameters: PostMutationPackV1MutationPacksPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationPackCreateResponse> {
         const response = await this.postMutationPackV1MutationPacksPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
