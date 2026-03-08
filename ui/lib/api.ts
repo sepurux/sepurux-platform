@@ -1,6 +1,21 @@
 export type TraceMetadata = {
   trace_id: string;
   source: string;
+  trace_version: string;
+  sdk_meta: string | null;
+  validation_status: string;
+  validation_errors?: Array<{ path: string; message: string }> | null;
+  normalized_summary?: {
+    trace_version?: string;
+    event_count?: number;
+    event_types?: Record<string, number>;
+    tool_calls?: number;
+    tool_results?: number;
+    model_events?: number;
+    error_events?: number;
+    first_event_type?: string | null;
+    last_event_type?: string | null;
+  } | null;
   s3_key: string;
   payload?: Record<string, unknown> | unknown[] | null;
   created_at: string;

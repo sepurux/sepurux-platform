@@ -9,7 +9,9 @@ from app.schemas import TraceMetadata
 from app.services.audit_service import actor_from_request
 from app.services.trace_intake import create_trace, get_trace_payload, list_traces, trace_metadata
 from app.services.trace_intake import get_trace as get_trace_record
+from app.services.trace_validation import validate_and_normalize_trace
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/traces", tags=["traces"])
@@ -25,11 +27,38 @@ def post_trace(
     db: DbSession,
     project_scope: ProjectScopeDep,
     request: Request,
-) -> TraceMetadata:
+) -> TraceMetadata | JSONResponse:
+    normalized_payload, validation_issues = validate_and_normalize_trace(payload)
+    if validation_issues:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error": "invalid_trace",
+                "details": validation_issues,
+            },
+        )
+    if normalized_payload is None:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error": "invalid_trace",
+                "details": [{"path": "$", "message": "trace normalization failed"}],
+            },
+        )
+
+    sdk_meta = request.headers.get("X-CrashLab-SDK")
+    if isinstance(sdk_meta, str):
+        sdk_meta = sdk_meta.strip() or None
+
     trace = create_trace(
         db=db,
         project_id=project_scope.project_id,
         payload=payload,
+        source=str(normalized_payload["source"]),
+        trace_version=str(normalized_payload["trace_version"]),
+        sdk_meta=sdk_meta,
+        validation_status="valid",
+        normalized_payload=normalized_payload,
         actor=actor_from_request(request),
     )
     return TraceMetadata(**trace_metadata(trace))

@@ -10,6 +10,11 @@ from pydantic import BaseModel, Field
 class TraceMetadata(BaseModel):
     trace_id: UUID
     source: str
+    trace_version: str
+    sdk_meta: str | None = None
+    validation_status: str
+    validation_errors: list[dict[str, str]] | None = None
+    normalized_summary: dict[str, Any] | None = None
     s3_key: str
     payload: Any | None = None
     created_at: datetime

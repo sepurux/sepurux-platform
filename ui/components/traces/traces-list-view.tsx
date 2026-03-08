@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { api, type TraceMetadata } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -74,13 +75,16 @@ export function TracesListView() {
                 <TableRow>
                   <TableHead>Trace ID</TableHead>
                   <TableHead>Source</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>SDK</TableHead>
+                  <TableHead>Validation</TableHead>
                   <TableHead className="text-right">Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {state.traces.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                       No traces yet - upload via SDK or curl.
                     </TableCell>
                   </TableRow>
@@ -95,6 +99,13 @@ export function TracesListView() {
                         {shortId(trace.trace_id, 20)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{trace.source}</TableCell>
+                      <TableCell className="text-foreground">{trace.trace_version}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {trace.sdk_meta ?? "--"}
+                      </TableCell>
+                      <TableCell>
+                        <ValidationStatusBadge status={trace.validation_status} />
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatRelativeDate(trace.created_at)}
                       </TableCell>
@@ -108,4 +119,11 @@ export function TracesListView() {
       )}
     </div>
   );
+}
+
+function ValidationStatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
+  if (normalized === "valid") return <Badge variant="success">valid</Badge>;
+  if (normalized === "invalid") return <Badge variant="danger">invalid</Badge>;
+  return <Badge variant="outline">{status}</Badge>;
 }
