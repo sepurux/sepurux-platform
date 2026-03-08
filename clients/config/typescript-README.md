@@ -1,4 +1,4 @@
-# Crash Lab TypeScript Client
+# Sepurux TypeScript Client
 
 Generated from `clients/openapi.json` with OpenAPI Generator (`typescript-fetch`).
 
@@ -19,13 +19,13 @@ npm run build
 ## Quick Start
 
 ```ts
-import { Configuration, RunsApi, TracesApi } from "crashlab-client";
+import { Configuration, RunsApi, TracesApi } from "@sepurux/client";
 
 const config = new Configuration({
-  basePath: process.env.CRASHLAB_BASE_URL ?? "http://localhost:8000",
+  basePath: process.env.SEPURUX_BASE_URL ?? "http://localhost:8000",
   headers: {
-    "X-API-Key": process.env.CRASHLAB_API_KEY ?? "",
-    "X-Project-Id": process.env.CRASHLAB_PROJECT_ID ?? "",
+    "X-API-Key": process.env.SEPURUX_API_KEY ?? "",
+    "X-Project-Id": process.env.SEPURUX_PROJECT_ID ?? "",
   },
 });
 
@@ -43,7 +43,7 @@ const runsApi = new RunsApi(config);
 const run = await runsApi.postRunV1RunsPost({
   runCreateRequest: {
     trace_id: trace.trace_id,
-    campaign_id: process.env.CRASHLAB_CAMPAIGN_ID ?? "",
+    campaign_id: process.env.SEPURUX_CAMPAIGN_ID ?? "",
   },
 });
 

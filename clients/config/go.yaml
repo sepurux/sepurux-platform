@@ -1,8 +1,8 @@
-packageName: crashlabclient
+packageName: sepuruxclient
 packageVersion: 0.1.0
-moduleName: github.com/felixkwasisarpong/crash-lab/clients/go
+moduleName: github.com/sepurux/go-sdk
 enumClassPrefix: true
 hideGenerationTimestamp: true
 gitHost: github.com
-gitUserId: felixkwasisarpong
-gitRepoId: crash-lab/clients/go
+gitUserId: sepurux
+gitRepoId: go-sdk

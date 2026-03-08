@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: api
-      CRASHLAB_OPENAPI_URL: http://127.0.0.1:8000/openapi.json
+      SEPURUX_OPENAPI_URL: http://127.0.0.1:8000/openapi.json
 
     steps:
       - name: Checkout
@@ -44,7 +44,7 @@ jobs:
       - name: Regenerate OpenAPI clients
         run: |
           set -euo pipefail
-          uvicorn app.main:app --host 127.0.0.1 --port 8000 >/tmp/crashlab-uvicorn.log 2>&1 &
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 >/tmp/sepurux-uvicorn.log 2>&1 &
           UVICORN_PID=$!
 
           cleanup() {

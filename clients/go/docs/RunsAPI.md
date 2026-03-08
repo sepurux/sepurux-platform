@@ -29,7 +29,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	openapiclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	openapiclient "github.com/sepurux/go-sdk"
 )
 
 func main() {
@@ -105,7 +105,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	openapiclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	openapiclient "github.com/sepurux/go-sdk"
 )
 
 func main() {
@@ -179,7 +179,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	openapiclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	openapiclient "github.com/sepurux/go-sdk"
 )
 
 func main() {
@@ -253,7 +253,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	openapiclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	openapiclient "github.com/sepurux/go-sdk"
 )
 
 func main() {
@@ -323,7 +323,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	openapiclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	openapiclient "github.com/sepurux/go-sdk"
 )
 
 func main() {
@@ -389,7 +389,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	openapiclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	openapiclient "github.com/sepurux/go-sdk"
 )
 
 func main() {
@@ -462,7 +462,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	openapiclient "github.com/felixkwasisarpong/crash-lab/clients/go"
+	openapiclient "github.com/sepurux/go-sdk"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 {
-  "name": "crashlab-client",
+  "name": "@sepurux/client",
   "version": "0.1.0",
-  "description": "OpenAPI client for crashlab-client",
+  "description": "OpenAPI client for @sepurux/client",
   "author": "OpenAPI-Generator",
   "repository": {
     "type": "git",
