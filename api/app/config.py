@@ -21,7 +21,7 @@ class Settings:
         return cls(
             database_url=os.getenv(
                 "DATABASE_URL",
-                "postgresql+psycopg://sepurux:sepurux@localhost:5432/sepurux",
+                "postgresql+psycopg://crashlab:crashlab@localhost:5432/crashlab",
             ),
             redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
             s3_endpoint_url=os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"),
