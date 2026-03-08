@@ -6,20 +6,22 @@ export function Footer() {
       <div className="site-container flex flex-col gap-6 py-10 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <p>© {new Date().getFullYear()} Crash Lab. All rights reserved.</p>
         <div className="flex flex-wrap items-center gap-5">
-          <Link href="/product" className="hover:text-foreground">
-            Product
-          </Link>
-          <Link href="/pricing" className="hover:text-foreground">
-            Pricing
-          </Link>
           <Link href="/docs" className="hover:text-foreground">
             Docs
           </Link>
-          <Link href="/legal/privacy" className="hover:text-foreground">
-            Privacy
+          <a
+            href="https://github.com/felixkwasisarpong/Crash-Lab"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-foreground"
+          >
+            GitHub
+          </a>
+          <Link href="/docs#api" className="hover:text-foreground">
+            API
           </Link>
-          <Link href="/legal/terms" className="hover:text-foreground">
-            Terms
+          <Link href="/pricing" className="hover:text-foreground">
+            Pricing
           </Link>
         </div>
       </div>
