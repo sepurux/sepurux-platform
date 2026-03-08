@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 
 import { HeroSection } from "@/components/sections/hero-section";
 import { ProblemSection } from "@/components/sections/problem-section";
-import { SolutionStepper } from "@/components/sections/solution-stepper";
-import { FeatureGrid } from "@/components/sections/feature-grid";
-import { HowItWorksSection } from "@/components/sections/how-it-works-section";
-import { SecuritySection } from "@/components/sections/security-section";
-import { PricingPreviewSection } from "@/components/sections/pricing-preview-section";
-import { FaqSection } from "@/components/sections/faq-section";
+import { ReplayTracesSection } from "@/components/sections/replay-traces-section";
+import { MutationTestingSection } from "@/components/sections/mutation-testing-section";
+import { PolicyGatesSection } from "@/components/sections/policy-gates-section";
+import { CIGuardrailsSection } from "@/components/sections/ci-guardrails-section";
+import { DashboardPreviewSection } from "@/components/sections/dashboard-preview-section";
 import { FinalCtaSection } from "@/components/sections/final-cta-section";
 import { buildPageMetadata } from "@/lib/site";
 
@@ -23,12 +22,11 @@ export default function HomePage() {
     <>
       <HeroSection />
       <ProblemSection />
-      <SolutionStepper />
-      <FeatureGrid />
-      <HowItWorksSection />
-      <SecuritySection />
-      <PricingPreviewSection />
-      <FaqSection />
+      <ReplayTracesSection />
+      <MutationTestingSection />
+      <PolicyGatesSection />
+      <CIGuardrailsSection />
+      <DashboardPreviewSection />
       <FinalCtaSection />
     </>
   );
