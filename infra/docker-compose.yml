@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: sepurux
-      POSTGRES_PASSWORD: sepurux
-      POSTGRES_DB: sepurux
+      POSTGRES_USER: ${POSTGRES_USER:-crashlab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crashlab}
+      POSTGRES_DB: ${POSTGRES_DB:-crashlab}
     ports:
       - "5434:5432"
     volumes:
@@ -39,12 +39,12 @@ services:
     build:
       context: ../api
     environment:
-      DATABASE_URL: postgresql+psycopg://sepurux:sepurux@postgres:5432/sepurux
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://crashlab:crashlab@postgres:5432/crashlab}
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT_URL: http://minio:9000
       S3_ACCESS_KEY: minio
       S3_SECRET_KEY: minio123456
-      S3_BUCKET: sepurux
+      S3_BUCKET: ${S3_BUCKET:-sepurux}
       S3_REGION: us-east-1
       OPA_URL: http://opa:8181
     ports:
@@ -59,12 +59,12 @@ services:
     build:
       context: ../worker
     environment:
-      DATABASE_URL: postgresql+psycopg://sepurux:sepurux@postgres:5432/sepurux
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://crashlab:crashlab@postgres:5432/crashlab}
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT_URL: http://minio:9000
       S3_ACCESS_KEY: minio
       S3_SECRET_KEY: minio123456
-      S3_BUCKET: sepurux
+      S3_BUCKET: ${S3_BUCKET:-sepurux}
       S3_REGION: us-east-1
       OPA_URL: http://opa:8181
     depends_on:
