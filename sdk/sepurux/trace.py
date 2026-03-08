@@ -7,7 +7,7 @@ from .types import TraceEvent, TracePayload
 
 
 class TraceBuilder:
-    """Builds Crash Lab trace payloads in the backend-compatible schema."""
+    """Builds Sepurux trace payloads in the backend-compatible schema."""
 
     def __init__(
         self,

@@ -1,3 +1,3 @@
-module github.com/felixkwasisarpong/crash-lab/clients/go-recorder
+module github.com/sepurux/go-recorder
 
 go 1.21

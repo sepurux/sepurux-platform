@@ -1,8 +1,8 @@
 {
-  "name": "crashlab-typescript-recorder",
+  "name": "@sepurux/recorder",
   "version": "0.1.2",
   "private": false,
-  "description": "Lightweight TypeScript trace recorder helper for Crash Lab",
+  "description": "Lightweight TypeScript trace recorder helper for Sepurux",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

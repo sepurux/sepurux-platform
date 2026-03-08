@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from crashlab_sdk import TraceBuilder
+from sepurux import TraceBuilder
 
 
 def test_trace_builder_schema_shape() -> None:
