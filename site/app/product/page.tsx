@@ -7,7 +7,7 @@ import { buildPageMetadata } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Product",
   description:
-    "Deep dive into Crash Lab replay, mutation packs, counterfactuals, policy packs, and CI gate workflows.",
+    "Deep dive into Sepurux replay, mutation packs, counterfactuals, policy packs, and CI gate workflows.",
   path: "/product",
 });
 
@@ -53,7 +53,7 @@ export default function ProductPage() {
           Reliability workflow for production AI agents.
         </h1>
         <p className="mt-5 text-lg text-muted-foreground">
-          Crash Lab helps platform teams replay real traces, inject controlled chaos, evaluate outcomes,
+          Sepurux helps platform teams replay real traces, inject controlled chaos, evaluate outcomes,
           and gate merges when agent quality regresses.
         </p>
       </header>

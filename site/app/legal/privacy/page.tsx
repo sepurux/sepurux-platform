@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy",
-  description: "Crash Lab privacy policy for data collection, processing, retention, and contact.",
+  description: "Sepurux privacy policy for data collection, processing, retention, and contact.",
   path: "/legal/privacy",
 });
 
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 text-lg font-semibold text-foreground">Contact</h2>
-          <p>For privacy inquiries: privacy@crashlab.ai</p>
+          <p>For privacy inquiries: privacy@sepurux.com</p>
         </section>
       </article>
     </div>

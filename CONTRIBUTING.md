@@ -1,6 +1,6 @@
-# Contributing to Crash-Lab
+# Contributing to Sepurux
 
-This guide is for team members working on Crash-Lab.
+This guide is for team members working on Sepurux.
 
 ## Prerequisites
 

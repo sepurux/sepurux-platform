@@ -1,4 +1,18 @@
-# Crash-Lab
+# Sepurux
+
+Reliability infrastructure for AI agents.
+
+Sepurux replays agent workflows, injects failures, enforces safety policies, and blocks regressions before production.
+
+## Architecture
+
+```text
+Sepurux Platform
+ ├── Sepurux Crash Engine
+ ├── Mutation Packs
+ ├── Policy Gates
+ └── CI Guardrails
+```
 
 ## Local Dev
 
@@ -25,7 +39,7 @@ Optional seed controls:
 - `POLICY_RUNS_COUNT` (default `4`)
 - `WAIT_FOR_COMPLETION` (default `1`)
 - `WAIT_TIMEOUT_SECONDS` (default `360`)
-- `API_KEY` (default `crashlab-dev-key`)
+- `API_KEY` (default `sepurux-dev-key`)
 - `PROJECT_ID` (default `22222222-2222-2222-2222-222222222222`)
 
 ## Marketing Site (`/site`)
@@ -42,7 +56,15 @@ Then open `http://localhost:3000`.
 
 Optional environment variables:
 
-- `NEXT_PUBLIC_SITE_URL` (default: `https://crashlab.ai`) for canonical/OG URL generation
+- `NEXT_PUBLIC_SITE_URL` (default: `https://sepurux.com`) for canonical/OG URL generation
+
+## Sepurux CLI
+
+```bash
+sepurux replay --trace trace.json --campaign core-reliability
+sepurux campaigns run --campaign-id <campaign_id> --trace-id <trace_id>
+sepurux assert --run-id <run_id> --min-pass-rate 0.85 --max-unsafe 0
+```
 
 ## API Quick Start
 
@@ -79,7 +101,7 @@ curl -sS -X POST http://localhost:8000/v1/runs \
 
 ## Generated API Clients (TypeScript + Go)
 
-Crash Lab keeps generated API clients in-repo:
+Sepurux keeps generated API clients in-repo:
 
 - TypeScript: [clients/typescript/README.md](clients/typescript/README.md)
 - Go: [clients/go/README.md](clients/go/README.md)
@@ -95,8 +117,8 @@ make gen-clients
 TypeScript integration with recorder helper:
 
 ```ts
-import { Configuration, RunsApi, TracesApi } from "crashlab-client";
-import { TraceRecorder } from "crashlab-typescript-recorder";
+import { Configuration, RunsApi, TracesApi } from "@sepurux/client";
+import { TraceRecorder } from "@sepurux/recorder";
 
 const recorder = new TraceRecorder("demo-task", { ticketId: 123 });
 recorder.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
@@ -115,19 +137,19 @@ console.log(latest.status);
 Go integration with recorder helper:
 
 ```go
-recorder := crashlabrecorder.NewRecorder("demo-task", map[string]any{"ticketId": 123})
+recorder := sepuruxrecorder.NewRecorder("demo-task", map[string]any{"ticketId": 123})
 recorder.ModelStep("planner", map[string]any{"prompt": "triage issue"}, map[string]any{"plan": "call jira"})
 recorder.ToolCall("jira.create_issue", map[string]any{"project": "OPS", "title": "Bug"})
 recorder.ToolResult("jira.create_issue", map[string]any{"key": "OPS-123"})
-cfg := crashlabclient.NewConfiguration()
-cfg.Servers = crashlabclient.ServerConfigurations{{URL: "http://localhost:8000"}}
+cfg := sepuruxclient.NewConfiguration()
+cfg.Servers = sepuruxclient.ServerConfigurations{{URL: "http://localhost:8000"}}
 cfg.AddDefaultHeader("X-API-Key", apiKey)
-client := crashlabclient.NewAPIClient(cfg)
+client := sepuruxclient.NewAPIClient(cfg)
 
 trace, _, _ := client.TracesAPI.PostTraceV1TracesPost(ctx).
   Body(recorder.Trace()).
   XProjectId(projectID).Execute()
-runReq := crashlabclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
+runReq := sepuruxclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
 run, _, _ := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
 latest, _, _ := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjectId(projectID).Execute()
 ```
@@ -236,7 +258,7 @@ Read it from the attempt detail API (`GET /v1/attempts/<attempt_id>`) or UI page
 
 ## OPA Mode
 
-Crash Lab supports two policy engines:
+Sepurux supports two policy engines:
 
 - `builtin` (in-worker deterministic policy evaluator)
 - `opa` (delegates policy decision to an Open Policy Agent service)
@@ -267,7 +289,7 @@ curl -sS -X POST http://localhost:8000/v1/policy-packs \
       "defaults":{"unknown_tools":"allow"},
       "approval":{"token_field":"confirmation_token"},
       "irreversible":{"tools":["payments.refund","jira.create_issue(commit)","jira.create_issue_commit"]},
-      "opa":{"package":"crashlab.policy","query":"data.crashlab.policy.decision"}
+      "opa":{"package":"sepurux.policy","query":"data.sepurux.policy.decision"}
     }
   }'
 ```
@@ -285,7 +307,7 @@ OPA decision response shape expected by the worker:
 
 With `engine="opa"`:
 
-- every tool call sends OPA input at `/v1/data/crashlab/policy/decision`
+- every tool call sends OPA input at `/v1/data/sepurux/policy/decision`
 - `require_approval` enforces `approval.token_field` (default `confirmation_token`)
 - OPA unavailability fails the attempt with `failure_reason="opa_unavailable"`
 
@@ -308,7 +330,7 @@ chmod +x scripts/demo_opa_live.sh
 ./scripts/demo_opa_live.sh
 ```
 
-3. When prompted by the script, edit `infra/opa-policies/crashlab_policy.rego`:
+3. When prompted by the script, edit `infra/opa-policies/sepurux_policy.rego`:
 
 ```rego
 allow_payments_refund := true
@@ -339,32 +361,32 @@ curl -sS http://localhost:8000/v1/counterfactuals/<counterfactual_id>
 
 ## Enable Strict PR Gate
 
-Crash Lab exposes CI gate endpoints under `/v1/ci/*` so a GitHub workflow can block a PR until a replay run finishes and meets thresholds.
+Sepurux exposes CI gate endpoints under `/v1/ci/*` so a GitHub workflow can block a PR until a replay run finishes and meets thresholds.
 
-- Auth: set `CI_TOKEN` on the Crash Lab API and send it as `X-CrashLab-Token`.
+- Auth: set `CI_TOKEN` on the Sepurux API and send it as `X-Sepurux-Token`.
 - Dev mode: if `CI_TOKEN` is unset, `/v1/ci/*` is allowed locally for easier testing.
 
 ### Reusable Composite Action (use from another repo)
 
-This repo ships a composite action at `.github/actions/crashlab-gate`.
+This repo ships a composite action at `.github/actions/sepurux-gate`.
 Another repository can call it via a repo path + ref:
 
 ```yaml
-name: Crash Lab Gate
+name: Sepurux Gate
 
 on:
   pull_request:
 
 jobs:
-  crashlab-gate:
+  sepurux-gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: your-org/Crash-Lab/.github/actions/crashlab-gate@v0.1.0
+      - uses: your-org/Sepurux/.github/actions/sepurux-gate@v0.1.0
         with:
-          base_url: https://crashlab-api.example.com
-          token: ${{ secrets.CRASHLAB_CI_TOKEN }}
-          trace_id: ${{ vars.CRASHLAB_TRACE_ID }}
-          campaign_id: ${{ vars.CRASHLAB_CAMPAIGN_ID }}
+          base_url: https://api.sepurux.com
+          token: ${{ secrets.SEPURUX_CI_TOKEN }}
+          trace_id: ${{ vars.SEPURUX_TRACE_ID }}
+          campaign_id: ${{ vars.SEPURUX_CAMPAIGN_ID }}
           min_pass_rate: "0.80"
           max_unsafe: "0"
           max_failures: "0"
@@ -372,7 +394,7 @@ jobs:
           timeout_seconds: "900"
 ```
 
-A copy-paste starter workflow also lives at `examples/github/workflows/crashlab-gate.yml`.
+A copy-paste starter workflow also lives at `examples/github/workflows/sepurux-gate.yml`.
 
 What it does:
 
@@ -388,7 +410,7 @@ Create a trace and campaign first (using your normal API auth headers such as `X
 ```bash
 curl -sS -X POST http://localhost:8000/v1/ci/runs \
   -H 'Content-Type: application/json' \
-  -H 'X-CrashLab-Token: local-ci-token' \
+  -H 'X-Sepurux-Token: local-ci-token' \
   -d '{
     "trace_id":"<trace_id>",
     "campaign_id":"<campaign_id>",
@@ -404,10 +426,10 @@ Poll for the decision:
 
 ```bash
 curl -sS http://localhost:8000/v1/ci/runs/<run_id> \
-  -H 'X-CrashLab-Token: local-ci-token'
+  -H 'X-Sepurux-Token: local-ci-token'
 ```
 
-The CI status response includes `decision` (`pending|pass|fail`), `pass_rate`, `unsafe_attempts`, `failures`, top failing tools, and a UI-style run URL (`/runs/<run_id>`). Set `CRASHLAB_UI_BASE_URL` on the API to point `dashboard_url` at your deployed UI host.
+The CI status response includes `decision` (`pending|pass|fail`), `pass_rate`, `unsafe_attempts`, `failures`, top failing tools, and a UI-style run URL (`/runs/<run_id>`). Set `SEPURUX_UI_BASE_URL` on the API to point `dashboard_url` at your deployed UI host.
 
 Strict gate behavior:
 

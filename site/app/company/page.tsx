@@ -7,7 +7,7 @@ import { buildPageMetadata } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Company",
   description:
-    "About Crash Lab and contact information for platform engineering, security, and partnerships.",
+    "About Sepurux and contact information for platform engineering, security, and partnerships.",
   path: "/company",
 });
 
@@ -20,7 +20,7 @@ export default function CompanyPage() {
           We help teams ship AI agents with fewer surprises.
         </h1>
         <p className="mt-5 text-lg text-muted-foreground">
-          Crash Lab is focused on reliability infrastructure for tool-using AI systems. We build replay,
+          Sepurux is focused on reliability infrastructure for tool-using AI systems. We build replay,
           chaos, and governance workflows for platform engineers.
         </p>
       </header>
@@ -32,7 +32,7 @@ export default function CompanyPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <p>
-              Our team has shipped infrastructure in observability, CI/CD, and platform security. Crash Lab
+              Our team has shipped infrastructure in observability, CI/CD, and platform security. Sepurux
               brings those practices to AI agent reliability.
             </p>
             <p>
@@ -47,9 +47,9 @@ export default function CompanyPage() {
             <CardTitle>Contact</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Email: hello@crashlab.ai</p>
-            <p>Security: security@crashlab.ai</p>
-            <p>Partnerships: partners@crashlab.ai</p>
+            <p>Email: hello@sepurux.com</p>
+            <p>Security: security@sepurux.com</p>
+            <p>Partnerships: partners@sepurux.com</p>
             <p>
               Read legal details in <Link href="/legal/privacy" className="text-primary hover:underline">Privacy</Link>{" "}
               and <Link href="/legal/terms" className="text-primary hover:underline">Terms</Link>.
