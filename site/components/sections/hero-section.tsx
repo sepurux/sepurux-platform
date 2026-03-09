@@ -1,16 +1,15 @@
-"use client";
-
-import { useState } from "react";
 import { PlayCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScreenshotPlaceholder } from "@/components/shared/screenshot-placeholder";
+import { siteConfig } from "@/lib/site";
 
 const logos = ["Northstar", "Helios", "Cresta", "Signal", "Orbit", "Vector"];
 
 export function HeroSection() {
-  const [showDemo, setShowDemo] = useState(false);
+  const requestAccessHref = `${siteConfig.appUrl}/dashboard?demo=1&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=request-access`;
+  const viewDemoHref = `${siteConfig.appUrl}/dashboard?demo=1&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=view-demo`;
 
   return (
     <section className="site-container pt-16 md:pt-24">
@@ -28,10 +27,12 @@ export function HeroSection() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <a href="#waitlist">Request access</a>
+              <a href={requestAccessHref}>Request access</a>
             </Button>
-            <Button size="lg" variant="outline" onClick={() => setShowDemo(true)}>
-              <PlayCircle className="h-4 w-4" /> View demo
+            <Button asChild size="lg" variant="outline">
+              <a href={viewDemoHref}>
+                <PlayCircle className="h-4 w-4" /> View demo
+              </a>
             </Button>
           </div>
           <div className="mt-10 flex flex-wrap items-center gap-2">
@@ -73,25 +74,6 @@ export function HeroSection() {
           />
         </div>
       </div>
-
-      {showDemo ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-panel">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">Demo Video (Placeholder)</h3>
-              <button
-                className="rounded-md border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setShowDemo(false)}
-              >
-                Close
-              </button>
-            </div>
-            <div className="faint-grid flex h-72 items-center justify-center rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground">
-              Product walkthrough video goes here.
-            </div>
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }

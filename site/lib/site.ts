@@ -5,6 +5,7 @@ export const siteConfig = {
   description:
     "Reliability infrastructure for AI agents. Replay workflows, inject failures, enforce policies, and block regressions before production.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://sepurux.com",
+  appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://app.sepurux.com",
   logo: "/logo.png",
   ogImage: "/logo.png",
 };

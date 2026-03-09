@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, TenantAuthContext, require_project_scope, require_role
 from app.db import get_db
 from app.schemas import CampaignCreateRequest, CampaignMetadata
 from app.services.audit_service import actor_from_request
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.campaign_service import list_campaigns as list_campaign_records
+from app.services.demo_service import enforce_demo_campaign_create_limit
 from app.services.mutation_pack_service import get_mutation_pack
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+DeveloperAuth = Annotated[TenantAuthContext, Depends(require_role("developer"))]
 
 
 def _to_campaign_metadata(campaign) -> CampaignMetadata:
@@ -25,6 +27,7 @@ def _to_campaign_metadata(campaign) -> CampaignMetadata:
         campaign_id=campaign.campaign_id,
         mutation_pack_id=campaign.mutation_pack_id,
         name=campaign.name,
+        status=campaign.status,
         mutation_set=campaign.mutation_set,
         eval_set=campaign.eval_set,
         created_at=campaign.created_at,
@@ -36,8 +39,12 @@ def post_campaign(
     payload: CampaignCreateRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
     request: Request,
 ) -> CampaignMetadata:
+    if tenant_auth.is_demo:
+        enforce_demo_campaign_create_limit(db, project_id=project_scope.project_id)
+
     if payload.mutation_pack_id is not None and (
         get_mutation_pack(
             db,

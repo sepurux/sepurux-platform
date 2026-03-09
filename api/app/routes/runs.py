@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Literal, cast
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, TenantAuthContext, require_project_scope, require_role
 from app.db import get_db
 from app.models import PolicyEvent, ReplayAttempt, SecurityEvent
 from app.schemas import (
@@ -16,6 +16,8 @@ from app.schemas import (
 )
 from app.services.attempt_service import list_attempts_for_run
 from app.services.audit_service import actor_from_request
+from app.services.campaign_service import get_campaign as get_campaign_record
+from app.services.demo_service import enforce_demo_run_limits
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_run_and_enqueue,
@@ -42,6 +44,7 @@ router = APIRouter(prefix="/v1/runs", tags=["runs"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+DeveloperAuth = Annotated[TenantAuthContext, Depends(require_role("developer"))]
 
 
 def _to_run_metadata(run, *, metrics: dict[str, object] | None = None) -> RunMetadata:
@@ -108,8 +111,23 @@ def post_run(
     payload: RunCreateRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
     request: Request,
 ) -> RunMetadata:
+    if tenant_auth.is_demo:
+        campaign = get_campaign_record(
+            db,
+            project_id=project_scope.project_id,
+            campaign_id=payload.campaign_id,
+        )
+        if campaign is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+        enforce_demo_run_limits(
+            db,
+            project_id=project_scope.project_id,
+            campaign=campaign,
+        )
+
     try:
         run = create_run_and_enqueue(
             db,
