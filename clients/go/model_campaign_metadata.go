@@ -25,6 +25,7 @@ type CampaignMetadata struct {
 	CampaignId string `json:"campaign_id"`
 	MutationPackId NullableString `json:"mutation_pack_id,omitempty"`
 	Name string `json:"name"`
+	Status string `json:"status"`
 	MutationSet interface{} `json:"mutation_set"`
 	EvalSet interface{} `json:"eval_set"`
 	CreatedAt time.Time `json:"created_at"`
@@ -36,10 +37,11 @@ type _CampaignMetadata CampaignMetadata
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCampaignMetadata(campaignId string, name string, mutationSet interface{}, evalSet interface{}, createdAt time.Time) *CampaignMetadata {
+func NewCampaignMetadata(campaignId string, name string, status string, mutationSet interface{}, evalSet interface{}, createdAt time.Time) *CampaignMetadata {
 	this := CampaignMetadata{}
 	this.CampaignId = campaignId
 	this.Name = name
+	this.Status = status
 	this.MutationSet = mutationSet
 	this.EvalSet = evalSet
 	this.CreatedAt = createdAt
@@ -144,6 +146,30 @@ func (o *CampaignMetadata) SetName(v string) {
 	o.Name = v
 }
 
+// GetStatus returns the Status field value
+func (o *CampaignMetadata) GetStatus() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.Status
+}
+
+// GetStatusOk returns a tuple with the Status field value
+// and a boolean to check if the value has been set.
+func (o *CampaignMetadata) GetStatusOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.Status, true
+}
+
+// SetStatus sets field value
+func (o *CampaignMetadata) SetStatus(v string) {
+	o.Status = v
+}
+
 // GetMutationSet returns the MutationSet field value
 // If the value is explicit nil, the zero value for interface{} will be returned
 func (o *CampaignMetadata) GetMutationSet() interface{} {
@@ -235,6 +261,7 @@ func (o CampaignMetadata) ToMap() (map[string]interface{}, error) {
 		toSerialize["mutation_pack_id"] = o.MutationPackId.Get()
 	}
 	toSerialize["name"] = o.Name
+	toSerialize["status"] = o.Status
 	if o.MutationSet != nil {
 		toSerialize["mutation_set"] = o.MutationSet
 	}
@@ -252,6 +279,7 @@ func (o *CampaignMetadata) UnmarshalJSON(data []byte) (err error) {
 	requiredProperties := []string{
 		"campaign_id",
 		"name",
+		"status",
 		"mutation_set",
 		"eval_set",
 		"created_at",

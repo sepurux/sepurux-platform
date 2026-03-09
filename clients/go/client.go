@@ -63,6 +63,8 @@ type APIClient struct {
 
 	CounterfactualsAPI *CounterfactualsAPIService
 
+	DemoAPI *DemoAPIService
+
 	HealthAPI *HealthAPIService
 
 	MutationPacksAPI *MutationPacksAPIService
@@ -105,6 +107,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.CampaignsAPI = (*CampaignsAPIService)(&c.common)
 	c.CiAPI = (*CiAPIService)(&c.common)
 	c.CounterfactualsAPI = (*CounterfactualsAPIService)(&c.common)
+	c.DemoAPI = (*DemoAPIService)(&c.common)
 	c.HealthAPI = (*HealthAPIService)(&c.common)
 	c.MutationPacksAPI = (*MutationPacksAPIService)(&c.common)
 	c.PolicyPacksAPI = (*PolicyPacksAPIService)(&c.common)

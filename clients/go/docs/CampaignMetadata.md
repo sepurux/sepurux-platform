@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **CampaignId** | **string** |  | 
 **MutationPackId** | Pointer to **NullableString** |  | [optional] 
 **Name** | **string** |  | 
+**Status** | **string** |  | 
 **MutationSet** | **interface{}** |  | 
 **EvalSet** | **interface{}** |  | 
 **CreatedAt** | **time.Time** |  | 
@@ -15,7 +16,7 @@ Name | Type | Description | Notes
 
 ### NewCampaignMetadata
 
-`func NewCampaignMetadata(campaignId string, name string, mutationSet interface{}, evalSet interface{}, createdAt time.Time, ) *CampaignMetadata`
+`func NewCampaignMetadata(campaignId string, name string, status string, mutationSet interface{}, evalSet interface{}, createdAt time.Time, ) *CampaignMetadata`
 
 NewCampaignMetadata instantiates a new CampaignMetadata object
 This constructor will assign default values to properties that have it defined,
@@ -103,6 +104,26 @@ and a boolean to check if the value has been set.
 `func (o *CampaignMetadata) SetName(v string)`
 
 SetName sets Name field to given value.
+
+
+### GetStatus
+
+`func (o *CampaignMetadata) GetStatus() string`
+
+GetStatus returns the Status field if non-nil, zero value otherwise.
+
+### GetStatusOk
+
+`func (o *CampaignMetadata) GetStatusOk() (*string, bool)`
+
+GetStatusOk returns a tuple with the Status field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStatus
+
+`func (o *CampaignMetadata) SetStatus(v string)`
+
+SetStatus sets Status field to given value.
 
 
 ### GetMutationSet

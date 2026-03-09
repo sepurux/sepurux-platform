@@ -36,7 +36,31 @@ export interface ApiKeyCreateResponse {
      * @type {string}
      * @memberof ApiKeyCreateResponse
      */
+    project_id?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeyCreateResponse
+     */
+    user_id?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeyCreateResponse
+     */
     name: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ApiKeyCreateResponse
+     */
+    is_demo?: boolean;
+    /**
+     * 
+     * @type {number}
+     * @memberof ApiKeyCreateResponse
+     */
+    rate_limit_per_minute?: number;
     /**
      * 
      * @type {Date}
@@ -87,7 +111,11 @@ export function ApiKeyCreateResponseFromJSONTyped(json: any, ignoreDiscriminator
         
         'api_key_id': json['api_key_id'],
         'tenant_id': json['tenant_id'],
+        'project_id': json['project_id'] == null ? undefined : json['project_id'],
+        'user_id': json['user_id'] == null ? undefined : json['user_id'],
         'name': json['name'],
+        'is_demo': json['is_demo'] == null ? undefined : json['is_demo'],
+        'rate_limit_per_minute': json['rate_limit_per_minute'] == null ? undefined : json['rate_limit_per_minute'],
         'created_at': (new Date(json['created_at'])),
         'last_used_at': json['last_used_at'] == null ? undefined : (new Date(json['last_used_at'])),
         'revoked_at': json['revoked_at'] == null ? undefined : (new Date(json['revoked_at'])),
@@ -103,7 +131,11 @@ export function ApiKeyCreateResponseToJSON(value?: ApiKeyCreateResponse | null):
         
         'api_key_id': value['api_key_id'],
         'tenant_id': value['tenant_id'],
+        'project_id': value['project_id'],
+        'user_id': value['user_id'],
         'name': value['name'],
+        'is_demo': value['is_demo'],
+        'rate_limit_per_minute': value['rate_limit_per_minute'],
         'created_at': ((value['created_at']).toISOString()),
         'last_used_at': value['last_used_at'] == null ? undefined : ((value['last_used_at'] as any).toISOString()),
         'revoked_at': value['revoked_at'] == null ? undefined : ((value['revoked_at'] as any).toISOString()),

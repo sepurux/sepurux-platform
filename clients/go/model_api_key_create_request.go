@@ -22,6 +22,8 @@ var _ MappedNullable = &ApiKeyCreateRequest{}
 // ApiKeyCreateRequest struct for ApiKeyCreateRequest
 type ApiKeyCreateRequest struct {
 	Name string `json:"name"`
+	ProjectId NullableString `json:"project_id,omitempty"`
+	RateLimitPerMinute *int32 `json:"rate_limit_per_minute,omitempty"`
 }
 
 type _ApiKeyCreateRequest ApiKeyCreateRequest
@@ -33,6 +35,8 @@ type _ApiKeyCreateRequest ApiKeyCreateRequest
 func NewApiKeyCreateRequest(name string) *ApiKeyCreateRequest {
 	this := ApiKeyCreateRequest{}
 	this.Name = name
+	var rateLimitPerMinute int32 = 120
+	this.RateLimitPerMinute = &rateLimitPerMinute
 	return &this
 }
 
@@ -41,6 +45,8 @@ func NewApiKeyCreateRequest(name string) *ApiKeyCreateRequest {
 // but it doesn't guarantee that properties required by API are set
 func NewApiKeyCreateRequestWithDefaults() *ApiKeyCreateRequest {
 	this := ApiKeyCreateRequest{}
+	var rateLimitPerMinute int32 = 120
+	this.RateLimitPerMinute = &rateLimitPerMinute
 	return &this
 }
 
@@ -68,6 +74,80 @@ func (o *ApiKeyCreateRequest) SetName(v string) {
 	o.Name = v
 }
 
+// GetProjectId returns the ProjectId field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *ApiKeyCreateRequest) GetProjectId() string {
+	if o == nil || IsNil(o.ProjectId.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.ProjectId.Get()
+}
+
+// GetProjectIdOk returns a tuple with the ProjectId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *ApiKeyCreateRequest) GetProjectIdOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.ProjectId.Get(), o.ProjectId.IsSet()
+}
+
+// HasProjectId returns a boolean if a field has been set.
+func (o *ApiKeyCreateRequest) HasProjectId() bool {
+	if o != nil && o.ProjectId.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetProjectId gets a reference to the given NullableString and assigns it to the ProjectId field.
+func (o *ApiKeyCreateRequest) SetProjectId(v string) {
+	o.ProjectId.Set(&v)
+}
+// SetProjectIdNil sets the value for ProjectId to be an explicit nil
+func (o *ApiKeyCreateRequest) SetProjectIdNil() {
+	o.ProjectId.Set(nil)
+}
+
+// UnsetProjectId ensures that no value is present for ProjectId, not even an explicit nil
+func (o *ApiKeyCreateRequest) UnsetProjectId() {
+	o.ProjectId.Unset()
+}
+
+// GetRateLimitPerMinute returns the RateLimitPerMinute field value if set, zero value otherwise.
+func (o *ApiKeyCreateRequest) GetRateLimitPerMinute() int32 {
+	if o == nil || IsNil(o.RateLimitPerMinute) {
+		var ret int32
+		return ret
+	}
+	return *o.RateLimitPerMinute
+}
+
+// GetRateLimitPerMinuteOk returns a tuple with the RateLimitPerMinute field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ApiKeyCreateRequest) GetRateLimitPerMinuteOk() (*int32, bool) {
+	if o == nil || IsNil(o.RateLimitPerMinute) {
+		return nil, false
+	}
+	return o.RateLimitPerMinute, true
+}
+
+// HasRateLimitPerMinute returns a boolean if a field has been set.
+func (o *ApiKeyCreateRequest) HasRateLimitPerMinute() bool {
+	if o != nil && !IsNil(o.RateLimitPerMinute) {
+		return true
+	}
+
+	return false
+}
+
+// SetRateLimitPerMinute gets a reference to the given int32 and assigns it to the RateLimitPerMinute field.
+func (o *ApiKeyCreateRequest) SetRateLimitPerMinute(v int32) {
+	o.RateLimitPerMinute = &v
+}
+
 func (o ApiKeyCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -79,6 +159,12 @@ func (o ApiKeyCreateRequest) MarshalJSON() ([]byte, error) {
 func (o ApiKeyCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["name"] = o.Name
+	if o.ProjectId.IsSet() {
+		toSerialize["project_id"] = o.ProjectId.Get()
+	}
+	if !IsNil(o.RateLimitPerMinute) {
+		toSerialize["rate_limit_per_minute"] = o.RateLimitPerMinute
+	}
 	return toSerialize, nil
 }
 
