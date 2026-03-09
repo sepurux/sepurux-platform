@@ -7,7 +7,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronDown, FolderKanban, Loader2, Search } from "lucide-react";
 
 import { api, type ProjectMetadata } from "@/lib/api";
-import { getStoredProjectId, setStoredProjectId } from "@/lib/tenant-settings";
+import {
+  clearStoredApiBaseUrl,
+  clearStoredApiKey,
+  clearStoredProjectId,
+  getStoredProjectId,
+  setStoredProjectId,
+} from "@/lib/tenant-settings";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -61,6 +67,13 @@ export function TopBar() {
     setSelectedProjectId(nextProjectId);
     setStoredProjectId(nextProjectId);
     window.location.reload();
+  }
+
+  function handleSignOut() {
+    clearStoredApiKey();
+    clearStoredProjectId();
+    clearStoredApiBaseUrl();
+    router.push("/auth?mode=access");
   }
 
   async function lookupRun(runId: string) {
@@ -256,7 +269,12 @@ export function TopBar() {
             <div className="absolute right-0 mt-2 w-44 rounded-md border border-border/70 bg-card p-1 shadow-panel">
               <button className="w-full rounded px-3 py-2 text-left text-sm text-foreground hover:bg-accent/50">Profile</button>
               <button className="w-full rounded px-3 py-2 text-left text-sm text-foreground hover:bg-accent/50">Preferences</button>
-              <button className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent/50">Sign out</button>
+              <button
+                className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent/50"
+                onClick={handleSignOut}
+              >
+                Sign out
+              </button>
             </div>
           </details>
         </div>

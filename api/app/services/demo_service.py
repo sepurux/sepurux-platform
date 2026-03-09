@@ -3,28 +3,36 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from app.models import Campaign, Run, Trace
+from app.models import ApiKey, Campaign, Project, Run, Trace
+from app.services.api_key_service import create_api_key_for_tenant
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 DEMO_API_KEY_PLAINTEXT = "demo_sepurux_key"
 DEMO_PROJECT_NAME = "Sepurux Demo Project"
 DEMO_CAMPAIGN_NAME = "demo_campaign"
 DEMO_MUTATION_PACK_NAME = "core.demo"
+DEMO_RECOMMENDED_FLOW = "session"
 
 DEMO_MAX_CAMPAIGNS_PER_HOUR = 3
 DEMO_MAX_MUTATIONS_PER_RUN = 20
 DEMO_MAX_TRACES_UPLOAD_PER_HOUR = 10
 DEMO_MAX_TRACE_BYTES = 256_000
+DEMO_SESSION_TTL_MINUTES = 180
+DEMO_SESSION_RATE_LIMIT_PER_MINUTE = 90
+DEMO_SESSION_NAME_PREFIX = "demo-session:"
+DEMO_MAX_SESSION_ISSUES_PER_10_MIN = 500
 
 
 def demo_info_payload() -> dict[str, Any]:
     return {
         "demo_api_key": DEMO_API_KEY_PLAINTEXT,
         "demo_campaign": DEMO_CAMPAIGN_NAME,
+        "recommended_flow": DEMO_RECOMMENDED_FLOW,
+        "session_ttl_minutes": DEMO_SESSION_TTL_MINUTES,
         "limits": {
             "campaigns_per_hour": DEMO_MAX_CAMPAIGNS_PER_HOUR,
             "mutations_per_run": DEMO_MAX_MUTATIONS_PER_RUN,
@@ -32,6 +40,78 @@ def demo_info_payload() -> dict[str, Any]:
             "max_trace_bytes": DEMO_MAX_TRACE_BYTES,
         },
     }
+
+
+def create_demo_session(db: Session) -> dict[str, Any]:
+    now = datetime.now(UTC)
+    _cleanup_stale_demo_session_keys(db, now=now)
+    _enforce_demo_session_issuance_limit(db, now=now)
+
+    project = _get_demo_project(db)
+    session_name = f"{DEMO_SESSION_NAME_PREFIX}{uuid4().hex[:12]}"
+    _, plaintext = create_api_key_for_tenant(
+        db,
+        tenant_id=project.tenant_id,
+        project_id=project.project_id,
+        user_id=project.owner_id,
+        name=session_name,
+        is_demo=True,
+        rate_limit_per_minute=DEMO_SESSION_RATE_LIMIT_PER_MINUTE,
+    )
+
+    return {
+        "api_key": plaintext,
+        "project_id": project.project_id,
+        "project_name": project.name,
+        "demo_campaign": DEMO_CAMPAIGN_NAME,
+        "demo_mutation_pack": DEMO_MUTATION_PACK_NAME,
+        "expires_at": now + timedelta(minutes=DEMO_SESSION_TTL_MINUTES),
+        "rate_limit_per_minute": DEMO_SESSION_RATE_LIMIT_PER_MINUTE,
+        "limits": demo_info_payload()["limits"],
+    }
+
+
+def _get_demo_project(db: Session) -> Project:
+    project = db.scalar(
+        select(Project)
+        .where(Project.name == DEMO_PROJECT_NAME)
+        .order_by(Project.created_at.desc(), Project.project_id.desc())
+    )
+    if not isinstance(project, Project):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo environment is not available",
+        )
+    return project
+
+
+def _cleanup_stale_demo_session_keys(db: Session, *, now: datetime) -> None:
+    cutoff = now - timedelta(minutes=DEMO_SESSION_TTL_MINUTES)
+    db.execute(
+        delete(ApiKey).where(
+            ApiKey.is_demo.is_(True),
+            ApiKey.name.like(f"{DEMO_SESSION_NAME_PREFIX}%"),
+            ApiKey.created_at < cutoff,
+        )
+    )
+
+
+def _enforce_demo_session_issuance_limit(db: Session, *, now: datetime) -> None:
+    window_start = now - timedelta(minutes=10)
+    issued_count = db.scalar(
+        select(func.count())
+        .select_from(ApiKey)
+        .where(
+            ApiKey.is_demo.is_(True),
+            ApiKey.name.like(f"{DEMO_SESSION_NAME_PREFIX}%"),
+            ApiKey.created_at >= window_start,
+        )
+    )
+    if int(issued_count or 0) >= DEMO_MAX_SESSION_ISSUES_PER_10_MIN:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demo is currently saturated. Retry in a few minutes.",
+        )
 
 
 def enforce_demo_campaign_create_limit(

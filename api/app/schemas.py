@@ -315,6 +315,34 @@ class ApiKeyCreateResponse(ApiKeyMetadata):
     api_key: str
 
 
+class DemoLimits(BaseModel):
+    campaigns_per_hour: int
+    mutations_per_run: int
+    traces_upload_per_hour: int | None = None
+    max_trace_bytes: int | None = None
+
+
+class DemoInfoResponse(BaseModel):
+    demo_api_key: str
+    demo_campaign: str
+    demo_project: str | None = None
+    demo_mutation_pack: str | None = None
+    limits: DemoLimits
+    recommended_flow: Literal["session", "shared_key"] = "session"
+    session_ttl_minutes: int | None = None
+
+
+class DemoSessionResponse(BaseModel):
+    api_key: str
+    project_id: UUID
+    project_name: str
+    demo_campaign: str
+    demo_mutation_pack: str
+    expires_at: datetime
+    rate_limit_per_minute: int
+    limits: DemoLimits
+
+
 class PolicyPackCreateRequest(BaseModel):
     name: str
     engine: Literal["builtin", "opa"] = "builtin"
