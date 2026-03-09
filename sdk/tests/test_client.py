@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 from sepurux import SepuruxClient
 
 
@@ -79,3 +80,29 @@ def test_upload_trace_uses_explicit_sdk_header_override() -> None:
     assert len(capture.requests) == 1
     request = capture.requests[0]
     assert request.headers.get("X-Sepurux-SDK") == "py/9.9.9"
+
+
+def test_demo_mode_warns() -> None:
+    with pytest.warns(UserWarning, match="limited demo environment"):
+        SepuruxClient(
+            base_url="http://localhost:8000",
+            api_key="demo_sepurux_key",
+            project_id="project-1",
+        )
+
+
+def test_get_demo_info_calls_public_endpoint() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/demo/info":
+            return httpx.Response(200, json={"demo_api_key": "demo_sepurux_key"})
+        return httpx.Response(404, json={"detail": "not found"})
+
+    client = SepuruxClient(base_url="http://localhost:8000")
+    client._client = httpx.Client(base_url=client.base_url, transport=httpx.MockTransport(handler))
+
+    payload = client.get_demo_info()
+    assert payload["demo_api_key"] == "demo_sepurux_key"
+    assert requests[0].url.path == "/demo/info"
