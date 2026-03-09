@@ -14,7 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const ENV_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const DEFAULT_API_BASE_URL =
+  process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api/backend";
+const ENV_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;
 const ENV_API_KEY =
   process.env.NEXT_PUBLIC_SEPURUX_API_KEY ??
   process.env.NEXT_PUBLIC_CRASHLAB_API_KEY ??
