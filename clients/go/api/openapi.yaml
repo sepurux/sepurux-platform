@@ -1909,6 +1909,20 @@ paths:
       summary: Post Rotate Webhook Secret
       tags:
       - webhooks
+  /demo/info:
+    get:
+      operationId: get_demo_info_demo_info_get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                title: Response Get Demo Info Demo Info Get
+          description: Successful Response
+      summary: Get Demo Info
+      tags:
+      - demo
   /healthz:
     get:
       operationId: healthz_healthz_get
@@ -1929,11 +1943,23 @@ components:
   schemas:
     ApiKeyCreateRequest:
       example:
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         name: name
+        rate_limit_per_minute: 801
       properties:
         name:
           title: Name
           type: string
+        project_id:
+          format: uuid
+          nullable: true
+          type: string
+        rate_limit_per_minute:
+          default: 120
+          maximum: 10000.0
+          minimum: 1.0
+          title: Rate Limit Per Minute
+          type: integer
       required:
       - name
       title: ApiKeyCreateRequest
@@ -1942,9 +1968,13 @@ components:
         tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         last_used_at: 2000-01-23T04:56:07.000+00:00
         revoked_at: 2000-01-23T04:56:07.000+00:00
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         api_key: api_key
         name: name
+        rate_limit_per_minute: 0
         created_at: 2000-01-23T04:56:07.000+00:00
+        is_demo: false
         api_key_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
       properties:
         api_key_id:
@@ -1955,9 +1985,25 @@ components:
           format: uuid
           title: Tenant Id
           type: string
+        project_id:
+          format: uuid
+          nullable: true
+          type: string
+        user_id:
+          format: uuid
+          nullable: true
+          type: string
         name:
           title: Name
           type: string
+        is_demo:
+          default: false
+          title: Is Demo
+          type: boolean
+        rate_limit_per_minute:
+          default: 120
+          title: Rate Limit Per Minute
+          type: integer
         created_at:
           format: date-time
           title: Created At
@@ -1985,8 +2031,12 @@ components:
         tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         last_used_at: 2000-01-23T04:56:07.000+00:00
         revoked_at: 2000-01-23T04:56:07.000+00:00
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         name: name
+        rate_limit_per_minute: 0
         created_at: 2000-01-23T04:56:07.000+00:00
+        is_demo: false
         api_key_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
       properties:
         api_key_id:
@@ -1997,9 +2047,25 @@ components:
           format: uuid
           title: Tenant Id
           type: string
+        project_id:
+          format: uuid
+          nullable: true
+          type: string
+        user_id:
+          format: uuid
+          nullable: true
+          type: string
         name:
           title: Name
           type: string
+        is_demo:
+          default: false
+          title: Is Demo
+          type: boolean
+        rate_limit_per_minute:
+          default: 120
+          title: Rate Limit Per Minute
+          type: integer
         created_at:
           format: date-time
           title: Created At
@@ -2206,6 +2272,7 @@ components:
         name: name
         created_at: 2000-01-23T04:56:07.000+00:00
         campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        status: status
       properties:
         campaign_id:
           format: uuid
@@ -2217,6 +2284,9 @@ components:
           type: string
         name:
           title: Name
+          type: string
+        status:
+          title: Status
           type: string
         mutation_set: {}
         eval_set: {}
@@ -2230,6 +2300,7 @@ components:
       - eval_set
       - mutation_set
       - name
+      - status
       title: CampaignMetadata
     CounterfactualListItem:
       example:

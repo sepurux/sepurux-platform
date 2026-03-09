@@ -25,6 +25,18 @@ export interface ApiKeyCreateRequest {
      * @memberof ApiKeyCreateRequest
      */
     name: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiKeyCreateRequest
+     */
+    project_id?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof ApiKeyCreateRequest
+     */
+    rate_limit_per_minute?: number;
 }
 
 /**
@@ -46,6 +58,8 @@ export function ApiKeyCreateRequestFromJSONTyped(json: any, ignoreDiscriminator:
     return {
         
         'name': json['name'],
+        'project_id': json['project_id'] == null ? undefined : json['project_id'],
+        'rate_limit_per_minute': json['rate_limit_per_minute'] == null ? undefined : json['rate_limit_per_minute'],
     };
 }
 
@@ -56,6 +70,8 @@ export function ApiKeyCreateRequestToJSON(value?: ApiKeyCreateRequest | null): a
     return {
         
         'name': value['name'],
+        'project_id': value['project_id'],
+        'rate_limit_per_minute': value['rate_limit_per_minute'],
     };
 }
 

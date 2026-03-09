@@ -9,6 +9,7 @@ api_audit_events.go
 api_campaigns.go
 api_ci.go
 api_counterfactuals.go
+api_demo.go
 api_health.go
 api_mutation_packs.go
 api_policy_packs.go
@@ -40,6 +41,7 @@ docs/CiAPI.md
 docs/CounterfactualListItem.md
 docs/CounterfactualMetadata.md
 docs/CounterfactualsAPI.md
+docs/DemoAPI.md
 docs/EventIndexCount.md
 docs/HTTPValidationError.md
 docs/HardeningTemplateCreateRequest.md

@@ -7,6 +7,7 @@ export * from './AuditEventsApi';
 export * from './CampaignsApi';
 export * from './CiApi';
 export * from './CounterfactualsApi';
+export * from './DemoApi';
 export * from './HealthApi';
 export * from './MutationPacksApi';
 export * from './PolicyPacksApi';
