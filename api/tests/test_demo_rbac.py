@@ -9,7 +9,7 @@ from app.db import get_db
 from app.main import app
 from app.models import ApiKey, Base, Project, ProjectMembership, Role, Tenant, User
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -99,6 +99,43 @@ def test_demo_info_public_endpoint() -> None:
     payload = response.json()
     assert payload["demo_api_key"] == "demo_sepurux_key"
     assert payload["demo_campaign"] == "demo_campaign"
+
+
+def test_demo_session_returns_project_scoped_key(
+    rbac_test_context: tuple[TestClient, sessionmaker[Session], UUID],
+) -> None:
+    client, session_factory, _ = rbac_test_context
+    demo_tenant_id = uuid4()
+    demo_project_id = uuid4()
+    demo_owner_id = uuid4()
+    with session_factory() as db:
+        db.add(Tenant(tenant_id=demo_tenant_id, name="Demo Tenant"))
+        db.add(User(user_id=demo_owner_id, email="demo-owner@example.com"))
+        db.add(
+            Project(
+                project_id=demo_project_id,
+                tenant_id=demo_tenant_id,
+                owner_id=demo_owner_id,
+                name="Sepurux Demo Project",
+            )
+        )
+        db.commit()
+
+    response = client.post("/demo/session")
+    assert response.status_code == 201
+    payload = response.json()
+
+    assert payload["project_name"] == "Sepurux Demo Project"
+    assert payload["demo_campaign"] == "demo_campaign"
+    assert payload["api_key"].startswith("cl_")
+    assert payload["project_id"] == str(demo_project_id)
+
+    with session_factory() as db:
+        record = db.scalar(select(ApiKey).where(ApiKey.key_hash == hash_api_key(payload["api_key"])))
+        assert isinstance(record, ApiKey)
+        assert record.is_demo is True
+        assert record.project_id == demo_project_id
+        assert record.tenant_id == demo_tenant_id
 
 
 def test_viewer_role_cannot_create_campaign(
