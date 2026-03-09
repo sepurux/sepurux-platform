@@ -306,7 +306,9 @@ export class ApiError extends Error {
   }
 }
 
-const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const DEFAULT_API_BASE_URL =
+  process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api/backend";
+const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;
 const PUBLIC_API_KEY =
   process.env.NEXT_PUBLIC_SEPURUX_API_KEY ??
   process.env.NEXT_PUBLIC_CRASHLAB_API_KEY ??
@@ -314,6 +316,10 @@ const PUBLIC_API_KEY =
   "";
 const PUBLIC_PROJECT_ID = process.env.NEXT_PUBLIC_PROJECT_ID ?? "";
 const BROWSER_PROXY_BASE = "/api/backend";
+
+function isLocalHost(value: string) {
+  return value === "localhost" || value === "127.0.0.1" || value === "::1";
+}
 
 async function getTenantSettingsHelpers() {
   if (typeof window === "undefined") {
@@ -347,6 +353,9 @@ function resolveApiBaseUrl() {
   try {
     const parsed = new URL(configuredBase);
     if (parsed.hostname === "api") {
+      return BROWSER_PROXY_BASE;
+    }
+    if (isLocalHost(parsed.hostname) && !isLocalHost(window.location.hostname)) {
       return BROWSER_PROXY_BASE;
     }
   } catch {
