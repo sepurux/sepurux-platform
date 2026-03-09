@@ -38,6 +38,25 @@ class PlaceholderRecord(Base):
     )
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    user_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    role_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+
+
 class Tenant(Base):
     __tablename__ = "tenants"
 
@@ -55,6 +74,7 @@ class Project(Base):
 
     project_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.tenant_id"), nullable=False)
+    owner_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -68,8 +88,24 @@ class ApiKey(Base):
 
     api_key_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.tenant_id"), nullable=False)
+    project_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("projects.project_id"), nullable=True
+    )
+    user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     key_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
+    rate_limit_per_minute: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=120, server_default=text("120")
+    )
+    window_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    request_count_window: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -77,6 +113,19 @@ class ApiKey(Base):
     )
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ProjectMembership(Base):
+    __tablename__ = "project_memberships"
+
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.user_id"), primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), primary_key=True)
+    role_id: Mapped[UUID] = mapped_column(ForeignKey("roles.role_id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
 
 
 class AuditEvent(Base):
@@ -150,6 +199,9 @@ class Campaign(Base):
         ForeignKey("mutation_packs.mutation_pack_id"), nullable=True
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, default="ready", server_default="ready"
+    )
     mutation_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     eval_set: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
