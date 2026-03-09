@@ -47,6 +47,7 @@ services:
       S3_BUCKET: ${S3_BUCKET:-sepurux}
       S3_REGION: us-east-1
       OPA_URL: http://opa:8181
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
       - "8000:8000"
     depends_on:
