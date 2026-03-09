@@ -34,6 +34,9 @@ export function SettingsView() {
   const [testMessage, setTestMessage] = useState<string | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
+  const [demoMessage, setDemoMessage] = useState<string | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
+  const [enablingDemo, setEnablingDemo] = useState(false);
 
   useEffect(() => {
     const storedApiBaseUrl = getStoredApiBaseUrl();
@@ -121,6 +124,37 @@ export function SettingsView() {
     }
   }
 
+  async function handleTryDemo() {
+    setEnablingDemo(true);
+    setDemoMessage(null);
+    setDemoError(null);
+
+    try {
+      const info = await api.getDemoInfo();
+      const demoBaseUrl = "/api/backend";
+      setApiBaseUrl(demoBaseUrl);
+      setApiKey(info.demo_api_key);
+      setStoredApiBaseUrl(demoBaseUrl);
+      setStoredApiKey(info.demo_api_key);
+
+      const records = await api.listProjects();
+      const preferred = records.find((record) => record.name === (info.demo_project ?? "")) ?? records[0];
+      if (!preferred) {
+        throw new Error("No projects available for demo setup");
+      }
+      setProjectId(preferred.project_id);
+      setStoredProjectId(preferred.project_id);
+
+      setDemoMessage(
+        `Demo loaded: campaign '${info.demo_campaign}' with max ${info.limits.mutations_per_run} mutations/run.`
+      );
+    } catch (error) {
+      setDemoError(error instanceof Error ? error.message : "Failed to enable demo mode");
+    } finally {
+      setEnablingDemo(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
@@ -187,6 +221,14 @@ export function SettingsView() {
               <Button type="button" variant="outline" onClick={() => void handleTestConnection()} disabled={testing}>
                 {testing ? "Testing..." : "Test connection"}
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleTryDemo()}
+                disabled={enablingDemo}
+              >
+                {enablingDemo ? "Loading demo..." : "Try Demo"}
+              </Button>
             </div>
 
             {testMessage ? (
@@ -197,6 +239,16 @@ export function SettingsView() {
             {testError ? (
               <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">
                 {testError}
+              </div>
+            ) : null}
+            {demoMessage ? (
+              <div className="rounded-md border border-indigo-500/30 bg-indigo-500/10 p-2 text-sm text-indigo-100">
+                {demoMessage}
+              </div>
+            ) : null}
+            {demoError ? (
+              <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">
+                {demoError}
               </div>
             ) : null}
           </form>
