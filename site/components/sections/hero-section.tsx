@@ -8,8 +8,8 @@ import { siteConfig } from "@/lib/site";
 const logos = ["Northstar", "Helios", "Cresta", "Signal", "Orbit", "Vector"];
 
 export function HeroSection() {
-  const requestAccessHref = `${siteConfig.appUrl}/dashboard?demo=1&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=request-access`;
-  const viewDemoHref = `${siteConfig.appUrl}/dashboard?demo=1&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=view-demo`;
+  const requestAccessHref = `${siteConfig.appUrl}/auth?mode=access&utm_source=site&utm_medium=hero&utm_campaign=request-access`;
+  const viewDemoHref = `${siteConfig.appUrl}/auth?mode=demo&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=view-demo`;
 
   return (
     <section className="site-container pt-16 md:pt-24">

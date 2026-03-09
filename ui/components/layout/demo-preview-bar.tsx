@@ -13,6 +13,7 @@ import {
   clearStoredApiKey,
   clearStoredProjectId,
   getStoredApiKey,
+  getStoredProjectId,
   setStoredApiBaseUrl,
   setStoredApiKey,
   setStoredProjectId,
@@ -66,23 +67,29 @@ export function DemoPreviewBar() {
 
       try {
         const info = await api.getDemoInfo();
+        const session = await api.createDemoSession();
         if (cancelled) return;
 
         setStoredApiBaseUrl(DEFAULT_DEMO_API_BASE);
-        setStoredApiKey(info.demo_api_key);
-        setCampaignName(info.demo_campaign);
+        setStoredApiKey(session.api_key);
+        setStoredProjectId(session.project_id);
+        setCampaignName(session.demo_campaign);
 
         if (typeof window !== "undefined") {
           window.localStorage.setItem(DEMO_PREVIEW_FLAG_KEY, "1");
-          window.localStorage.setItem(DEMO_CAMPAIGN_STORAGE_KEY, info.demo_campaign);
+          window.localStorage.setItem(DEMO_CAMPAIGN_STORAGE_KEY, session.demo_campaign);
         }
 
-        const projects = await api.listProjects();
-        if (cancelled) return;
-        const preferredProject =
-          projects.find((project) => project.name === (info.demo_project ?? "")) ?? projects[0];
-        if (preferredProject) {
-          setStoredProjectId(preferredProject.project_id);
+        // For backward compatibility with older APIs, verify project fallback if
+        // the session endpoint does not return a project id.
+        if (!getStoredProjectId()) {
+          const projects = await api.listProjects();
+          if (cancelled) return;
+          const preferredProject =
+            projects.find((project) => project.name === (info.demo_project ?? "")) ?? projects[0];
+          if (preferredProject) {
+            setStoredProjectId(preferredProject.project_id);
+          }
         }
 
         setIsActive(true);
@@ -136,7 +143,7 @@ export function DemoPreviewBar() {
           )}
           <span className="font-semibold uppercase tracking-[0.14em]">Live Preview</span>
           <span className="hidden text-cyan-100/80 sm:inline">
-            Shared demo mode. Campaign: <span className="font-medium">{campaignName}</span>
+            Seeded demo workspace. Campaign: <span className="font-medium">{campaignName}</span>
           </span>
         </div>
 
