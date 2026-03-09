@@ -2,6 +2,7 @@ import os
 import secrets
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.auth import TenantAuthContext, authenticate_api_key_value
@@ -24,8 +25,27 @@ from app.routes.webhooks import router as webhooks_router
 app = FastAPI(title="Sepurux API")
 
 
+def _parse_cors_origins(raw_value: str | None) -> list[str]:
+    if not raw_value:
+        return []
+    return [origin.strip() for origin in raw_value.split(",") if origin.strip()]
+
+
+cors_origins = _parse_cors_origins(os.getenv("CORS_ALLOW_ORIGINS"))
+if cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"] if "*" in cors_origins else cors_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
 @app.middleware("http")
 async def api_key_auth_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
     if request.url.path.startswith("/v1/ci"):
         return await call_next(request)
     if not request.url.path.startswith("/v1"):
@@ -46,6 +66,8 @@ async def api_key_auth_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def ci_token_auth_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
     if not request.url.path.startswith("/v1/ci"):
         return await call_next(request)
 
