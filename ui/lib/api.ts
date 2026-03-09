@@ -269,12 +269,25 @@ export type DemoInfoResponse = {
   demo_campaign: string;
   demo_project?: string;
   demo_mutation_pack?: string;
+  recommended_flow?: "session" | "shared_key";
+  session_ttl_minutes?: number | null;
   limits: {
     campaigns_per_hour: number;
     mutations_per_run: number;
     traces_upload_per_hour?: number;
     max_trace_bytes?: number;
   };
+};
+
+export type DemoSessionResponse = {
+  api_key: string;
+  project_id: string;
+  project_name: string;
+  demo_campaign: string;
+  demo_mutation_pack: string;
+  expires_at: string;
+  rate_limit_per_minute: number;
+  limits: DemoInfoResponse["limits"];
 };
 
 export type ToolRegistryMetadata = {
@@ -619,5 +632,11 @@ export const api = {
     requestJson<CounterfactualDetail>(`/v1/counterfactuals/${counterfactualId}`),
   getDemoInfo: () =>
     requestJson<DemoInfoResponse>("/demo/info", undefined, { requireProjectHeader: false }),
+  createDemoSession: () =>
+    postJson<DemoSessionResponse, Record<string, never>>(
+      "/demo/session",
+      {},
+      { requireProjectHeader: false }
+    ),
   healthz: () => requestJson<{ status: string }>("/healthz", undefined, { requireProjectHeader: false }),
 };

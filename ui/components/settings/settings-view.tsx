@@ -130,23 +130,22 @@ export function SettingsView() {
     setDemoError(null);
 
     try {
-      const info = await api.getDemoInfo();
+      const [session, info] = await Promise.all([
+        api.createDemoSession(),
+        api.getDemoInfo().catch(() => null),
+      ]);
       const demoBaseUrl = "/api/backend";
       setApiBaseUrl(demoBaseUrl);
-      setApiKey(info.demo_api_key);
+      setApiKey(session.api_key);
       setStoredApiBaseUrl(demoBaseUrl);
-      setStoredApiKey(info.demo_api_key);
-
-      const records = await api.listProjects();
-      const preferred = records.find((record) => record.name === (info.demo_project ?? "")) ?? records[0];
-      if (!preferred) {
-        throw new Error("No projects available for demo setup");
-      }
-      setProjectId(preferred.project_id);
-      setStoredProjectId(preferred.project_id);
+      setStoredApiKey(session.api_key);
+      setProjectId(session.project_id);
+      setStoredProjectId(session.project_id);
 
       setDemoMessage(
-        `Demo loaded: campaign '${info.demo_campaign}' with max ${info.limits.mutations_per_run} mutations/run.`
+        `Demo loaded: campaign '${session.demo_campaign}' with max ${
+          info?.limits.mutations_per_run ?? session.limits.mutations_per_run
+        } mutations/run.`
       );
     } catch (error) {
       setDemoError(error instanceof Error ? error.message : "Failed to enable demo mode");
