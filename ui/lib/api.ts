@@ -264,6 +264,19 @@ export type WebhookRotateSecretResponse = {
   secret: string;
 };
 
+export type DemoInfoResponse = {
+  demo_api_key: string;
+  demo_campaign: string;
+  demo_project?: string;
+  demo_mutation_pack?: string;
+  limits: {
+    campaigns_per_hour: number;
+    mutations_per_run: number;
+    traces_upload_per_hour?: number;
+    max_trace_bytes?: number;
+  };
+};
+
 export type ToolRegistryMetadata = {
   tool_id: string;
   project_id: string;
@@ -604,5 +617,7 @@ export const api = {
     requestJson<CounterfactualListItem[]>(`/v1/attempts/${attemptId}/counterfactuals`),
   getCounterfactual: (counterfactualId: string) =>
     requestJson<CounterfactualDetail>(`/v1/counterfactuals/${counterfactualId}`),
+  getDemoInfo: () =>
+    requestJson<DemoInfoResponse>("/demo/info", undefined, { requireProjectHeader: false }),
   healthz: () => requestJson<{ status: string }>("/healthz", undefined, { requireProjectHeader: false }),
 };
