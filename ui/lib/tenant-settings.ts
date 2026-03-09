@@ -27,6 +27,16 @@ export function setStoredProjectId(projectId: string) {
   }
 }
 
+export function clearStoredProjectId() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(PROJECT_ID_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_PROJECT_ID_STORAGE_KEY);
+  } catch {
+    // ignore localStorage failures in private mode / restricted browsers
+  }
+}
+
 export function getStoredApiKey(): string | null {
   if (typeof window === "undefined") return null;
   try {
@@ -55,6 +65,16 @@ export function setStoredApiKey(apiKey: string) {
   }
 }
 
+export function clearStoredApiKey() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(API_KEY_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_API_KEY_STORAGE_KEY);
+  } catch {
+    // ignore localStorage failures in private mode / restricted browsers
+  }
+}
+
 export function getStoredApiBaseUrl(): string | null {
   if (typeof window === "undefined") return null;
   try {
@@ -78,6 +98,16 @@ export function setStoredApiBaseUrl(apiBaseUrl: string) {
       window.localStorage.removeItem(API_BASE_URL_STORAGE_KEY);
       window.localStorage.removeItem(LEGACY_API_BASE_URL_STORAGE_KEY);
     }
+  } catch {
+    // ignore localStorage failures in private mode / restricted browsers
+  }
+}
+
+export function clearStoredApiBaseUrl() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(API_BASE_URL_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_API_BASE_URL_STORAGE_KEY);
   } catch {
     // ignore localStorage failures in private mode / restricted browsers
   }

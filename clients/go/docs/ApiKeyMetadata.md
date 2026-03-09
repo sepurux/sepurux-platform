@@ -6,7 +6,11 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **ApiKeyId** | **string** |  | 
 **TenantId** | **string** |  | 
+**ProjectId** | Pointer to **NullableString** |  | [optional] 
+**UserId** | Pointer to **NullableString** |  | [optional] 
 **Name** | **string** |  | 
+**IsDemo** | Pointer to **bool** |  | [optional] [default to false]
+**RateLimitPerMinute** | Pointer to **int32** |  | [optional] [default to 120]
 **CreatedAt** | **time.Time** |  | 
 **LastUsedAt** | Pointer to **NullableTime** |  | [optional] 
 **RevokedAt** | Pointer to **NullableTime** |  | [optional] 
@@ -70,6 +74,76 @@ and a boolean to check if the value has been set.
 SetTenantId sets TenantId field to given value.
 
 
+### GetProjectId
+
+`func (o *ApiKeyMetadata) GetProjectId() string`
+
+GetProjectId returns the ProjectId field if non-nil, zero value otherwise.
+
+### GetProjectIdOk
+
+`func (o *ApiKeyMetadata) GetProjectIdOk() (*string, bool)`
+
+GetProjectIdOk returns a tuple with the ProjectId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetProjectId
+
+`func (o *ApiKeyMetadata) SetProjectId(v string)`
+
+SetProjectId sets ProjectId field to given value.
+
+### HasProjectId
+
+`func (o *ApiKeyMetadata) HasProjectId() bool`
+
+HasProjectId returns a boolean if a field has been set.
+
+### SetProjectIdNil
+
+`func (o *ApiKeyMetadata) SetProjectIdNil(b bool)`
+
+ SetProjectIdNil sets the value for ProjectId to be an explicit nil
+
+### UnsetProjectId
+`func (o *ApiKeyMetadata) UnsetProjectId()`
+
+UnsetProjectId ensures that no value is present for ProjectId, not even an explicit nil
+### GetUserId
+
+`func (o *ApiKeyMetadata) GetUserId() string`
+
+GetUserId returns the UserId field if non-nil, zero value otherwise.
+
+### GetUserIdOk
+
+`func (o *ApiKeyMetadata) GetUserIdOk() (*string, bool)`
+
+GetUserIdOk returns a tuple with the UserId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetUserId
+
+`func (o *ApiKeyMetadata) SetUserId(v string)`
+
+SetUserId sets UserId field to given value.
+
+### HasUserId
+
+`func (o *ApiKeyMetadata) HasUserId() bool`
+
+HasUserId returns a boolean if a field has been set.
+
+### SetUserIdNil
+
+`func (o *ApiKeyMetadata) SetUserIdNil(b bool)`
+
+ SetUserIdNil sets the value for UserId to be an explicit nil
+
+### UnsetUserId
+`func (o *ApiKeyMetadata) UnsetUserId()`
+
+UnsetUserId ensures that no value is present for UserId, not even an explicit nil
 ### GetName
 
 `func (o *ApiKeyMetadata) GetName() string`
@@ -89,6 +163,56 @@ and a boolean to check if the value has been set.
 
 SetName sets Name field to given value.
 
+
+### GetIsDemo
+
+`func (o *ApiKeyMetadata) GetIsDemo() bool`
+
+GetIsDemo returns the IsDemo field if non-nil, zero value otherwise.
+
+### GetIsDemoOk
+
+`func (o *ApiKeyMetadata) GetIsDemoOk() (*bool, bool)`
+
+GetIsDemoOk returns a tuple with the IsDemo field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetIsDemo
+
+`func (o *ApiKeyMetadata) SetIsDemo(v bool)`
+
+SetIsDemo sets IsDemo field to given value.
+
+### HasIsDemo
+
+`func (o *ApiKeyMetadata) HasIsDemo() bool`
+
+HasIsDemo returns a boolean if a field has been set.
+
+### GetRateLimitPerMinute
+
+`func (o *ApiKeyMetadata) GetRateLimitPerMinute() int32`
+
+GetRateLimitPerMinute returns the RateLimitPerMinute field if non-nil, zero value otherwise.
+
+### GetRateLimitPerMinuteOk
+
+`func (o *ApiKeyMetadata) GetRateLimitPerMinuteOk() (*int32, bool)`
+
+GetRateLimitPerMinuteOk returns a tuple with the RateLimitPerMinute field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRateLimitPerMinute
+
+`func (o *ApiKeyMetadata) SetRateLimitPerMinute(v int32)`
+
+SetRateLimitPerMinute sets RateLimitPerMinute field to given value.
+
+### HasRateLimitPerMinute
+
+`func (o *ApiKeyMetadata) HasRateLimitPerMinute() bool`
+
+HasRateLimitPerMinute returns a boolean if a field has been set.
 
 ### GetCreatedAt
 

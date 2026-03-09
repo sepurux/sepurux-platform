@@ -31,6 +31,7 @@ class CampaignMetadata(BaseModel):
     campaign_id: UUID
     mutation_pack_id: UUID | None = None
     name: str
+    status: str
     mutation_set: Any
     eval_set: Any
     created_at: datetime
@@ -293,12 +294,18 @@ class ProjectMetadata(BaseModel):
 
 class ApiKeyCreateRequest(BaseModel):
     name: str
+    project_id: UUID | None = None
+    rate_limit_per_minute: int = Field(default=120, ge=1, le=10_000)
 
 
 class ApiKeyMetadata(BaseModel):
     api_key_id: UUID
     tenant_id: UUID
+    project_id: UUID | None = None
+    user_id: UUID | None = None
     name: str
+    is_demo: bool = False
+    rate_limit_per_minute: int = 120
     created_at: datetime
     last_used_at: datetime | None = None
     revoked_at: datetime | None = None

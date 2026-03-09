@@ -9,6 +9,7 @@ src/apis/AuditEventsApi.ts
 src/apis/CampaignsApi.ts
 src/apis/CiApi.ts
 src/apis/CounterfactualsApi.ts
+src/apis/DemoApi.ts
 src/apis/HealthApi.ts
 src/apis/MutationPacksApi.ts
 src/apis/PolicyPacksApi.ts

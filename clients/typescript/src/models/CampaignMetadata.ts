@@ -39,6 +39,12 @@ export interface CampaignMetadata {
     name: string;
     /**
      * 
+     * @type {string}
+     * @memberof CampaignMetadata
+     */
+    status: string;
+    /**
+     * 
      * @type {any}
      * @memberof CampaignMetadata
      */
@@ -63,6 +69,7 @@ export interface CampaignMetadata {
 export function instanceOfCampaignMetadata(value: object): value is CampaignMetadata {
     if (!('campaign_id' in value) || value['campaign_id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
     if (!('mutation_set' in value) || value['mutation_set'] === undefined) return false;
     if (!('eval_set' in value) || value['eval_set'] === undefined) return false;
     if (!('created_at' in value) || value['created_at'] === undefined) return false;
@@ -82,6 +89,7 @@ export function CampaignMetadataFromJSONTyped(json: any, ignoreDiscriminator: bo
         'campaign_id': json['campaign_id'],
         'mutation_pack_id': json['mutation_pack_id'] == null ? undefined : json['mutation_pack_id'],
         'name': json['name'],
+        'status': json['status'],
         'mutation_set': json['mutation_set'],
         'eval_set': json['eval_set'],
         'created_at': (new Date(json['created_at'])),
@@ -97,6 +105,7 @@ export function CampaignMetadataToJSON(value?: CampaignMetadata | null): any {
         'campaign_id': value['campaign_id'],
         'mutation_pack_id': value['mutation_pack_id'],
         'name': value['name'],
+        'status': value['status'],
         'mutation_set': value['mutation_set'],
         'eval_set': value['eval_set'],
         'created_at': ((value['created_at']).toISOString()),

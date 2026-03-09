@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import warnings
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
+from uuid import UUID
 
 import httpx
 
 from .types import RunStatus, TracePayload
 
 SDK_PACKAGE_NAME = "sepurux"
+DEMO_API_KEY = "demo_sepurux_key"
 
 
 class SepuruxClient:
@@ -18,6 +21,7 @@ class SepuruxClient:
         project_id: str | None = None,
         timeout: float = 30,
         sdk_header: str | None = None,
+        demo_mode: bool = False,
     ) -> None:
         normalized = base_url.strip().rstrip("/")
         if not normalized:
@@ -28,12 +32,15 @@ class SepuruxClient:
         self.project_id = project_id
         self.timeout = timeout
         self.sdk_header = (sdk_header or _default_sdk_header()).strip() or _default_sdk_header()
+        self.demo_mode = demo_mode or api_key == DEMO_API_KEY
 
         self._client = httpx.Client(
             base_url=self.base_url,
             timeout=timeout,
             headers={"Accept": "application/json", "X-Sepurux-SDK": self.sdk_header},
         )
+        if self.demo_mode:
+            warnings.warn("This is a limited demo environment.", stacklevel=2)
 
     def close(self) -> None:
         self._client.close()
@@ -126,6 +133,22 @@ class SepuruxClient:
             raise ValueError("Run creation succeeded but run_id was missing")
         return run_id
 
+    def get_demo_info(self) -> dict[str, Any]:
+        response = self._client.get("/demo/info", headers={"Accept": "application/json"})
+        response.raise_for_status()
+        return _parse_json_response(response)
+
+    def run_campaign(
+        self,
+        campaign_name_or_id: str,
+        *,
+        trace: dict[str, Any] | None = None,
+    ) -> str:
+        campaign_id = self._resolve_campaign_id(campaign_name_or_id)
+        trace_payload = trace or _build_demo_trace(campaign_name_or_id)
+        trace_id = self.upload_trace(trace_payload)
+        return self.start_run(trace_id=trace_id, campaign_id=campaign_id)
+
     def get_run(self, run_id: str) -> RunStatus:
         response = self._client.get(
             f"/v1/runs/{run_id}",
@@ -157,6 +180,26 @@ class SepuruxClient:
         headers["X-Sepurux-SDK"] = self.sdk_header
         return headers
 
+    def _resolve_campaign_id(self, campaign_name_or_id: str) -> str:
+        try:
+            return str(UUID(campaign_name_or_id))
+        except ValueError:
+            pass
+
+        response = self._client.get("/v1/campaigns", headers=self._request_headers())
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, list):
+            raise ValueError("Expected campaign list response")
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            name = item.get("name")
+            campaign_id = item.get("campaign_id")
+            if name == campaign_name_or_id and isinstance(campaign_id, str):
+                return campaign_id
+        raise ValueError(f"Campaign not found: {campaign_name_or_id}")
+
 
 def _parse_json_response(response: httpx.Response) -> dict[str, Any]:
     data = response.json()
@@ -171,3 +214,23 @@ def _default_sdk_header() -> str:
     except PackageNotFoundError:
         sdk_version = "dev"
     return f"py/{sdk_version}"
+
+
+def _build_demo_trace(campaign_name_or_id: str) -> dict[str, Any]:
+    return {
+        "trace_version": "0.1",
+        "source": "sdk-demo",
+        "task": {
+            "name": "demo_campaign_run",
+            "input": {
+                "campaign": campaign_name_or_id,
+            },
+        },
+        "events": [
+            {
+                "type": "model",
+                "name": "demo.start",
+                "input": {"campaign": campaign_name_or_id},
+            }
+        ],
+    }

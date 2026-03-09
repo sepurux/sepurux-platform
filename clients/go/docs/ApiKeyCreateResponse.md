@@ -6,7 +6,11 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **ApiKeyId** | **string** |  | 
 **TenantId** | **string** |  | 
+**ProjectId** | Pointer to **NullableString** |  | [optional] 
+**UserId** | Pointer to **NullableString** |  | [optional] 
 **Name** | **string** |  | 
+**IsDemo** | Pointer to **bool** |  | [optional] [default to false]
+**RateLimitPerMinute** | Pointer to **int32** |  | [optional] [default to 120]
 **CreatedAt** | **time.Time** |  | 
 **LastUsedAt** | Pointer to **NullableTime** |  | [optional] 
 **RevokedAt** | Pointer to **NullableTime** |  | [optional] 
@@ -71,6 +75,76 @@ and a boolean to check if the value has been set.
 SetTenantId sets TenantId field to given value.
 
 
+### GetProjectId
+
+`func (o *ApiKeyCreateResponse) GetProjectId() string`
+
+GetProjectId returns the ProjectId field if non-nil, zero value otherwise.
+
+### GetProjectIdOk
+
+`func (o *ApiKeyCreateResponse) GetProjectIdOk() (*string, bool)`
+
+GetProjectIdOk returns a tuple with the ProjectId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetProjectId
+
+`func (o *ApiKeyCreateResponse) SetProjectId(v string)`
+
+SetProjectId sets ProjectId field to given value.
+
+### HasProjectId
+
+`func (o *ApiKeyCreateResponse) HasProjectId() bool`
+
+HasProjectId returns a boolean if a field has been set.
+
+### SetProjectIdNil
+
+`func (o *ApiKeyCreateResponse) SetProjectIdNil(b bool)`
+
+ SetProjectIdNil sets the value for ProjectId to be an explicit nil
+
+### UnsetProjectId
+`func (o *ApiKeyCreateResponse) UnsetProjectId()`
+
+UnsetProjectId ensures that no value is present for ProjectId, not even an explicit nil
+### GetUserId
+
+`func (o *ApiKeyCreateResponse) GetUserId() string`
+
+GetUserId returns the UserId field if non-nil, zero value otherwise.
+
+### GetUserIdOk
+
+`func (o *ApiKeyCreateResponse) GetUserIdOk() (*string, bool)`
+
+GetUserIdOk returns a tuple with the UserId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetUserId
+
+`func (o *ApiKeyCreateResponse) SetUserId(v string)`
+
+SetUserId sets UserId field to given value.
+
+### HasUserId
+
+`func (o *ApiKeyCreateResponse) HasUserId() bool`
+
+HasUserId returns a boolean if a field has been set.
+
+### SetUserIdNil
+
+`func (o *ApiKeyCreateResponse) SetUserIdNil(b bool)`
+
+ SetUserIdNil sets the value for UserId to be an explicit nil
+
+### UnsetUserId
+`func (o *ApiKeyCreateResponse) UnsetUserId()`
+
+UnsetUserId ensures that no value is present for UserId, not even an explicit nil
 ### GetName
 
 `func (o *ApiKeyCreateResponse) GetName() string`
@@ -90,6 +164,56 @@ and a boolean to check if the value has been set.
 
 SetName sets Name field to given value.
 
+
+### GetIsDemo
+
+`func (o *ApiKeyCreateResponse) GetIsDemo() bool`
+
+GetIsDemo returns the IsDemo field if non-nil, zero value otherwise.
+
+### GetIsDemoOk
+
+`func (o *ApiKeyCreateResponse) GetIsDemoOk() (*bool, bool)`
+
+GetIsDemoOk returns a tuple with the IsDemo field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetIsDemo
+
+`func (o *ApiKeyCreateResponse) SetIsDemo(v bool)`
+
+SetIsDemo sets IsDemo field to given value.
+
+### HasIsDemo
+
+`func (o *ApiKeyCreateResponse) HasIsDemo() bool`
+
+HasIsDemo returns a boolean if a field has been set.
+
+### GetRateLimitPerMinute
+
+`func (o *ApiKeyCreateResponse) GetRateLimitPerMinute() int32`
+
+GetRateLimitPerMinute returns the RateLimitPerMinute field if non-nil, zero value otherwise.
+
+### GetRateLimitPerMinuteOk
+
+`func (o *ApiKeyCreateResponse) GetRateLimitPerMinuteOk() (*int32, bool)`
+
+GetRateLimitPerMinuteOk returns a tuple with the RateLimitPerMinute field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRateLimitPerMinute
+
+`func (o *ApiKeyCreateResponse) SetRateLimitPerMinute(v int32)`
+
+SetRateLimitPerMinute sets RateLimitPerMinute field to given value.
+
+### HasRateLimitPerMinute
+
+`func (o *ApiKeyCreateResponse) HasRateLimitPerMinute() bool`
+
+HasRateLimitPerMinute returns a boolean if a field has been set.
 
 ### GetCreatedAt
 
