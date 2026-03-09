@@ -1,7 +1,7 @@
 import os
 import secrets
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -13,6 +13,7 @@ from app.routes.audit_events import router as audit_events_router
 from app.routes.campaigns import router as campaigns_router
 from app.routes.ci import router as ci_router
 from app.routes.counterfactuals import router as counterfactuals_router
+from app.routes.demo import router as demo_router
 from app.routes.mutation_packs import router as mutation_packs_router
 from app.routes.policy_packs import router as policy_packs_router
 from app.routes.projects import router as projects_router
@@ -55,7 +56,11 @@ async def api_key_auth_middleware(request: Request, call_next):
     if not api_key_value:
         return JSONResponse(status_code=401, content={"detail": "X-API-Key header is required"})
 
-    auth_ctx = authenticate_api_key_value(request, api_key_value)
+    try:
+        auth_ctx = authenticate_api_key_value(request, api_key_value)
+    except HTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
     if not isinstance(auth_ctx, TenantAuthContext):
         return JSONResponse(status_code=401, content={"detail": "Invalid API key"})
 
@@ -100,6 +105,7 @@ app.include_router(templates_router)
 app.include_router(tools_router)
 app.include_router(traces_router)
 app.include_router(webhooks_router)
+app.include_router(demo_router)
 
 
 @app.get("/healthz", tags=["health"])

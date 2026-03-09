@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, TenantAuthContext, require_project_scope, require_role
 from app.db import get_db
 from app.schemas import TraceMetadata
 from app.services.audit_service import actor_from_request
+from app.services.demo_service import enforce_demo_trace_upload_limits
 from app.services.trace_intake import create_trace, get_trace_payload, list_traces, trace_metadata
 from app.services.trace_intake import get_trace as get_trace_record
 from app.services.trace_validation import validate_and_normalize_trace
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/v1/traces", tags=["traces"])
 DbSession = Annotated[Session, Depends(get_db)]
 JsonPayload = Annotated[Any, Body()]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+DeveloperAuth = Annotated[TenantAuthContext, Depends(require_role("developer"))]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=TraceMetadata)
@@ -26,8 +28,16 @@ def post_trace(
     payload: JsonPayload,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
     request: Request,
 ) -> TraceMetadata | JSONResponse:
+    if tenant_auth.is_demo:
+        enforce_demo_trace_upload_limits(
+            db,
+            project_id=project_scope.project_id,
+            payload=payload,
+        )
+
     normalized_payload, validation_issues = validate_and_normalize_trace(payload)
     if validation_issues:
         return JSONResponse(
