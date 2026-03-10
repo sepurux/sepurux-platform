@@ -191,7 +191,7 @@ export function TopBar() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-3">
-            <div className="hidden h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/80 text-xs font-semibold text-cyan-200 sm:flex">
+            <div className="hidden h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/80 text-xs font-semibold text-blue-200 sm:flex">
               CL
             </div>
             <div className="min-w-0">
@@ -220,7 +220,7 @@ export function TopBar() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
-            <FolderKanban className="h-4 w-4 text-cyan-200" />
+            <FolderKanban className="h-4 w-4 text-blue-200" />
             <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
               <select
@@ -244,7 +244,7 @@ export function TopBar() {
             className="hidden min-w-[280px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex"
             onSubmit={handleSearchSubmit}
           >
-            {searching ? <Loader2 className="h-4 w-4 animate-spin text-cyan-200" /> : <Search className="h-4 w-4 text-cyan-200" />}
+            {searching ? <Loader2 className="h-4 w-4 animate-spin text-blue-200" /> : <Search className="h-4 w-4 text-blue-200" />}
             <input
               type="search"
               value={searchQuery}
@@ -262,7 +262,7 @@ export function TopBar() {
           </button>
           <details className="group relative">
             <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm hover:bg-accent/40">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-cyan-400/20 text-xs font-semibold text-cyan-200">AK</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-400/20 text-xs font-semibold text-blue-200">AK</span>
               <span className="hidden text-foreground sm:inline">Analyst</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground group-open:rotate-180" />
             </summary>
