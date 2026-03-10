@@ -52,7 +52,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
       <div className="faint-grid flex min-h-screen items-center justify-center bg-background p-6">
         <div className="rounded-lg border border-border/70 bg-card/80 px-6 py-5 text-sm text-muted-foreground shadow-panel">
           <span className="inline-flex items-center gap-2 text-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+            <Loader2 className="h-4 w-4 animate-spin text-blue-300" />
             Preparing workspace...
           </span>
         </div>

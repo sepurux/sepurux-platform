@@ -15,6 +15,8 @@ const config: Config = {
     extend: {
       colors: {
         background: "hsl(var(--background))",
+        surface: "hsl(var(--surface))",
+        sidebar: "hsl(var(--sidebar))",
         foreground: "hsl(var(--foreground))",
         card: "hsl(var(--card))",
         "card-foreground": "hsl(var(--card-foreground))",
@@ -27,17 +29,20 @@ const config: Config = {
         "accent-foreground": "hsl(var(--accent-foreground))",
         primary: "hsl(var(--primary))",
         "primary-foreground": "hsl(var(--primary-foreground))",
+        secondary: "hsl(var(--secondary))",
         success: "hsl(var(--success))",
+        info: "hsl(var(--info))",
+        neutral: "hsl(var(--neutral))",
         warning: "hsl(var(--warning))",
         danger: "hsl(var(--danger))"
       },
       borderRadius: {
-        lg: "0.9rem",
+        lg: "10px",
         md: "0.65rem",
         sm: "0.45rem"
       },
       boxShadow: {
-        panel: "0 12px 38px rgba(0,0,0,0.28)",
+        panel: "0 6px 24px rgba(0,0,0,0.35)",
         insetSoft: "inset 0 1px 0 rgba(255,255,255,0.04)"
       },
       backgroundImage: {

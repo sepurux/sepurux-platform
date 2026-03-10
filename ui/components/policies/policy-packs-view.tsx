@@ -103,7 +103,7 @@ export function PolicyPacksView() {
                         <TableCell className="font-medium text-foreground">
                           <Link
                             href={`/policies/${record.policy_pack_id}`}
-                            className="hover:text-cyan-200"
+                            className="hover:text-blue-200"
                           >
                             {record.name}
                           </Link>

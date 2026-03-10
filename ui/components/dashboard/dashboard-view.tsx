@@ -48,6 +48,12 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; data: DashboardData };
 
+const CHART_LINE = "#38BDF8";
+const CHART_GRID = "#1E2936";
+const CHART_AXIS = "#94A3B8";
+const TOOLTIP_BG = "#121821";
+const TOOLTIP_BORDER = "#1E2936";
+
 export function DashboardView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -182,22 +188,28 @@ function DashboardPanels({ data }: { data: DashboardData }) {
             value={kpis.reliabilityScore === null ? "--" : `${kpis.reliabilityScore}`}
             subtitle="Weighted from recent run pass rates"
             icon={ShieldCheck}
-            accent="cyan"
+            accent="success"
           />
-          <KpiCard title="Tests Run" value={String(kpis.testsRun)} subtitle="Replay attempts across recent runs" icon={TestTube2} />
+          <KpiCard
+            title="Tests Run"
+            value={String(kpis.testsRun)}
+            subtitle="Replay attempts across recent runs"
+            icon={TestTube2}
+            accent="neutral"
+          />
           <KpiCard
             title="Failed Attempts"
             value={String(kpis.failedAttempts)}
             subtitle="Failed replays in current dashboard sample"
             icon={Flame}
-            accent="rose"
+            accent="danger"
           />
           <KpiCard
             title="Avg Duration"
             value={kpis.avgDurationLabel}
             subtitle="Estimated from attempt volume (placeholder)"
             icon={Clock3}
-            accent="amber"
+            accent="info"
           />
         </div>
 
@@ -242,19 +254,19 @@ function KpiCard({
   value,
   subtitle,
   icon: Icon,
-  accent = "slate",
+  accent = "neutral",
 }: {
   title: string;
   value: string;
   subtitle: string;
   icon: React.ComponentType<{ className?: string }>;
-  accent?: "slate" | "cyan" | "rose" | "amber";
+  accent?: "neutral" | "success" | "danger" | "info";
 }) {
   const accentClasses: Record<string, string> = {
-    slate: "text-slate-300 border-slate-300/15 bg-slate-300/5",
-    cyan: "text-cyan-300 border-cyan-300/20 bg-cyan-400/10",
-    rose: "text-rose-300 border-rose-300/20 bg-rose-400/10",
-    amber: "text-amber-300 border-amber-300/20 bg-amber-400/10",
+    neutral: "text-neutral border-neutral/30 bg-neutral/10",
+    success: "text-success border-success/30 bg-success/10",
+    danger: "text-danger border-danger/30 bg-danger/10",
+    info: "text-info border-info/30 bg-info/10",
   };
 
   return (
@@ -263,7 +275,7 @@ function KpiCard({
         <div className="flex items-start justify-between gap-4 p-5">
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{title}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
+            <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-foreground">{value}</p>
             <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
           </div>
           <div className={cn("grid h-10 w-10 place-items-center rounded-md border", accentClasses[accent])}>
@@ -337,7 +349,7 @@ function PassRateTrendCard({ series }: { series: Array<{ name: string; passRate:
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-cyan-300" /> Pass Rate Trend
+          <BarChart3 className="h-4 w-4 text-info" /> Pass Rate Trend
         </CardTitle>
         <CardDescription>Recent run pass rate trend (from /runs/{`{id}`}/stats).</CardDescription>
       </CardHeader>
@@ -348,25 +360,25 @@ function PassRateTrendCard({ series }: { series: Array<{ name: string; passRate:
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis dataKey="name" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fill: "#9ca3af", fontSize: 11 }}
+                  tick={{ fill: CHART_AXIS, fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   width={32}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#121722",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: TOOLTIP_BG,
+                    border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
                     color: "#e5e7eb",
                   }}
                   formatter={(value: number) => `${value.toFixed(0)}%`}
                 />
-                <Line type="monotone" dataKey="passRate" stroke="#3dd9f5" strokeWidth={2.5} dot={{ r: 2 }} />
+                <Line type="monotone" dataKey="passRate" stroke={CHART_LINE} strokeWidth={2.5} dot={{ r: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -411,13 +423,13 @@ function TopFragileToolsCard({ fragility }: { fragility: ToolFragilityResponse }
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="tool" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                <XAxis dataKey="tool" tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip
                   contentStyle={{
-                    background: "#121722",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: TOOLTIP_BG,
+                    border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
                     color: "#e5e7eb",
                   }}
@@ -437,7 +449,6 @@ function RunStatusMixCard({
 }: {
   series: Array<{ status: string; count: number }>;
 }) {
-  const palette = ["#3dd9f5", "#22c55e", "#f97316", "#f43f5e", "#a78bfa", "#94a3b8"];
   const total = series.reduce((sum, item) => sum + item.count, 0);
 
   return (
@@ -464,13 +475,13 @@ function RunStatusMixCard({
                   paddingAngle={2}
                 >
                   {series.map((entry, index) => (
-                    <Cell key={entry.status} fill={palette[index % palette.length]} />
+                    <Cell key={entry.status} fill={statusColor(entry.status, index)} />
                   ))}
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    background: "#121722",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: TOOLTIP_BG,
+                    border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
                     color: "#e5e7eb",
                   }}
@@ -489,7 +500,7 @@ function RunStatusMixCard({
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: palette[index % palette.length] }}
+                      style={{ backgroundColor: statusColor(item.status, index) }}
                     />
                     <span>{item.status}</span>
                   </div>
@@ -520,20 +531,20 @@ function FailureReasonsCard({ reasons }: { reasons: Array<{ reason: string; coun
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={reasons} layout="vertical" margin={{ top: 8, right: 10, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
+                <XAxis type="number" tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis
                   type="category"
                   dataKey="reason"
-                  tick={{ fill: "#9ca3af", fontSize: 10 }}
+                  tick={{ fill: CHART_AXIS, fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
                   width={94}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#121722",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: TOOLTIP_BG,
+                    border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
                     color: "#e5e7eb",
                   }}
@@ -566,13 +577,13 @@ function FirstFailureStepCard({
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="step" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis dataKey="step" tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip
                   contentStyle={{
-                    background: "#121722",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: TOOLTIP_BG,
+                    border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
                     color: "#e5e7eb",
                   }}
@@ -606,18 +617,18 @@ function AttemptVolumeCard({
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="run" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis dataKey="run" tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip
                   contentStyle={{
-                    background: "#121722",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: TOOLTIP_BG,
+                    border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
                     color: "#e5e7eb",
                   }}
                 />
-                <Bar dataKey="attempts" radius={[6, 6, 0, 0]} fill="#3dd9f5" />
+                <Bar dataKey="attempts" radius={[6, 6, 0, 0]} fill={CHART_LINE} />
                 <Bar dataKey="failed" radius={[6, 6, 0, 0]} fill="#f43f5e" />
               </BarChart>
             </ResponsiveContainer>
@@ -815,8 +826,8 @@ function HeatmapRow({
             key={`${category}:${fault}`}
             className="grid h-12 place-items-center rounded-md border border-border/50 text-xs font-semibold text-foreground"
             style={{
-              backgroundColor: `rgba(61, 217, 245, ${0.06 + intensity * 0.42})`,
-              boxShadow: intensity > 0 ? `inset 0 0 0 1px rgba(61,217,245,${0.08 + intensity * 0.35})` : undefined,
+              backgroundColor: `rgba(56, 189, 248, ${0.06 + intensity * 0.42})`,
+              boxShadow: intensity > 0 ? `inset 0 0 0 1px rgba(56,189,248,${0.08 + intensity * 0.35})` : undefined,
             }}
             title={`${category} × ${fault}: ${count}`}
           >
@@ -832,8 +843,19 @@ function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   if (normalized === "completed") return <Badge variant="success">completed</Badge>;
   if (normalized === "failed") return <Badge variant="danger">failed</Badge>;
-  if (normalized === "running") return <Badge variant="warning">running</Badge>;
-  return <Badge variant="default">{status}</Badge>;
+  if (normalized === "running") return <Badge variant="info">running</Badge>;
+  if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
+  return <Badge variant="neutral">{status}</Badge>;
+}
+
+function statusColor(status: string, index: number) {
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "completed") return "#22C55E";
+  if (normalized === "failed") return "#EF4444";
+  if (normalized === "running") return "#3B82F6";
+  if (normalized === "queued") return "#94A3B8";
+  const fallbackPalette = ["#60A5FA", "#F59E0B", "#A78BFA", "#22D3EE", "#94A3B8"];
+  return fallbackPalette[index % fallbackPalette.length];
 }
 
 function DashboardLoading() {
