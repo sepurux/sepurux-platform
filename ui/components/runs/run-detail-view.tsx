@@ -152,7 +152,7 @@ function RunDetailPanels({
             <StatTile label="Attempts" value={String(derived.total)} />
             <StatTile label="Passed" value={String(derived.passed)} tone="success" />
             <StatTile label="Failed" value={String(derived.failed)} tone="danger" />
-            <StatTile label="Pass Rate" value={derived.passRateLabel} tone="cyan" />
+            <StatTile label="Pass Rate" value={derived.passRateLabel} tone="info" />
             <StatTile label="Policy Violations" value={String(policyViolationCount)} tone={policyViolationCount > 0 ? "danger" : "default"} />
           </div>
         </CardContent>
@@ -400,7 +400,7 @@ function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
               attempts.map((attempt) => (
                 <TableRow key={attempt.attempt_id}>
                   <TableCell>
-                    <Link href={`/attempts/${attempt.attempt_id}`} className="font-medium text-foreground hover:text-cyan-200">
+                    <Link href={`/attempts/${attempt.attempt_id}`} className="font-medium text-foreground hover:text-info">
                       {shortId(attempt.attempt_id, 10)}
                     </Link>
                   </TableCell>
@@ -671,17 +671,17 @@ function derivePassRate(run: RunMetadata, stats: RunStats | null): number {
   return passed / attempts;
 }
 
-function StatTile({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "danger" | "cyan" }) {
+function StatTile({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "danger" | "info" }) {
   const toneClasses: Record<string, string> = {
     default: "text-foreground",
-    success: "text-emerald-300",
-    danger: "text-rose-300",
-    cyan: "text-cyan-300",
+    success: "text-success",
+    danger: "text-danger",
+    info: "text-info",
   };
   return (
     <div className="rounded-md border border-border/60 bg-muted/15 p-4">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 text-2xl font-semibold", toneClasses[tone])}>{value}</p>
+      <p className={cn("mt-2 text-[28px] font-semibold leading-none", toneClasses[tone])}>{value}</p>
     </div>
   );
 }
@@ -690,8 +690,9 @@ function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   if (normalized === "completed") return <Badge variant="success">completed</Badge>;
   if (normalized === "failed") return <Badge variant="danger">failed</Badge>;
-  if (normalized === "running") return <Badge variant="warning">running</Badge>;
-  return <Badge variant="default">{status}</Badge>;
+  if (normalized === "running") return <Badge variant="info">running</Badge>;
+  if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
+  return <Badge variant="neutral">{status}</Badge>;
 }
 
 function RunDetailSkeleton() {

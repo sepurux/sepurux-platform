@@ -192,8 +192,9 @@ function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   if (normalized === "completed") return <Badge variant="success">completed</Badge>;
   if (normalized === "failed") return <Badge variant="danger">failed</Badge>;
-  if (normalized === "running") return <Badge variant="warning">running</Badge>;
-  return <Badge variant="default">{status}</Badge>;
+  if (normalized === "running") return <Badge variant="info">running</Badge>;
+  if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
+  return <Badge variant="neutral">{status}</Badge>;
 }
 
 function downloadJson(filename: string, payload: unknown) {

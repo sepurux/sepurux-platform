@@ -137,30 +137,30 @@ export function DemoPreviewBar() {
   }
 
   return (
-    <div className="border-b border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-cyan-100">
+    <div className="border-b border-blue-400/30 bg-blue-500/10 px-4 py-2 text-blue-100">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2 text-xs">
           {isBootstrapping ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-200" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-200" />
           ) : (
-            <MonitorPlay className="h-3.5 w-3.5 text-cyan-200" />
+            <MonitorPlay className="h-3.5 w-3.5 text-blue-200" />
           )}
           <span className="font-semibold uppercase tracking-[0.14em]">Live Preview</span>
-          <span className="hidden text-cyan-100/80 sm:inline">
+          <span className="hidden text-blue-100/80 sm:inline">
             Seeded demo workspace. Campaign: <span className="font-medium">{campaignName}</span>
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" className="border-cyan-300/40 text-cyan-100">
+          <Button asChild size="sm" variant="outline" className="border-blue-300/40 text-blue-100">
             <Link href="/dashboard">Open Dashboard</Link>
           </Button>
-          <Button asChild size="sm" variant="outline" className="border-cyan-300/40 text-cyan-100">
+          <Button asChild size="sm" variant="outline" className="border-blue-300/40 text-blue-100">
             <a href={siteUrl}>
               Back to Site <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </Button>
-          <Button size="sm" variant="ghost" className="text-cyan-100" onClick={handleExitDemo}>
+          <Button size="sm" variant="ghost" className="text-blue-100" onClick={handleExitDemo}>
             Exit Demo
           </Button>
         </div>

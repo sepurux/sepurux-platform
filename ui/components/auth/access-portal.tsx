@@ -187,7 +187,7 @@ export function AccessPortal() {
   return (
     <div className="mx-auto w-full max-w-5xl">
       <div className="mb-6 flex items-center justify-between">
-        <Link href={DEFAULT_SITE_URL} className="text-sm text-cyan-200 hover:text-cyan-100">
+        <Link href={DEFAULT_SITE_URL} className="text-sm text-blue-200 hover:text-blue-100">
           <span className="inline-flex items-center gap-1">
             Back to site <ExternalLink className="h-3.5 w-3.5" />
           </span>
@@ -206,7 +206,7 @@ export function AccessPortal() {
                 type="button"
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
                   mode === "demo"
-                    ? "bg-cyan-400/15 text-cyan-100"
+                    ? "bg-blue-400/15 text-blue-100"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => handleModeSwitch("demo")}
@@ -217,7 +217,7 @@ export function AccessPortal() {
                 type="button"
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
                   mode === "access"
-                    ? "bg-cyan-400/15 text-cyan-100"
+                    ? "bg-blue-400/15 text-blue-100"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => handleModeSwitch("access")}
@@ -229,13 +229,13 @@ export function AccessPortal() {
           <CardContent>
             {mode === "demo" ? (
               <div className="space-y-4">
-                <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-100">
+                <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-100">
                   <p className="font-medium">Seeded Demo Workspace</p>
-                  <p className="mt-1 text-cyan-100/80">
+                  <p className="mt-1 text-blue-100/80">
                     We issue a per-session demo API key and route you to a resettable shared dataset.
                   </p>
                   {demoInfo ? (
-                    <p className="mt-2 text-cyan-100/80">
+                    <p className="mt-2 text-blue-100/80">
                       Limits: {demoInfo.limits.campaigns_per_hour}/hr campaigns,{" "}
                       {demoInfo.limits.mutations_per_run}/run mutations.
                     </p>
@@ -324,7 +324,7 @@ export function AccessPortal() {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="rounded-md border border-border/60 bg-muted/30 p-3">
               <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <Sparkles className="h-4 w-4 text-cyan-300" /> View Demo
+                <Sparkles className="h-4 w-4 text-blue-300" /> View Demo
               </p>
               <p className="mt-1">
                 Generates a short-lived demo key mapped to seeded project data, then opens dashboard instantly.
@@ -332,7 +332,7 @@ export function AccessPortal() {
             </div>
             <div className="rounded-md border border-border/60 bg-muted/30 p-3">
               <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <KeyRound className="h-4 w-4 text-cyan-300" /> Get Access
+                <KeyRound className="h-4 w-4 text-blue-300" /> Get Access
               </p>
               <p className="mt-1">
                 Uses your API key + project scope for persistent workspaces and unrestricted runs.
@@ -340,7 +340,7 @@ export function AccessPortal() {
             </div>
             <div className="rounded-md border border-border/60 bg-muted/30 p-3">
               <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <MonitorPlay className="h-4 w-4 text-cyan-300" /> Seeded Data
+                <MonitorPlay className="h-4 w-4 text-blue-300" /> Seeded Data
               </p>
               <p className="mt-1">
                 Demo traces, campaigns, and mutation packs are preloaded and periodically reset.

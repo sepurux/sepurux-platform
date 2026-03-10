@@ -25,7 +25,7 @@ export function CounterfactualResultsCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FlaskConical className="h-4 w-4 text-cyan-300" /> {title}
+          <FlaskConical className="h-4 w-4 text-blue-300" /> {title}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
@@ -48,7 +48,7 @@ export function CounterfactualResultsCard({
               <div key={`${item.strategy}:${item.created_at}`} className="rounded-md border border-border/60 bg-muted/15 p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <Sparkles className="h-4 w-4 text-cyan-300" />
+                    <Sparkles className="h-4 w-4 text-blue-300" />
                     {titleFromStrategy(item.strategy)}
                   </div>
                   <Badge variant={item.result.toLowerCase().startsWith("pass") ? "success" : "danger"}>{item.result}</Badge>

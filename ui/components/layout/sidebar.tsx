@@ -42,9 +42,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border/70 bg-card/60 p-4 backdrop-blur xl:flex xl:flex-col">
+    <aside className="hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border bg-sidebar/95 p-4 backdrop-blur xl:flex xl:flex-col">
       <div className="mb-4 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
-        <div className="grid h-10 w-10 place-items-center rounded-md border border-cyan-300/20 bg-cyan-400/10 text-cyan-300">
+        <div className="grid h-10 w-10 place-items-center rounded-md border border-info/20 bg-info/10 text-info">
           <Activity className="h-5 w-5" />
         </div>
         <div>
@@ -63,13 +63,13 @@ export function Sidebar() {
               key={item.label}
               href={item.href}
               className={cn(
-                "group flex items-center gap-3 rounded-md border px-3 py-2.5 text-sm transition",
+                "group flex items-center gap-3 rounded-md border-l-2 border-l-transparent border-transparent px-3 py-2.5 text-sm transition",
                 active
-                  ? "border-cyan-300/20 bg-cyan-400/10 text-cyan-200 shadow-insetSoft"
-                  : "border-transparent text-muted-foreground hover:border-border/70 hover:bg-accent/40 hover:text-foreground",
+                  ? "border-l-primary bg-muted/45 text-foreground shadow-insetSoft"
+                  : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground",
               )}
             >
-              <Icon className={cn("h-4 w-4", active ? "text-cyan-300" : "text-muted-foreground group-hover:text-foreground")} />
+              <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
               <span className="flex-1">{item.label}</span>
             </Link>
           );

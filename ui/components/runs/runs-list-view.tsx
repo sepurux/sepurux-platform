@@ -118,7 +118,7 @@ export function RunsListView() {
                       return (
                         <TableRow key={run.run_id}>
                           <TableCell>
-                            <Link href={`/runs/${run.run_id}`} className="font-medium text-foreground hover:text-cyan-200">
+                            <Link href={`/runs/${run.run_id}`} className="font-medium text-foreground hover:text-info">
                               {shortId(run.run_id, 10)}
                             </Link>
                           </TableCell>
@@ -160,8 +160,9 @@ function RunStatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   if (normalized === "completed") return <Badge variant="success">completed</Badge>;
   if (normalized === "failed") return <Badge variant="danger">failed</Badge>;
-  if (normalized === "running") return <Badge variant="warning">running</Badge>;
-  return <Badge variant="default">{status}</Badge>;
+  if (normalized === "running") return <Badge variant="info">running</Badge>;
+  if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
+  return <Badge variant="neutral">{status}</Badge>;
 }
 
 function RunsTableSkeleton() {
