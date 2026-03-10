@@ -125,7 +125,11 @@ export function DemoPreviewBar() {
     clearStoredProjectId();
     clearStoredApiBaseUrl();
     setIsActive(false);
-    router.push("/settings");
+    if (typeof window !== "undefined") {
+      window.location.assign(siteUrl);
+      return;
+    }
+    router.push("/");
   }
 
   if (!isActive && !isPreviewRequest) {

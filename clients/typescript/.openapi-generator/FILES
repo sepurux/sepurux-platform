@@ -34,6 +34,9 @@ src/models/CampaignCreateRequest.ts
 src/models/CampaignMetadata.ts
 src/models/CounterfactualListItem.ts
 src/models/CounterfactualMetadata.ts
+src/models/DemoInfoResponse.ts
+src/models/DemoLimits.ts
+src/models/DemoSessionResponse.ts
 src/models/EventIndexCount.ts
 src/models/HTTPValidationError.ts
 src/models/HardeningTemplateCreateRequest.ts

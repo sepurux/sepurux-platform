@@ -25,8 +25,7 @@ class Settings:
             s3_endpoint_url=_first_env("S3_ENDPOINT_URL", "AWS_ENDPOINT_URL_S3")
             or "http://localhost:9000",
             s3_access_key=_first_env("S3_ACCESS_KEY", "AWS_ACCESS_KEY_ID") or "minio",
-            s3_secret_key=_first_env("S3_SECRET_KEY", "AWS_SECRET_ACCESS_KEY")
-            or "minio123456",
+            s3_secret_key=_first_env("S3_SECRET_KEY", "AWS_SECRET_ACCESS_KEY") or "minio123456",
             s3_bucket=_first_env("S3_BUCKET", "BUCKET_NAME") or "sepurux",
             s3_region=_first_env("S3_REGION", "AWS_REGION") or "us-east-1",
             opa_url=os.getenv("OPA_URL", "http://opa:8181"),

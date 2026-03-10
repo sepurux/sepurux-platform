@@ -27,7 +27,7 @@ type ApiGetDemoInfoDemoInfoGetRequest struct {
 	ApiService *DemoAPIService
 }
 
-func (r ApiGetDemoInfoDemoInfoGetRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiGetDemoInfoDemoInfoGetRequest) Execute() (*DemoInfoResponse, *http.Response, error) {
 	return r.ApiService.GetDemoInfoDemoInfoGetExecute(r)
 }
 
@@ -45,13 +45,13 @@ func (a *DemoAPIService) GetDemoInfoDemoInfoGet(ctx context.Context) ApiGetDemoI
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *DemoAPIService) GetDemoInfoDemoInfoGetExecute(r ApiGetDemoInfoDemoInfoGetRequest) (map[string]interface{}, *http.Response, error) {
+//  @return DemoInfoResponse
+func (a *DemoAPIService) GetDemoInfoDemoInfoGetExecute(r ApiGetDemoInfoDemoInfoGetRequest) (*DemoInfoResponse, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *DemoInfoResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DemoAPIService.GetDemoInfoDemoInfoGet")
@@ -60,6 +60,103 @@ func (a *DemoAPIService) GetDemoInfoDemoInfoGetExecute(r ApiGetDemoInfoDemoInfoG
 	}
 
 	localVarPath := localBasePath + "/demo/info"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiPostDemoSessionDemoSessionPostRequest struct {
+	ctx context.Context
+	ApiService *DemoAPIService
+}
+
+func (r ApiPostDemoSessionDemoSessionPostRequest) Execute() (*DemoSessionResponse, *http.Response, error) {
+	return r.ApiService.PostDemoSessionDemoSessionPostExecute(r)
+}
+
+/*
+PostDemoSessionDemoSessionPost Post Demo Session
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiPostDemoSessionDemoSessionPostRequest
+*/
+func (a *DemoAPIService) PostDemoSessionDemoSessionPost(ctx context.Context) ApiPostDemoSessionDemoSessionPostRequest {
+	return ApiPostDemoSessionDemoSessionPostRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return DemoSessionResponse
+func (a *DemoAPIService) PostDemoSessionDemoSessionPostExecute(r ApiPostDemoSessionDemoSessionPostRequest) (*DemoSessionResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *DemoSessionResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DemoAPIService.PostDemoSessionDemoSessionPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/demo/session"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

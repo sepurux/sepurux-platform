@@ -14,6 +14,16 @@
 
 
 import * as runtime from '../runtime';
+import type {
+  DemoInfoResponse,
+  DemoSessionResponse,
+} from '../models/index';
+import {
+    DemoInfoResponseFromJSON,
+    DemoInfoResponseToJSON,
+    DemoSessionResponseFromJSON,
+    DemoSessionResponseToJSON,
+} from '../models/index';
 
 /**
  * 
@@ -23,7 +33,7 @@ export class DemoApi extends runtime.BaseAPI {
     /**
      * Get Demo Info
      */
-    async getDemoInfoDemoInfoGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: any; }>> {
+    async getDemoInfoDemoInfoGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DemoInfoResponse>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -35,14 +45,40 @@ export class DemoApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse<any>(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => DemoInfoResponseFromJSON(jsonValue));
     }
 
     /**
      * Get Demo Info
      */
-    async getDemoInfoDemoInfoGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: any; }> {
+    async getDemoInfoDemoInfoGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DemoInfoResponse> {
         const response = await this.getDemoInfoDemoInfoGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Post Demo Session
+     */
+    async postDemoSessionDemoSessionPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DemoSessionResponse>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/demo/session`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DemoSessionResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Post Demo Session
+     */
+    async postDemoSessionDemoSessionPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DemoSessionResponse> {
+        const response = await this.postDemoSessionDemoSessionPostRaw(initOverrides);
         return await response.value();
     }
 
