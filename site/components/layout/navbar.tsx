@@ -23,7 +23,7 @@ export function Navbar() {
             priority
           />
           <span className="-ml-6 text-xl font-semibold tracking-tight text-foreground">
-            Crash <span className="text-primary">Lab</span>
+            Sepurux 
           </span>
         </Link>
 
