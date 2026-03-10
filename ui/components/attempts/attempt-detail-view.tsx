@@ -41,7 +41,7 @@ export function AttemptDetailView({ attemptId }: { attemptId: string }) {
       const [timeline, counterfactuals, runSecurityEvents] = await Promise.all([
         api.getAttemptTimeline(attemptId).catch(() => null),
         api.listAttemptCounterfactuals(attemptId).catch(() => []),
-        api.listRunSecurityEvents(attempt.run_id, { limit: 400, offset: 0 }).catch(() => []),
+        api.listRunSecurityEvents(attempt.run_id, { limit: 200, offset: 0 }).catch(() => []),
       ]);
       const securityEvents = runSecurityEvents.filter((event) => event.attempt_id === attemptId);
       setState({ status: "ready", attempt, timeline, counterfactuals, securityEvents });

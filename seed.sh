@@ -349,7 +349,31 @@ TRACE_JSON="$(
     -H "Content-Type: application/json" \
     -H "X-API-Key: $API_KEY" \
     -H "X-Project-Id: $PROJECT_ID" \
-    -d '{"event":"seed-trace","source":"seed.sh","architecture":"tenant-project-mutation-policy"}'
+    -d @- <<'JSON'
+{
+  "trace_version": "0.1",
+  "source": "seed.sh",
+  "task": {
+    "name": "seed.trace",
+    "input": {
+      "scenario": "tenant-project-mutation-policy"
+    }
+  },
+  "events": [
+    {
+      "type": "model",
+      "name": "seed.bootstrap",
+      "timestamp": "2026-03-09T00:00:00Z",
+      "input": {
+        "stage": "init"
+      },
+      "output": {
+        "status": "ok"
+      }
+    }
+  ]
+}
+JSON
 )"
 TRACE_ID="$(
   printf '%s' "$TRACE_JSON" | json_extract "trace_id"

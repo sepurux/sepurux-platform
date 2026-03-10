@@ -343,6 +343,13 @@ const PUBLIC_API_KEY =
 const PUBLIC_PROJECT_ID = process.env.NEXT_PUBLIC_PROJECT_ID ?? "";
 const BROWSER_PROXY_BASE = "/api/backend";
 
+function clampLimit(value: number | undefined, fallback: number, max = 200) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return fallback;
+  }
+  return Math.min(Math.max(Math.trunc(value), 1), max);
+}
+
 function isLocalHost(value: string) {
   return value === "localhost" || value === "127.0.0.1" || value === "::1";
 }
@@ -582,12 +589,12 @@ export const api = {
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
   listRunPolicyEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
     requestJson<PolicyEventListItem[]>(`/v1/runs/${runId}/policy-events`, {
-      limit: options?.limit ?? 200,
+      limit: clampLimit(options?.limit, 200),
       offset: options?.offset ?? 0,
     }),
   listRunSecurityEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
     requestJson<SecurityEventListItem[]>(`/v1/runs/${runId}/security-events`, {
-      limit: options?.limit ?? 200,
+      limit: clampLimit(options?.limit, 200),
       offset: options?.offset ?? 0,
     }),
   listAuditEvents: (options?: { limit?: number; offset?: number; event_type?: string }) =>
@@ -613,7 +620,7 @@ export const api = {
     ),
   listRunAttempts: (runId: string, options?: { limit?: number; offset?: number; result?: string }) =>
     requestJson<ReplayAttemptListItem[]>(`/v1/runs/${runId}/attempts`, {
-      limit: options?.limit ?? 50,
+      limit: clampLimit(options?.limit, 50),
       offset: options?.offset ?? 0,
       result: options?.result
     }),
