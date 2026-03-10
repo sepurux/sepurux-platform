@@ -8,7 +8,7 @@ import { siteConfig } from "@/lib/site";
 const logos = ["Northstar", "Helios", "Cresta", "Signal", "Orbit", "Vector"];
 
 export function HeroSection() {
-  const requestAccessHref = `${siteConfig.appUrl}/auth?mode=access&utm_source=site&utm_medium=hero&utm_campaign=request-access`;
+  const getAccessHref = `${siteConfig.appUrl}/auth?mode=access&utm_source=site&utm_medium=hero&utm_campaign=get-access`;
   const viewDemoHref = `${siteConfig.appUrl}/auth?mode=demo&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=view-demo`;
 
   return (
@@ -27,7 +27,7 @@ export function HeroSection() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <a href={requestAccessHref}>Request access</a>
+              <a href={getAccessHref}>Get access</a>
             </Button>
             <Button asChild size="lg" variant="outline">
               <a href={viewDemoHref}>

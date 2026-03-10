@@ -7,9 +7,22 @@ import pytest
 from app.auth import hash_api_key
 from app.db import get_db
 from app.main import app
-from app.models import ApiKey, Base, Project, ProjectMembership, Role, Tenant, User
+from app.models import (
+    ApiKey,
+    Base,
+    Campaign,
+    MutationPack,
+    Project,
+    ProjectMembership,
+    ReplayAttempt,
+    Role,
+    Run,
+    Tenant,
+    Trace,
+    User,
+)
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -136,6 +149,50 @@ def test_demo_session_returns_project_scoped_key(
         assert record.is_demo is True
         assert record.project_id == demo_project_id
         assert record.tenant_id == demo_tenant_id
+
+        demo_pack = db.scalar(
+            select(MutationPack).where(
+                MutationPack.project_id == demo_project_id,
+                MutationPack.name == "core.demo",
+            )
+        )
+        assert isinstance(demo_pack, MutationPack)
+
+        demo_campaign = db.scalar(
+            select(Campaign).where(
+                Campaign.project_id == demo_project_id,
+                Campaign.name == "demo_campaign",
+            )
+        )
+        assert isinstance(demo_campaign, Campaign)
+        assert demo_campaign.mutation_pack_id == demo_pack.mutation_pack_id
+
+        trace_count = db.scalar(
+            select(func.count())
+            .select_from(Trace)
+            .where(
+                Trace.project_id == demo_project_id,
+                Trace.source == "demo.seed",
+            )
+        )
+        assert int(trace_count or 0) >= 1
+
+        run_count = db.scalar(
+            select(func.count())
+            .select_from(Run)
+            .where(
+                Run.project_id == demo_project_id,
+                Run.campaign_id == demo_campaign.campaign_id,
+            )
+        )
+        assert int(run_count or 0) >= 1
+
+        attempts_count = db.scalar(
+            select(func.count())
+            .select_from(ReplayAttempt)
+            .where(ReplayAttempt.project_id == demo_project_id)
+        )
+        assert int(attempts_count or 0) >= 1
 
 
 def test_viewer_role_cannot_create_campaign(
