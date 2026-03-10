@@ -1917,10 +1917,22 @@ paths:
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                title: Response Get Demo Info Demo Info Get
+                $ref: '#/components/schemas/DemoInfoResponse'
           description: Successful Response
       summary: Get Demo Info
+      tags:
+      - demo
+  /demo/session:
+    post:
+      operationId: post_demo_session_demo_session_post
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoSessionResponse'
+          description: Successful Response
+      summary: Post Demo Session
       tags:
       - demo
   /healthz:
@@ -2390,6 +2402,122 @@ components:
       - result
       - strategy
       title: CounterfactualMetadata
+    DemoInfoResponse:
+      example:
+        demo_api_key: demo_api_key
+        demo_mutation_pack: demo_mutation_pack
+        demo_campaign: demo_campaign
+        recommended_flow: session
+        session_ttl_minutes: 5
+        demo_project: demo_project
+        limits:
+          traces_upload_per_hour: 1
+          max_trace_bytes: 5
+          campaigns_per_hour: 0
+          mutations_per_run: 6
+      properties:
+        demo_api_key:
+          title: Demo Api Key
+          type: string
+        demo_campaign:
+          title: Demo Campaign
+          type: string
+        demo_project:
+          nullable: true
+          type: string
+        demo_mutation_pack:
+          nullable: true
+          type: string
+        limits:
+          $ref: '#/components/schemas/DemoLimits'
+        recommended_flow:
+          default: session
+          enum:
+          - session
+          - shared_key
+          title: Recommended Flow
+          type: string
+        session_ttl_minutes:
+          nullable: true
+          type: integer
+      required:
+      - demo_api_key
+      - demo_campaign
+      - limits
+      title: DemoInfoResponse
+    DemoLimits:
+      example:
+        traces_upload_per_hour: 1
+        max_trace_bytes: 5
+        campaigns_per_hour: 0
+        mutations_per_run: 6
+      properties:
+        campaigns_per_hour:
+          title: Campaigns Per Hour
+          type: integer
+        mutations_per_run:
+          title: Mutations Per Run
+          type: integer
+        traces_upload_per_hour:
+          nullable: true
+          type: integer
+        max_trace_bytes:
+          nullable: true
+          type: integer
+      required:
+      - campaigns_per_hour
+      - mutations_per_run
+      title: DemoLimits
+    DemoSessionResponse:
+      example:
+        demo_mutation_pack: demo_mutation_pack
+        expires_at: 2000-01-23T04:56:07.000+00:00
+        api_key: api_key
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        demo_campaign: demo_campaign
+        rate_limit_per_minute: 0
+        project_name: project_name
+        limits:
+          traces_upload_per_hour: 1
+          max_trace_bytes: 5
+          campaigns_per_hour: 0
+          mutations_per_run: 6
+      properties:
+        api_key:
+          title: Api Key
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        project_name:
+          title: Project Name
+          type: string
+        demo_campaign:
+          title: Demo Campaign
+          type: string
+        demo_mutation_pack:
+          title: Demo Mutation Pack
+          type: string
+        expires_at:
+          format: date-time
+          title: Expires At
+          type: string
+        rate_limit_per_minute:
+          title: Rate Limit Per Minute
+          type: integer
+        limits:
+          $ref: '#/components/schemas/DemoLimits'
+      required:
+      - api_key
+      - demo_campaign
+      - demo_mutation_pack
+      - expires_at
+      - limits
+      - project_id
+      - project_name
+      - rate_limit_per_minute
+      title: DemoSessionResponse
     EventIndexCount:
       example:
         count: 1

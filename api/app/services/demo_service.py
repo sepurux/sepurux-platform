@@ -460,9 +460,7 @@ def _ensure_demo_runs(
 
 def _ensure_demo_attempts_for_run(db: Session, *, run: Run, seed_index: int) -> None:
     existing_count = db.scalar(
-        select(func.count())
-        .select_from(ReplayAttempt)
-        .where(ReplayAttempt.run_id == run.run_id)
+        select(func.count()).select_from(ReplayAttempt).where(ReplayAttempt.run_id == run.run_id)
     )
     if int(existing_count or 0) > 0:
         return
@@ -490,7 +488,11 @@ def _ensure_demo_attempts_for_run(db: Session, *, run: Run, seed_index: int) -> 
             run_id=run.run_id,
             mutation_id=mutation_id,
             result="failed" if failed else "passed",
-            failure_reason="timeout" if failed and attempt_index % 2 == 0 else ("unsafe_blocked" if failed else None),
+            failure_reason=(
+                "timeout"
+                if failed and attempt_index % 2 == 0
+                else ("unsafe_blocked" if failed else None)
+            ),
             first_failure_event_index=3 if failed else None,
             first_failure_tool=tool if failed else None,
             seed=10_000 + seed_index * 100 + attempt_index,

@@ -42,6 +42,9 @@ docs/CounterfactualListItem.md
 docs/CounterfactualMetadata.md
 docs/CounterfactualsAPI.md
 docs/DemoAPI.md
+docs/DemoInfoResponse.md
+docs/DemoLimits.md
+docs/DemoSessionResponse.md
 docs/EventIndexCount.md
 docs/HTTPValidationError.md
 docs/HardeningTemplateCreateRequest.md
@@ -122,6 +125,9 @@ model_ci_run_status_response.go
 model_ci_run_thresholds.go
 model_counterfactual_list_item.go
 model_counterfactual_metadata.go
+model_demo_info_response.go
+model_demo_limits.go
+model_demo_session_response.go
 model_event_index_count.go
 model_hardening_template_create_request.go
 model_hardening_template_metadata.go
