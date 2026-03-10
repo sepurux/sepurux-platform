@@ -12,17 +12,19 @@ export function HeroSection() {
   const viewDemoHref = `${siteConfig.appUrl}/auth?mode=demo&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=view-demo`;
 
   return (
-    <section className="site-container pt-16 md:pt-24">
+    <section className="site-container pt-14 md:pt-20">
       <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
-          <Badge variant="outline" className="mb-5 border-primary/30 text-primary">
+          <Badge variant="outline" className="mb-5 border-info/30 bg-info/10 text-info">
             Used by platform teams
           </Badge>
-          <h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
+          <h1 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-foreground md:text-6xl">
             <span className="block">Sepurux</span>
-            <span className="block text-3xl md:text-5xl">Reliability infrastructure for AI agents</span>
+            <span className="block bg-gradient-to-r from-slate-100 via-blue-200 to-cyan-300 bg-clip-text text-3xl text-transparent md:text-5xl">
+              Reliability infrastructure for AI agents
+            </span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+          <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             Replay workflows, inject failures, enforce policies, and block regressions before production.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -39,7 +41,7 @@ export function HeroSection() {
             {logos.map((logo) => (
               <span
                 key={logo}
-                className="rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs text-muted-foreground"
+                className="rounded-full border border-border/80 bg-card/70 px-3 py-1 text-xs text-muted-foreground"
               >
                 {logo}
               </span>
@@ -47,10 +49,11 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="relative space-y-4">
+          <div className="pointer-events-none absolute -left-8 -top-8 h-36 w-36 rounded-full bg-secondary/16 blur-3xl" />
           <ScreenshotPlaceholder
             title="Run Inspector"
-            className="-rotate-1"
+            className="-rotate-[1.8deg]"
             command="curl -s http://localhost:8000/v1/runs/<run_id>/stats"
             animateCommand
             terminalLabel="run-inspector.sh"
@@ -62,7 +65,7 @@ export function HeroSection() {
           />
           <ScreenshotPlaceholder
             title="Policy + CI Gate"
-            className="rotate-1"
+            className="rotate-[1.6deg]"
             command="curl -s -X POST http://localhost:8000/v1/ci/runs"
             animateCommand
             terminalLabel="policy-ci-gate.sh"
