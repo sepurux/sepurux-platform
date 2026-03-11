@@ -31,6 +31,38 @@ def _timeline_fixture() -> dict[str, object]:
     }
 
 
+def _timeline_with_bootstrap_fixture() -> dict[str, object]:
+    return {
+        "timeline_version": "0.1",
+        "events": [
+            {
+                "index": 0,
+                "type": "tool_call",
+                "tool": "trace.load",
+                "args": {"s3_key": "traces/demo.json"},
+            },
+            {
+                "index": 1,
+                "type": "tool_result",
+                "tool": "trace.load",
+                "result": {"ok": True},
+            },
+            {
+                "index": 2,
+                "type": "tool_call",
+                "tool": "jira.create_issue",
+                "args": {"title": "Create issue"},
+            },
+            {
+                "index": 3,
+                "type": "tool_result",
+                "tool": "jira.create_issue",
+                "result": {"ok": True, "status": "draft", "text": "hello"},
+            },
+        ],
+    }
+
+
 def test_apply_mutation_pack_is_deterministic_for_same_seed_and_trace() -> None:
     config = {
         "max_mutations_per_attempt": 2,
@@ -303,3 +335,39 @@ def test_fault_timeout_forces_failure_and_schema_rename_applies() -> None:
     assert isinstance(applied, list)
     applied_ids = [str(item["mutation_id"]) for item in applied]
     assert applied_ids == ["rename-status", "timeout-tool-call"]
+
+
+def test_fault_timeout_skips_internal_trace_load_events() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "timeout-tool-call",
+                "type": "fault.timeout",
+                "probability": 1.0,
+                "weight": 1.0,
+            }
+        ],
+    }
+
+    outcome = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=0,
+        timeline_artifact=copy.deepcopy(_timeline_with_bootstrap_fixture()),
+        seed=9,
+    )
+
+    assert outcome.forced_failure_reason == "timeout"
+    assert outcome.first_failure_tool == "jira.create_issue"
+    assert outcome.first_failure_event_index == 3
+
+    events = outcome.timeline_artifact["events"]
+    assert isinstance(events, list)
+    assert [event["tool"] for event in events if event.get("type") == "tool_call"] == [
+        "trace.load",
+        "jira.create_issue",
+    ]
+    assert events[-1]["type"] == "error"
+    assert events[-1]["tool"] == "jira.create_issue"

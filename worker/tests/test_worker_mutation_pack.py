@@ -351,3 +351,87 @@ def test_execute_run_prefers_run_level_mutation_pack_override(
     assert isinstance(result, dict)
     assert result.get("state") == "replayed"
     assert "status" not in result
+
+
+def test_execute_run_fault_mutation_skips_internal_trace_load_tool(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, artifacts = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Wildcard Timeout Pack",
+                description="Applies a timeout fault without an explicit target tool.",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "timeout-tool-call",
+                            "type": "fault.timeout",
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Mutation Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "failed"
+    assert attempt.failure_reason == "timeout"
+    assert attempt.first_failure_tool == "jira.create_issue"
+
+    artifact_payload = next(iter(artifacts.values()))
+    events = artifact_payload.get("events")
+    assert isinstance(events, list)
+    assert events[-1]["type"] == "error"
+    assert events[-1]["tool"] == "jira.create_issue"
