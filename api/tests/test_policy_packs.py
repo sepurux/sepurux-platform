@@ -513,7 +513,9 @@ def test_run_snapshots_policy_pack_version_before_updates(
 
     first_run_after_update = client.get(f"/v1/runs/{first_run_id}")
     assert first_run_after_update.status_code == 200
-    assert first_run_after_update.json()["effective_policy_pack_version_id"] == initial_active_version
+    assert (
+        first_run_after_update.json()["effective_policy_pack_version_id"] == initial_active_version
+    )
 
     assert len(fake_queue.calls) == 2
 

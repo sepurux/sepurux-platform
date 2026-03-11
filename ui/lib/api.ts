@@ -290,6 +290,32 @@ export type DemoSessionResponse = {
   limits: DemoInfoResponse["limits"];
 };
 
+export type AuthPermissionSet = {
+  visible_sections: string[];
+  can_upload_traces: boolean;
+  can_create_campaigns: boolean;
+  can_run_campaigns: boolean;
+  can_manage_workspace: boolean;
+  can_manage_api_keys: boolean;
+};
+
+export type AuthSessionMetadata = {
+  tenant_id: string;
+  project_id: string;
+  project_name: string;
+  project_scoped: boolean;
+  role_name: "admin" | "developer" | "viewer";
+  user_id: string | null;
+  email: string | null;
+  name: string | null;
+  is_demo: boolean;
+  permissions: AuthPermissionSet;
+};
+
+export type AuthSessionResponse = AuthSessionMetadata & {
+  api_key: string;
+};
+
 export type ToolRegistryMetadata = {
   tool_id: string;
   project_id: string;
@@ -350,6 +376,20 @@ function clampLimit(value: number | undefined, fallback: number, max = 200) {
   return Math.min(Math.max(Math.trunc(value), 1), max);
 }
 
+function messageFromErrorPayload(payload: unknown, fallback: string) {
+  if (payload && typeof payload === "object") {
+    const detail = (payload as { detail?: unknown }).detail;
+    if (typeof detail === "string" && detail.trim()) {
+      return detail;
+    }
+    const error = (payload as { error?: unknown }).error;
+    if (typeof error === "string" && error.trim()) {
+      return error;
+    }
+  }
+  return fallback;
+}
+
 function isLocalHost(value: string) {
   return value === "localhost" || value === "127.0.0.1" || value === "::1";
 }
@@ -398,8 +438,12 @@ function resolveApiBaseUrl() {
   return configuredBase;
 }
 
-function buildUrl(path: string, query?: Record<string, string | number | undefined | null>) {
-  const base = resolveApiBaseUrl();
+function buildUrl(
+  path: string,
+  query?: Record<string, string | number | undefined | null>,
+  options?: { baseUrl?: string }
+) {
+  const base = options?.baseUrl || resolveApiBaseUrl();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const baseUrl = base.endsWith("/") ? base.slice(0, -1) : base;
   const isAbsolute = /^https?:\/\//.test(baseUrl);
@@ -415,17 +459,17 @@ function buildUrl(path: string, query?: Record<string, string | number | undefin
   return isAbsolute ? url.toString() : `${url.pathname}${url.search}`;
 }
 
-async function buildHeaders(options?: { requireProjectHeader?: boolean }) {
+async function buildHeaders(options?: { requireProjectHeader?: boolean; includeAuth?: boolean }) {
   const helpers = await getTenantSettingsHelpers();
   const apiKey = helpers.getStoredApiKey?.() || PUBLIC_API_KEY;
   const projectId = helpers.getStoredProjectId?.() || PUBLIC_PROJECT_ID;
   const headers: Record<string, string> = {
     Accept: "application/json"
   };
-  if (apiKey) {
+  if (options?.includeAuth !== false && apiKey) {
     headers["X-API-Key"] = apiKey;
   }
-  if (options?.requireProjectHeader !== false && projectId) {
+  if (options?.includeAuth !== false && options?.requireProjectHeader !== false && projectId) {
     headers["X-Project-Id"] = projectId;
   }
   return headers;
@@ -434,9 +478,9 @@ async function buildHeaders(options?: { requireProjectHeader?: boolean }) {
 async function requestJson<T>(
   path: string,
   query?: Record<string, string | number | undefined | null>,
-  options?: { requireProjectHeader?: boolean }
+  options?: { requireProjectHeader?: boolean; includeAuth?: boolean; baseUrl?: string }
 ): Promise<T> {
-  const response = await fetch(buildUrl(path, query), {
+  const response = await fetch(buildUrl(path, query, { baseUrl: options?.baseUrl }), {
     method: "GET",
     headers: await buildHeaders(options),
     cache: "no-store"
@@ -451,7 +495,11 @@ async function requestJson<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError(`Request failed: ${response.status}`, response.status, payload);
+    throw new ApiError(
+      messageFromErrorPayload(payload, `Request failed: ${response.status}`),
+      response.status,
+      payload
+    );
   }
 
   return payload as T;
@@ -460,12 +508,12 @@ async function requestJson<T>(
 async function postJson<TResponse, TBody>(
   path: string,
   body: TBody,
-  options?: { requireProjectHeader?: boolean }
+  options?: { requireProjectHeader?: boolean; includeAuth?: boolean; baseUrl?: string }
 ): Promise<TResponse> {
   const headers = await buildHeaders(options);
   headers["Content-Type"] = "application/json";
 
-  const response = await fetch(buildUrl(path), {
+  const response = await fetch(buildUrl(path, undefined, { baseUrl: options?.baseUrl }), {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -481,7 +529,11 @@ async function postJson<TResponse, TBody>(
   }
 
   if (!response.ok) {
-    throw new ApiError(`Request failed: ${response.status}`, response.status, payload);
+    throw new ApiError(
+      messageFromErrorPayload(payload, `Request failed: ${response.status}`),
+      response.status,
+      payload
+    );
   }
 
   return payload as TResponse;
@@ -490,12 +542,12 @@ async function postJson<TResponse, TBody>(
 async function patchJson<TResponse, TBody>(
   path: string,
   body: TBody,
-  options?: { requireProjectHeader?: boolean }
+  options?: { requireProjectHeader?: boolean; includeAuth?: boolean; baseUrl?: string }
 ): Promise<TResponse> {
   const headers = await buildHeaders(options);
   headers["Content-Type"] = "application/json";
 
-  const response = await fetch(buildUrl(path), {
+  const response = await fetch(buildUrl(path, undefined, { baseUrl: options?.baseUrl }), {
     method: "PATCH",
     headers,
     body: JSON.stringify(body),
@@ -511,13 +563,36 @@ async function patchJson<TResponse, TBody>(
   }
 
   if (!response.ok) {
-    throw new ApiError(`Request failed: ${response.status}`, response.status, payload);
+    throw new ApiError(
+      messageFromErrorPayload(payload, `Request failed: ${response.status}`),
+      response.status,
+      payload
+    );
   }
 
   return payload as TResponse;
 }
 
 export const api = {
+  signup: (payload: {
+    email: string;
+    password: string;
+    name?: string;
+    project_name?: string;
+  }, options?: { baseUrl?: string }) =>
+    postJson<AuthSessionResponse, typeof payload>(
+      "/auth/signup",
+      payload,
+      { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
+    ),
+  login: (payload: { email: string; password: string }, options?: { baseUrl?: string }) =>
+    postJson<AuthSessionResponse, typeof payload>(
+      "/auth/login",
+      payload,
+      { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
+    ),
+  getAuthSession: () =>
+    requestJson<AuthSessionMetadata>("/v1/auth/session"),
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),

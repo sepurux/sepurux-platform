@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+from app.auth import hash_api_key
 from app.db import get_db
 from app.main import app
 from app.models import ApiKey, Base, Project, Tenant
@@ -109,6 +110,41 @@ def test_projects_list_and_create_are_scoped_to_authenticated_tenant(
     assert str(project_id) in item_ids
     assert created["project_id"] in item_ids
     assert str(other_project_id) not in item_ids
+
+
+def test_project_scoped_api_key_only_sees_its_bound_project(
+    auth_test_context: tuple[TestClient, sessionmaker[Session], UUID, str],
+) -> None:
+    client, testing_session_local, project_id, _ = auth_test_context
+    scoped_project_id = uuid4()
+    scoped_api_key = f"project-key-{uuid4().hex[:8]}"
+
+    with testing_session_local() as db:
+        seeded_project = db.scalar(select(Project).where(Project.project_id == project_id))
+        assert isinstance(seeded_project, Project)
+        db.add(
+            Project(
+                project_id=scoped_project_id,
+                tenant_id=seeded_project.tenant_id,
+                name="Scoped Project",
+            )
+        )
+        db.add(
+            ApiKey(
+                api_key_id=uuid4(),
+                tenant_id=seeded_project.tenant_id,
+                project_id=scoped_project_id,
+                name="scoped-project-key",
+                key_hash=hash_api_key(scoped_api_key),
+            )
+        )
+        db.commit()
+
+    response = client.get("/v1/projects", headers={"X-API-Key": scoped_api_key})
+
+    assert response.status_code == 200
+    items = response.json()
+    assert [item["project_id"] for item in items] == [str(scoped_project_id)]
 
 
 def test_post_api_keys_returns_plaintext_once_and_stores_hash(

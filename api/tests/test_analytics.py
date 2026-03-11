@@ -112,7 +112,11 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             mutation_trace={
                 "seed": 101,
                 "applied": [
-                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 2},
+                    {
+                        "mutation_id": "schema.drop_field",
+                        "tool": "jira.create_issue",
+                        "event_index": 2,
+                    },
                     {"mutation_id": "poison.inject", "tool": "jira.create_issue", "event_index": 3},
                 ],
             },
@@ -132,7 +136,11 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             mutation_trace={
                 "seed": 102,
                 "applied": [
-                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 3},
+                    {
+                        "mutation_id": "schema.drop_field",
+                        "tool": "jira.create_issue",
+                        "event_index": 3,
+                    },
                     {"mutation_id": "fault.timeout", "tool": "jira.create_issue", "event_index": 4},
                 ],
             },
@@ -152,9 +160,21 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             mutation_trace={
                 "seed": 103,
                 "applied": [
-                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 1},
-                    {"mutation_id": "schema.drop_field", "tool": "jira.create_issue", "event_index": 2},
-                    {"mutation_id": "fault.rate_limit", "tool": "slack.send_message", "event_index": 3},
+                    {
+                        "mutation_id": "schema.drop_field",
+                        "tool": "jira.create_issue",
+                        "event_index": 1,
+                    },
+                    {
+                        "mutation_id": "schema.drop_field",
+                        "tool": "jira.create_issue",
+                        "event_index": 2,
+                    },
+                    {
+                        "mutation_id": "fault.rate_limit",
+                        "tool": "slack.send_message",
+                        "event_index": 3,
+                    },
                 ],
             },
             tools_touched=["jira.create_issue", "slack.send_message"],
@@ -173,7 +193,11 @@ def _seed_analytics_data(db: Session, *, project_id) -> tuple[str, str]:
             mutation_trace={
                 "seed": 104,
                 "applied": [
-                    {"mutation_id": "poison.inject", "tool": "slack.send_message", "event_index": 5},
+                    {
+                        "mutation_id": "poison.inject",
+                        "tool": "slack.send_message",
+                        "event_index": 5,
+                    },
                 ],
             },
             tools_touched=["slack.send_message"],
@@ -270,7 +294,12 @@ def _seed_lethal_mutation_data(db: Session, *, project_id) -> str:
             "timeout",
             "jira.create_issue",
         ),
-        (["schema.drop_field", "fault.timeout"], "failed", "permission_denied", "slack.send_message"),
+        (
+            ["schema.drop_field", "fault.timeout"],
+            "failed",
+            "permission_denied",
+            "slack.send_message",
+        ),
         (["schema.drop_field", "fault.timeout"], "passed", None, None),
         (["schema.drop_field", "fault.timeout"], "failed", "timeout", "jira.create_issue"),
         (["fault.timeout"], "failed", "rate_limited", "github.create_pr"),
@@ -347,10 +376,7 @@ def test_get_run_stats_returns_correct_breakdowns(
         {"event_index": 2, "count": 1},
         {"event_index": 6, "count": 2},
     ]
-    assert (
-        data["attribution"]
-        == "mvp_multi_attribution_each_applied_mutation_gets_credit"
-    )
+    assert data["attribution"] == "mvp_multi_attribution_each_applied_mutation_gets_credit"
     assert isinstance(data["insights"], list)
 
 

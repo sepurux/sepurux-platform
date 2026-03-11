@@ -144,7 +144,9 @@ def test_demo_session_returns_project_scoped_key(
     assert payload["project_id"] == str(demo_project_id)
 
     with session_factory() as db:
-        record = db.scalar(select(ApiKey).where(ApiKey.key_hash == hash_api_key(payload["api_key"])))
+        record = db.scalar(
+            select(ApiKey).where(ApiKey.key_hash == hash_api_key(payload["api_key"]))
+        )
         assert isinstance(record, ApiKey)
         assert record.is_demo is True
         assert record.project_id == demo_project_id

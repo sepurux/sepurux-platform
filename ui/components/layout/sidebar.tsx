@@ -16,30 +16,36 @@ import {
   Shield,
 } from "lucide-react";
 
+import type { AuthSessionMetadata } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
   href: string;
   label: string;
+  section: string;
   icon: React.ComponentType<{ className?: string }>;
 };
 
 const primaryItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/traces", label: "Traces", icon: FileSearch },
-  { href: "/campaigns", label: "Campaigns", icon: FlaskConical },
-  { href: "/runs", label: "Runs", icon: PlayCircle },
-  { href: "/reports", label: "Reports", icon: ScrollText },
-  { href: "/mutation-packs", label: "Mutation Packs", icon: Bug },
-  { href: "/policies", label: "Policies", icon: Shield },
-  { href: "/security", label: "Security", icon: ShieldAlert },
-  { href: "/audit", label: "Audit", icon: ScrollText },
-  { href: "/webhooks", label: "Webhooks", icon: Bell },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "Dashboard", section: "dashboard", icon: Home },
+  { href: "/traces", label: "Traces", section: "traces", icon: FileSearch },
+  { href: "/campaigns", label: "Campaigns", section: "campaigns", icon: FlaskConical },
+  { href: "/runs", label: "Runs", section: "runs", icon: PlayCircle },
+  { href: "/reports", label: "Reports", section: "reports", icon: ScrollText },
+  { href: "/mutation-packs", label: "Mutation Packs", section: "mutation-packs", icon: Bug },
+  { href: "/policies", label: "Policies", section: "policies", icon: Shield },
+  { href: "/security", label: "Security", section: "security", icon: ShieldAlert },
+  { href: "/audit", label: "Audit", section: "audit", icon: ScrollText },
+  { href: "/webhooks", label: "Webhooks", section: "webhooks", icon: Bell },
+  { href: "/settings", label: "Settings", section: "settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | null }) {
   const pathname = usePathname();
+  const visibleSections = new Set(authSession?.permissions.visible_sections ?? []);
+  const items = primaryItems.filter(
+    (item) => visibleSections.size === 0 || visibleSections.has(item.section)
+  );
 
   return (
     <aside className="hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border bg-sidebar/95 p-4 backdrop-blur xl:flex xl:flex-col">
@@ -49,12 +55,14 @@ export function Sidebar() {
         </div>
         <div>
           <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Agent Sepurux</p>
-          <p className="text-sm font-semibold text-foreground">Control Plane</p>
+          <p className="text-sm font-semibold text-foreground">
+            {authSession?.project_name ?? "Control Plane"}
+          </p>
         </div>
       </div>
 
       <nav className="flex-1 space-y-1.5">
-        {primaryItems.map((item) => {
+        {items.map((item) => {
           const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
 
@@ -77,8 +85,10 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-        <p className="mb-1 font-medium text-foreground">Lab Status</p>
-        <p>Streaming replay diagnostics, counterfactuals, and fragility analytics in one place.</p>
+        <p className="mb-1 font-medium text-foreground">
+          {authSession?.role_name ?? "viewer"} access
+        </p>
+        <p>Navigation and dashboard actions are scoped to the current project role.</p>
       </div>
     </aside>
   );
