@@ -147,6 +147,7 @@ celerybeat.pid
 .env
 .env.local
 .envrc
+infra/.env.hetzner
 .venv
 env/
 venv/
