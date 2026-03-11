@@ -5,8 +5,8 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**DeleteMutationPackByIdV1MutationPacksMutationPackIdDelete**](MutationPacksAPI.md#DeleteMutationPackByIdV1MutationPacksMutationPackIdDelete) | **Delete** /v1/mutation-packs/{mutation_pack_id} | Delete Mutation Pack By Id
-[**GetMutationPackByIdV1MutationPacksMutationPackIdGet**](MutationPacksAPI.md#GetMutationPackByIdV1MutationPacksMutationPackIdGet) | **Get** /v1/mutation-packs/{mutation_pack_id} | Get Mutation Pack By Id
-[**GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet**](MutationPacksAPI.md#GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet) | **Get** /v1/mutation-packs/{mutation_pack_id}/coverage | Get Mutation Pack Coverage
+[**GetMutationPackByIdV1MutationPacksPackRefGet**](MutationPacksAPI.md#GetMutationPackByIdV1MutationPacksPackRefGet) | **Get** /v1/mutation-packs/{pack_ref} | Get Mutation Pack By Id
+[**GetMutationPackCoverageV1MutationPacksPackRefCoverageGet**](MutationPacksAPI.md#GetMutationPackCoverageV1MutationPacksPackRefCoverageGet) | **Get** /v1/mutation-packs/{pack_ref}/coverage | Get Mutation Pack Coverage
 [**GetMutationPacksV1MutationPacksGet**](MutationPacksAPI.md#GetMutationPacksV1MutationPacksGet) | **Get** /v1/mutation-packs | Get Mutation Packs
 [**PostMutationPackV1MutationPacksPost**](MutationPacksAPI.md#PostMutationPackV1MutationPacksPost) | **Post** /v1/mutation-packs | Post Mutation Pack
 
@@ -80,9 +80,9 @@ No authorization required
 [[Back to README]](../README.md)
 
 
-## GetMutationPackByIdV1MutationPacksMutationPackIdGet
+## GetMutationPackByIdV1MutationPacksPackRefGet
 
-> MutationPackMetadata GetMutationPackByIdV1MutationPacksMutationPackIdGet(ctx, mutationPackId).XProjectId(xProjectId).Execute()
+> MutationPackMetadata GetMutationPackByIdV1MutationPacksPackRefGet(ctx, packRef).XProjectId(xProjectId).Execute()
 
 Get Mutation Pack By Id
 
@@ -99,18 +99,18 @@ import (
 )
 
 func main() {
-	mutationPackId := "38400000-8cf0-11bd-b23e-10b96e4ef00d" // string | 
+	packRef := "packRef_example" // string | 
 	xProjectId := "xProjectId_example" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.MutationPacksAPI.GetMutationPackByIdV1MutationPacksMutationPackIdGet(context.Background(), mutationPackId).XProjectId(xProjectId).Execute()
+	resp, r, err := apiClient.MutationPacksAPI.GetMutationPackByIdV1MutationPacksPackRefGet(context.Background(), packRef).XProjectId(xProjectId).Execute()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error when calling `MutationPacksAPI.GetMutationPackByIdV1MutationPacksMutationPackIdGet``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error when calling `MutationPacksAPI.GetMutationPackByIdV1MutationPacksPackRefGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `GetMutationPackByIdV1MutationPacksMutationPackIdGet`: MutationPackMetadata
-	fmt.Fprintf(os.Stdout, "Response from `MutationPacksAPI.GetMutationPackByIdV1MutationPacksMutationPackIdGet`: %v\n", resp)
+	// response from `GetMutationPackByIdV1MutationPacksPackRefGet`: MutationPackMetadata
+	fmt.Fprintf(os.Stdout, "Response from `MutationPacksAPI.GetMutationPackByIdV1MutationPacksPackRefGet`: %v\n", resp)
 }
 ```
 
@@ -120,11 +120,11 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**mutationPackId** | **string** |  | 
+**packRef** | **string** |  | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiGetMutationPackByIdV1MutationPacksPackRefGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -150,9 +150,9 @@ No authorization required
 [[Back to README]](../README.md)
 
 
-## GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet
+## GetMutationPackCoverageV1MutationPacksPackRefCoverageGet
 
-> MutationPackCoverageResponse GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet(ctx, mutationPackId).XProjectId(xProjectId).Execute()
+> MutationPackCoverageResponse GetMutationPackCoverageV1MutationPacksPackRefCoverageGet(ctx, packRef).XProjectId(xProjectId).Execute()
 
 Get Mutation Pack Coverage
 
@@ -169,18 +169,18 @@ import (
 )
 
 func main() {
-	mutationPackId := "38400000-8cf0-11bd-b23e-10b96e4ef00d" // string | 
+	packRef := "packRef_example" // string | 
 	xProjectId := "xProjectId_example" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.MutationPacksAPI.GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet(context.Background(), mutationPackId).XProjectId(xProjectId).Execute()
+	resp, r, err := apiClient.MutationPacksAPI.GetMutationPackCoverageV1MutationPacksPackRefCoverageGet(context.Background(), packRef).XProjectId(xProjectId).Execute()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error when calling `MutationPacksAPI.GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error when calling `MutationPacksAPI.GetMutationPackCoverageV1MutationPacksPackRefCoverageGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet`: MutationPackCoverageResponse
-	fmt.Fprintf(os.Stdout, "Response from `MutationPacksAPI.GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet`: %v\n", resp)
+	// response from `GetMutationPackCoverageV1MutationPacksPackRefCoverageGet`: MutationPackCoverageResponse
+	fmt.Fprintf(os.Stdout, "Response from `MutationPacksAPI.GetMutationPackCoverageV1MutationPacksPackRefCoverageGet`: %v\n", resp)
 }
 ```
 
@@ -190,11 +190,11 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**mutationPackId** | **string** |  | 
+**packRef** | **string** |  | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes

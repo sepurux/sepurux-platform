@@ -164,6 +164,7 @@ class Run(Base):
     project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     trace_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     campaign_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    mutation_pack_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     policy_pack_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     effective_policy_pack_version_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False)

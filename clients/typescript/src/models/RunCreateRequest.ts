@@ -36,6 +36,12 @@ export interface RunCreateRequest {
      * @type {string}
      * @memberof RunCreateRequest
      */
+    mutation_pack_id?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof RunCreateRequest
+     */
     policy_pack_id?: string | null;
 }
 
@@ -60,6 +66,7 @@ export function RunCreateRequestFromJSONTyped(json: any, ignoreDiscriminator: bo
         
         'trace_id': json['trace_id'],
         'campaign_id': json['campaign_id'],
+        'mutation_pack_id': json['mutation_pack_id'] == null ? undefined : json['mutation_pack_id'],
         'policy_pack_id': json['policy_pack_id'] == null ? undefined : json['policy_pack_id'],
     };
 }
@@ -72,6 +79,7 @@ export function RunCreateRequestToJSON(value?: RunCreateRequest | null): any {
         
         'trace_id': value['trace_id'],
         'campaign_id': value['campaign_id'],
+        'mutation_pack_id': value['mutation_pack_id'],
         'policy_pack_id': value['policy_pack_id'],
     };
 }

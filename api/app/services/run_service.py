@@ -18,6 +18,7 @@ from app.models import (
 from app.queue import get_run_queue
 from app.services.audit_service import create_audit_event
 from app.services.policy_service import get_policy_pack_active_version
+from app.services.trace_intake import create_trace
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -32,6 +33,7 @@ def create_run(
     project_id: UUID,
     trace_id: UUID,
     campaign_id: UUID,
+    mutation_pack_id: UUID | None = None,
     policy_pack_id: UUID | None = None,
     actor: str | None = None,
 ) -> Run:
@@ -51,16 +53,20 @@ def create_run(
     )
     if campaign is None:
         raise RelatedRecordNotFoundError("Campaign not found")
-    if campaign.mutation_pack_id is not None and (
+
+    effective_mutation_pack_id = (
+        mutation_pack_id if mutation_pack_id is not None else campaign.mutation_pack_id
+    )
+    if effective_mutation_pack_id is not None and (
         db.scalar(
             select(MutationPack).where(
-                MutationPack.mutation_pack_id == campaign.mutation_pack_id,
+                MutationPack.mutation_pack_id == effective_mutation_pack_id,
                 MutationPack.project_id == project_id,
             )
         )
         is None
     ):
-        raise RelatedRecordNotFoundError("Campaign mutation pack not found")
+        raise RelatedRecordNotFoundError("Mutation pack not found")
     if policy_pack_id is not None:
         policy_pack = db.scalar(
             select(PolicyPack).where(
@@ -79,6 +85,7 @@ def create_run(
         project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
+        mutation_pack_id=effective_mutation_pack_id,
         policy_pack_id=policy_pack_id,
         effective_policy_pack_version_id=effective_policy_pack_version_id,
         summary=None,
@@ -92,6 +99,7 @@ def _create_run_record(
     project_id: UUID,
     trace_id: UUID,
     campaign_id: UUID,
+    mutation_pack_id: UUID | None,
     policy_pack_id: UUID | None,
     effective_policy_pack_version_id: UUID | None,
     summary: Any | None,
@@ -102,6 +110,7 @@ def _create_run_record(
         project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
+        mutation_pack_id=mutation_pack_id,
         policy_pack_id=policy_pack_id,
         effective_policy_pack_version_id=effective_policy_pack_version_id,
         status="queued",
@@ -119,6 +128,9 @@ def _create_run_record(
             "run_id": str(run.run_id),
             "trace_id": str(run.trace_id),
             "campaign_id": str(run.campaign_id),
+            "mutation_pack_id": (
+                str(run.mutation_pack_id) if run.mutation_pack_id is not None else None
+            ),
             "policy_pack_id": str(run.policy_pack_id) if run.policy_pack_id is not None else None,
             "effective_policy_pack_version_id": (
                 str(run.effective_policy_pack_version_id)
@@ -143,6 +155,7 @@ def create_run_and_enqueue(
     project_id: UUID,
     trace_id: UUID,
     campaign_id: UUID,
+    mutation_pack_id: UUID | None = None,
     policy_pack_id: UUID | None = None,
     actor: str | None = None,
 ) -> Run:
@@ -151,6 +164,7 @@ def create_run_and_enqueue(
         project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
+        mutation_pack_id=mutation_pack_id,
         policy_pack_id=policy_pack_id,
         actor=actor,
     )
@@ -182,6 +196,7 @@ def create_ci_run_and_enqueue(
         project_id=trace.project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
+        mutation_pack_id=campaign.mutation_pack_id,
         policy_pack_id=None,
         effective_policy_pack_version_id=None,
         summary={"ci_thresholds": thresholds},
@@ -225,6 +240,7 @@ def run_metadata(run: Run) -> dict[str, Any]:
         "run_id": run.run_id,
         "trace_id": run.trace_id,
         "campaign_id": run.campaign_id,
+        "mutation_pack_id": run.mutation_pack_id,
         "policy_pack_id": run.policy_pack_id,
         "effective_policy_pack_version_id": run.effective_policy_pack_version_id,
         "status": run.status,
@@ -232,6 +248,81 @@ def run_metadata(run: Run) -> dict[str, Any]:
         "pass_rate": summary_pass_rate,
         "unsafe_count": summary_unsafe,
         "created_at": run.created_at,
+    }
+
+
+def create_run_pack_and_enqueue(
+    db: Session,
+    *,
+    project_id: UUID,
+    campaign: Campaign,
+    mutation_pack: MutationPack,
+    actor: str | None = None,
+) -> Run:
+    trace_payload = _build_synthetic_campaign_trace_payload(
+        campaign=campaign,
+        mutation_pack=mutation_pack,
+    )
+    trace = create_trace(
+        db,
+        project_id=project_id,
+        payload=trace_payload,
+        source="campaign.run_pack",
+        trace_version="0.1",
+        sdk_meta="api/run-pack",
+        validation_status="valid",
+        validation_errors=None,
+        normalized_payload=trace_payload,
+        actor=actor,
+    )
+    return create_run_and_enqueue(
+        db,
+        project_id=project_id,
+        trace_id=trace.trace_id,
+        campaign_id=campaign.campaign_id,
+        mutation_pack_id=mutation_pack.mutation_pack_id,
+        actor=actor,
+    )
+
+
+def _build_synthetic_campaign_trace_payload(
+    *,
+    campaign: Campaign,
+    mutation_pack: MutationPack,
+) -> dict[str, Any]:
+    task_name = campaign.name.strip() or "campaign.run_pack"
+    return {
+        "trace_version": "0.1",
+        "source": "campaign.run_pack",
+        "task": {
+            "name": task_name,
+            "input": {
+                "campaign_id": str(campaign.campaign_id),
+                "campaign_name": campaign.name,
+                "mutation_pack": mutation_pack.name,
+            },
+        },
+        "events": [
+            {
+                "index": 0,
+                "type": "tool_call",
+                "tool": "campaign.load",
+                "args": {
+                    "campaign_id": str(campaign.campaign_id),
+                    "mutation_pack": mutation_pack.name,
+                },
+            },
+            {
+                "index": 1,
+                "type": "tool_result",
+                "tool": "campaign.load",
+                "result": {
+                    "ok": True,
+                    "campaign_name": campaign.name,
+                    "mutation_pack": mutation_pack.name,
+                },
+            },
+        ],
     }
 
 

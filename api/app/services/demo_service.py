@@ -16,7 +16,9 @@ from app.models import (
     SecurityEvent,
     Trace,
 )
+from app.mutation_registry import get_registered_pack_definition
 from app.services.api_key_service import create_api_key_for_tenant
+from app.services.mutation_pack_policy import coverage_score_for_config
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -24,7 +26,8 @@ from sqlalchemy.orm import Session
 DEMO_API_KEY_PLAINTEXT = "demo_sepurux_key"
 DEMO_PROJECT_NAME = "Sepurux Demo Project"
 DEMO_CAMPAIGN_NAME = "demo_campaign"
-DEMO_MUTATION_PACK_NAME = "core.demo"
+DEMO_MUTATION_PACK_NAME = "core.reliability"
+DEMO_ALLOWED_MUTATION_PACKS = {"core.reliability", "prompt.injection"}
 DEMO_RECOMMENDED_FLOW = "session"
 
 DEMO_MAX_CAMPAIGNS_PER_HOUR = 3
@@ -47,6 +50,7 @@ def demo_info_payload() -> dict[str, Any]:
         "demo_api_key": DEMO_API_KEY_PLAINTEXT,
         "demo_campaign": DEMO_CAMPAIGN_NAME,
         "recommended_flow": DEMO_RECOMMENDED_FLOW,
+        "allowed_mutation_packs": sorted(DEMO_ALLOWED_MUTATION_PACKS),
         "session_ttl_minutes": DEMO_SESSION_TTL_MINUTES,
         "limits": {
             "campaigns_per_hour": DEMO_MAX_CAMPAIGNS_PER_HOUR,
@@ -210,6 +214,19 @@ def enforce_demo_run_limits(
         )
 
 
+def enforce_demo_run_pack_limits(*, pack_name: str, mutation_count: int) -> None:
+    if pack_name not in DEMO_ALLOWED_MUTATION_PACKS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo only allows core.reliability and prompt.injection mutation packs",
+        )
+    if mutation_count > DEMO_MAX_MUTATIONS_PER_RUN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Demo limit reached: max mutations per run exceeded",
+        )
+
+
 def estimate_mutation_count(mutation_set: Any) -> int:
     if isinstance(mutation_set, list):
         return len(mutation_set)
@@ -242,39 +259,27 @@ def _ensure_demo_mutation_pack(db: Session, *, project: Project) -> MutationPack
     if isinstance(record, MutationPack):
         return record
 
+    definition = get_registered_pack_definition(DEMO_MUTATION_PACK_NAME)
+    if definition is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo mutation pack registry is unavailable",
+        )
+    config = definition.get("config")
+    if not isinstance(config, dict):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo mutation pack config is invalid",
+        )
+
     record = MutationPack(
         mutation_pack_id=uuid4(),
         project_id=project.project_id,
         name=DEMO_MUTATION_PACK_NAME,
-        description="Seeded demo mutation pack for preview sessions",
-        config={
-            "version": "0.1",
-            "max_mutations_per_attempt": 2,
-            "mutations": [
-                {
-                    "mutation_id": "demo.schema.rename_field",
-                    "type": "schema.rename_field",
-                    "target": {"tool": "jira.*"},
-                    "weight": 1.0,
-                },
-                {
-                    "mutation_id": "demo.fault.timeout",
-                    "type": "fault.timeout",
-                    "target": {"tool": "payments.*"},
-                    "prob": 0.2,
-                    "weight": 1.0,
-                },
-                {
-                    "mutation_id": "demo.latency.delay",
-                    "type": "latency_delay",
-                    "target": {"tool": "slack.*"},
-                    "random_ms": [200, 1200],
-                    "weight": 1.0,
-                },
-            ],
-        },
-        is_system=False,
-        coverage_score=60,
+        description=str(definition.get("description") or "Seeded demo mutation pack"),
+        config=config,
+        is_system=True,
+        coverage_score=coverage_score_for_config(config),
     )
     db.add(record)
     db.flush()
@@ -296,7 +301,7 @@ def _ensure_demo_campaign(
         .order_by(Campaign.created_at.desc(), Campaign.campaign_id.desc())
     )
     if isinstance(record, Campaign):
-        if record.mutation_pack_id is None:
+        if record.mutation_pack_id != mutation_pack.mutation_pack_id:
             record.mutation_pack_id = mutation_pack.mutation_pack_id
             db.add(record)
             db.flush()
@@ -429,6 +434,7 @@ def _ensure_demo_runs(
             project_id=project.project_id,
             trace_id=trace.trace_id,
             campaign_id=campaign.campaign_id,
+            mutation_pack_id=campaign.mutation_pack_id,
             policy_pack_id=None,
             effective_policy_pack_version_id=None,
             status="completed",

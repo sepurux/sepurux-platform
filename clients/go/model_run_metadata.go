@@ -25,6 +25,7 @@ type RunMetadata struct {
 	RunId string `json:"run_id"`
 	TraceId string `json:"trace_id"`
 	CampaignId string `json:"campaign_id"`
+	MutationPackId NullableString `json:"mutation_pack_id,omitempty"`
 	PolicyPackId NullableString `json:"policy_pack_id,omitempty"`
 	EffectivePolicyPackVersionId NullableString `json:"effective_policy_pack_version_id,omitempty"`
 	Status string `json:"status"`
@@ -129,6 +130,48 @@ func (o *RunMetadata) GetCampaignIdOk() (*string, bool) {
 // SetCampaignId sets field value
 func (o *RunMetadata) SetCampaignId(v string) {
 	o.CampaignId = v
+}
+
+// GetMutationPackId returns the MutationPackId field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *RunMetadata) GetMutationPackId() string {
+	if o == nil || IsNil(o.MutationPackId.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.MutationPackId.Get()
+}
+
+// GetMutationPackIdOk returns a tuple with the MutationPackId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *RunMetadata) GetMutationPackIdOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.MutationPackId.Get(), o.MutationPackId.IsSet()
+}
+
+// HasMutationPackId returns a boolean if a field has been set.
+func (o *RunMetadata) HasMutationPackId() bool {
+	if o != nil && o.MutationPackId.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetMutationPackId gets a reference to the given NullableString and assigns it to the MutationPackId field.
+func (o *RunMetadata) SetMutationPackId(v string) {
+	o.MutationPackId.Set(&v)
+}
+// SetMutationPackIdNil sets the value for MutationPackId to be an explicit nil
+func (o *RunMetadata) SetMutationPackIdNil() {
+	o.MutationPackId.Set(nil)
+}
+
+// UnsetMutationPackId ensures that no value is present for MutationPackId, not even an explicit nil
+func (o *RunMetadata) UnsetMutationPackId() {
+	o.MutationPackId.Unset()
 }
 
 // GetPolicyPackId returns the PolicyPackId field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -386,6 +429,9 @@ func (o RunMetadata) ToMap() (map[string]interface{}, error) {
 	toSerialize["run_id"] = o.RunId
 	toSerialize["trace_id"] = o.TraceId
 	toSerialize["campaign_id"] = o.CampaignId
+	if o.MutationPackId.IsSet() {
+		toSerialize["mutation_pack_id"] = o.MutationPackId.Get()
+	}
 	if o.PolicyPackId.IsSet() {
 		toSerialize["policy_pack_id"] = o.PolicyPackId.Get()
 	}

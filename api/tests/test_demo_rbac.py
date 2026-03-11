@@ -164,7 +164,7 @@ def test_demo_session_returns_project_scoped_key(
         demo_pack = db.scalar(
             select(MutationPack).where(
                 MutationPack.project_id == demo_project_id,
-                MutationPack.name == "core.demo",
+                MutationPack.name == "core.reliability",
             )
         )
         assert isinstance(demo_pack, MutationPack)

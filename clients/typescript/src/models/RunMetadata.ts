@@ -42,6 +42,12 @@ export interface RunMetadata {
      * @type {string}
      * @memberof RunMetadata
      */
+    mutation_pack_id?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof RunMetadata
+     */
     policy_pack_id?: string | null;
     /**
      * 
@@ -107,6 +113,7 @@ export function RunMetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'run_id': json['run_id'],
         'trace_id': json['trace_id'],
         'campaign_id': json['campaign_id'],
+        'mutation_pack_id': json['mutation_pack_id'] == null ? undefined : json['mutation_pack_id'],
         'policy_pack_id': json['policy_pack_id'] == null ? undefined : json['policy_pack_id'],
         'effective_policy_pack_version_id': json['effective_policy_pack_version_id'] == null ? undefined : json['effective_policy_pack_version_id'],
         'status': json['status'],
@@ -126,6 +133,7 @@ export function RunMetadataToJSON(value?: RunMetadata | null): any {
         'run_id': value['run_id'],
         'trace_id': value['trace_id'],
         'campaign_id': value['campaign_id'],
+        'mutation_pack_id': value['mutation_pack_id'],
         'policy_pack_id': value['policy_pack_id'],
         'effective_policy_pack_version_id': value['effective_policy_pack_version_id'],
         'status': value['status'],

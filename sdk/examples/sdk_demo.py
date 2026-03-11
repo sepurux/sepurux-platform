@@ -11,6 +11,7 @@ def main() -> None:
     api_key = os.getenv("SEPURUX_API_KEY")
     project_id = os.getenv("SEPURUX_PROJECT_ID")
     campaign_id = os.getenv("SEPURUX_CAMPAIGN_ID")
+    mutation_pack = os.getenv("SEPURUX_MUTATION_PACK")
 
     with SepuruxClient(
         base_url=base_url,
@@ -42,7 +43,11 @@ def main() -> None:
         trace_id = client.upload_trace(recorder.to_trace())
         print(f"Uploaded trace_id: {trace_id}")
 
-        if campaign_id:
+        if campaign_id and mutation_pack:
+            run_id = client.run_pack(campaign_id=campaign_id, mutation_pack=mutation_pack)
+            print(f"Started run_id: {run_id}")
+            print(f"Run URL: {ui_base}/runs/{run_id}")
+        elif campaign_id:
             run_id = client.start_run(trace_id=trace_id, campaign_id=campaign_id)
             print(f"Started run_id: {run_id}")
             print(f"Run URL: {ui_base}/runs/{run_id}")

@@ -39,13 +39,13 @@ export interface DeleteMutationPackByIdV1MutationPacksMutationPackIdDeleteReques
     xProjectId?: string | null;
 }
 
-export interface GetMutationPackByIdV1MutationPacksMutationPackIdGetRequest {
-    mutationPackId: string;
+export interface GetMutationPackByIdV1MutationPacksPackRefGetRequest {
+    packRef: string;
     xProjectId?: string | null;
 }
 
-export interface GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest {
-    mutationPackId: string;
+export interface GetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest {
+    packRef: string;
     xProjectId?: string | null;
 }
 
@@ -103,11 +103,11 @@ export class MutationPacksApi extends runtime.BaseAPI {
     /**
      * Get Mutation Pack By Id
      */
-    async getMutationPackByIdV1MutationPacksMutationPackIdGetRaw(requestParameters: GetMutationPackByIdV1MutationPacksMutationPackIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MutationPackMetadata>> {
-        if (requestParameters['mutationPackId'] == null) {
+    async getMutationPackByIdV1MutationPacksPackRefGetRaw(requestParameters: GetMutationPackByIdV1MutationPacksPackRefGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MutationPackMetadata>> {
+        if (requestParameters['packRef'] == null) {
             throw new runtime.RequiredError(
-                'mutationPackId',
-                'Required parameter "mutationPackId" was null or undefined when calling getMutationPackByIdV1MutationPacksMutationPackIdGet().'
+                'packRef',
+                'Required parameter "packRef" was null or undefined when calling getMutationPackByIdV1MutationPacksPackRefGet().'
             );
         }
 
@@ -120,7 +120,7 @@ export class MutationPacksApi extends runtime.BaseAPI {
         }
 
         const response = await this.request({
-            path: `/v1/mutation-packs/{mutation_pack_id}`.replace(`{${"mutation_pack_id"}}`, encodeURIComponent(String(requestParameters['mutationPackId']))),
+            path: `/v1/mutation-packs/{pack_ref}`.replace(`{${"pack_ref"}}`, encodeURIComponent(String(requestParameters['packRef']))),
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
@@ -132,19 +132,19 @@ export class MutationPacksApi extends runtime.BaseAPI {
     /**
      * Get Mutation Pack By Id
      */
-    async getMutationPackByIdV1MutationPacksMutationPackIdGet(requestParameters: GetMutationPackByIdV1MutationPacksMutationPackIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationPackMetadata> {
-        const response = await this.getMutationPackByIdV1MutationPacksMutationPackIdGetRaw(requestParameters, initOverrides);
+    async getMutationPackByIdV1MutationPacksPackRefGet(requestParameters: GetMutationPackByIdV1MutationPacksPackRefGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationPackMetadata> {
+        const response = await this.getMutationPackByIdV1MutationPacksPackRefGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Get Mutation Pack Coverage
      */
-    async getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRaw(requestParameters: GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MutationPackCoverageResponse>> {
-        if (requestParameters['mutationPackId'] == null) {
+    async getMutationPackCoverageV1MutationPacksPackRefCoverageGetRaw(requestParameters: GetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MutationPackCoverageResponse>> {
+        if (requestParameters['packRef'] == null) {
             throw new runtime.RequiredError(
-                'mutationPackId',
-                'Required parameter "mutationPackId" was null or undefined when calling getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet().'
+                'packRef',
+                'Required parameter "packRef" was null or undefined when calling getMutationPackCoverageV1MutationPacksPackRefCoverageGet().'
             );
         }
 
@@ -157,7 +157,7 @@ export class MutationPacksApi extends runtime.BaseAPI {
         }
 
         const response = await this.request({
-            path: `/v1/mutation-packs/{mutation_pack_id}/coverage`.replace(`{${"mutation_pack_id"}}`, encodeURIComponent(String(requestParameters['mutationPackId']))),
+            path: `/v1/mutation-packs/{pack_ref}/coverage`.replace(`{${"pack_ref"}}`, encodeURIComponent(String(requestParameters['packRef']))),
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
@@ -169,8 +169,8 @@ export class MutationPacksApi extends runtime.BaseAPI {
     /**
      * Get Mutation Pack Coverage
      */
-    async getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet(requestParameters: GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationPackCoverageResponse> {
-        const response = await this.getMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRaw(requestParameters, initOverrides);
+    async getMutationPackCoverageV1MutationPacksPackRefCoverageGet(requestParameters: GetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationPackCoverageResponse> {
+        const response = await this.getMutationPackCoverageV1MutationPacksPackRefCoverageGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

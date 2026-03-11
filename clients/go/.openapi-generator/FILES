@@ -41,6 +41,8 @@ docs/CIRunStatusResponse.md
 docs/CIRunThresholds.md
 docs/CampaignCreateRequest.md
 docs/CampaignMetadata.md
+docs/CampaignRunPackRequest.md
+docs/CampaignRunPackResponse.md
 docs/CampaignsAPI.md
 docs/CiAPI.md
 docs/CounterfactualListItem.md
@@ -129,6 +131,8 @@ model_auth_session_metadata.go
 model_auth_session_response.go
 model_campaign_create_request.go
 model_campaign_metadata.go
+model_campaign_run_pack_request.go
+model_campaign_run_pack_response.go
 model_ci_run_create_request.go
 model_ci_run_create_response.go
 model_ci_run_status_response.go
