@@ -12,7 +12,7 @@ const navItems = [
 ];
 
 export function Navbar() {
-  const getAccessHref = `${siteConfig.appUrl}/auth?mode=access&utm_source=site&utm_medium=navbar&utm_campaign=get-access`;
+  const getAccessHref = `${siteConfig.appUrl}/auth?mode=access&intent=signup&utm_source=site&utm_medium=navbar&utm_campaign=get-access`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/80 bg-background/84 backdrop-blur-xl">

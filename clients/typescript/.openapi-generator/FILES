@@ -6,6 +6,7 @@ src/apis/AnalyticsApi.ts
 src/apis/ApiKeysApi.ts
 src/apis/AttemptsApi.ts
 src/apis/AuditEventsApi.ts
+src/apis/AuthApi.ts
 src/apis/CampaignsApi.ts
 src/apis/CiApi.ts
 src/apis/CounterfactualsApi.ts
@@ -26,6 +27,9 @@ src/models/ApiKeyCreateResponse.ts
 src/models/ApiKeyMetadata.ts
 src/models/ApplyTemplateRunResponse.ts
 src/models/AuditEventListItem.ts
+src/models/AuthPermissionSet.ts
+src/models/AuthSessionMetadata.ts
+src/models/AuthSessionResponse.ts
 src/models/CIRunCreateRequest.ts
 src/models/CIRunCreateResponse.ts
 src/models/CIRunStatusResponse.ts
@@ -47,6 +51,7 @@ src/models/InsightEvidenceTool.ts
 src/models/LethalMutationInsight.ts
 src/models/LethalMutationTopReason.ts
 src/models/LethalMutationTopTool.ts
+src/models/LoginRequest.ts
 src/models/MutationCountPct.ts
 src/models/MutationPackCoverageResponse.ts
 src/models/MutationPackCreateRequest.ts
@@ -74,6 +79,7 @@ src/models/RunInsightEvidence.ts
 src/models/RunMetadata.ts
 src/models/RunStatsResponse.ts
 src/models/SecurityEventListItem.ts
+src/models/SignupRequest.ts
 src/models/ToolCount.ts
 src/models/ToolCountPct.ts
 src/models/ToolFragilityItem.ts

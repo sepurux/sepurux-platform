@@ -264,7 +264,10 @@ def test_weak_custom_pack_returns_warning_and_include_system_filter_works(
     created = create_response.json()
     assert created["warning"] == "Mutation pack may be too weak to detect failures"
     assert created["coverage_score"] == 20
-    assert "must contain at least one failure mutation (timeout/rate_limit)" in created["validation_issues"]
+    assert (
+        "must contain at least one failure mutation (timeout/rate_limit)"
+        in created["validation_issues"]
+    )
     assert "must contain at least one latency mutation" in created["validation_issues"]
     assert "must contain at least two distinct mutation types" in created["validation_issues"]
 

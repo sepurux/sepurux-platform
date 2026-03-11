@@ -4,11 +4,12 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ExternalLink, KeyRound, Loader2, MonitorPlay, Sparkles } from "lucide-react";
+import { ExternalLink, KeyRound, Loader2, LogIn, MonitorPlay, Sparkles, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, type DemoInfoResponse } from "@/lib/api";
+import { api, type AuthSessionResponse, type DemoInfoResponse } from "@/lib/api";
+import { clearStoredAuthSession, setStoredAuthSession } from "@/lib/auth-session";
 import {
   clearStoredApiBaseUrl,
   clearStoredApiKey,
@@ -23,6 +24,9 @@ const DEFAULT_API_BASE_URL =
 const DEFAULT_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sepurux.com";
 const DEMO_PREVIEW_FLAG_KEY = "sepurux.demoPreview";
 const DEMO_CAMPAIGN_STORAGE_KEY = "sepurux.demoCampaign";
+
+type AccessMode = "demo" | "access";
+type AccessIntent = "signup" | "login";
 
 function normalizeNextPath(rawPath: string | null) {
   if (!rawPath || !rawPath.startsWith("/")) {
@@ -41,7 +45,11 @@ function resolveBaseForBrowser(inputBaseUrl: string) {
   }
   try {
     const parsed = new URL(candidate);
-    if (parsed.hostname === "api" || parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+    if (
+      parsed.hostname === "api" ||
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1"
+    ) {
       return "/api/backend";
     }
   } catch {
@@ -54,24 +62,32 @@ export function AccessPortal() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [mode, setMode] = useState<"demo" | "access">(
+  const [mode, setMode] = useState<AccessMode>(
     searchParams.get("mode") === "access" ? "access" : "demo"
+  );
+  const [intent, setIntent] = useState<AccessIntent>(
+    searchParams.get("intent") === "login" ? "login" : "signup"
   );
   const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE_URL);
   const [apiKey, setApiKey] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupProjectName, setSignupProjectName] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [demoInfo, setDemoInfo] = useState<DemoInfoResponse | null>(null);
   const [loadingDemo, setLoadingDemo] = useState(false);
+  const [submittingAccess, setSubmittingAccess] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const nextPath = useMemo(
-    () => normalizeNextPath(searchParams.get("next")),
-    [searchParams]
-  );
+  const nextPath = useMemo(() => normalizeNextPath(searchParams.get("next")), [searchParams]);
 
   useEffect(() => {
     setMode(searchParams.get("mode") === "access" ? "access" : "demo");
+    setIntent(searchParams.get("intent") === "login" ? "login" : "signup");
   }, [searchParams]);
 
   useEffect(() => {
@@ -102,6 +118,25 @@ export function AccessPortal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
+  async function persistSession(session: AuthSessionResponse, resolvedBase: string) {
+    const { api_key: _apiKey, ...sessionMetadata } = session;
+    setStoredApiBaseUrl(resolvedBase);
+    setStoredApiKey(session.api_key);
+    setStoredProjectId(session.project_id);
+    setStoredAuthSession(sessionMetadata);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(DEMO_PREVIEW_FLAG_KEY);
+      window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
+    }
+  }
+
+  async function refreshSessionFromStoredCredentials() {
+    const session = await api.getAuthSession();
+    setStoredAuthSession(session);
+    return session;
+  }
+
   async function handleActivateDemo() {
     if (loadingDemo) return;
     setLoadingDemo(true);
@@ -119,6 +154,8 @@ export function AccessPortal() {
         window.localStorage.setItem(DEMO_CAMPAIGN_STORAGE_KEY, session.demo_campaign);
       }
 
+      const authSession = await refreshSessionFromStoredCredentials();
+      setStoredAuthSession({ ...authSession, is_demo: true });
       router.replace(nextPath);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to start demo session");
@@ -127,13 +164,73 @@ export function AccessPortal() {
     }
   }
 
-  function handleModeSwitch(nextMode: "demo" | "access") {
-    setMode(nextMode);
-    setErrorMessage(null);
+  function updateQuery(nextMode: AccessMode, nextIntent: AccessIntent) {
     if (typeof window === "undefined") return;
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("mode", nextMode);
+    nextUrl.searchParams.set("intent", nextIntent);
     window.history.replaceState({}, "", nextUrl.toString());
+  }
+
+  function handleModeSwitch(nextMode: AccessMode) {
+    const nextIntent = nextMode === "access" ? intent : "signup";
+    setMode(nextMode);
+    setErrorMessage(null);
+    updateQuery(nextMode, nextIntent);
+  }
+
+  function handleIntentSwitch(nextIntent: AccessIntent) {
+    setIntent(nextIntent);
+    setErrorMessage(null);
+    updateQuery("access", nextIntent);
+  }
+
+  async function handleSignup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submittingAccess) return;
+    setSubmittingAccess(true);
+    setErrorMessage(null);
+    try {
+      const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
+      const session = await api.signup(
+        {
+          email: signupEmail.trim(),
+          password: signupPassword,
+          name: signupName.trim() || undefined,
+          project_name: signupProjectName.trim() || undefined,
+        },
+        { baseUrl: resolvedBase }
+      );
+      await persistSession(session, resolvedBase);
+      router.replace(nextPath);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to create account");
+    } finally {
+      setSubmittingAccess(false);
+    }
+  }
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submittingAccess) return;
+    setSubmittingAccess(true);
+    setErrorMessage(null);
+    try {
+      const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
+      const session = await api.login(
+        {
+          email: loginEmail.trim(),
+          password: loginPassword,
+        },
+        { baseUrl: resolvedBase }
+      );
+      await persistSession(session, resolvedBase);
+      router.replace(nextPath);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to log in");
+    } finally {
+      setSubmittingAccess(false);
+    }
   }
 
   async function handleManualConnect(event: FormEvent<HTMLFormElement>) {
@@ -163,8 +260,10 @@ export function AccessPortal() {
         window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
       }
 
+      await refreshSessionFromStoredCredentials();
       router.replace(nextPath);
     } catch (error) {
+      clearStoredAuthSession();
       setErrorMessage(error instanceof Error ? error.message : "Unable to connect");
     } finally {
       setConnecting(false);
@@ -175,6 +274,7 @@ export function AccessPortal() {
     clearStoredApiBaseUrl();
     clearStoredApiKey();
     clearStoredProjectId();
+    clearStoredAuthSession();
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(DEMO_PREVIEW_FLAG_KEY);
       window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
@@ -199,7 +299,7 @@ export function AccessPortal() {
           <CardHeader>
             <CardTitle className="text-2xl">Sepurux Access</CardTitle>
             <CardDescription>
-              Start with seeded demo data or connect your own project credentials.
+              Create a workspace account, sign back in, or launch the seeded demo environment.
             </CardDescription>
             <div className="inline-flex w-fit items-center rounded-lg border border-border/70 bg-muted/40 p-1">
               <button
@@ -232,11 +332,11 @@ export function AccessPortal() {
                 <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-100">
                   <p className="font-medium">Seeded Demo Workspace</p>
                   <p className="mt-1 text-blue-100/80">
-                    We issue a per-session demo API key and route you to a resettable shared dataset.
+                    We issue a short-lived demo session and route you into a resettable shared dataset.
                   </p>
                   {demoInfo ? (
                     <p className="mt-2 text-blue-100/80">
-                      Limits: {demoInfo.limits.campaigns_per_hour}/hr campaigns,{" "}
+                      Limits: {demoInfo.limits.campaigns_per_hour}/hr campaigns, {" "}
                       {demoInfo.limits.mutations_per_run}/run mutations.
                     </p>
                   ) : null}
@@ -260,7 +360,7 @@ export function AccessPortal() {
                 </Button>
               </div>
             ) : (
-              <form className="space-y-4" onSubmit={handleManualConnect}>
+              <div className="space-y-5">
                 <label className="block space-y-1 text-sm">
                   <span className="text-muted-foreground">API Base URL</span>
                   <input
@@ -270,42 +370,171 @@ export function AccessPortal() {
                     placeholder="/api/backend"
                   />
                 </label>
-                <label className="block space-y-1 text-sm">
-                  <span className="text-muted-foreground">API Key</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                    value={apiKey}
-                    onChange={(event) => setApiKey(event.target.value)}
-                    placeholder="cl_..."
-                  />
-                </label>
-                <label className="block space-y-1 text-sm">
-                  <span className="text-muted-foreground">Project ID (optional)</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                    value={projectId}
-                    onChange={(event) => setProjectId(event.target.value)}
-                    placeholder="UUID"
-                  />
-                </label>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button type="submit" disabled={connecting}>
-                    {connecting ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Connecting...
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-2">
-                        <KeyRound className="h-4 w-4" /> Continue to dashboard
-                      </span>
-                    )}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={resetStoredCredentials}>
-                    Reset
-                  </Button>
+                <div className="inline-flex w-fit items-center rounded-lg border border-border/70 bg-muted/40 p-1">
+                  <button
+                    type="button"
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                      intent === "signup"
+                        ? "bg-blue-400/15 text-blue-100"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => handleIntentSwitch("signup")}
+                  >
+                    Sign up
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                      intent === "login"
+                        ? "bg-blue-400/15 text-blue-100"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => handleIntentSwitch("login")}
+                  >
+                    Log in
+                  </button>
                 </div>
-              </form>
+
+                {intent === "signup" ? (
+                  <form className="space-y-4" onSubmit={handleSignup}>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Name</span>
+                      <input
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={signupName}
+                        onChange={(event) => setSignupName(event.target.value)}
+                        placeholder="Ada Lovelace"
+                      />
+                    </label>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Work email</span>
+                      <input
+                        type="email"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={signupEmail}
+                        onChange={(event) => setSignupEmail(event.target.value)}
+                        placeholder="you@company.com"
+                        required
+                      />
+                    </label>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Password</span>
+                      <input
+                        type="password"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={signupPassword}
+                        onChange={(event) => setSignupPassword(event.target.value)}
+                        placeholder="Minimum 8 characters"
+                        minLength={8}
+                        required
+                      />
+                    </label>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Project name</span>
+                      <input
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={signupProjectName}
+                        onChange={(event) => setSignupProjectName(event.target.value)}
+                        placeholder="Fraud Agent Sandbox"
+                      />
+                    </label>
+
+                    <Button type="submit" className="w-full" disabled={submittingAccess}>
+                      {submittingAccess ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Creating workspace...
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2">
+                          <UserPlus className="h-4 w-4" /> Create account and open dashboard
+                        </span>
+                      )}
+                    </Button>
+                  </form>
+                ) : (
+                  <form className="space-y-4" onSubmit={handleLogin}>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Email</span>
+                      <input
+                        type="email"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={loginEmail}
+                        onChange={(event) => setLoginEmail(event.target.value)}
+                        placeholder="you@company.com"
+                        required
+                      />
+                    </label>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Password</span>
+                      <input
+                        type="password"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={loginPassword}
+                        onChange={(event) => setLoginPassword(event.target.value)}
+                        placeholder="Your password"
+                        minLength={8}
+                        required
+                      />
+                    </label>
+
+                    <Button type="submit" className="w-full" disabled={submittingAccess}>
+                      {submittingAccess ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2">
+                          <LogIn className="h-4 w-4" /> Log in to dashboard
+                        </span>
+                      )}
+                    </Button>
+                  </form>
+                )}
+
+                <details className="rounded-lg border border-border/70 bg-muted/25 p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-foreground">
+                    Use an existing API key instead
+                  </summary>
+                  <form className="mt-4 space-y-4" onSubmit={handleManualConnect}>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">API Key</span>
+                      <input
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={apiKey}
+                        onChange={(event) => setApiKey(event.target.value)}
+                        placeholder="cl_..."
+                      />
+                    </label>
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Project ID (optional)</span>
+                      <input
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={projectId}
+                        onChange={(event) => setProjectId(event.target.value)}
+                        placeholder="UUID"
+                      />
+                    </label>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="submit" disabled={connecting}>
+                        {connecting ? (
+                          <span className="inline-flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Connecting...
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2">
+                            <KeyRound className="h-4 w-4" /> Continue with API key
+                          </span>
+                        )}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={resetStoredCredentials}>
+                        Reset
+                      </Button>
+                    </div>
+                  </form>
+                </details>
+              </div>
             )}
 
             {errorMessage ? (
@@ -318,32 +547,32 @@ export function AccessPortal() {
 
         <Card className="border-border/70 bg-card/70">
           <CardHeader>
-            <CardTitle>How this works</CardTitle>
-            <CardDescription>Envato-style preview entry with safe tenant isolation.</CardDescription>
+            <CardTitle>Access model</CardTitle>
+            <CardDescription>Role-aware dashboard entry with demo isolation and per-session keys.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+              <p className="inline-flex items-center gap-2 font-medium text-foreground">
+                <UserPlus className="h-4 w-4 text-blue-300" /> Sign up
+              </p>
+              <p className="mt-1">
+                Creates a workspace, makes you the admin for the first project, and issues a project-scoped session key.
+              </p>
+            </div>
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+              <p className="inline-flex items-center gap-2 font-medium text-foreground">
+                <LogIn className="h-4 w-4 text-blue-300" /> Log in
+              </p>
+              <p className="mt-1">
+                Restores your role-aware dashboard session and uses the backend RBAC model to gate access.
+              </p>
+            </div>
             <div className="rounded-md border border-border/60 bg-muted/30 p-3">
               <p className="inline-flex items-center gap-2 font-medium text-foreground">
                 <Sparkles className="h-4 w-4 text-blue-300" /> View Demo
               </p>
               <p className="mt-1">
-                Generates a short-lived demo key mapped to seeded project data, then opens dashboard instantly.
-              </p>
-            </div>
-            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
-              <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <KeyRound className="h-4 w-4 text-blue-300" /> Get Access
-              </p>
-              <p className="mt-1">
-                Uses your API key + project scope for persistent workspaces and unrestricted runs.
-              </p>
-            </div>
-            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
-              <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <MonitorPlay className="h-4 w-4 text-blue-300" /> Seeded Data
-              </p>
-              <p className="mt-1">
-                Demo traces, campaigns, and mutation packs are preloaded and periodically reset.
+                Generates a short-lived demo key mapped to seeded data without exposing shared credentials.
               </p>
             </div>
           </CardContent>

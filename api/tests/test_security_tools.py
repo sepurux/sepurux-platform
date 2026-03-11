@@ -26,7 +26,9 @@ from .conftest import auth_headers, seed_tenant_project_and_key
 
 
 @pytest.fixture()
-def security_test_context() -> Generator[tuple[TestClient, sessionmaker[Session], UUID], None, None]:
+def security_test_context() -> (
+    Generator[tuple[TestClient, sessionmaker[Session], UUID], None, None]
+):
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},

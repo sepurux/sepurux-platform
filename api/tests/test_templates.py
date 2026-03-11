@@ -171,9 +171,7 @@ def test_apply_template_creates_new_run_and_enqueues(
         inherited_template_id = inherited_template.template_id
         selected_template_id = selected_template.template_id
 
-    response = client.post(
-        f"/v1/runs/{source_run_id}/apply-template/{selected_template_id}"
-    )
+    response = client.post(f"/v1/runs/{source_run_id}/apply-template/{selected_template_id}")
 
     assert response.status_code == 201
     payload = response.json()
