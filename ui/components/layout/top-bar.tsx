@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronDown, FolderKanban, Loader2, Search } from "lucide-react";
 
-import { api, type ProjectMetadata } from "@/lib/api";
+import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
+import { clearStoredAuthSession } from "@/lib/auth-session";
 import {
   clearStoredApiBaseUrl,
   clearStoredApiKey,
@@ -17,13 +18,24 @@ import {
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/traces", label: "Traces" },
-  { href: "/campaigns", label: "Campaigns" },
-  { href: "/runs", label: "Runs" },
+  { href: "/dashboard", label: "Dashboard", section: "dashboard" },
+  { href: "/traces", label: "Traces", section: "traces" },
+  { href: "/campaigns", label: "Campaigns", section: "campaigns" },
+  { href: "/runs", label: "Runs", section: "runs" },
+  { href: "/reports", label: "Reports", section: "reports" },
 ];
 
-export function TopBar() {
+function initialsForSession(authSession: AuthSessionMetadata | null) {
+  const source = authSession?.name || authSession?.email || "Sepurux";
+  return source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((segment) => segment[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+export function TopBar({ authSession }: { authSession: AuthSessionMetadata | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectMetadata[]>([]);
@@ -37,6 +49,14 @@ export function TopBar() {
     let cancelled = false;
 
     async function loadProjects() {
+      if (authSession?.project_scoped) {
+        setProjects([]);
+        setProjectsError(null);
+        setSelectedProjectId(authSession.project_id);
+        setStoredProjectId(authSession.project_id);
+        return;
+      }
+
       try {
         const records = await api.listProjects();
         if (cancelled) return;
@@ -61,19 +81,23 @@ export function TopBar() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authSession?.project_id, authSession?.project_scoped]);
 
   function handleProjectChange(nextProjectId: string) {
+    if (authSession?.project_scoped) {
+      return;
+    }
     setSelectedProjectId(nextProjectId);
     setStoredProjectId(nextProjectId);
     window.location.reload();
   }
 
   function handleSignOut() {
+    clearStoredAuthSession();
     clearStoredApiKey();
     clearStoredProjectId();
     clearStoredApiBaseUrl();
-    router.push("/auth?mode=access");
+    router.push("/auth?mode=access&intent=login");
   }
 
   async function lookupRun(runId: string) {
@@ -186,6 +210,14 @@ export function TopBar() {
     }
   }
 
+  const visibleSections = new Set(authSession?.permissions.visible_sections ?? []);
+  const visibleTabs = tabs.filter(
+    (tab) => visibleSections.size === 0 || visibleSections.has(tab.section)
+  );
+  const userInitials = initialsForSession(authSession);
+  const userLabel = authSession?.name || authSession?.email || "Workspace User";
+  const showProjectSelector = !authSession?.project_scoped;
+
   return (
     <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -195,12 +227,18 @@ export function TopBar() {
               CL
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">Agent Sepurux</p>
-              <p className="truncate text-xs text-muted-foreground">Reliability dashboard for replay diagnostics</p>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {authSession?.project_name ?? "Agent Sepurux"}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {authSession
+                  ? `${authSession.role_name} workspace access`
+                  : "Reliability dashboard for replay diagnostics"}
+              </p>
             </div>
           </div>
           <div className="inline-flex w-fit items-center rounded-md border border-border/70 bg-muted/40 p-1">
-            {tabs.map((tab) => {
+            {visibleTabs.map((tab) => {
               const active = pathname === tab.href || (tab.href !== "/dashboard" && pathname.startsWith(tab.href + "/"));
               return (
                 <Link
@@ -219,27 +257,41 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
-            <FolderKanban className="h-4 w-4 text-blue-200" />
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
-              <select
-                className="mt-0.5 w-full truncate bg-transparent text-sm text-foreground outline-none"
-                value={selectedProjectId}
-                onChange={(event) => handleProjectChange(event.target.value)}
-                disabled={!projects.length}
-              >
-                {!projects.length ? (
-                  <option value="">{projectsError ? "Projects unavailable" : "Loading projects..."}</option>
-                ) : null}
-                {projects.map((project) => (
-                  <option key={project.project_id} value={project.project_id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+          {showProjectSelector ? (
+            <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
+              <FolderKanban className="h-4 w-4 text-blue-200" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
+                <select
+                  className="mt-0.5 w-full truncate bg-transparent text-sm text-foreground outline-none"
+                  value={selectedProjectId}
+                  onChange={(event) => handleProjectChange(event.target.value)}
+                  disabled={!projects.length}
+                >
+                  {!projects.length ? (
+                    <option value="">
+                      {projectsError ? "Projects unavailable" : "Loading projects..."}
+                    </option>
+                  ) : null}
+                  {projects.map((project) => (
+                    <option key={project.project_id} value={project.project_id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </label>
+          ) : (
+            <div className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
+              <FolderKanban className="h-4 w-4 text-blue-200" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
+                <p className="mt-0.5 truncate text-sm text-foreground">
+                  {authSession?.project_name ?? "Scoped workspace"}
+                </p>
+              </div>
             </div>
-          </label>
+          )}
           <form
             className="hidden min-w-[280px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex"
             onSubmit={handleSearchSubmit}
@@ -262,13 +314,17 @@ export function TopBar() {
           </button>
           <details className="group relative">
             <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm hover:bg-accent/40">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-400/20 text-xs font-semibold text-blue-200">AK</span>
-              <span className="hidden text-foreground sm:inline">Analyst</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-400/20 text-xs font-semibold text-blue-200">
+                {userInitials}
+              </span>
+              <span className="hidden text-foreground sm:inline">{userLabel}</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground group-open:rotate-180" />
             </summary>
             <div className="absolute right-0 mt-2 w-44 rounded-md border border-border/70 bg-card p-1 shadow-panel">
-              <button className="w-full rounded px-3 py-2 text-left text-sm text-foreground hover:bg-accent/50">Profile</button>
-              <button className="w-full rounded px-3 py-2 text-left text-sm text-foreground hover:bg-accent/50">Preferences</button>
+              <div className="px-3 py-2 text-left text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">{userLabel}</p>
+                <p className="mt-0.5 uppercase tracking-[0.12em]">{authSession?.role_name ?? "viewer"}</p>
+              </div>
               <button
                 className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent/50"
                 onClick={handleSignOut}

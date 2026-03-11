@@ -343,6 +343,44 @@ class DemoSessionResponse(BaseModel):
     limits: DemoLimits
 
 
+class AuthPermissionSet(BaseModel):
+    visible_sections: list[str] = Field(default_factory=list)
+    can_upload_traces: bool = False
+    can_create_campaigns: bool = False
+    can_run_campaigns: bool = False
+    can_manage_workspace: bool = False
+    can_manage_api_keys: bool = False
+
+
+class AuthSessionMetadata(BaseModel):
+    tenant_id: UUID
+    project_id: UUID
+    project_name: str
+    project_scoped: bool = True
+    role_name: Literal["admin", "developer", "viewer"]
+    user_id: UUID | None = None
+    email: str | None = None
+    name: str | None = None
+    is_demo: bool = False
+    permissions: AuthPermissionSet
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=8, max_length=256)
+    name: str | None = Field(default=None, max_length=120)
+    project_name: str | None = Field(default=None, max_length=120)
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=8, max_length=256)
+
+
+class AuthSessionResponse(AuthSessionMetadata):
+    api_key: str
+
+
 class PolicyPackCreateRequest(BaseModel):
     name: str
     engine: Literal["builtin", "opa"] = "builtin"

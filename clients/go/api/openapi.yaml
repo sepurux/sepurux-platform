@@ -240,6 +240,34 @@ paths:
       summary: Get Audit Events
       tags:
       - audit-events
+  /v1/auth/session:
+    get:
+      operationId: get_auth_session_v1_auth_session_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Auth Session
+      tags:
+      - auth
   /v1/attempts/{attempt_id}:
     get:
       operationId: get_attempt_v1_attempts__attempt_id__get
@@ -1935,6 +1963,56 @@ paths:
       summary: Post Demo Session
       tags:
       - demo
+  /auth/signup:
+    post:
+      operationId: post_signup_auth_signup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Signup
+      tags:
+      - auth
+  /auth/login:
+    post:
+      operationId: post_login_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Login
+      tags:
+      - auth
   /healthz:
     get:
       operationId: healthz_healthz_get
@@ -2142,6 +2220,179 @@ components:
       - metadata
       - project_id
       title: AuditEventListItem
+    AuthPermissionSet:
+      example:
+        can_run_campaigns: false
+        can_manage_workspace: false
+        can_manage_api_keys: false
+        can_create_campaigns: false
+        visible_sections:
+        - visible_sections
+        - visible_sections
+        can_upload_traces: false
+      properties:
+        visible_sections:
+          items:
+            type: string
+          type: array
+        can_upload_traces:
+          default: false
+          title: Can Upload Traces
+          type: boolean
+        can_create_campaigns:
+          default: false
+          title: Can Create Campaigns
+          type: boolean
+        can_run_campaigns:
+          default: false
+          title: Can Run Campaigns
+          type: boolean
+        can_manage_workspace:
+          default: false
+          title: Can Manage Workspace
+          type: boolean
+        can_manage_api_keys:
+          default: false
+          title: Can Manage Api Keys
+          type: boolean
+      title: AuthPermissionSet
+    AuthSessionMetadata:
+      example:
+        tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        role_name: admin
+        project_scoped: true
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        permissions:
+          can_run_campaigns: false
+          can_manage_workspace: false
+          can_manage_api_keys: false
+          can_create_campaigns: false
+          visible_sections:
+          - visible_sections
+          - visible_sections
+          can_upload_traces: false
+        name: name
+        project_name: project_name
+        is_demo: false
+        email: email
+      properties:
+        tenant_id:
+          format: uuid
+          title: Tenant Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        project_name:
+          title: Project Name
+          type: string
+        project_scoped:
+          default: true
+          title: Project Scoped
+          type: boolean
+        role_name:
+          enum:
+          - admin
+          - developer
+          - viewer
+          title: Role Name
+          type: string
+        user_id:
+          format: uuid
+          nullable: true
+          type: string
+        email:
+          nullable: true
+          type: string
+        name:
+          nullable: true
+          type: string
+        is_demo:
+          default: false
+          title: Is Demo
+          type: boolean
+        permissions:
+          $ref: '#/components/schemas/AuthPermissionSet'
+      required:
+      - permissions
+      - project_id
+      - project_name
+      - role_name
+      - tenant_id
+      title: AuthSessionMetadata
+    AuthSessionResponse:
+      example:
+        tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        role_name: admin
+        project_scoped: true
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        api_key: api_key
+        permissions:
+          can_run_campaigns: false
+          can_manage_workspace: false
+          can_manage_api_keys: false
+          can_create_campaigns: false
+          visible_sections:
+          - visible_sections
+          - visible_sections
+          can_upload_traces: false
+        name: name
+        project_name: project_name
+        is_demo: false
+        email: email
+      properties:
+        tenant_id:
+          format: uuid
+          title: Tenant Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        project_name:
+          title: Project Name
+          type: string
+        project_scoped:
+          default: true
+          title: Project Scoped
+          type: boolean
+        role_name:
+          enum:
+          - admin
+          - developer
+          - viewer
+          title: Role Name
+          type: string
+        user_id:
+          format: uuid
+          nullable: true
+          type: string
+        email:
+          nullable: true
+          type: string
+        name:
+          nullable: true
+          type: string
+        is_demo:
+          default: false
+          title: Is Demo
+          type: boolean
+        permissions:
+          $ref: '#/components/schemas/AuthPermissionSet'
+        api_key:
+          title: Api Key
+          type: string
+      required:
+      - api_key
+      - permissions
+      - project_id
+      - project_name
+      - role_name
+      - tenant_id
+      title: AuthSessionResponse
     CIRunCreateRequest:
       example:
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -2736,6 +2987,23 @@ components:
       - count
       - tool
       title: LethalMutationTopTool
+    LoginRequest:
+      example:
+        password: password
+        email: email
+      properties:
+        email:
+          title: Email
+          type: string
+        password:
+          maxLength: 256
+          minLength: 8
+          title: Password
+          type: string
+      required:
+      - email
+      - password
+      title: LoginRequest
     MutationCountPct:
       example:
         pct: 2.027123023002322
@@ -3799,6 +4067,33 @@ components:
       - tool
       - zone
       title: SecurityEventListItem
+    SignupRequest:
+      example:
+        password: password
+        name: name
+        project_name: project_name
+        email: email
+      properties:
+        email:
+          title: Email
+          type: string
+        password:
+          maxLength: 256
+          minLength: 8
+          title: Password
+          type: string
+        name:
+          maxLength: 120
+          nullable: true
+          type: string
+        project_name:
+          maxLength: 120
+          nullable: true
+          type: string
+      required:
+      - email
+      - password
+      title: SignupRequest
     ToolCount:
       example:
         count: 5

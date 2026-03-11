@@ -8,7 +8,7 @@ import { siteConfig } from "@/lib/site";
 const logos = ["Northstar", "Helios", "Cresta", "Signal", "Orbit", "Vector"];
 
 export function HeroSection() {
-  const getAccessHref = `${siteConfig.appUrl}/auth?mode=access&utm_source=site&utm_medium=hero&utm_campaign=get-access`;
+  const getAccessHref = `${siteConfig.appUrl}/auth?mode=access&intent=signup&utm_source=site&utm_medium=hero&utm_campaign=get-access`;
   const viewDemoHref = `${siteConfig.appUrl}/auth?mode=demo&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=view-demo`;
 
   return (

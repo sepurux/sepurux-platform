@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { siteConfig } from "@/lib/site";
 
 const navItems = [
   { href: "/product", label: "Product" },
@@ -11,19 +12,15 @@ const navItems = [
 ];
 
 export function Navbar() {
+  const getAccessHref = `${siteConfig.appUrl}/auth?mode=access&intent=signup&utm_source=site&utm_medium=navbar&utm_campaign=get-access`;
+
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-lg">
       <div className="site-container flex h-20 items-center justify-between">
         <Link href="/" className="inline-flex items-center gap-0" aria-label="Sepurux home">
-          <Image
-            src="/logo.png"
-            alt="Sepurux logo"
-            width={130}
-            height={130}
-            priority
-          />
+          <Image src="/logo.png" alt="Sepurux logo" width={130} height={130} priority />
           <span className="-ml-6 text-xl font-semibold tracking-tight text-foreground">
-            Sepurux 
+            Sepurux
           </span>
         </Link>
 
@@ -40,7 +37,7 @@ export function Navbar() {
         </nav>
 
         <Button asChild size="sm" variant="outline">
-          <Link href="#">Login</Link>
+          <a href={getAccessHref}>Request Access</a>
         </Button>
       </div>
     </header>

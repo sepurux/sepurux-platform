@@ -4,9 +4,11 @@ from typing import Annotated
 
 from app.auth import TenantAuthContext, get_tenant_auth, require_role
 from app.db import get_db
+from app.models import Project
 from app.schemas import ProjectCreateRequest, ProjectMetadata
 from app.services.project_service import create_project, list_projects_for_tenant
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
@@ -27,6 +29,15 @@ def _to_project_metadata(project) -> ProjectMetadata:
 
 @router.get("", response_model=list[ProjectMetadata])
 def get_projects(db: DbSession, tenant_auth: TenantAuth) -> list[ProjectMetadata]:
+    if tenant_auth.project_id is not None:
+        scoped_project = db.scalar(
+            select(Project).where(
+                Project.tenant_id == tenant_auth.tenant_id,
+                Project.project_id == tenant_auth.project_id,
+            )
+        )
+        return [_to_project_metadata(scoped_project)] if isinstance(scoped_project, Project) else []
+
     records = list_projects_for_tenant(db, tenant_id=tenant_auth.tenant_id)
     return [_to_project_metadata(record) for record in records]
 

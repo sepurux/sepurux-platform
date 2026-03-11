@@ -57,7 +57,9 @@ def test_schema_lethal_generates_schema_adapter_recommendation() -> None:
     )
 
     insights = build_run_insights(**payload)
-    schema_insights = [item for item in insights if item["id"].startswith("insight.schema_adapter.")]
+    schema_insights = [
+        item for item in insights if item["id"].startswith("insight.schema_adapter.")
+    ]
     assert len(schema_insights) == 1
     assert "schema adapter" in schema_insights[0]["title"].lower()
 
