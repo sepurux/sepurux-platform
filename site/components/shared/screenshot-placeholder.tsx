@@ -73,7 +73,7 @@ export function ScreenshotPlaceholder({
           </div>
         ) : (
           <div className="grid gap-3">
-            <div className="h-3 w-2/3 rounded bg-primary/40" />
+            <div className="h-3 w-2/3 rounded bg-secondary/40" />
             <div className="h-3 w-5/6 rounded bg-muted" />
             <div className="h-20 rounded-md border border-border/70 bg-background/70" />
             <div className="grid grid-cols-3 gap-2">

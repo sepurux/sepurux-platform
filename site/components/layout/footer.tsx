@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-border/70 bg-card/20">
+    <footer className="mt-24 border-t border-border/80 bg-surface/60">
       <div className="site-container flex flex-col gap-6 py-10 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-        <p>© {new Date().getFullYear()} Sepurux. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Sepurux. Reliability infrastructure for AI agents.</p>
         <div className="flex flex-wrap items-center gap-5">
           <Link href="/docs" className="hover:text-foreground">
             Docs
