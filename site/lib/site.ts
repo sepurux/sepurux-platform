@@ -5,6 +5,8 @@ const defaultSiteUrl =
 const defaultAppUrl =
   process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://app.sepurux.com";
 
+export type PricingTier = "starter" | "team" | "enterprise";
+
 export const siteConfig = {
   name: "Sepurux",
   description:
@@ -14,6 +16,51 @@ export const siteConfig = {
   logo: "/logo.png",
   ogImage: "/logo.png",
 };
+
+export function buildAppAuthHref({
+  mode,
+  intent,
+  plan,
+  preview,
+  next,
+  utmSource,
+  utmMedium,
+  utmCampaign,
+}: {
+  mode: "demo" | "access";
+  intent?: "signup" | "login";
+  plan?: PricingTier;
+  preview?: string;
+  next?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+}) {
+  const url = new URL("/auth", siteConfig.appUrl);
+  url.searchParams.set("mode", mode);
+  if (intent) {
+    url.searchParams.set("intent", intent);
+  }
+  if (plan) {
+    url.searchParams.set("plan", plan);
+  }
+  if (preview) {
+    url.searchParams.set("preview", preview);
+  }
+  if (next) {
+    url.searchParams.set("next", next);
+  }
+  if (utmSource) {
+    url.searchParams.set("utm_source", utmSource);
+  }
+  if (utmMedium) {
+    url.searchParams.set("utm_medium", utmMedium);
+  }
+  if (utmCampaign) {
+    url.searchParams.set("utm_campaign", utmCampaign);
+  }
+  return url.toString();
+}
 
 export function buildPageMetadata({
   title,

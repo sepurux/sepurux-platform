@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **Password** | **string** |  | 
 **Name** | Pointer to **NullableString** |  | [optional] 
 **ProjectName** | Pointer to **NullableString** |  | [optional] 
+**PricingTier** | Pointer to **NullableString** |  | [optional] 
 
 ## Methods
 
@@ -138,6 +139,41 @@ HasProjectName returns a boolean if a field has been set.
 `func (o *SignupRequest) UnsetProjectName()`
 
 UnsetProjectName ensures that no value is present for ProjectName, not even an explicit nil
+### GetPricingTier
+
+`func (o *SignupRequest) GetPricingTier() string`
+
+GetPricingTier returns the PricingTier field if non-nil, zero value otherwise.
+
+### GetPricingTierOk
+
+`func (o *SignupRequest) GetPricingTierOk() (*string, bool)`
+
+GetPricingTierOk returns a tuple with the PricingTier field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPricingTier
+
+`func (o *SignupRequest) SetPricingTier(v string)`
+
+SetPricingTier sets PricingTier field to given value.
+
+### HasPricingTier
+
+`func (o *SignupRequest) HasPricingTier() bool`
+
+HasPricingTier returns a boolean if a field has been set.
+
+### SetPricingTierNil
+
+`func (o *SignupRequest) SetPricingTierNil(b bool)`
+
+ SetPricingTierNil sets the value for PricingTier to be an explicit nil
+
+### UnsetPricingTier
+`func (o *SignupRequest) UnsetPricingTier()`
+
+UnsetPricingTier ensures that no value is present for PricingTier, not even an explicit nil
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

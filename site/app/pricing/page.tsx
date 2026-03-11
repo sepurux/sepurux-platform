@@ -21,7 +21,7 @@ export default function PricingPage() {
           Transparent plans for every reliability stage.
         </h1>
         <p className="mt-5 text-lg text-muted-foreground">
-          Start with replay diagnostics and scale into policy + CI quality gates as your agent surface grows.
+          Start with replay diagnostics and scale into policy, security, and governance surfaces as your agent footprint grows.
         </p>
       </header>
 

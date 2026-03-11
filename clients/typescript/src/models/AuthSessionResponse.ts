@@ -55,6 +55,18 @@ export interface AuthSessionResponse {
      * @type {string}
      * @memberof AuthSessionResponse
      */
+    pricing_tier?: AuthSessionResponsePricingTierEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof AuthSessionResponse
+     */
+    plan_name: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AuthSessionResponse
+     */
     role_name: AuthSessionResponseRoleNameEnum;
     /**
      * 
@@ -98,6 +110,16 @@ export interface AuthSessionResponse {
 /**
  * @export
  */
+export const AuthSessionResponsePricingTierEnum = {
+    starter: 'starter',
+    team: 'team',
+    enterprise: 'enterprise'
+} as const;
+export type AuthSessionResponsePricingTierEnum = typeof AuthSessionResponsePricingTierEnum[keyof typeof AuthSessionResponsePricingTierEnum];
+
+/**
+ * @export
+ */
 export const AuthSessionResponseRoleNameEnum = {
     admin: 'admin',
     developer: 'developer',
@@ -113,6 +135,7 @@ export function instanceOfAuthSessionResponse(value: object): value is AuthSessi
     if (!('tenant_id' in value) || value['tenant_id'] === undefined) return false;
     if (!('project_id' in value) || value['project_id'] === undefined) return false;
     if (!('project_name' in value) || value['project_name'] === undefined) return false;
+    if (!('plan_name' in value) || value['plan_name'] === undefined) return false;
     if (!('role_name' in value) || value['role_name'] === undefined) return false;
     if (!('permissions' in value) || value['permissions'] === undefined) return false;
     if (!('api_key' in value) || value['api_key'] === undefined) return false;
@@ -133,6 +156,8 @@ export function AuthSessionResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'project_id': json['project_id'],
         'project_name': json['project_name'],
         'project_scoped': json['project_scoped'] == null ? undefined : json['project_scoped'],
+        'pricing_tier': json['pricing_tier'] == null ? undefined : json['pricing_tier'],
+        'plan_name': json['plan_name'],
         'role_name': json['role_name'],
         'user_id': json['user_id'] == null ? undefined : json['user_id'],
         'email': json['email'] == null ? undefined : json['email'],
@@ -153,6 +178,8 @@ export function AuthSessionResponseToJSON(value?: AuthSessionResponse | null): a
         'project_id': value['project_id'],
         'project_name': value['project_name'],
         'project_scoped': value['project_scoped'],
+        'pricing_tier': value['pricing_tier'],
+        'plan_name': value['plan_name'],
         'role_name': value['role_name'],
         'user_id': value['user_id'],
         'email': value['email'],

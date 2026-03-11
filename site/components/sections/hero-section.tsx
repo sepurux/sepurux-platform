@@ -3,13 +3,26 @@ import { PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScreenshotPlaceholder } from "@/components/shared/screenshot-placeholder";
-import { siteConfig } from "@/lib/site";
+import { buildAppAuthHref } from "@/lib/site";
 
 const logos = ["Northstar", "Helios", "Cresta", "Signal", "Orbit", "Vector"];
 
 export function HeroSection() {
-  const getAccessHref = `${siteConfig.appUrl}/auth?mode=access&intent=signup&utm_source=site&utm_medium=hero&utm_campaign=get-access`;
-  const viewDemoHref = `${siteConfig.appUrl}/auth?mode=demo&preview=envato&utm_source=site&utm_medium=hero&utm_campaign=view-demo`;
+  const getAccessHref = buildAppAuthHref({
+    mode: "access",
+    intent: "signup",
+    plan: "team",
+    utmSource: "site",
+    utmMedium: "hero",
+    utmCampaign: "get-access",
+  });
+  const viewDemoHref = buildAppAuthHref({
+    mode: "demo",
+    preview: "envato",
+    utmSource: "site",
+    utmMedium: "hero",
+    utmCampaign: "view-demo",
+  });
 
   return (
     <section className="site-container pt-14 md:pt-20">

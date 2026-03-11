@@ -28,6 +28,7 @@ def post_signup(payload: SignupRequest, db: DbSession) -> AuthSessionResponse:
             password=payload.password,
             name=payload.name,
             project_name=payload.project_name,
+            pricing_tier=payload.pricing_tier,
         )
     )
 

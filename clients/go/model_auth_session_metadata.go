@@ -25,6 +25,8 @@ type AuthSessionMetadata struct {
 	ProjectId string `json:"project_id"`
 	ProjectName string `json:"project_name"`
 	ProjectScoped *bool `json:"project_scoped,omitempty"`
+	PricingTier *string `json:"pricing_tier,omitempty"`
+	PlanName string `json:"plan_name"`
 	RoleName string `json:"role_name"`
 	UserId NullableString `json:"user_id,omitempty"`
 	Email NullableString `json:"email,omitempty"`
@@ -39,13 +41,16 @@ type _AuthSessionMetadata AuthSessionMetadata
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewAuthSessionMetadata(tenantId string, projectId string, projectName string, roleName string, permissions AuthPermissionSet) *AuthSessionMetadata {
+func NewAuthSessionMetadata(tenantId string, projectId string, projectName string, planName string, roleName string, permissions AuthPermissionSet) *AuthSessionMetadata {
 	this := AuthSessionMetadata{}
 	this.TenantId = tenantId
 	this.ProjectId = projectId
 	this.ProjectName = projectName
 	var projectScoped bool = true
 	this.ProjectScoped = &projectScoped
+	var pricingTier string = "team"
+	this.PricingTier = &pricingTier
+	this.PlanName = planName
 	this.RoleName = roleName
 	var isDemo bool = false
 	this.IsDemo = &isDemo
@@ -60,6 +65,8 @@ func NewAuthSessionMetadataWithDefaults() *AuthSessionMetadata {
 	this := AuthSessionMetadata{}
 	var projectScoped bool = true
 	this.ProjectScoped = &projectScoped
+	var pricingTier string = "team"
+	this.PricingTier = &pricingTier
 	var isDemo bool = false
 	this.IsDemo = &isDemo
 	return &this
@@ -167,6 +174,62 @@ func (o *AuthSessionMetadata) HasProjectScoped() bool {
 // SetProjectScoped gets a reference to the given bool and assigns it to the ProjectScoped field.
 func (o *AuthSessionMetadata) SetProjectScoped(v bool) {
 	o.ProjectScoped = &v
+}
+
+// GetPricingTier returns the PricingTier field value if set, zero value otherwise.
+func (o *AuthSessionMetadata) GetPricingTier() string {
+	if o == nil || IsNil(o.PricingTier) {
+		var ret string
+		return ret
+	}
+	return *o.PricingTier
+}
+
+// GetPricingTierOk returns a tuple with the PricingTier field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AuthSessionMetadata) GetPricingTierOk() (*string, bool) {
+	if o == nil || IsNil(o.PricingTier) {
+		return nil, false
+	}
+	return o.PricingTier, true
+}
+
+// HasPricingTier returns a boolean if a field has been set.
+func (o *AuthSessionMetadata) HasPricingTier() bool {
+	if o != nil && !IsNil(o.PricingTier) {
+		return true
+	}
+
+	return false
+}
+
+// SetPricingTier gets a reference to the given string and assigns it to the PricingTier field.
+func (o *AuthSessionMetadata) SetPricingTier(v string) {
+	o.PricingTier = &v
+}
+
+// GetPlanName returns the PlanName field value
+func (o *AuthSessionMetadata) GetPlanName() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.PlanName
+}
+
+// GetPlanNameOk returns a tuple with the PlanName field value
+// and a boolean to check if the value has been set.
+func (o *AuthSessionMetadata) GetPlanNameOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.PlanName, true
+}
+
+// SetPlanName sets field value
+func (o *AuthSessionMetadata) SetPlanName(v string) {
+	o.PlanName = v
 }
 
 // GetRoleName returns the RoleName field value
@@ -391,6 +454,10 @@ func (o AuthSessionMetadata) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.ProjectScoped) {
 		toSerialize["project_scoped"] = o.ProjectScoped
 	}
+	if !IsNil(o.PricingTier) {
+		toSerialize["pricing_tier"] = o.PricingTier
+	}
+	toSerialize["plan_name"] = o.PlanName
 	toSerialize["role_name"] = o.RoleName
 	if o.UserId.IsSet() {
 		toSerialize["user_id"] = o.UserId.Get()
@@ -416,6 +483,7 @@ func (o *AuthSessionMetadata) UnmarshalJSON(data []byte) (err error) {
 		"tenant_id",
 		"project_id",
 		"project_name",
+		"plan_name",
 		"role_name",
 		"permissions",
 	}

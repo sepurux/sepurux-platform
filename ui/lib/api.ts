@@ -304,6 +304,8 @@ export type AuthSessionMetadata = {
   project_id: string;
   project_name: string;
   project_scoped: boolean;
+  pricing_tier: "starter" | "team" | "enterprise";
+  plan_name: string;
   role_name: "admin" | "developer" | "viewer";
   user_id: string | null;
   email: string | null;
@@ -579,6 +581,7 @@ export const api = {
     password: string;
     name?: string;
     project_name?: string;
+    pricing_tier?: "starter" | "team" | "enterprise";
   }, options?: { baseUrl?: string }) =>
     postJson<AuthSessionResponse, typeof payload>(
       "/auth/signup",

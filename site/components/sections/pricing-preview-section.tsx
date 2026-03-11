@@ -3,25 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const tiers = [
-  {
-    name: "Starter",
-    price: "$99/mo",
-    highlights: ["1 project", "Basic mutation packs", "Email support"],
-  },
-  {
-    name: "Team",
-    price: "$599/mo",
-    highlights: ["10 projects", "Policy packs + CI gate", "Run inspector analytics"],
-    featured: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Contact us",
-    highlights: ["Unlimited projects", "SSO + advanced controls", "Priority support"],
-  },
-];
+import { pricingTiers } from "@/lib/pricing";
 
 export function PricingPreviewSection() {
   return (
@@ -39,8 +21,8 @@ export function PricingPreviewSection() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {tiers.map((tier) => (
-          <Card key={tier.name} className={tier.featured ? "border-primary/40" : undefined}>
+        {pricingTiers.map((tier) => (
+          <Card key={tier.tier} className={tier.featured ? "border-primary/40" : undefined}>
             <CardHeader>
               <div className="mb-1 flex items-center justify-between">
                 <CardTitle>{tier.name}</CardTitle>
@@ -48,11 +30,12 @@ export function PricingPreviewSection() {
               </div>
               <CardDescription className="text-xl font-semibold text-foreground">
                 {tier.price}
+                <span className="ml-1 text-sm font-normal text-muted-foreground">{tier.interval}</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                {tier.highlights.map((item) => (
+                {tier.previewHighlights.map((item) => (
                   <li key={item}>• {item}</li>
                 ))}
               </ul>
