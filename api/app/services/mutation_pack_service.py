@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from app.models import Campaign, MutationPack
+from app.mutation_registry import get_registered_pack_definition
 from app.services.mutation_pack_policy import (
     SYSTEM_MUTATION_PACK_DEFINITIONS,
     coverage_score_for_config,
@@ -118,6 +119,67 @@ def get_mutation_pack(
         MutationPack.mutation_pack_id == mutation_pack_id,
     )
     return db.scalar(stmt)
+
+
+def get_mutation_pack_by_name(
+    db: Session,
+    *,
+    project_id: UUID,
+    name: str,
+) -> MutationPack | None:
+    ensure_system_mutation_packs(db, project_id=project_id)
+    stmt = select(MutationPack).where(
+        MutationPack.project_id == project_id,
+        MutationPack.name == name,
+    )
+    return db.scalar(stmt)
+
+
+def resolve_mutation_pack(
+    db: Session,
+    *,
+    project_id: UUID,
+    pack_ref: str,
+) -> MutationPack | None:
+    normalized = pack_ref.strip()
+    if not normalized:
+        return None
+
+    try:
+        pack_id = UUID(normalized)
+    except ValueError:
+        return get_mutation_pack_by_name(db, project_id=project_id, name=normalized)
+
+    return get_mutation_pack(db, project_id=project_id, mutation_pack_id=pack_id)
+
+
+def ensure_registered_mutation_pack(
+    db: Session,
+    *,
+    project_id: UUID,
+    pack_name: str,
+) -> MutationPack | None:
+    existing = get_mutation_pack_by_name(db, project_id=project_id, name=pack_name)
+    if existing is not None:
+        return existing
+
+    definition = get_registered_pack_definition(pack_name)
+    if definition is None:
+        return None
+
+    config = definition.get("config")
+    if not isinstance(config, dict):
+        return None
+
+    return create_mutation_pack(
+        db,
+        project_id=project_id,
+        name=str(definition["name"]),
+        description=str(definition.get("description") or ""),
+        config=config,
+        is_system=True,
+        coverage_score=coverage_score_for_config(config),
+    )
 
 
 def delete_mutation_pack(
