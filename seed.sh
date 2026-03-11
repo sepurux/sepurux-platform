@@ -112,6 +112,9 @@ docker compose -f "$COMPOSE_FILE" up -d --build
 echo "[seed] running migrations..."
 docker compose -f "$COMPOSE_FILE" run --rm api alembic upgrade head
 
+echo "[seed] seeding local role credentials..."
+docker compose -f "$COMPOSE_FILE" run --rm api python -m app.scripts.seed_local_credentials
+
 echo "[seed] waiting for API readiness..."
 wait_for_api
 

@@ -143,6 +143,15 @@ def test_demo_session_returns_project_scoped_key(
     assert payload["api_key"].startswith("cl_")
     assert payload["project_id"] == str(demo_project_id)
 
+    session_response = client.get(
+        "/v1/auth/session",
+        headers=auth_headers(api_key=payload["api_key"], project_id=demo_project_id),
+    )
+    assert session_response.status_code == 200
+    session_payload = session_response.json()
+    assert session_payload["pricing_tier"] == "enterprise"
+    assert "audit" in session_payload["permissions"]["visible_sections"]
+
     with session_factory() as db:
         record = db.scalar(
             select(ApiKey).where(ApiKey.key_hash == hash_api_key(payload["api_key"]))

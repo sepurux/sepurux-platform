@@ -357,6 +357,8 @@ class AuthSessionMetadata(BaseModel):
     project_id: UUID
     project_name: str
     project_scoped: bool = True
+    pricing_tier: Literal["starter", "team", "enterprise"] = "team"
+    plan_name: str
     role_name: Literal["admin", "developer", "viewer"]
     user_id: UUID | None = None
     email: str | None = None
@@ -370,6 +372,7 @@ class SignupRequest(BaseModel):
     password: str = Field(min_length=8, max_length=256)
     name: str | None = Field(default=None, max_length=120)
     project_name: str | None = Field(default=None, max_length=120)
+    pricing_tier: Literal["starter", "team", "enterprise"] | None = None
 
 
 class LoginRequest(BaseModel):

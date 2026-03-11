@@ -59,6 +59,7 @@ def test_signup_bootstraps_workspace_and_session(
             "password": "super-secret-123",
             "name": "Alice Example",
             "project_name": "Alice Sandbox",
+            "pricing_tier": "enterprise",
         },
     )
     assert response.status_code == 201
@@ -67,6 +68,8 @@ def test_signup_bootstraps_workspace_and_session(
     assert payload["email"] == "alice@example.com"
     assert payload["name"] == "Alice Example"
     assert payload["project_name"] == "Alice Sandbox"
+    assert payload["pricing_tier"] == "enterprise"
+    assert payload["plan_name"] == "Enterprise"
     assert payload["role_name"] == "admin"
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert "audit" in payload["permissions"]["visible_sections"]
@@ -104,8 +107,32 @@ def test_signup_bootstraps_workspace_and_session(
     assert session_response.status_code == 200
     session_payload = session_response.json()
     assert session_payload["email"] == "alice@example.com"
+    assert session_payload["pricing_tier"] == "enterprise"
     assert session_payload["role_name"] == "admin"
     assert session_payload["permissions"]["can_manage_workspace"] is True
+
+
+def test_signup_with_starter_plan_hides_team_and_enterprise_sections(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _session_factory = auth_test_context
+
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": "starter@example.com",
+            "password": "starter-pass-123",
+            "pricing_tier": "starter",
+        },
+    )
+    assert response.status_code == 201
+    payload = response.json()
+
+    assert payload["pricing_tier"] == "starter"
+    assert payload["plan_name"] == "Starter"
+    assert "mutation-packs" in payload["permissions"]["visible_sections"]
+    assert "policies" not in payload["permissions"]["visible_sections"]
+    assert "audit" not in payload["permissions"]["visible_sections"]
 
 
 def test_login_returns_project_scoped_session_for_existing_user(
@@ -118,7 +145,7 @@ def test_login_returns_project_scoped_session_for_existing_user(
     role_id = uuid4()
 
     with session_factory() as db:
-        db.add(Tenant(tenant_id=tenant_id, name="Beta Tenant"))
+        db.add(Tenant(tenant_id=tenant_id, name="Beta Tenant", pricing_tier="team"))
         db.add(Role(role_id=role_id, name="developer"))
         db.add(
             User(
@@ -143,6 +170,8 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert response.status_code == 200
     payload = response.json()
     assert payload["project_id"] == str(project_id)
+    assert payload["pricing_tier"] == "team"
+    assert payload["plan_name"] == "Team"
     assert payload["role_name"] == "developer"
     assert payload["permissions"]["can_run_campaigns"] is True
     assert payload["permissions"]["can_manage_api_keys"] is False
@@ -160,7 +189,7 @@ def test_viewer_login_gets_read_only_dashboard_sections(
     role_id = uuid4()
 
     with session_factory() as db:
-        db.add(Tenant(tenant_id=tenant_id, name="Viewer Tenant"))
+        db.add(Tenant(tenant_id=tenant_id, name="Viewer Tenant", pricing_tier="starter"))
         db.add(Role(role_id=role_id, name="viewer"))
         db.add(
             User(
@@ -184,6 +213,7 @@ def test_viewer_login_gets_read_only_dashboard_sections(
     )
     assert response.status_code == 200
     payload = response.json()
+    assert payload["pricing_tier"] == "starter"
     assert payload["role_name"] == "viewer"
     assert payload["permissions"]["visible_sections"] == ["dashboard", "reports", "settings"]
     assert payload["permissions"]["can_upload_traces"] is False

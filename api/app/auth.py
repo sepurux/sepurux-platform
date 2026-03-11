@@ -125,7 +125,7 @@ def require_role(role_name: str):
 
 def _get_role_name_for_api_key(db: Session, api_key: ApiKey) -> str:
     if api_key.is_demo:
-        return "developer"
+        return "admin"
 
     if api_key.project_id is not None and api_key.user_id is not None:
         membership = db.scalar(

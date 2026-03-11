@@ -3,56 +3,14 @@ import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-
-const tiers = [
-  {
-    name: "Starter",
-    price: "$99",
-    interval: "/month",
-    description: "For small teams validating one agent stack.",
-    features: [
-      "1 project / 2 seats",
-      "Deterministic replay campaigns",
-      "Basic mutation packs",
-      "7-day run history",
-    ],
-    cta: "Get started",
-  },
-  {
-    name: "Team",
-    price: "$599",
-    interval: "/month",
-    description: "For platform teams shipping agent updates weekly.",
-    features: [
-      "10 projects / 25 seats",
-      "Policy packs + approval gates",
-      "GitHub PR gate integration",
-      "Counterfactual fix reports",
-    ],
-    cta: "Start trial",
-    featured: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    interval: "",
-    description: "For organizations with strict governance and scale.",
-    features: [
-      "Unlimited projects",
-      "Private network deployment",
-      "SSO / RBAC roadmap",
-      "Security + support SLAs",
-    ],
-    cta: "Contact us",
-  },
-];
+import { pricingTiers } from "@/lib/pricing";
 
 export function PricingTable({ compact = false }: { compact?: boolean }) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      {tiers.map((tier) => (
+      {pricingTiers.map((tier) => (
         <Card
-          key={tier.name}
+          key={tier.tier}
           className={tier.featured ? "border-primary/40 bg-primary/[0.08]" : undefined}
         >
           <CardHeader>
@@ -77,8 +35,8 @@ export function PricingTable({ compact = false }: { compact?: boolean }) {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full" variant={tier.featured ? "default" : "outline"}>
-              {tier.cta}
+            <Button asChild className="w-full" variant={tier.featured ? "default" : "outline"}>
+              <a href={tier.href}>{tier.cta}</a>
             </Button>
           </CardFooter>
         </Card>

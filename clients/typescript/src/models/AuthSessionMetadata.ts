@@ -55,6 +55,18 @@ export interface AuthSessionMetadata {
      * @type {string}
      * @memberof AuthSessionMetadata
      */
+    pricing_tier?: AuthSessionMetadataPricingTierEnum;
+    /**
+     * 
+     * @type {string}
+     * @memberof AuthSessionMetadata
+     */
+    plan_name: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof AuthSessionMetadata
+     */
     role_name: AuthSessionMetadataRoleNameEnum;
     /**
      * 
@@ -92,6 +104,16 @@ export interface AuthSessionMetadata {
 /**
  * @export
  */
+export const AuthSessionMetadataPricingTierEnum = {
+    starter: 'starter',
+    team: 'team',
+    enterprise: 'enterprise'
+} as const;
+export type AuthSessionMetadataPricingTierEnum = typeof AuthSessionMetadataPricingTierEnum[keyof typeof AuthSessionMetadataPricingTierEnum];
+
+/**
+ * @export
+ */
 export const AuthSessionMetadataRoleNameEnum = {
     admin: 'admin',
     developer: 'developer',
@@ -107,6 +129,7 @@ export function instanceOfAuthSessionMetadata(value: object): value is AuthSessi
     if (!('tenant_id' in value) || value['tenant_id'] === undefined) return false;
     if (!('project_id' in value) || value['project_id'] === undefined) return false;
     if (!('project_name' in value) || value['project_name'] === undefined) return false;
+    if (!('plan_name' in value) || value['plan_name'] === undefined) return false;
     if (!('role_name' in value) || value['role_name'] === undefined) return false;
     if (!('permissions' in value) || value['permissions'] === undefined) return false;
     return true;
@@ -126,6 +149,8 @@ export function AuthSessionMetadataFromJSONTyped(json: any, ignoreDiscriminator:
         'project_id': json['project_id'],
         'project_name': json['project_name'],
         'project_scoped': json['project_scoped'] == null ? undefined : json['project_scoped'],
+        'pricing_tier': json['pricing_tier'] == null ? undefined : json['pricing_tier'],
+        'plan_name': json['plan_name'],
         'role_name': json['role_name'],
         'user_id': json['user_id'] == null ? undefined : json['user_id'],
         'email': json['email'] == null ? undefined : json['email'],
@@ -145,6 +170,8 @@ export function AuthSessionMetadataToJSON(value?: AuthSessionMetadata | null): a
         'project_id': value['project_id'],
         'project_name': value['project_name'],
         'project_scoped': value['project_scoped'],
+        'pricing_tier': value['pricing_tier'],
+        'plan_name': value['plan_name'],
         'role_name': value['role_name'],
         'user_id': value['user_id'],
         'email': value['email'],
