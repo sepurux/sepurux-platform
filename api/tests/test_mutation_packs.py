@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, MutationPack, Project, Trace
+from app.models import Base, Campaign, MutationPack, Project, Run, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -40,6 +40,7 @@ def mutation_pack_test_context(
 
     fake_queue = FakeQueue()
     monkeypatch.setattr("app.services.run_service.get_run_queue", lambda: fake_queue)
+    monkeypatch.setattr("app.services.trace_intake.put_json_object", lambda *args, **kwargs: None)
 
     def override_get_db() -> Generator[Session, None, None]:
         db = testing_session_local()
@@ -226,16 +227,19 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
 
     system_rows = [row for row in payload if row["is_system"]]
     system_names = {row["name"] for row in system_rows}
-    assert "sepurux.core.reliability" in system_names
-    assert "sepurux.security.injection" in system_names
-    assert "sepurux.api.drift" in system_names
-    assert "sepurux.latency.storm" in system_names
-    assert "sepurux.max_chaos" in system_names
+    assert "core.reliability" in system_names
+    assert "core.latency" in system_names
+    assert "prompt.injection" in system_names
+    assert "tool.schema.break" in system_names
 
     sample_system_pack_id = system_rows[0]["mutation_pack_id"]
     delete_response = client.delete(f"/v1/mutation-packs/{sample_system_pack_id}")
     assert delete_response.status_code == 403
     assert delete_response.json() == {"detail": "System mutation packs cannot be deleted"}
+
+    get_by_name = client.get("/v1/mutation-packs/core.reliability")
+    assert get_by_name.status_code == 200
+    assert get_by_name.json()["name"] == "core.reliability"
 
 
 def test_weak_custom_pack_returns_warning_and_include_system_filter_works(
@@ -313,3 +317,48 @@ def test_mutation_pack_coverage_endpoint_returns_expected_score(
         "security",
         "data_corruption",
     }
+
+
+def test_campaign_run_pack_creates_synthetic_trace_and_queues_run(
+    mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, testing_session_local, project_id, fake_queue = mutation_pack_test_context
+
+    campaign_response = client.post(
+        "/v1/campaigns",
+        json={
+            "name": "Registry Campaign",
+            "mutation_set": [{"mutation_id": "baseline", "tool": "jira.create_issue"}],
+            "eval_set": {"checks": ["status"]},
+        },
+    )
+    assert campaign_response.status_code == 201
+    campaign_id = campaign_response.json()["campaign_id"]
+
+    run_response = client.post(
+        f"/v1/campaigns/{campaign_id}/run-pack",
+        json={"pack": "core.reliability"},
+    )
+    assert run_response.status_code == 201
+    payload = run_response.json()
+    assert payload["campaign_id"] == campaign_id
+    assert payload["mutation_pack"] == "core.reliability"
+
+    run_id = UUID(payload["run_id"])
+    trace_id = UUID(payload["trace_id"])
+    mutation_pack_id = UUID(payload["mutation_pack_id"])
+    assert fake_queue.calls == [(("worker.execute_run", str(run_id)), {})]
+
+    with testing_session_local() as db:
+        trace = db.execute(select(Trace).where(Trace.trace_id == trace_id)).scalar_one()
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+        pack = db.execute(
+            select(MutationPack).where(MutationPack.mutation_pack_id == mutation_pack_id)
+        ).scalar_one()
+
+        assert trace.project_id == project_id
+        assert trace.source == "campaign.run_pack"
+        assert run.trace_id == trace_id
+        assert run.campaign_id == UUID(campaign_id)
+        assert run.mutation_pack_id == mutation_pack_id
+        assert pack.name == "core.reliability"

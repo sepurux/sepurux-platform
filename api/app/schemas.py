@@ -40,6 +40,7 @@ class CampaignMetadata(BaseModel):
 class RunCreateRequest(BaseModel):
     trace_id: UUID
     campaign_id: UUID
+    mutation_pack_id: UUID | None = None
     policy_pack_id: UUID | None = None
 
 
@@ -47,12 +48,27 @@ class RunMetadata(BaseModel):
     run_id: UUID
     trace_id: UUID
     campaign_id: UUID
+    mutation_pack_id: UUID | None = None
     policy_pack_id: UUID | None = None
     effective_policy_pack_version_id: UUID | None = None
     status: str
     summary: Any | None
     pass_rate: float | None = None
     unsafe_count: int | None = None
+    created_at: datetime
+
+
+class CampaignRunPackRequest(BaseModel):
+    pack: str
+
+
+class CampaignRunPackResponse(BaseModel):
+    run_id: UUID
+    trace_id: UUID
+    campaign_id: UUID
+    mutation_pack_id: UUID
+    mutation_pack: str
+    status: str
     created_at: datetime
 
 

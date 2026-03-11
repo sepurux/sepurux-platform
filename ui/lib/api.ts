@@ -34,6 +34,7 @@ export type RunMetadata = {
   run_id: string;
   trace_id: string;
   campaign_id: string;
+  mutation_pack_id: string | null;
   policy_pack_id: string | null;
   effective_policy_pack_version_id: string | null;
   status: string;
