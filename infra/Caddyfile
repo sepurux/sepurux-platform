@@ -1,0 +1,21 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+{$SITE_WWW_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+{$APP_ALT_DOMAIN} {
+	redir https://{$APP_DOMAIN}{uri} permanent
+}
+
+{$SITE_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy site:3000
+}
+
+{$APP_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy ui:3000
+}
