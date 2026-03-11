@@ -196,5 +196,4 @@ model_webhook_metadata.go
 model_webhook_rotate_secret_response.go
 model_webhook_update_request.go
 response.go
-test/api_auth_test.go
 utils.go
