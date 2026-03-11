@@ -8,6 +8,8 @@ Name | Type | Description | Notes
 **ProjectId** | **string** |  | 
 **ProjectName** | **string** |  | 
 **ProjectScoped** | Pointer to **bool** |  | [optional] [default to true]
+**PricingTier** | Pointer to **string** |  | [optional] [default to "team"]
+**PlanName** | **string** |  | 
 **RoleName** | **string** |  | 
 **UserId** | Pointer to **NullableString** |  | [optional] 
 **Email** | Pointer to **NullableString** |  | [optional] 
@@ -20,7 +22,7 @@ Name | Type | Description | Notes
 
 ### NewAuthSessionResponse
 
-`func NewAuthSessionResponse(tenantId string, projectId string, projectName string, roleName string, permissions AuthPermissionSet, apiKey string, ) *AuthSessionResponse`
+`func NewAuthSessionResponse(tenantId string, projectId string, projectName string, planName string, roleName string, permissions AuthPermissionSet, apiKey string, ) *AuthSessionResponse`
 
 NewAuthSessionResponse instantiates a new AuthSessionResponse object
 This constructor will assign default values to properties that have it defined,
@@ -119,6 +121,51 @@ SetProjectScoped sets ProjectScoped field to given value.
 `func (o *AuthSessionResponse) HasProjectScoped() bool`
 
 HasProjectScoped returns a boolean if a field has been set.
+
+### GetPricingTier
+
+`func (o *AuthSessionResponse) GetPricingTier() string`
+
+GetPricingTier returns the PricingTier field if non-nil, zero value otherwise.
+
+### GetPricingTierOk
+
+`func (o *AuthSessionResponse) GetPricingTierOk() (*string, bool)`
+
+GetPricingTierOk returns a tuple with the PricingTier field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPricingTier
+
+`func (o *AuthSessionResponse) SetPricingTier(v string)`
+
+SetPricingTier sets PricingTier field to given value.
+
+### HasPricingTier
+
+`func (o *AuthSessionResponse) HasPricingTier() bool`
+
+HasPricingTier returns a boolean if a field has been set.
+
+### GetPlanName
+
+`func (o *AuthSessionResponse) GetPlanName() string`
+
+GetPlanName returns the PlanName field if non-nil, zero value otherwise.
+
+### GetPlanNameOk
+
+`func (o *AuthSessionResponse) GetPlanNameOk() (*string, bool)`
+
+GetPlanNameOk returns a tuple with the PlanName field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPlanName
+
+`func (o *AuthSessionResponse) SetPlanName(v string)`
+
+SetPlanName sets PlanName field to given value.
+
 
 ### GetRoleName
 

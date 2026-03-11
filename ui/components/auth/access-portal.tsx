@@ -11,6 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { api, type AuthSessionResponse, type DemoInfoResponse } from "@/lib/api";
 import { clearStoredAuthSession, setStoredAuthSession } from "@/lib/auth-session";
 import {
+  getPricingTierDefinition,
+  isPricingTier,
+  pricingTierDefinitions,
+  type PricingTier,
+} from "@/lib/pricing";
+import {
   clearStoredApiBaseUrl,
   clearStoredApiKey,
   clearStoredProjectId,
@@ -27,6 +33,7 @@ const DEMO_CAMPAIGN_STORAGE_KEY = "sepurux.demoCampaign";
 
 type AccessMode = "demo" | "access";
 type AccessIntent = "signup" | "login";
+const DEFAULT_SIGNUP_PLAN: PricingTier = "team";
 
 function normalizeNextPath(rawPath: string | null) {
   if (!rawPath || !rawPath.startsWith("/")) {
@@ -75,6 +82,7 @@ export function AccessPortal() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupProjectName, setSignupProjectName] = useState("");
+  const [signupPlan, setSignupPlan] = useState<PricingTier>(DEFAULT_SIGNUP_PLAN);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [demoInfo, setDemoInfo] = useState<DemoInfoResponse | null>(null);
@@ -84,10 +92,13 @@ export function AccessPortal() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const nextPath = useMemo(() => normalizeNextPath(searchParams.get("next")), [searchParams]);
+  const selectedPlanDefinition = useMemo(() => getPricingTierDefinition(signupPlan), [signupPlan]);
 
   useEffect(() => {
     setMode(searchParams.get("mode") === "access" ? "access" : "demo");
     setIntent(searchParams.get("intent") === "login" ? "login" : "signup");
+    const nextPlan = searchParams.get("plan");
+    setSignupPlan(isPricingTier(nextPlan) ? nextPlan : DEFAULT_SIGNUP_PLAN);
   }, [searchParams]);
 
   useEffect(() => {
@@ -164,11 +175,14 @@ export function AccessPortal() {
     }
   }
 
-  function updateQuery(nextMode: AccessMode, nextIntent: AccessIntent) {
+  function updateQuery(nextMode: AccessMode, nextIntent: AccessIntent, nextPlan?: PricingTier) {
     if (typeof window === "undefined") return;
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("mode", nextMode);
     nextUrl.searchParams.set("intent", nextIntent);
+    if (nextPlan) {
+      nextUrl.searchParams.set("plan", nextPlan);
+    }
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -176,13 +190,19 @@ export function AccessPortal() {
     const nextIntent = nextMode === "access" ? intent : "signup";
     setMode(nextMode);
     setErrorMessage(null);
-    updateQuery(nextMode, nextIntent);
+    updateQuery(nextMode, nextIntent, signupPlan);
   }
 
   function handleIntentSwitch(nextIntent: AccessIntent) {
     setIntent(nextIntent);
     setErrorMessage(null);
-    updateQuery("access", nextIntent);
+    updateQuery("access", nextIntent, signupPlan);
+  }
+
+  function handlePlanSwitch(nextPlan: PricingTier) {
+    setSignupPlan(nextPlan);
+    setErrorMessage(null);
+    updateQuery("access", intent, nextPlan);
   }
 
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
@@ -198,6 +218,7 @@ export function AccessPortal() {
           password: signupPassword,
           name: signupName.trim() || undefined,
           project_name: signupProjectName.trim() || undefined,
+          pricing_tier: signupPlan,
         },
         { baseUrl: resolvedBase }
       );
@@ -398,6 +419,37 @@ export function AccessPortal() {
 
                 {intent === "signup" ? (
                   <form className="space-y-4" onSubmit={handleSignup}>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Workspace plan</span>
+                        <span className="text-xs uppercase tracking-[0.14em] text-blue-200">
+                          {selectedPlanDefinition.name}
+                        </span>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-3">
+                        {pricingTierDefinitions.map((plan) => {
+                          const active = plan.tier === signupPlan;
+                          return (
+                            <button
+                              key={plan.tier}
+                              type="button"
+                              onClick={() => handlePlanSwitch(plan.tier)}
+                              className={`rounded-lg border p-3 text-left transition ${
+                                active
+                                  ? "border-blue-400/60 bg-blue-500/10 shadow-[0_0_0_1px_rgba(96,165,250,0.18)]"
+                                  : "border-border/70 bg-muted/20 hover:border-border hover:bg-muted/35"
+                              }`}
+                            >
+                              <p className="text-sm font-medium text-foreground">{plan.name}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{plan.summary}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This plan controls which dashboard surfaces unlock after signup.
+                      </p>
+                    </div>
                     <label className="block space-y-1 text-sm">
                       <span className="text-muted-foreground">Name</span>
                       <input
@@ -548,15 +600,26 @@ export function AccessPortal() {
         <Card className="border-border/70 bg-card/70">
           <CardHeader>
             <CardTitle>Access model</CardTitle>
-            <CardDescription>Role-aware dashboard entry with demo isolation and per-session keys.</CardDescription>
+            <CardDescription>
+              Role-aware dashboard entry with plan-based menus, demo isolation, and per-session keys.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+              <p className="font-medium text-foreground">
+                Selected plan: {selectedPlanDefinition.name}
+              </p>
+              <p className="mt-1">{selectedPlanDefinition.summary}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Includes: {selectedPlanDefinition.menuHighlights.join(", ")}
+              </p>
+            </div>
             <div className="rounded-md border border-border/60 bg-muted/30 p-3">
               <p className="inline-flex items-center gap-2 font-medium text-foreground">
                 <UserPlus className="h-4 w-4 text-blue-300" /> Sign up
               </p>
               <p className="mt-1">
-                Creates a workspace, makes you the admin for the first project, and issues a project-scoped session key.
+                Creates a workspace on the selected plan, makes you the admin for the first project, and issues a project-scoped session key.
               </p>
             </div>
             <div className="rounded-md border border-border/60 bg-muted/30 p-3">

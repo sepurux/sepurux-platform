@@ -58,6 +58,9 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
           <p className="text-sm font-semibold text-foreground">
             {authSession?.project_name ?? "Control Plane"}
           </p>
+          <p className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-info">
+            {authSession?.plan_name ?? "Workspace"} plan
+          </p>
         </div>
       </div>
 
@@ -86,9 +89,9 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
 
       <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
         <p className="mb-1 font-medium text-foreground">
-          {authSession?.role_name ?? "viewer"} access
+          {(authSession?.plan_name ?? "Workspace") + " · " + (authSession?.role_name ?? "viewer")} access
         </p>
-        <p>Navigation and dashboard actions are scoped to the current project role.</p>
+        <p>Navigation is filtered by the workspace plan first, then by the current project role.</p>
       </div>
     </aside>
   );

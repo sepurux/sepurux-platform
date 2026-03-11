@@ -232,7 +232,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {authSession
-                  ? `${authSession.role_name} workspace access`
+                  ? `${authSession.plan_name} plan · ${authSession.role_name} workspace access`
                   : "Reliability dashboard for replay diagnostics"}
               </p>
             </div>

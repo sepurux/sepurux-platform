@@ -43,7 +43,25 @@ export interface SignupRequest {
      * @memberof SignupRequest
      */
     project_name?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SignupRequest
+     */
+    pricing_tier?: SignupRequestPricingTierEnum | null;
 }
+
+
+/**
+ * @export
+ */
+export const SignupRequestPricingTierEnum = {
+    starter: 'starter',
+    team: 'team',
+    enterprise: 'enterprise'
+} as const;
+export type SignupRequestPricingTierEnum = typeof SignupRequestPricingTierEnum[keyof typeof SignupRequestPricingTierEnum];
+
 
 /**
  * Check if a given object implements the SignupRequest interface.
@@ -68,6 +86,7 @@ export function SignupRequestFromJSONTyped(json: any, ignoreDiscriminator: boole
         'password': json['password'],
         'name': json['name'] == null ? undefined : json['name'],
         'project_name': json['project_name'] == null ? undefined : json['project_name'],
+        'pricing_tier': json['pricing_tier'] == null ? undefined : json['pricing_tier'],
     };
 }
 
@@ -81,6 +100,7 @@ export function SignupRequestToJSON(value?: SignupRequest | null): any {
         'password': value['password'],
         'name': value['name'],
         'project_name': value['project_name'],
+        'pricing_tier': value['pricing_tier'],
     };
 }
 

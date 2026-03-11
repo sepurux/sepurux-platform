@@ -64,6 +64,12 @@ class Tenant(Base):
 
     tenant_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    pricing_tier: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="team",
+        server_default=text("'team'"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

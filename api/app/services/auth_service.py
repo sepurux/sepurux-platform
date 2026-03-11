@@ -8,9 +8,14 @@ from uuid import UUID, uuid4
 
 from app.auth import ROLE_RANKS, TenantAuthContext
 from app.models import Project, ProjectMembership, Role, Tenant, User
-from app.schemas import AuthPermissionSet
 from app.services.api_key_service import create_api_key_for_tenant
 from app.services.mutation_pack_service import ensure_system_mutation_packs
+from app.services.pricing_service import (
+    DEFAULT_PRICING_TIER,
+    build_auth_permissions,
+    normalize_pricing_tier,
+    plan_label,
+)
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -76,58 +81,6 @@ def verify_password(password: str, password_hash: str | None) -> bool:
     return hmac.compare_digest(candidate, expected)
 
 
-def build_auth_permissions(role_name: str) -> AuthPermissionSet:
-    normalized = role_name if role_name in ROLE_RANKS else "viewer"
-    if normalized == "admin":
-        return AuthPermissionSet(
-            visible_sections=[
-                "dashboard",
-                "traces",
-                "campaigns",
-                "runs",
-                "reports",
-                "mutation-packs",
-                "policies",
-                "security",
-                "audit",
-                "webhooks",
-                "settings",
-            ],
-            can_upload_traces=True,
-            can_create_campaigns=True,
-            can_run_campaigns=True,
-            can_manage_workspace=True,
-            can_manage_api_keys=True,
-        )
-    if normalized == "developer":
-        return AuthPermissionSet(
-            visible_sections=[
-                "dashboard",
-                "traces",
-                "campaigns",
-                "runs",
-                "reports",
-                "mutation-packs",
-                "policies",
-                "security",
-                "settings",
-            ],
-            can_upload_traces=True,
-            can_create_campaigns=True,
-            can_run_campaigns=True,
-            can_manage_workspace=False,
-            can_manage_api_keys=False,
-        )
-    return AuthPermissionSet(
-        visible_sections=["dashboard", "reports", "settings"],
-        can_upload_traces=False,
-        can_create_campaigns=False,
-        can_run_campaigns=False,
-        can_manage_workspace=False,
-        can_manage_api_keys=False,
-    )
-
-
 def signup_user(
     db: Session,
     *,
@@ -135,6 +88,7 @@ def signup_user(
     password: str,
     name: str | None,
     project_name: str | None,
+    pricing_tier: str | None,
 ) -> dict[str, object]:
     normalized_email = normalize_email(email)
     if not normalized_email:
@@ -151,7 +105,8 @@ def signup_user(
     workspace_name = f"{display_name} Workspace"
     resolved_project_name = (project_name or "").strip() or f"{display_name} Project"
 
-    tenant = Tenant(tenant_id=uuid4(), name=workspace_name)
+    resolved_pricing_tier = normalize_pricing_tier(pricing_tier or DEFAULT_PRICING_TIER)
+    tenant = Tenant(tenant_id=uuid4(), name=workspace_name, pricing_tier=resolved_pricing_tier)
     user = User(
         user_id=uuid4(),
         email=normalized_email,
@@ -232,6 +187,15 @@ def session_metadata(
     if not isinstance(project, Project):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
+    tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == project.tenant_id))
+    pricing_tier = (
+        "enterprise"
+        if tenant_auth.is_demo
+        else normalize_pricing_tier(
+            tenant.pricing_tier if isinstance(tenant, Tenant) else DEFAULT_PRICING_TIER
+        )
+    )
+
     user = None
     if tenant_auth.user_id is not None:
         user = db.scalar(select(User).where(User.user_id == tenant_auth.user_id))
@@ -247,12 +211,14 @@ def session_metadata(
         "project_id": project.project_id,
         "project_name": project.name,
         "project_scoped": tenant_auth.project_id is not None,
+        "pricing_tier": pricing_tier,
+        "plan_name": plan_label(pricing_tier),
         "role_name": _normalize_role_name(tenant_auth.role_name),
         "user_id": tenant_auth.user_id,
         "email": email,
         "name": display_name,
         "is_demo": tenant_auth.is_demo,
-        "permissions": build_auth_permissions(tenant_auth.role_name).model_dump(),
+        "permissions": build_auth_permissions(tenant_auth.role_name, pricing_tier).model_dump(),
     }
 
 

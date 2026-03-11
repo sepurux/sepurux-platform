@@ -2272,9 +2272,11 @@ components:
           - visible_sections
           - visible_sections
           can_upload_traces: false
+        pricing_tier: team
         name: name
         project_name: project_name
         is_demo: false
+        plan_name: plan_name
         email: email
       properties:
         tenant_id:
@@ -2292,6 +2294,17 @@ components:
           default: true
           title: Project Scoped
           type: boolean
+        pricing_tier:
+          default: team
+          enum:
+          - starter
+          - team
+          - enterprise
+          title: Pricing Tier
+          type: string
+        plan_name:
+          title: Plan Name
+          type: string
         role_name:
           enum:
           - admin
@@ -2317,6 +2330,7 @@ components:
           $ref: '#/components/schemas/AuthPermissionSet'
       required:
       - permissions
+      - plan_name
       - project_id
       - project_name
       - role_name
@@ -2325,6 +2339,9 @@ components:
     AuthSessionResponse:
       example:
         tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        project_name: project_name
+        is_demo: false
+        plan_name: plan_name
         role_name: admin
         project_scoped: true
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -2339,9 +2356,8 @@ components:
           - visible_sections
           - visible_sections
           can_upload_traces: false
+        pricing_tier: team
         name: name
-        project_name: project_name
-        is_demo: false
         email: email
       properties:
         tenant_id:
@@ -2359,6 +2375,17 @@ components:
           default: true
           title: Project Scoped
           type: boolean
+        pricing_tier:
+          default: team
+          enum:
+          - starter
+          - team
+          - enterprise
+          title: Pricing Tier
+          type: string
+        plan_name:
+          title: Plan Name
+          type: string
         role_name:
           enum:
           - admin
@@ -2388,6 +2415,7 @@ components:
       required:
       - api_key
       - permissions
+      - plan_name
       - project_id
       - project_name
       - role_name
@@ -4071,6 +4099,7 @@ components:
       example:
         password: password
         name: name
+        pricing_tier: starter
         project_name: project_name
         email: email
       properties:
@@ -4088,6 +4117,13 @@ components:
           type: string
         project_name:
           maxLength: 120
+          nullable: true
+          type: string
+        pricing_tier:
+          enum:
+          - starter
+          - team
+          - enterprise
           nullable: true
           type: string
       required:

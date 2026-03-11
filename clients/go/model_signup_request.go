@@ -25,6 +25,7 @@ type SignupRequest struct {
 	Password string `json:"password"`
 	Name NullableString `json:"name,omitempty"`
 	ProjectName NullableString `json:"project_name,omitempty"`
+	PricingTier NullableString `json:"pricing_tier,omitempty"`
 }
 
 type _SignupRequest SignupRequest
@@ -180,6 +181,48 @@ func (o *SignupRequest) UnsetProjectName() {
 	o.ProjectName.Unset()
 }
 
+// GetPricingTier returns the PricingTier field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *SignupRequest) GetPricingTier() string {
+	if o == nil || IsNil(o.PricingTier.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.PricingTier.Get()
+}
+
+// GetPricingTierOk returns a tuple with the PricingTier field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *SignupRequest) GetPricingTierOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.PricingTier.Get(), o.PricingTier.IsSet()
+}
+
+// HasPricingTier returns a boolean if a field has been set.
+func (o *SignupRequest) HasPricingTier() bool {
+	if o != nil && o.PricingTier.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetPricingTier gets a reference to the given NullableString and assigns it to the PricingTier field.
+func (o *SignupRequest) SetPricingTier(v string) {
+	o.PricingTier.Set(&v)
+}
+// SetPricingTierNil sets the value for PricingTier to be an explicit nil
+func (o *SignupRequest) SetPricingTierNil() {
+	o.PricingTier.Set(nil)
+}
+
+// UnsetPricingTier ensures that no value is present for PricingTier, not even an explicit nil
+func (o *SignupRequest) UnsetPricingTier() {
+	o.PricingTier.Unset()
+}
+
 func (o SignupRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -197,6 +240,9 @@ func (o SignupRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if o.ProjectName.IsSet() {
 		toSerialize["project_name"] = o.ProjectName.Get()
+	}
+	if o.PricingTier.IsSet() {
+		toSerialize["pricing_tier"] = o.PricingTier.Get()
 	}
 	return toSerialize, nil
 }
