@@ -20,6 +20,10 @@ Sepurux Platform
 docker compose -f infra/docker-compose.yml up --build
 ```
 
+Hetzner single-server deploy guide:
+
+- [docs/hetzner-cx22-setup.md](docs/hetzner-cx22-setup.md)
+
 Run DB migrations in the API container:
 
 ```bash
