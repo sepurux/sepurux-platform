@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 const defaultSiteUrl =
   process.env.NODE_ENV === "development" ? "http://localhost:3001" : "https://sepurux.com";
 const defaultAppUrl =
-  process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://app.sepurux.com";
+  process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://app.sepurux.dev";
 
 export type PricingTier = "starter" | "team" | "enterprise";
 
