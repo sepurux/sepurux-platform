@@ -8,6 +8,8 @@ from fnmatch import fnmatchcase
 from typing import Any
 from uuid import UUID
 
+INTERNAL_BOOTSTRAP_TOOLS = frozenset({"trace.load", "campaign.load"})
+
 
 @dataclass(frozen=True)
 class MutationApplicationResult:
@@ -415,6 +417,8 @@ def _apply_fault(
         if event.get("type") != "tool_call":
             continue
         tool = _event_tool(event)
+        if not _is_mutation_target(tool):
+            continue
         if not _tool_matches(definition.target_tool_pattern, tool):
             continue
 
@@ -463,7 +467,7 @@ def _iter_matching_events(
         if event.get("type") != event_type:
             continue
         tool = _event_tool(event)
-        if _tool_matches(tool_pattern, tool):
+        if _is_mutation_target(tool) and _tool_matches(tool_pattern, tool):
             matching.append(event)
     return matching
 
@@ -474,6 +478,10 @@ def _tool_matches(pattern: str, tool: str) -> bool:
     if "*" in pattern:
         return fnmatchcase(tool, pattern)
     return tool == pattern
+
+
+def _is_mutation_target(tool: str) -> bool:
+    return tool not in INTERNAL_BOOTSTRAP_TOOLS
 
 
 def _event_tool(event: dict[str, Any]) -> str:
