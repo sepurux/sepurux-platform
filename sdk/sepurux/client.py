@@ -96,12 +96,15 @@ class SepuruxClient:
         *,
         trace_id: str,
         campaign_id: str,
+        mutation_pack_id: str | None = None,
         thresholds: dict[str, Any] | None = None,
     ) -> str:
         run_payload = {
             "trace_id": trace_id,
             "campaign_id": campaign_id,
         }
+        if mutation_pack_id:
+            run_payload["mutation_pack_id"] = mutation_pack_id
 
         # Prefer standard /v1/runs. If unavailable, fallback to CI endpoint.
         response = self._client.post(
@@ -133,6 +136,19 @@ class SepuruxClient:
             raise ValueError("Run creation succeeded but run_id was missing")
         return run_id
 
+    def run_pack(self, *, campaign_id: str, mutation_pack: str) -> str:
+        response = self._client.post(
+            f"/v1/campaigns/{campaign_id}/run-pack",
+            headers=self._request_headers(),
+            json={"pack": mutation_pack},
+        )
+        response.raise_for_status()
+        payload = _parse_json_response(response)
+        run_id = payload.get("run_id")
+        if not isinstance(run_id, str) or not run_id:
+            raise ValueError("Run-pack succeeded but run_id was missing")
+        return run_id
+
     def get_demo_info(self) -> dict[str, Any]:
         response = self._client.get("/demo/info", headers={"Accept": "application/json"})
         response.raise_for_status()
@@ -143,8 +159,11 @@ class SepuruxClient:
         campaign_name_or_id: str,
         *,
         trace: dict[str, Any] | None = None,
+        mutation_pack: str | None = None,
     ) -> str:
         campaign_id = self._resolve_campaign_id(campaign_name_or_id)
+        if mutation_pack:
+            return self.run_pack(campaign_id=campaign_id, mutation_pack=mutation_pack)
         trace_payload = trace or _build_demo_trace(campaign_name_or_id)
         trace_id = self.upload_trace(trace_payload)
         return self.start_run(trace_id=trace_id, campaign_id=campaign_id)
