@@ -246,6 +246,8 @@ def _apply_single_mutation(
         return _apply_drop_field(definition, events), None
     if mutation_type == "poison.inject":
         return _apply_poison_inject(definition, events), None
+    if mutation_type == "latency_delay":
+        return _apply_latency_delay(definition, events), None
     if mutation_type == "fault.timeout":
         return _apply_fault(
             definition,
@@ -348,6 +350,46 @@ def _apply_poison_inject(
                 "type": definition.mutation_type,
                 "field": target_field,
                 "payload": payload,
+            },
+        }
+    return None
+
+
+def _apply_latency_delay(
+    definition: _MutationDefinition, events: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    min_ms = definition.params.get("min_ms")
+    max_ms = definition.params.get("max_ms")
+
+    min_ms_value = (
+        int(min_ms) if isinstance(min_ms, int | float) and not isinstance(min_ms, bool) else 0
+    )
+    max_ms_value = (
+        int(max_ms)
+        if isinstance(max_ms, int | float) and not isinstance(max_ms, bool)
+        else max(min_ms_value, 1000)
+    )
+    if max_ms_value < min_ms_value:
+        max_ms_value = min_ms_value
+
+    injected_delay_ms = max_ms_value
+
+    for event in _iter_matching_events(
+        events, event_type="tool_result", tool_pattern=definition.target_tool_pattern
+    ):
+        result = event.get("result")
+        if not isinstance(result, dict):
+            continue
+        result["latency_ms"] = injected_delay_ms
+        event["latency_ms"] = injected_delay_ms
+        return {
+            "mutation_id": definition.mutation_id,
+            "tool": _event_tool(event),
+            "event_index": _event_index(event),
+            "details": {
+                "type": definition.mutation_type,
+                "latency_ms": injected_delay_ms,
+                "range": [min_ms_value, max_ms_value],
             },
         }
     return None

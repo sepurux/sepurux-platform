@@ -316,6 +316,9 @@ class Run(Base):
     project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
     trace_id: Mapped[UUID] = mapped_column(ForeignKey("traces.trace_id"), nullable=False)
     campaign_id: Mapped[UUID] = mapped_column(ForeignKey("campaigns.campaign_id"), nullable=False)
+    mutation_pack_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("mutation_packs.mutation_pack_id"), nullable=True
+    )
     policy_pack_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("policy_packs.policy_pack_id"), nullable=True
     )
