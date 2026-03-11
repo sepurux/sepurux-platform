@@ -2,8 +2,9 @@ SEPURUX_OPENAPI_URL ?= http://localhost:8000/openapi.json
 OPENAPI_FILE ?= clients/openapi.json
 OPENAPI_GENERATOR_IMAGE ?= openapitools/openapi-generator-cli:v7.8.0
 SEPURUX_GO_MODULE ?= github.com/sepurux/go-sdk
+COMPOSE_FILE ?= infra/docker-compose.yml
 
-.PHONY: openapi-export gen-clients gen-typescript-client gen-go-client postprocess-generated-clients
+.PHONY: openapi-export gen-clients gen-typescript-client gen-go-client postprocess-generated-clients seed-local-credentials seed-local-credentials-host
 
 openapi-export:
 	@mkdir -p clients
@@ -34,3 +35,11 @@ postprocess-generated-clients:
 
 gen-clients: openapi-export gen-typescript-client gen-go-client postprocess-generated-clients
 	@echo "Generated TypeScript + Go clients from $(OPENAPI_FILE)"
+
+seed-local-credentials:
+	docker compose -f "$(COMPOSE_FILE)" build api
+	docker compose -f "$(COMPOSE_FILE)" run --rm api sh -lc 'alembic upgrade head && python -m app.scripts.seed_local_credentials'
+
+seed-local-credentials-host:
+	DATABASE_URL="$${SEED_DATABASE_URL:-postgresql+psycopg://crashlab:crashlab@localhost:5434/crashlab}" \
+	PYTHONPATH=api python -m app.scripts.seed_local_credentials
