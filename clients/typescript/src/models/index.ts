@@ -14,6 +14,8 @@ export * from './CIRunStatusResponse';
 export * from './CIRunThresholds';
 export * from './CampaignCreateRequest';
 export * from './CampaignMetadata';
+export * from './CampaignRunPackRequest';
+export * from './CampaignRunPackResponse';
 export * from './CounterfactualListItem';
 export * from './CounterfactualMetadata';
 export * from './DemoInfoResponse';

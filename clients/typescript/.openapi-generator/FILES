@@ -36,6 +36,8 @@ src/models/CIRunStatusResponse.ts
 src/models/CIRunThresholds.ts
 src/models/CampaignCreateRequest.ts
 src/models/CampaignMetadata.ts
+src/models/CampaignRunPackRequest.ts
+src/models/CampaignRunPackResponse.ts
 src/models/CounterfactualListItem.ts
 src/models/CounterfactualMetadata.ts
 src/models/DemoInfoResponse.ts

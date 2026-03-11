@@ -465,6 +465,49 @@ paths:
       summary: Get Campaign
       tags:
       - campaigns
+  /v1/campaigns/{campaign_id}/run-pack:
+    post:
+      operationId: post_campaign_run_pack_v1_campaigns__campaign_id__run_pack_post
+      parameters:
+      - explode: false
+        in: path
+        name: campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Campaign Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignRunPackRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignRunPackResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Campaign Run Pack
+      tags:
+      - campaigns
   /v1/ci/runs:
     post:
       operationId: post_ci_run_v1_ci_runs_post
@@ -667,6 +710,78 @@ paths:
       summary: Post Mutation Pack
       tags:
       - mutation-packs
+  /v1/mutation-packs/{pack_ref}:
+    get:
+      operationId: get_mutation_pack_by_id_v1_mutation_packs__pack_ref__get
+      parameters:
+      - explode: false
+        in: path
+        name: pack_ref
+        required: true
+        schema:
+          title: Pack Ref
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationPackMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Mutation Pack By Id
+      tags:
+      - mutation-packs
+  /v1/mutation-packs/{pack_ref}/coverage:
+    get:
+      operationId: get_mutation_pack_coverage_v1_mutation_packs__pack_ref__coverage_get
+      parameters:
+      - explode: false
+        in: path
+        name: pack_ref
+        required: true
+        schema:
+          title: Pack Ref
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationPackCoverageResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Mutation Pack Coverage
+      tags:
+      - mutation-packs
   /v1/mutation-packs/{mutation_pack_id}:
     delete:
       operationId: delete_mutation_pack_by_id_v1_mutation_packs__mutation_pack_id__delete
@@ -698,79 +813,6 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Delete Mutation Pack By Id
-      tags:
-      - mutation-packs
-    get:
-      operationId: get_mutation_pack_by_id_v1_mutation_packs__mutation_pack_id__get
-      parameters:
-      - explode: false
-        in: path
-        name: mutation_pack_id
-        required: true
-        schema:
-          format: uuid
-          title: Mutation Pack Id
-          type: string
-        style: simple
-      - explode: false
-        in: header
-        name: X-Project-Id
-        required: false
-        schema:
-          nullable: true
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MutationPackMetadata'
-          description: Successful Response
-        "422":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Get Mutation Pack By Id
-      tags:
-      - mutation-packs
-  /v1/mutation-packs/{mutation_pack_id}/coverage:
-    get:
-      operationId: get_mutation_pack_coverage_v1_mutation_packs__mutation_pack_id__coverage_get
-      parameters:
-      - explode: false
-        in: path
-        name: mutation_pack_id
-        required: true
-        schema:
-          format: uuid
-          title: Mutation Pack Id
-          type: string
-        style: simple
-      - explode: false
-        in: header
-        name: X-Project-Id
-        required: false
-        schema:
-          nullable: true
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MutationPackCoverageResponse'
-          description: Successful Response
-        "422":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Get Mutation Pack Coverage
       tags:
       - mutation-packs
   /v1/policy-packs:
@@ -2593,6 +2635,61 @@ components:
       - name
       - status
       title: CampaignMetadata
+    CampaignRunPackRequest:
+      example:
+        pack: pack
+      properties:
+        pack:
+          title: Pack
+          type: string
+      required:
+      - pack
+      title: CampaignRunPackRequest
+    CampaignRunPackResponse:
+      example:
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        mutation_pack: mutation_pack
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        status: status
+      properties:
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        mutation_pack_id:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        mutation_pack:
+          title: Mutation Pack
+          type: string
+        status:
+          title: Status
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - campaign_id
+      - created_at
+      - mutation_pack
+      - mutation_pack_id
+      - run_id
+      - status
+      - trace_id
+      title: CampaignRunPackResponse
     CounterfactualListItem:
       example:
         result: result
@@ -3699,6 +3796,7 @@ components:
     RunCreateRequest:
       example:
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         policy_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
       properties:
@@ -3709,6 +3807,10 @@ components:
         campaign_id:
           format: uuid
           title: Campaign Id
+          type: string
+        mutation_pack_id:
+          format: uuid
+          nullable: true
           type: string
         policy_pack_id:
           format: uuid
@@ -3806,6 +3908,7 @@ components:
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         pass_rate: 0.8008281904610115
         run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         unsafe_count: 6
         effective_policy_pack_version_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         created_at: 2000-01-23T04:56:07.000+00:00
@@ -3824,6 +3927,10 @@ components:
         campaign_id:
           format: uuid
           title: Campaign Id
+          type: string
+        mutation_pack_id:
+          format: uuid
+          nullable: true
           type: string
         policy_pack_id:
           format: uuid

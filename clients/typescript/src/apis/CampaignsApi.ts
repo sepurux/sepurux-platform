@@ -17,6 +17,8 @@ import * as runtime from '../runtime';
 import type {
   CampaignCreateRequest,
   CampaignMetadata,
+  CampaignRunPackRequest,
+  CampaignRunPackResponse,
   HTTPValidationError,
 } from '../models/index';
 import {
@@ -24,6 +26,10 @@ import {
     CampaignCreateRequestToJSON,
     CampaignMetadataFromJSON,
     CampaignMetadataToJSON,
+    CampaignRunPackRequestFromJSON,
+    CampaignRunPackRequestToJSON,
+    CampaignRunPackResponseFromJSON,
+    CampaignRunPackResponseToJSON,
     HTTPValidationErrorFromJSON,
     HTTPValidationErrorToJSON,
 } from '../models/index';
@@ -36,6 +42,12 @@ export interface GetCampaignV1CampaignsCampaignIdGetRequest {
 export interface GetCampaignsV1CampaignsGetRequest {
     limit?: number;
     offset?: number;
+    xProjectId?: string | null;
+}
+
+export interface PostCampaignRunPackV1CampaignsCampaignIdRunPackPostRequest {
+    campaignId: string;
+    campaignRunPackRequest: CampaignRunPackRequest;
     xProjectId?: string | null;
 }
 
@@ -121,6 +133,53 @@ export class CampaignsApi extends runtime.BaseAPI {
      */
     async getCampaignsV1CampaignsGet(requestParameters: GetCampaignsV1CampaignsGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<CampaignMetadata>> {
         const response = await this.getCampaignsV1CampaignsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Post Campaign Run Pack
+     */
+    async postCampaignRunPackV1CampaignsCampaignIdRunPackPostRaw(requestParameters: PostCampaignRunPackV1CampaignsCampaignIdRunPackPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CampaignRunPackResponse>> {
+        if (requestParameters['campaignId'] == null) {
+            throw new runtime.RequiredError(
+                'campaignId',
+                'Required parameter "campaignId" was null or undefined when calling postCampaignRunPackV1CampaignsCampaignIdRunPackPost().'
+            );
+        }
+
+        if (requestParameters['campaignRunPackRequest'] == null) {
+            throw new runtime.RequiredError(
+                'campaignRunPackRequest',
+                'Required parameter "campaignRunPackRequest" was null or undefined when calling postCampaignRunPackV1CampaignsCampaignIdRunPackPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/campaigns/{campaign_id}/run-pack`.replace(`{${"campaign_id"}}`, encodeURIComponent(String(requestParameters['campaignId']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CampaignRunPackRequestToJSON(requestParameters['campaignRunPackRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CampaignRunPackResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Post Campaign Run Pack
+     */
+    async postCampaignRunPackV1CampaignsCampaignIdRunPackPost(requestParameters: PostCampaignRunPackV1CampaignsCampaignIdRunPackPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CampaignRunPackResponse> {
+        const response = await this.postCampaignRunPackV1CampaignsCampaignIdRunPackPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **RunId** | **string** |  | 
 **TraceId** | **string** |  | 
 **CampaignId** | **string** |  | 
+**MutationPackId** | Pointer to **NullableString** |  | [optional] 
 **PolicyPackId** | Pointer to **NullableString** |  | [optional] 
 **EffectivePolicyPackVersionId** | Pointer to **NullableString** |  | [optional] 
 **Status** | **string** |  | 
@@ -94,6 +95,41 @@ and a boolean to check if the value has been set.
 SetCampaignId sets CampaignId field to given value.
 
 
+### GetMutationPackId
+
+`func (o *RunMetadata) GetMutationPackId() string`
+
+GetMutationPackId returns the MutationPackId field if non-nil, zero value otherwise.
+
+### GetMutationPackIdOk
+
+`func (o *RunMetadata) GetMutationPackIdOk() (*string, bool)`
+
+GetMutationPackIdOk returns a tuple with the MutationPackId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMutationPackId
+
+`func (o *RunMetadata) SetMutationPackId(v string)`
+
+SetMutationPackId sets MutationPackId field to given value.
+
+### HasMutationPackId
+
+`func (o *RunMetadata) HasMutationPackId() bool`
+
+HasMutationPackId returns a boolean if a field has been set.
+
+### SetMutationPackIdNil
+
+`func (o *RunMetadata) SetMutationPackIdNil(b bool)`
+
+ SetMutationPackIdNil sets the value for MutationPackId to be an explicit nil
+
+### UnsetMutationPackId
+`func (o *RunMetadata) UnsetMutationPackId()`
+
+UnsetMutationPackId ensures that no value is present for MutationPackId, not even an explicit nil
 ### GetPolicyPackId
 
 `func (o *RunMetadata) GetPolicyPackId() string`

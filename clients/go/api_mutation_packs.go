@@ -132,40 +132,40 @@ func (a *MutationPacksAPIService) DeleteMutationPackByIdV1MutationPacksMutationP
 	return localVarHTTPResponse, nil
 }
 
-type ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest struct {
+type ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest struct {
 	ctx context.Context
 	ApiService *MutationPacksAPIService
-	mutationPackId string
+	packRef string
 	xProjectId *string
 }
 
-func (r ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest) XProjectId(xProjectId string) ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest {
+func (r ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest) XProjectId(xProjectId string) ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest {
 	r.xProjectId = &xProjectId
 	return r
 }
 
-func (r ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest) Execute() (*MutationPackMetadata, *http.Response, error) {
-	return r.ApiService.GetMutationPackByIdV1MutationPacksMutationPackIdGetExecute(r)
+func (r ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest) Execute() (*MutationPackMetadata, *http.Response, error) {
+	return r.ApiService.GetMutationPackByIdV1MutationPacksPackRefGetExecute(r)
 }
 
 /*
-GetMutationPackByIdV1MutationPacksMutationPackIdGet Get Mutation Pack By Id
+GetMutationPackByIdV1MutationPacksPackRefGet Get Mutation Pack By Id
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param mutationPackId
- @return ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest
+ @param packRef
+ @return ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest
 */
-func (a *MutationPacksAPIService) GetMutationPackByIdV1MutationPacksMutationPackIdGet(ctx context.Context, mutationPackId string) ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest {
-	return ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest{
+func (a *MutationPacksAPIService) GetMutationPackByIdV1MutationPacksPackRefGet(ctx context.Context, packRef string) ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest {
+	return ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest{
 		ApiService: a,
 		ctx: ctx,
-		mutationPackId: mutationPackId,
+		packRef: packRef,
 	}
 }
 
 // Execute executes the request
 //  @return MutationPackMetadata
-func (a *MutationPacksAPIService) GetMutationPackByIdV1MutationPacksMutationPackIdGetExecute(r ApiGetMutationPackByIdV1MutationPacksMutationPackIdGetRequest) (*MutationPackMetadata, *http.Response, error) {
+func (a *MutationPacksAPIService) GetMutationPackByIdV1MutationPacksPackRefGetExecute(r ApiGetMutationPackByIdV1MutationPacksPackRefGetRequest) (*MutationPackMetadata, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -173,13 +173,13 @@ func (a *MutationPacksAPIService) GetMutationPackByIdV1MutationPacksMutationPack
 		localVarReturnValue  *MutationPackMetadata
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "MutationPacksAPIService.GetMutationPackByIdV1MutationPacksMutationPackIdGet")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "MutationPacksAPIService.GetMutationPackByIdV1MutationPacksPackRefGet")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1/mutation-packs/{mutation_pack_id}"
-	localVarPath = strings.Replace(localVarPath, "{"+"mutation_pack_id"+"}", url.PathEscape(parameterValueToString(r.mutationPackId, "mutationPackId")), -1)
+	localVarPath := localBasePath + "/v1/mutation-packs/{pack_ref}"
+	localVarPath = strings.Replace(localVarPath, "{"+"pack_ref"+"}", url.PathEscape(parameterValueToString(r.packRef, "packRef")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -252,40 +252,40 @@ func (a *MutationPacksAPIService) GetMutationPackByIdV1MutationPacksMutationPack
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest struct {
+type ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest struct {
 	ctx context.Context
 	ApiService *MutationPacksAPIService
-	mutationPackId string
+	packRef string
 	xProjectId *string
 }
 
-func (r ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest) XProjectId(xProjectId string) ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest {
+func (r ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest) XProjectId(xProjectId string) ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest {
 	r.xProjectId = &xProjectId
 	return r
 }
 
-func (r ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest) Execute() (*MutationPackCoverageResponse, *http.Response, error) {
-	return r.ApiService.GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetExecute(r)
+func (r ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest) Execute() (*MutationPackCoverageResponse, *http.Response, error) {
+	return r.ApiService.GetMutationPackCoverageV1MutationPacksPackRefCoverageGetExecute(r)
 }
 
 /*
-GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet Get Mutation Pack Coverage
+GetMutationPackCoverageV1MutationPacksPackRefCoverageGet Get Mutation Pack Coverage
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param mutationPackId
- @return ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest
+ @param packRef
+ @return ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest
 */
-func (a *MutationPacksAPIService) GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet(ctx context.Context, mutationPackId string) ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest {
-	return ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest{
+func (a *MutationPacksAPIService) GetMutationPackCoverageV1MutationPacksPackRefCoverageGet(ctx context.Context, packRef string) ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest {
+	return ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest{
 		ApiService: a,
 		ctx: ctx,
-		mutationPackId: mutationPackId,
+		packRef: packRef,
 	}
 }
 
 // Execute executes the request
 //  @return MutationPackCoverageResponse
-func (a *MutationPacksAPIService) GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetExecute(r ApiGetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGetRequest) (*MutationPackCoverageResponse, *http.Response, error) {
+func (a *MutationPacksAPIService) GetMutationPackCoverageV1MutationPacksPackRefCoverageGetExecute(r ApiGetMutationPackCoverageV1MutationPacksPackRefCoverageGetRequest) (*MutationPackCoverageResponse, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -293,13 +293,13 @@ func (a *MutationPacksAPIService) GetMutationPackCoverageV1MutationPacksMutation
 		localVarReturnValue  *MutationPackCoverageResponse
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "MutationPacksAPIService.GetMutationPackCoverageV1MutationPacksMutationPackIdCoverageGet")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "MutationPacksAPIService.GetMutationPackCoverageV1MutationPacksPackRefCoverageGet")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/v1/mutation-packs/{mutation_pack_id}/coverage"
-	localVarPath = strings.Replace(localVarPath, "{"+"mutation_pack_id"+"}", url.PathEscape(parameterValueToString(r.mutationPackId, "mutationPackId")), -1)
+	localVarPath := localBasePath + "/v1/mutation-packs/{pack_ref}/coverage"
+	localVarPath = strings.Replace(localVarPath, "{"+"pack_ref"+"}", url.PathEscape(parameterValueToString(r.packRef, "packRef")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
