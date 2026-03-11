@@ -28,9 +28,9 @@ export function CampaignsView() {
   const recommendedSystemPackNames = useMemo(
     () =>
       new Set([
-        "sepurux.core.reliability",
-        "sepurux.security.injection",
-        "sepurux.max_chaos",
+        "core.reliability",
+        "prompt.injection",
+        "core.latency",
       ]),
     []
   );

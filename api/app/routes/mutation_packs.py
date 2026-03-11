@@ -18,9 +18,9 @@ from app.services.mutation_pack_service import (
     SystemMutationPackModificationError,
     create_mutation_pack,
     delete_mutation_pack,
-    get_mutation_pack,
     list_mutation_packs,
     mutation_pack_coverage,
+    resolve_mutation_pack,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
@@ -96,16 +96,16 @@ def get_mutation_packs(
     return [_to_mutation_pack_metadata(record) for record in records]
 
 
-@router.get("/{mutation_pack_id}", response_model=MutationPackMetadata)
+@router.get("/{pack_ref}", response_model=MutationPackMetadata)
 def get_mutation_pack_by_id(
-    mutation_pack_id: UUID,
+    pack_ref: str,
     db: DbSession,
     project_scope: ProjectScopeDep,
 ) -> MutationPackMetadata:
-    record = get_mutation_pack(
+    record = resolve_mutation_pack(
         db,
         project_id=project_scope.project_id,
-        mutation_pack_id=mutation_pack_id,
+        pack_ref=pack_ref,
     )
     if record is None:
         raise HTTPException(
@@ -115,16 +115,16 @@ def get_mutation_pack_by_id(
     return _to_mutation_pack_metadata(record)
 
 
-@router.get("/{mutation_pack_id}/coverage", response_model=MutationPackCoverageResponse)
+@router.get("/{pack_ref}/coverage", response_model=MutationPackCoverageResponse)
 def get_mutation_pack_coverage(
-    mutation_pack_id: UUID,
+    pack_ref: str,
     db: DbSession,
     project_scope: ProjectScopeDep,
 ) -> MutationPackCoverageResponse:
-    record = get_mutation_pack(
+    record = resolve_mutation_pack(
         db,
         project_id=project_scope.project_id,
-        mutation_pack_id=mutation_pack_id,
+        pack_ref=pack_ref,
     )
     if record is None:
         raise HTTPException(

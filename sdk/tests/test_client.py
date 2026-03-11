@@ -13,6 +13,12 @@ class _RequestCapture:
         self.requests.append(request)
         if request.url.path == "/v1/traces":
             return httpx.Response(201, json={"trace_id": "trace-123"})
+        if request.url.path == "/v1/campaigns":
+            return httpx.Response(
+                200, json=[{"campaign_id": "campaign-123", "name": "demo_campaign"}]
+            )
+        if request.url.path == "/v1/campaigns/campaign-123/run-pack":
+            return httpx.Response(201, json={"run_id": "run-123"})
         return httpx.Response(404, json={"detail": "not found"})
 
 
@@ -106,3 +112,53 @@ def test_get_demo_info_calls_public_endpoint() -> None:
     payload = client.get_demo_info()
     assert payload["demo_api_key"] == "demo_sepurux_key"
     assert requests[0].url.path == "/demo/info"
+
+
+def test_run_pack_uses_campaign_run_pack_endpoint() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    run_id = client.run_pack(campaign_id="campaign-123", mutation_pack="core.reliability")
+
+    assert run_id == "run-123"
+    request = capture.requests[0]
+    assert request.url.path == "/v1/campaigns/campaign-123/run-pack"
+    assert request.headers.get("X-API-Key") == "key-1"
+    assert request.headers.get("X-Project-Id") == "project-1"
+
+
+def test_run_campaign_prefers_server_side_run_pack_when_requested() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    run_id = client.run_campaign("demo_campaign", mutation_pack="core.reliability")
+
+    assert run_id == "run-123"
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/campaigns",
+        "/v1/campaigns/campaign-123/run-pack",
+    ]

@@ -6,6 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**GetCampaignV1CampaignsCampaignIdGet**](CampaignsAPI.md#GetCampaignV1CampaignsCampaignIdGet) | **Get** /v1/campaigns/{campaign_id} | Get Campaign
 [**GetCampaignsV1CampaignsGet**](CampaignsAPI.md#GetCampaignsV1CampaignsGet) | **Get** /v1/campaigns | Get Campaigns
+[**PostCampaignRunPackV1CampaignsCampaignIdRunPackPost**](CampaignsAPI.md#PostCampaignRunPackV1CampaignsCampaignIdRunPackPost) | **Post** /v1/campaigns/{campaign_id}/run-pack | Post Campaign Run Pack
 [**PostCampaignV1CampaignsPost**](CampaignsAPI.md#PostCampaignV1CampaignsPost) | **Post** /v1/campaigns | Post Campaign
 
 
@@ -141,6 +142,78 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## PostCampaignRunPackV1CampaignsCampaignIdRunPackPost
+
+> CampaignRunPackResponse PostCampaignRunPackV1CampaignsCampaignIdRunPackPost(ctx, campaignId).CampaignRunPackRequest(campaignRunPackRequest).XProjectId(xProjectId).Execute()
+
+Post Campaign Run Pack
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/go-sdk"
+)
+
+func main() {
+	campaignId := "38400000-8cf0-11bd-b23e-10b96e4ef00d" // string | 
+	campaignRunPackRequest := *openapiclient.NewCampaignRunPackRequest("Pack_example") // CampaignRunPackRequest | 
+	xProjectId := "xProjectId_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.CampaignsAPI.PostCampaignRunPackV1CampaignsCampaignIdRunPackPost(context.Background(), campaignId).CampaignRunPackRequest(campaignRunPackRequest).XProjectId(xProjectId).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `CampaignsAPI.PostCampaignRunPackV1CampaignsCampaignIdRunPackPost``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `PostCampaignRunPackV1CampaignsCampaignIdRunPackPost`: CampaignRunPackResponse
+	fmt.Fprintf(os.Stdout, "Response from `CampaignsAPI.PostCampaignRunPackV1CampaignsCampaignIdRunPackPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**campaignId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiPostCampaignRunPackV1CampaignsCampaignIdRunPackPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **campaignRunPackRequest** | [**CampaignRunPackRequest**](CampaignRunPackRequest.md) |  | 
+ **xProjectId** | **string** |  | 
+
+### Return type
+
+[**CampaignRunPackResponse**](CampaignRunPackResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

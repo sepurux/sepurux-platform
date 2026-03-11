@@ -134,6 +134,7 @@ def post_run(
             project_id=project_scope.project_id,
             trace_id=payload.trace_id,
             campaign_id=payload.campaign_id,
+            mutation_pack_id=payload.mutation_pack_id,
             policy_pack_id=payload.policy_pack_id,
             actor=actor_from_request(request),
         )

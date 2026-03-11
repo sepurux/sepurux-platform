@@ -247,3 +247,107 @@ def test_run_completion_records_audit_event_and_delivers_webhook(
         webhook = db.execute(select(Webhook).where(Webhook.webhook_id == webhook_id)).scalar_one()
         assert webhook.last_success_at is not None
         assert webhook.last_error is None
+
+
+def test_execute_run_prefers_run_level_mutation_pack_override(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, artifacts = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    campaign_pack_id = uuid4()
+    override_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=campaign_pack_id,
+                project_id=project_id,
+                name="Campaign Default Pack",
+                description="Drops the status field",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "drop-status",
+                            "type": "schema.drop_field",
+                            "target": {"tool": "jira.*"},
+                            "params": {"field": "status"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=override_pack_id,
+                project_id=project_id,
+                name="Run Override Pack",
+                description="Renames the status field",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "rename-status",
+                            "type": "schema.rename_field",
+                            "target": {"tool": "jira.*"},
+                            "params": {"from": "status", "to": "state"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=campaign_pack_id,
+                name="Mutation Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                mutation_pack_id=override_pack_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    artifact_payload = next(iter(artifacts.values()))
+    events = artifact_payload.get("events")
+    assert isinstance(events, list)
+    tool_results = [event for event in events if event.get("type") == "tool_result"]
+    assert tool_results
+    result = tool_results[-1].get("result")
+    assert isinstance(result, dict)
+    assert result.get("state") == "replayed"
+    assert "status" not in result

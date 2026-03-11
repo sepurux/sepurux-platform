@@ -744,16 +744,13 @@ def execute_run(run_id: str) -> None:
 
         mutation_pack: MutationPack | None = None
         mutation_pack_config: dict[str, Any] | None = None
-        if campaign.mutation_pack_id is not None:
-            mutation_pack = db.get(MutationPack, campaign.mutation_pack_id)
+        effective_mutation_pack_id = run.mutation_pack_id or campaign.mutation_pack_id
+        if effective_mutation_pack_id is not None:
+            mutation_pack = db.get(MutationPack, effective_mutation_pack_id)
             if mutation_pack is None:
-                raise ValueError(
-                    f"Mutation pack not found for campaign {campaign.campaign_id} in run {run_id}"
-                )
+                raise ValueError(f"Mutation pack not found for run {run_id}")
             if mutation_pack.project_id != run.project_id:
-                raise ValueError(
-                    f"Mutation pack project mismatch for campaign {campaign.campaign_id} in run {run_id}"
-                )
+                raise ValueError(f"Mutation pack project mismatch for run {run_id}")
             mutation_pack_config = (
                 mutation_pack.config if isinstance(mutation_pack.config, dict) else {}
             )

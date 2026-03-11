@@ -85,6 +85,7 @@ def apply_template_and_enqueue(
         project_id=project_id,
         trace_id=source_run.trace_id,
         campaign_id=source_run.campaign_id,
+        mutation_pack_id=source_run.mutation_pack_id,
         policy_pack_id=source_run.policy_pack_id,
         actor=actor,
     )

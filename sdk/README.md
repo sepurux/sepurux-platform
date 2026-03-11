@@ -43,6 +43,7 @@ Methods:
 - `upload_trace(trace: dict) -> str`
 - `create_campaign(name, mutation_set, eval_set, mutation_pack_id=None) -> str`
 - `start_run(trace_id, campaign_id, thresholds=None) -> str`
+- `run_pack(campaign_id, mutation_pack) -> str`
 - `get_run(run_id) -> dict`
 
 ### `TraceBuilder`
@@ -83,6 +84,12 @@ def run_business_logic(x: int) -> int:
 ```
 
 The decorator preserves the function return value and attempts to upload/start runs in the background path without interrupting normal execution.
+
+### Server-side pack execution
+
+```python
+run_id = client.run_campaign("demo_campaign", mutation_pack="core.reliability")
+```
 
 ## Example script
 
