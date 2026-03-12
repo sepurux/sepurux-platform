@@ -71,7 +71,7 @@ body::before {
 
 @layer components {
   .site-container {
-    @apply container max-w-[1240px];
+    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6;
   }
 
   .panel-surface {
