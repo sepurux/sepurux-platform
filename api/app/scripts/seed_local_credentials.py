@@ -9,12 +9,12 @@ from sqlalchemy.orm import Session
 from app.auth import hash_api_key
 from app.db import SessionLocal
 from app.models import ApiKey, Project, ProjectMembership, Role, Tenant, User
-from app.services.mutation_pack_service import ensure_system_mutation_packs
 from app.services.auth_service import (
     ROLE_ADMIN_ID,
     ROLE_DEVELOPER_ID,
     ROLE_VIEWER_ID,
 )
+from app.services.mutation_pack_service import ensure_system_mutation_packs
 
 
 @dataclass(frozen=True)
