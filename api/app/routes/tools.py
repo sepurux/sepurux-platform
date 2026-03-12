@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, require_permission, require_visible_section
 from app.db import get_db
 from app.schemas import (
     ToolRegistryCreateRequest,
@@ -22,7 +22,11 @@ from sqlalchemy.orm import Session
 router = APIRouter(prefix="/v1/tools", tags=["tools"])
 
 DbSession = Annotated[Session, Depends(get_db)]
-ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+SecurityReadScope = Annotated[ProjectScope, Depends(require_visible_section("security"))]
+SecurityManageScope = Annotated[
+    ProjectScope,
+    Depends(require_permission("can_manage_security_config", section_name="security")),
+]
 
 
 def _to_tool_registry_metadata(record) -> ToolRegistryMetadata:
@@ -39,7 +43,7 @@ def _to_tool_registry_metadata(record) -> ToolRegistryMetadata:
 def post_tool_registry_entry(
     payload: ToolRegistryCreateRequest,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: SecurityManageScope,
 ) -> ToolRegistryMetadata:
     record = create_or_update_tool_registry_entry(
         db,
@@ -53,7 +57,7 @@ def post_tool_registry_entry(
 @router.get("", response_model=list[ToolRegistryMetadata])
 def get_tool_registry_entries(
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: SecurityReadScope,
 ) -> list[ToolRegistryMetadata]:
     records = list_tool_registry_entries(db, project_id=project_scope.project_id)
     return [_to_tool_registry_metadata(record) for record in records]
@@ -64,7 +68,7 @@ def patch_tool_registry_entry(
     tool_id: UUID,
     payload: ToolRegistryZoneUpdateRequest,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: SecurityManageScope,
 ) -> ToolRegistryMetadata:
     try:
         record = update_tool_registry_zone(

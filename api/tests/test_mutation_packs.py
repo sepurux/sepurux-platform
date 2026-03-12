@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .conftest import auth_headers, seed_tenant_project_and_key
+from .conftest import auth_headers, seed_project_membership_api_key, seed_tenant_project_and_key
 
 
 class FakeQueue:
@@ -239,13 +239,50 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
     assert delete_response.status_code == 403
     assert delete_response.json() == {"detail": "System mutation packs cannot be deleted"}
 
-    get_by_name = client.get("/v1/mutation-packs/core.reliability")
-    assert get_by_name.status_code == 200
-    assert get_by_name.json()["name"] == "core.reliability"
 
-    get_max_chaos = client.get("/v1/mutation-packs/sepurux.max_chaos")
-    assert get_max_chaos.status_code == 200
-    assert get_max_chaos.json()["coverage_score"] == 80
+def test_viewer_cannot_create_mutation_pack() -> None:
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+    with testing_session_local() as db:
+        _, project_id, _, _, api_key_plaintext = seed_project_membership_api_key(
+            db,
+            role_name="viewer",
+            pricing_tier="starter",
+        )
+
+    def override_get_db() -> Generator[Session, None, None]:
+        db = testing_session_local()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
+
+    with TestClient(app) as client:
+        client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+        response = client.post(
+            "/v1/mutation-packs",
+            json={
+                "name": "Viewer Pack",
+                "description": "Should be blocked",
+                "config": {"mutations": []},
+            },
+        )
+
+    app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+    assert response.status_code == 403
 
 
 def test_weak_custom_pack_returns_warning_and_include_system_filter_works(

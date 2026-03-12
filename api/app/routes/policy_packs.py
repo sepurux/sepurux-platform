@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, require_permission, require_visible_section
 from app.db import get_db
 from app.schemas import (
     PolicyPackCreateRequest,
@@ -29,7 +29,11 @@ from sqlalchemy.orm import Session
 router = APIRouter(prefix="/v1/policy-packs", tags=["policy-packs"])
 
 DbSession = Annotated[Session, Depends(get_db)]
-ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+PolicyReadScope = Annotated[ProjectScope, Depends(require_visible_section("policies"))]
+PolicyManageScope = Annotated[
+    ProjectScope,
+    Depends(require_permission("can_manage_policy_packs", section_name="policies")),
+]
 
 
 def _to_policy_pack_metadata(db: Session, record) -> PolicyPackMetadata:
@@ -59,7 +63,7 @@ def _to_policy_pack_metadata(db: Session, record) -> PolicyPackMetadata:
 def post_policy_pack(
     payload: PolicyPackCreateRequest,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: PolicyManageScope,
     request: Request,
 ) -> PolicyPackMetadata:
     record = create_policy_pack(
@@ -74,7 +78,7 @@ def post_policy_pack(
 
 
 @router.get("", response_model=list[PolicyPackMetadata])
-def get_policy_packs(db: DbSession, project_scope: ProjectScopeDep) -> list[PolicyPackMetadata]:
+def get_policy_packs(db: DbSession, project_scope: PolicyReadScope) -> list[PolicyPackMetadata]:
     records = list_policy_packs(db, project_id=project_scope.project_id)
     return [_to_policy_pack_metadata(db, record) for record in records]
 
@@ -83,7 +87,7 @@ def get_policy_packs(db: DbSession, project_scope: ProjectScopeDep) -> list[Poli
 def get_policy_pack_by_id(
     policy_pack_id: UUID,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: PolicyReadScope,
 ) -> PolicyPackMetadata:
     record = get_policy_pack(
         db,
@@ -115,7 +119,7 @@ def patch_policy_pack(
     policy_pack_id: UUID,
     payload: PolicyPackUpdateRequest,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: PolicyManageScope,
     request: Request,
 ) -> PolicyPackMetadata:
     record = update_policy_pack(
@@ -138,7 +142,7 @@ def post_policy_pack_rollback(
     policy_pack_id: UUID,
     payload: PolicyPackRollbackRequest,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: PolicyManageScope,
     request: Request,
 ) -> PolicyPackMetadata:
     record = rollback_policy_pack(
@@ -160,7 +164,7 @@ def post_policy_pack_rollback(
 def get_policy_pack_versions(
     policy_pack_id: UUID,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: PolicyReadScope,
 ) -> list[PolicyPackVersionMetadata]:
     record = get_policy_pack(
         db,

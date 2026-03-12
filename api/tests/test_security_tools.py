@@ -22,7 +22,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .conftest import auth_headers, seed_tenant_project_and_key
+from .conftest import auth_headers, seed_project_membership_api_key, seed_tenant_project_and_key
 
 
 @pytest.fixture()
@@ -202,3 +202,82 @@ def test_run_security_events_endpoint_and_stats_counts(
     stats_payload = stats_response.json()
     assert stats_payload["injection_blocks"] == 1
     assert stats_payload["injection_sanitizations"] == 1
+
+
+def test_security_tool_registry_write_requires_admin_role() -> None:
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+    with testing_session_local() as db:
+        _, project_id, _, _, api_key_plaintext = seed_project_membership_api_key(
+            db,
+            role_name="developer",
+            pricing_tier="team",
+        )
+
+    def override_get_db() -> Generator[Session, None, None]:
+        db = testing_session_local()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
+
+    with TestClient(app) as client:
+        client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+        response = client.post(
+            "/v1/tools",
+            json={"name": "jira.create_issue", "zone": "untrusted"},
+        )
+
+    app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+    assert response.status_code == 403
+
+
+def test_security_section_respects_pricing_tier() -> None:
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+    with testing_session_local() as db:
+        _, project_id, _, _, api_key_plaintext = seed_project_membership_api_key(
+            db,
+            role_name="admin",
+            pricing_tier="starter",
+        )
+
+    def override_get_db() -> Generator[Session, None, None]:
+        db = testing_session_local()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
+
+    with TestClient(app) as client:
+        client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+        response = client.get("/v1/tools")
+
+    app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+    assert response.status_code == 403

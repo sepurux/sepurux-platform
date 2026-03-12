@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, require_permission, require_visible_section
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.schemas import (
@@ -28,8 +28,12 @@ from sqlalchemy.orm import Session
 router = APIRouter(prefix="/v1/mutation-packs", tags=["mutation-packs"])
 
 DbSession = Annotated[Session, Depends(get_db)]
-ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+MutationPackReadScope = Annotated[ProjectScope, Depends(require_visible_section("mutation-packs"))]
+MutationPackManageScope = Annotated[
+    ProjectScope,
+    Depends(require_permission("can_manage_mutation_packs", section_name="mutation-packs")),
+]
 
 
 def _to_mutation_pack_metadata(record) -> MutationPackMetadata:
@@ -49,7 +53,7 @@ def _to_mutation_pack_metadata(record) -> MutationPackMetadata:
 def post_mutation_pack(
     payload: MutationPackCreateRequest,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: MutationPackManageScope,
     settings: SettingsDep,
 ) -> MutationPackCreateResponse:
     validation = evaluate_mutation_pack_config(payload.config)
@@ -85,7 +89,7 @@ def post_mutation_pack(
 @router.get("", response_model=list[MutationPackMetadata])
 def get_mutation_packs(
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: MutationPackReadScope,
     include_system: bool = Query(True),
 ) -> list[MutationPackMetadata]:
     records = list_mutation_packs(
@@ -100,7 +104,7 @@ def get_mutation_packs(
 def get_mutation_pack_by_id(
     pack_ref: str,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: MutationPackReadScope,
 ) -> MutationPackMetadata:
     record = resolve_mutation_pack(
         db,
@@ -119,7 +123,7 @@ def get_mutation_pack_by_id(
 def get_mutation_pack_coverage(
     pack_ref: str,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: MutationPackReadScope,
 ) -> MutationPackCoverageResponse:
     record = resolve_mutation_pack(
         db,
@@ -152,7 +156,7 @@ def get_mutation_pack_coverage(
 def delete_mutation_pack_by_id(
     mutation_pack_id: UUID,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: MutationPackManageScope,
 ) -> Response:
     try:
         deleted = delete_mutation_pack(

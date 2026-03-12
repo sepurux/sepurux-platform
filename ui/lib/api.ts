@@ -296,6 +296,9 @@ export type AuthPermissionSet = {
   can_upload_traces: boolean;
   can_create_campaigns: boolean;
   can_run_campaigns: boolean;
+  can_manage_mutation_packs: boolean;
+  can_manage_policy_packs: boolean;
+  can_manage_security_config: boolean;
   can_manage_workspace: boolean;
   can_manage_api_keys: boolean;
 };
@@ -620,6 +623,11 @@ export const api = {
     eval_set: unknown;
     mutation_pack_id?: string | null;
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
+  createMutationPack: (payload: {
+    name: string;
+    description?: string | null;
+    config: Record<string, unknown>;
+  }) => postJson<MutationPackCreateResponse, typeof payload>("/v1/mutation-packs", payload),
   listMutationPacks: (options?: { include_system?: boolean }) =>
     requestJson<MutationPackMetadata[]>("/v1/mutation-packs", {
       include_system: options?.include_system === false ? "false" : "true",
@@ -642,6 +650,11 @@ export const api = {
       {}
     ),
   listPolicyPacks: () => requestJson<PolicyPackMetadata[]>("/v1/policy-packs"),
+  createPolicyPack: (payload: {
+    name: string;
+    engine?: "builtin" | "opa";
+    policy: Record<string, unknown>;
+  }) => postJson<PolicyPackMetadata, typeof payload>("/v1/policy-packs", payload),
   getPolicyPack: (policyPackId: string) =>
     requestJson<PolicyPackMetadata>(`/v1/policy-packs/${policyPackId}`),
   updatePolicyPack: (

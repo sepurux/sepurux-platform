@@ -2264,8 +2264,11 @@ components:
       title: AuditEventListItem
     AuthPermissionSet:
       example:
+        can_manage_policy_packs: false
+        can_manage_security_config: false
         can_run_campaigns: false
         can_manage_workspace: false
+        can_manage_mutation_packs: false
         can_manage_api_keys: false
         can_create_campaigns: false
         visible_sections:
@@ -2289,6 +2292,18 @@ components:
           default: false
           title: Can Run Campaigns
           type: boolean
+        can_manage_mutation_packs:
+          default: false
+          title: Can Manage Mutation Packs
+          type: boolean
+        can_manage_policy_packs:
+          default: false
+          title: Can Manage Policy Packs
+          type: boolean
+        can_manage_security_config:
+          default: false
+          title: Can Manage Security Config
+          type: boolean
         can_manage_workspace:
           default: false
           title: Can Manage Workspace
@@ -2306,8 +2321,11 @@ components:
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         permissions:
+          can_manage_policy_packs: false
+          can_manage_security_config: false
           can_run_campaigns: false
           can_manage_workspace: false
+          can_manage_mutation_packs: false
           can_manage_api_keys: false
           can_create_campaigns: false
           visible_sections:
@@ -2390,8 +2408,11 @@ components:
         user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         api_key: api_key
         permissions:
+          can_manage_policy_packs: false
+          can_manage_security_config: false
           can_run_campaigns: false
           can_manage_workspace: false
+          can_manage_mutation_packs: false
           can_manage_api_keys: false
           can_create_campaigns: false
           visible_sections:
