@@ -4,7 +4,7 @@ import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
-import { siteConfig } from "@/lib/site";
+import { siteAssetVersion, siteConfig } from "@/lib/site";
 
 import "./globals.css";
 
@@ -29,13 +29,17 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   icons: {
     icon: [
-      { url: "/favicon.png", type: "image/png" },
-      { url: "/logo.png", type: "image/png" },
+      { url: `/favicon.png?v=${siteAssetVersion}`, type: "image/png" },
+      { url: siteConfig.logo, type: "image/png" },
     ],
-    shortcut: [{ url: "/favicon.png", type: "image/png" }],
+    shortcut: [{ url: `/favicon.png?v=${siteAssetVersion}`, type: "image/png" }],
     apple: [
-      { url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
-      { url: "/apple-touch-icon-precomposed.png", type: "image/png", sizes: "180x180" },
+      { url: `/apple-touch-icon.png?v=${siteAssetVersion}`, type: "image/png", sizes: "180x180" },
+      {
+        url: `/apple-touch-icon-precomposed.png?v=${siteAssetVersion}`,
+        type: "image/png",
+        sizes: "180x180",
+      },
     ],
   },
   openGraph: {
