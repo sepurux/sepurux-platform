@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
-from sepurux import SepuruxClient
+from sepurux import SepuruxClient, configure, trace, traceable
 
 
 class _RequestCapture:
@@ -14,9 +14,13 @@ class _RequestCapture:
         if request.url.path == "/v1/traces":
             return httpx.Response(201, json={"trace_id": "trace-123"})
         if request.url.path == "/v1/campaigns":
-            return httpx.Response(
-                200, json=[{"campaign_id": "campaign-123", "name": "demo_campaign"}]
-            )
+            if request.method == "GET":
+                return httpx.Response(
+                    200, json=[{"campaign_id": "campaign-123", "name": "demo_campaign"}]
+                )
+            return httpx.Response(201, json={"campaign_id": "campaign-created"})
+        if request.url.path == "/v1/runs":
+            return httpx.Response(201, json={"run_id": "run-456"})
         if request.url.path == "/v1/campaigns/campaign-123/run-pack":
             return httpx.Response(201, json={"run_id": "run-123"})
         return httpx.Response(404, json={"detail": "not found"})
@@ -97,6 +101,18 @@ def test_demo_mode_warns() -> None:
         )
 
 
+def test_from_env_reads_standard_sdk_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEPURUX_API_BASE_URL", "https://example.test")
+    monkeypatch.setenv("SEPURUX_API_KEY", "env-key")
+    monkeypatch.setenv("SEPURUX_PROJECT_ID", "env-project")
+
+    client = SepuruxClient.from_env()
+
+    assert client.base_url == "https://example.test"
+    assert client.api_key == "env-key"
+    assert client.project_id == "env-project"
+
+
 def test_get_demo_info_calls_public_endpoint() -> None:
     requests: list[httpx.Request] = []
 
@@ -137,6 +153,91 @@ def test_run_pack_uses_campaign_run_pack_endpoint() -> None:
     assert request.url.path == "/v1/campaigns/campaign-123/run-pack"
     assert request.headers.get("X-API-Key") == "key-1"
     assert request.headers.get("X-Project-Id") == "project-1"
+
+
+def test_trace_context_auto_uploads_and_starts_run() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    with client.trace("demo_trace", {"foo": "bar"}, campaign_id="demo_campaign") as trace_recorder:
+        trace_recorder.model_step("plan", {"goal": "test"})
+
+    assert trace_recorder.trace_id == "trace-123"
+    assert trace_recorder.run_id == "run-456"
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/traces",
+        "/v1/campaigns",
+        "/v1/runs",
+    ]
+
+
+def test_traceable_decorator_records_and_uploads() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    @client.traceable(campaign_id="demo_campaign")
+    def multiply(x: int, y: int) -> int:
+        return x * y
+
+    assert multiply(3, 4) == 12
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/traces",
+        "/v1/campaigns",
+        "/v1/runs",
+    ]
+
+
+def test_global_configure_and_traceable_use_default_client() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+    configure(client=client)
+
+    @traceable()
+    def classify(text: str) -> dict[str, str]:
+        return {"label": text}
+
+    assert classify("bug") == {"label": "bug"}
+
+    with trace("support_case", {"channel": "email"}) as recorder:
+        recorder.model_step("classify", {"label": "bug"})
+
+    assert capture.requests[-1].url.path == "/v1/traces"
 
 
 def test_run_campaign_prefers_server_side_run_pack_when_requested() -> None:

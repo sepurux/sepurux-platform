@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import inspect
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -23,8 +22,16 @@ class TraceRecorder:
         self,
         task_name: str,
         task_input: dict[str, Any] | None = None,
+        *,
+        source: str = "sdk",
+        trace_version: str = "0.1",
     ) -> None:
-        self._builder = TraceBuilder(task_name=task_name, task_input=task_input)
+        self._builder = TraceBuilder(
+            task_name=task_name,
+            task_input=task_input,
+            source=source,
+            trace_version=trace_version,
+        )
 
     def model_step(self, name: str, input: Any, output: Any | None = None) -> None:
         self._builder.add_model_step(name=name, input=input, output=output)
@@ -46,8 +53,16 @@ class TraceRecorder:
 def sepurux_trace(
     task_name: str,
     task_input: dict[str, Any] | None = None,
+    *,
+    source: str = "sdk",
+    trace_version: str = "0.1",
 ) -> Iterator[TraceRecorder]:
-    recorder = TraceRecorder(task_name=task_name, task_input=task_input)
+    recorder = TraceRecorder(
+        task_name=task_name,
+        task_input=task_input,
+        source=source,
+        trace_version=trace_version,
+    )
     yield recorder
 
 
@@ -57,56 +72,18 @@ def record_trace(
     campaign_id: str | None = None,
     task_name: str | None = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    """Decorator that records function traces and optionally starts a run."""
+    """Backward-compatible alias for the easier client traceable decorator."""
 
-    def decorator(func: Callable[P, R]) -> Callable[P, R]:
-        @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            trace_task_name = task_name or func.__name__
-            task_input = {
-                "function": func.__name__,
-                "args": _safe_json_value(list(args)),
-                "kwargs": _safe_json_value(dict(kwargs)),
-            }
-
-            with sepurux_trace(trace_task_name, task_input=task_input) as recorder:
-                recorder.model_step(
-                    "function.call",
-                    {"qualname": getattr(func, "__qualname__", func.__name__)},
-                )
-                try:
-                    result = func(*args, **kwargs)
-                except Exception as exc:
-                    recorder.error(tool=func.__name__, message=str(exc))
-                    raise
-                recorder.model_step(
-                    "function.return", {"ok": True}, output=_safe_json_value(result)
-                )
-
-                trace = recorder.to_trace()
-
-            # SDK telemetry should not break business logic.
-            try:
-                trace_id = client.upload_trace(trace)
-                if campaign_id:
-                    client.start_run(trace_id=trace_id, campaign_id=campaign_id)
-            except Exception:
-                pass
-
-            return result
-
-        return wrapper
-
-    return decorator
+    return client.traceable(name=task_name, campaign_id=campaign_id, raise_on_error=False)
 
 
-def _safe_json_value(value: Any) -> Any:
+def safe_json_value(value: Any) -> Any:
     if value is None or isinstance(value, str | int | float | bool):
         return value
     if isinstance(value, dict):
-        return {str(k): _safe_json_value(v) for k, v in value.items()}
+        return {str(k): safe_json_value(v) for k, v in value.items()}
     if isinstance(value, list | tuple | set):
-        return [_safe_json_value(v) for v in value]
+        return [safe_json_value(v) for v in value]
 
     if inspect.isfunction(value) or inspect.ismethod(value):
         return getattr(value, "__name__", "callable")
