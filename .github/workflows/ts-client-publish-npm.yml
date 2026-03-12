@@ -1,0 +1,79 @@
+name: Publish TypeScript Client to npm
+
+on:
+  push:
+    tags:
+      - "ts-client-v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate tag matches package version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#ts-client-v}"
+          PKG_VERSION="$(node -p "require('./clients/typescript/package.json').version")"
+          if [ "${TAG_VERSION}" != "${PKG_VERSION}" ]; then
+            echo "Tag version (${TAG_VERSION}) does not match package.json version (${PKG_VERSION})"
+            exit 1
+          fi
+
+      - name: Install and build package
+        run: |
+          cd clients/typescript
+          npm install
+          npm run build
+
+      - name: Pack npm artifact
+        run: |
+          mkdir -p dist
+          cd clients/typescript
+          npm pack --pack-destination ../../dist
+
+      - name: Upload npm tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-client-dist
+          path: dist
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download npm tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: ts-client-dist
+          path: dist
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          TARBALL="$(find dist -type f -name '*.tgz' | head -n 1)"
+          if [ -z "${TARBALL}" ]; then
+            echo "No npm tarball found under dist/"
+            find dist -maxdepth 5 -type f || true
+            exit 1
+          fi
+          echo "Publishing tarball: ${TARBALL}"
+          npm publish "./${TARBALL}" --access public

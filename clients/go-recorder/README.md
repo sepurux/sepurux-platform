@@ -18,7 +18,7 @@
 import (
 	"context"
 
-	sepuruxclient "github.com/sepurux/go-sdk"
+	sepuruxclient "github.com/sepurux/sepurux-platform/clients/go"
 	sepuruxrecorder "github.com/sepurux/go-recorder"
 )
 

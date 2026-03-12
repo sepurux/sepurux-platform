@@ -1,6 +1,4 @@
-module github.com/sepurux/go-sdk
+module github.com/sepurux/sepurux-platform/clients/go
 
 go 1.18
 
-require (
-)

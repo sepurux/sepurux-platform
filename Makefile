@@ -1,7 +1,7 @@
 SEPURUX_OPENAPI_URL ?= http://localhost:8000/openapi.json
 OPENAPI_FILE ?= clients/openapi.json
 OPENAPI_GENERATOR_IMAGE ?= openapitools/openapi-generator-cli:v7.8.0
-SEPURUX_GO_MODULE ?= github.com/sepurux/go-sdk
+SEPURUX_GO_MODULE ?= github.com/sepurux/sepurux-platform/clients/go
 COMPOSE_FILE ?= infra/docker-compose.yml
 
 .PHONY: openapi-export gen-clients gen-typescript-client gen-go-client postprocess-generated-clients seed-local-credentials seed-local-credentials-host
