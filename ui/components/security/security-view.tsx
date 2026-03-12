@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { api, type SecurityEventListItem } from "@/lib/api";
+import {
+  api,
+  type SecurityEventListItem,
+  type ToolRegistryMetadata,
+} from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,9 +31,19 @@ type ToolRiskSummary = {
 };
 
 export function SecurityView() {
+  const authSession = useAuthSession();
   const searchParams = useSearchParams();
   const toolFilter = (searchParams.get("tool") ?? "").trim().toLowerCase();
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [toolRegistry, setToolRegistry] = useState<ToolRegistryMetadata[]>([]);
+  const [toolName, setToolName] = useState("");
+  const [toolZone, setToolZone] = useState("untrusted");
+  const [toolConfigError, setToolConfigError] = useState<string | null>(null);
+  const [creatingTool, setCreatingTool] = useState(false);
+  const [savingToolId, setSavingToolId] = useState<string | null>(null);
+
+  const canManageSecurityConfig =
+    authSession?.permissions.can_manage_security_config ?? false;
 
   useEffect(() => {
     let cancelled = false;
@@ -35,7 +51,7 @@ export function SecurityView() {
     async function load() {
       setState({ status: "loading" });
       try {
-        const runs = await api.listRuns(25);
+        const [runs, tools] = await Promise.all([api.listRuns(25), api.listTools()]);
         const eventResults = await Promise.allSettled(
           runs.map((run) => api.listRunSecurityEvents(run.run_id, { limit: 200, offset: 0 }))
         );
@@ -45,6 +61,9 @@ export function SecurityView() {
           .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 
         if (cancelled) return;
+        setToolRegistry(
+          [...tools].sort((left, right) => left.name.localeCompare(right.name))
+        );
         setState({ status: "ready", events });
       } catch (error) {
         if (cancelled) return;
@@ -61,6 +80,44 @@ export function SecurityView() {
       cancelled = true;
     };
   }, []);
+
+  async function onCreateTool(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setToolConfigError(null);
+    setCreatingTool(true);
+
+    try {
+      await api.createTool({ name: toolName, zone: toolZone });
+      const tools = await api.listTools();
+      setToolRegistry(
+        [...tools].sort((left, right) => left.name.localeCompare(right.name))
+      );
+      setToolName("");
+      setToolZone("untrusted");
+    } catch (error) {
+      setToolConfigError(error instanceof Error ? error.message : "Failed to create tool zone");
+    } finally {
+      setCreatingTool(false);
+    }
+  }
+
+  async function onUpdateToolZone(toolId: string, zone: string) {
+    setToolConfigError(null);
+    setSavingToolId(toolId);
+
+    try {
+      const updated = await api.updateToolZone(toolId, zone);
+      setToolRegistry((currentValue) =>
+        currentValue
+          .map((item) => (item.tool_id === toolId ? updated : item))
+          .sort((left, right) => left.name.localeCompare(right.name))
+      );
+    } catch (error) {
+      setToolConfigError(error instanceof Error ? error.message : "Failed to update tool zone");
+    } finally {
+      setSavingToolId(null);
+    }
+  }
 
   const filteredEvents = useMemo(() => {
     if (state.status !== "ready") return [] as SecurityEventListItem[];
@@ -123,6 +180,107 @@ export function SecurityView() {
         </Card>
       ) : (
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tool Zones</CardTitle>
+              <CardDescription>
+                Tool trust boundaries follow workspace RBAC and plan access.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {canManageSecurityConfig ? (
+                <form
+                  className="grid gap-4 rounded-md border border-border/60 bg-muted/10 p-4 md:grid-cols-[1.4fr_0.8fr_auto]"
+                  onSubmit={onCreateTool}
+                >
+                  <label className="space-y-1 text-sm">
+                    <span className="text-muted-foreground">Tool Name</span>
+                    <input
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                      value={toolName}
+                      onChange={(event) => setToolName(event.target.value)}
+                      placeholder="jira.create_issue"
+                      required
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm">
+                    <span className="text-muted-foreground">Zone</span>
+                    <select
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                      value={toolZone}
+                      onChange={(event) => setToolZone(event.target.value)}
+                    >
+                      <option value="trusted">trusted</option>
+                      <option value="untrusted">untrusted</option>
+                    </select>
+                  </label>
+                  <div className="flex items-end">
+                    <Button type="submit" disabled={creatingTool}>
+                      {creatingTool ? "Saving..." : "Add Tool"}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Tool-zone management is restricted to admin memberships on plans with security access.
+                </p>
+              )}
+
+              {toolConfigError ? (
+                <p className="text-sm text-rose-200">{toolConfigError}</p>
+              ) : null}
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tool</TableHead>
+                    <TableHead>Zone</TableHead>
+                    <TableHead className="text-right">Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {toolRegistry.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                        No tool zones configured yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    toolRegistry.map((tool) => (
+                      <TableRow key={tool.tool_id}>
+                        <TableCell className="font-mono text-xs text-foreground">
+                          {tool.name}
+                        </TableCell>
+                        <TableCell>
+                          {canManageSecurityConfig ? (
+                            <select
+                              className="rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
+                              value={tool.zone}
+                              disabled={savingToolId === tool.tool_id}
+                              onChange={(event) =>
+                                void onUpdateToolZone(tool.tool_id, event.target.value)
+                              }
+                            >
+                              <option value="trusted">trusted</option>
+                              <option value="untrusted">untrusted</option>
+                            </select>
+                          ) : (
+                            <Badge variant={tool.zone === "trusted" ? "default" : "warning"}>
+                              {tool.zone}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {formatRelativeDate(tool.created_at)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Top Risky Tools</CardTitle>

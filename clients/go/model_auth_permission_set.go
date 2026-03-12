@@ -23,6 +23,9 @@ type AuthPermissionSet struct {
 	CanUploadTraces *bool `json:"can_upload_traces,omitempty"`
 	CanCreateCampaigns *bool `json:"can_create_campaigns,omitempty"`
 	CanRunCampaigns *bool `json:"can_run_campaigns,omitempty"`
+	CanManageMutationPacks *bool `json:"can_manage_mutation_packs,omitempty"`
+	CanManagePolicyPacks *bool `json:"can_manage_policy_packs,omitempty"`
+	CanManageSecurityConfig *bool `json:"can_manage_security_config,omitempty"`
 	CanManageWorkspace *bool `json:"can_manage_workspace,omitempty"`
 	CanManageApiKeys *bool `json:"can_manage_api_keys,omitempty"`
 }
@@ -39,6 +42,12 @@ func NewAuthPermissionSet() *AuthPermissionSet {
 	this.CanCreateCampaigns = &canCreateCampaigns
 	var canRunCampaigns bool = false
 	this.CanRunCampaigns = &canRunCampaigns
+	var canManageMutationPacks bool = false
+	this.CanManageMutationPacks = &canManageMutationPacks
+	var canManagePolicyPacks bool = false
+	this.CanManagePolicyPacks = &canManagePolicyPacks
+	var canManageSecurityConfig bool = false
+	this.CanManageSecurityConfig = &canManageSecurityConfig
 	var canManageWorkspace bool = false
 	this.CanManageWorkspace = &canManageWorkspace
 	var canManageApiKeys bool = false
@@ -57,6 +66,12 @@ func NewAuthPermissionSetWithDefaults() *AuthPermissionSet {
 	this.CanCreateCampaigns = &canCreateCampaigns
 	var canRunCampaigns bool = false
 	this.CanRunCampaigns = &canRunCampaigns
+	var canManageMutationPacks bool = false
+	this.CanManageMutationPacks = &canManageMutationPacks
+	var canManagePolicyPacks bool = false
+	this.CanManagePolicyPacks = &canManagePolicyPacks
+	var canManageSecurityConfig bool = false
+	this.CanManageSecurityConfig = &canManageSecurityConfig
 	var canManageWorkspace bool = false
 	this.CanManageWorkspace = &canManageWorkspace
 	var canManageApiKeys bool = false
@@ -192,6 +207,102 @@ func (o *AuthPermissionSet) SetCanRunCampaigns(v bool) {
 	o.CanRunCampaigns = &v
 }
 
+// GetCanManageMutationPacks returns the CanManageMutationPacks field value if set, zero value otherwise.
+func (o *AuthPermissionSet) GetCanManageMutationPacks() bool {
+	if o == nil || IsNil(o.CanManageMutationPacks) {
+		var ret bool
+		return ret
+	}
+	return *o.CanManageMutationPacks
+}
+
+// GetCanManageMutationPacksOk returns a tuple with the CanManageMutationPacks field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AuthPermissionSet) GetCanManageMutationPacksOk() (*bool, bool) {
+	if o == nil || IsNil(o.CanManageMutationPacks) {
+		return nil, false
+	}
+	return o.CanManageMutationPacks, true
+}
+
+// HasCanManageMutationPacks returns a boolean if a field has been set.
+func (o *AuthPermissionSet) HasCanManageMutationPacks() bool {
+	if o != nil && !IsNil(o.CanManageMutationPacks) {
+		return true
+	}
+
+	return false
+}
+
+// SetCanManageMutationPacks gets a reference to the given bool and assigns it to the CanManageMutationPacks field.
+func (o *AuthPermissionSet) SetCanManageMutationPacks(v bool) {
+	o.CanManageMutationPacks = &v
+}
+
+// GetCanManagePolicyPacks returns the CanManagePolicyPacks field value if set, zero value otherwise.
+func (o *AuthPermissionSet) GetCanManagePolicyPacks() bool {
+	if o == nil || IsNil(o.CanManagePolicyPacks) {
+		var ret bool
+		return ret
+	}
+	return *o.CanManagePolicyPacks
+}
+
+// GetCanManagePolicyPacksOk returns a tuple with the CanManagePolicyPacks field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AuthPermissionSet) GetCanManagePolicyPacksOk() (*bool, bool) {
+	if o == nil || IsNil(o.CanManagePolicyPacks) {
+		return nil, false
+	}
+	return o.CanManagePolicyPacks, true
+}
+
+// HasCanManagePolicyPacks returns a boolean if a field has been set.
+func (o *AuthPermissionSet) HasCanManagePolicyPacks() bool {
+	if o != nil && !IsNil(o.CanManagePolicyPacks) {
+		return true
+	}
+
+	return false
+}
+
+// SetCanManagePolicyPacks gets a reference to the given bool and assigns it to the CanManagePolicyPacks field.
+func (o *AuthPermissionSet) SetCanManagePolicyPacks(v bool) {
+	o.CanManagePolicyPacks = &v
+}
+
+// GetCanManageSecurityConfig returns the CanManageSecurityConfig field value if set, zero value otherwise.
+func (o *AuthPermissionSet) GetCanManageSecurityConfig() bool {
+	if o == nil || IsNil(o.CanManageSecurityConfig) {
+		var ret bool
+		return ret
+	}
+	return *o.CanManageSecurityConfig
+}
+
+// GetCanManageSecurityConfigOk returns a tuple with the CanManageSecurityConfig field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AuthPermissionSet) GetCanManageSecurityConfigOk() (*bool, bool) {
+	if o == nil || IsNil(o.CanManageSecurityConfig) {
+		return nil, false
+	}
+	return o.CanManageSecurityConfig, true
+}
+
+// HasCanManageSecurityConfig returns a boolean if a field has been set.
+func (o *AuthPermissionSet) HasCanManageSecurityConfig() bool {
+	if o != nil && !IsNil(o.CanManageSecurityConfig) {
+		return true
+	}
+
+	return false
+}
+
+// SetCanManageSecurityConfig gets a reference to the given bool and assigns it to the CanManageSecurityConfig field.
+func (o *AuthPermissionSet) SetCanManageSecurityConfig(v bool) {
+	o.CanManageSecurityConfig = &v
+}
+
 // GetCanManageWorkspace returns the CanManageWorkspace field value if set, zero value otherwise.
 func (o *AuthPermissionSet) GetCanManageWorkspace() bool {
 	if o == nil || IsNil(o.CanManageWorkspace) {
@@ -277,6 +388,15 @@ func (o AuthPermissionSet) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.CanRunCampaigns) {
 		toSerialize["can_run_campaigns"] = o.CanRunCampaigns
+	}
+	if !IsNil(o.CanManageMutationPacks) {
+		toSerialize["can_manage_mutation_packs"] = o.CanManageMutationPacks
+	}
+	if !IsNil(o.CanManagePolicyPacks) {
+		toSerialize["can_manage_policy_packs"] = o.CanManagePolicyPacks
+	}
+	if !IsNil(o.CanManageSecurityConfig) {
+		toSerialize["can_manage_security_config"] = o.CanManageSecurityConfig
 	}
 	if !IsNil(o.CanManageWorkspace) {
 		toSerialize["can_manage_workspace"] = o.CanManageWorkspace

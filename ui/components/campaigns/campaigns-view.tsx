@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { api, type CampaignMetadata, type MutationPackMetadata } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +17,13 @@ type LoadState =
   | { status: "ready"; campaigns: CampaignMetadata[] };
 
 export function CampaignsView() {
+  const authSession = useAuthSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [mutationPacks, setMutationPacks] = useState<MutationPackMetadata[] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [mutationPackId, setMutationPackId] = useState("");
@@ -112,6 +115,15 @@ export function CampaignsView() {
     selectedMutationPack && selectedMutationPack.coverage_score < 40
       ? "This mutation pack may not detect realistic failures."
       : null;
+  const canCreateCampaigns = authSession?.permissions.can_create_campaigns ?? false;
+
+  const baselineMutationSet = [
+    {
+      mutation_id: "baseline",
+      tool: "jira.create_issue",
+      args: { title: "Generated campaign" },
+    },
+  ];
 
   async function onCreateCampaign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -119,22 +131,10 @@ export function CampaignsView() {
     setCreateError(null);
 
     try {
-      const mutationsFromPackRaw = selectedMutationPack?.config?.mutations;
-      const mutationsFromPack = Array.isArray(mutationsFromPackRaw)
-        ? mutationsFromPackRaw
-        : [];
-      const fallbackMutationSet = [
-        {
-          mutation_id: "baseline",
-          tool: "jira.create_issue",
-          args: { title: "Generated campaign" },
-        },
-      ];
-
       await api.createCampaign({
         name,
         mutation_pack_id: mutationPackId || null,
-        mutation_set: mutationsFromPack.length > 0 ? mutationsFromPack : fallbackMutationSet,
+        mutation_set: baselineMutationSet,
         eval_set: {
           checks: ["status"],
           attempts_count: attemptsCount,
@@ -153,6 +153,20 @@ export function CampaignsView() {
     }
   }
 
+  async function onCopyCampaignId(campaignId: string) {
+    try {
+      await navigator.clipboard.writeText(campaignId);
+      setCopiedCampaignId(campaignId);
+      window.setTimeout(() => {
+        setCopiedCampaignId((currentValue) =>
+          currentValue === campaignId ? null : currentValue
+        );
+      }, 1500);
+    } catch {
+      setCreateError("Failed to copy campaign ID");
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -160,8 +174,18 @@ export function CampaignsView() {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Campaigns</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage evaluation campaign definitions.</p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>Create Campaign</Button>
+        {canCreateCampaigns ? (
+          <Button onClick={() => setModalOpen(true)}>Create Campaign</Button>
+        ) : null}
       </div>
+
+      {!canCreateCampaigns && authSession ? (
+        <Card className="border-border/60">
+          <CardContent className="p-5 text-sm text-muted-foreground">
+            Campaign creation follows your workspace membership bundle. This membership can review campaigns but cannot create or run them.
+          </CardContent>
+        </Card>
+      ) : null}
 
       {state.status === "loading" ? (
         <Card>
@@ -199,8 +223,18 @@ export function CampaignsView() {
                 ) : (
                   state.campaigns.map((campaign) => (
                     <TableRow key={campaign.campaign_id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground" title={campaign.campaign_id}>
-                        {shortId(campaign.campaign_id, 16)}
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <span className="break-all text-foreground">{campaign.campaign_id}</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void onCopyCampaignId(campaign.campaign_id)}
+                          >
+                            {copiedCampaignId === campaign.campaign_id ? "Copied" : "Copy ID"}
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell className="font-medium text-foreground">{campaign.name}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">

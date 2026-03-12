@@ -48,6 +48,24 @@ export interface AuthPermissionSet {
      * @type {boolean}
      * @memberof AuthPermissionSet
      */
+    can_manage_mutation_packs?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AuthPermissionSet
+     */
+    can_manage_policy_packs?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AuthPermissionSet
+     */
+    can_manage_security_config?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AuthPermissionSet
+     */
     can_manage_workspace?: boolean;
     /**
      * 
@@ -78,6 +96,9 @@ export function AuthPermissionSetFromJSONTyped(json: any, ignoreDiscriminator: b
         'can_upload_traces': json['can_upload_traces'] == null ? undefined : json['can_upload_traces'],
         'can_create_campaigns': json['can_create_campaigns'] == null ? undefined : json['can_create_campaigns'],
         'can_run_campaigns': json['can_run_campaigns'] == null ? undefined : json['can_run_campaigns'],
+        'can_manage_mutation_packs': json['can_manage_mutation_packs'] == null ? undefined : json['can_manage_mutation_packs'],
+        'can_manage_policy_packs': json['can_manage_policy_packs'] == null ? undefined : json['can_manage_policy_packs'],
+        'can_manage_security_config': json['can_manage_security_config'] == null ? undefined : json['can_manage_security_config'],
         'can_manage_workspace': json['can_manage_workspace'] == null ? undefined : json['can_manage_workspace'],
         'can_manage_api_keys': json['can_manage_api_keys'] == null ? undefined : json['can_manage_api_keys'],
     };
@@ -93,6 +114,9 @@ export function AuthPermissionSetToJSON(value?: AuthPermissionSet | null): any {
         'can_upload_traces': value['can_upload_traces'],
         'can_create_campaigns': value['can_create_campaigns'],
         'can_run_campaigns': value['can_run_campaigns'],
+        'can_manage_mutation_packs': value['can_manage_mutation_packs'],
+        'can_manage_policy_packs': value['can_manage_policy_packs'],
+        'can_manage_security_config': value['can_manage_security_config'],
         'can_manage_workspace': value['can_manage_workspace'],
         'can_manage_api_keys': value['can_manage_api_keys'],
     };

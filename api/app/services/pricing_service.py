@@ -91,10 +91,16 @@ def build_auth_permissions(role_name: str, pricing_tier: str | None) -> AuthPerm
     visible_sections = [
         section for section in ROLE_SECTION_ALLOWLIST[normalized_role] if section in plan_sections
     ]
+    visible_section_set = set(visible_sections)
 
     can_upload_traces = normalized_role in {"admin", "developer"}
     can_create_campaigns = normalized_role in {"admin", "developer"}
     can_run_campaigns = normalized_role in {"admin", "developer"}
+    can_manage_mutation_packs = (
+        normalized_role in {"admin", "developer"} and "mutation-packs" in visible_section_set
+    )
+    can_manage_policy_packs = normalized_role == "admin" and "policies" in visible_section_set
+    can_manage_security_config = normalized_role == "admin" and "security" in visible_section_set
     can_manage_workspace = normalized_role == "admin"
     can_manage_api_keys = normalized_role == "admin"
 
@@ -107,6 +113,9 @@ def build_auth_permissions(role_name: str, pricing_tier: str | None) -> AuthPerm
         can_upload_traces=can_upload_traces,
         can_create_campaigns=can_create_campaigns,
         can_run_campaigns=can_run_campaigns,
+        can_manage_mutation_packs=can_manage_mutation_packs,
+        can_manage_policy_packs=can_manage_policy_packs,
+        can_manage_security_config=can_manage_security_config,
         can_manage_workspace=can_manage_workspace,
         can_manage_api_keys=can_manage_api_keys,
     )

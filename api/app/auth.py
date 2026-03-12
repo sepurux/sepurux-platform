@@ -12,7 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, get_db
-from app.models import ApiKey, Project, ProjectMembership, Role
+from app.models import ApiKey, Project, ProjectMembership, Role, Tenant
+from app.services.pricing_service import build_auth_permissions
 
 # Deterministic dev seed values inserted by the Alembic migration for local compose usage.
 DEV_TENANT_ID = UUID("11111111-1111-1111-1111-111111111111")
@@ -108,6 +109,9 @@ def require_project_scope(
     return project_scope
 
 
+ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+
+
 def require_role(role_name: str):
     required_rank = ROLE_RANKS.get(role_name, ROLE_RANKS["viewer"])
 
@@ -119,6 +123,44 @@ def require_role(role_name: str):
                 detail=f"{role_name} role required",
             )
         return tenant_auth
+
+    return dependency
+
+
+def _project_permission_bundle(db: Session, project_scope: ProjectScope):
+    tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == project_scope.tenant_id))
+    pricing_tier = tenant.pricing_tier if isinstance(tenant, Tenant) else None
+    return build_auth_permissions(project_scope.role_name, pricing_tier)
+
+
+def require_visible_section(section_name: str):
+    def dependency(db: DbSession, project_scope: ProjectScopeDep) -> ProjectScope:
+        permissions = _project_permission_bundle(db, project_scope)
+        if section_name not in permissions.visible_sections:
+            raise HTTPException(
+                status_code=403,
+                detail=f"{section_name} access is not available for this workspace membership",
+            )
+        return project_scope
+
+    return dependency
+
+
+def require_permission(permission_name: str, *, section_name: str | None = None):
+    def dependency(db: DbSession, project_scope: ProjectScopeDep) -> ProjectScope:
+        permissions = _project_permission_bundle(db, project_scope)
+        if section_name is not None and section_name not in permissions.visible_sections:
+            raise HTTPException(
+                status_code=403,
+                detail=f"{section_name} access is not available for this workspace membership",
+            )
+
+        if not bool(getattr(permissions, permission_name, False)):
+            raise HTTPException(
+                status_code=403,
+                detail=f"{permission_name} is not available for this workspace membership",
+            )
+        return project_scope
 
     return dependency
 
