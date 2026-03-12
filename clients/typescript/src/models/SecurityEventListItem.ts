@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { FromJSON, ToJSON, mapValues } from '../runtime';
 /**
  * 
  * @export

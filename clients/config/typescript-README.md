@@ -2,18 +2,16 @@
 
 Generated from `clients/openapi.json` with OpenAPI Generator (`typescript-fetch`).
 
+## Install
+
+```bash
+npm install @sepurux/client
+```
+
 ## Regenerate
 
 ```bash
 make gen-clients
-```
-
-## Install
-
-```bash
-cd clients/typescript
-npm install
-npm run build
 ```
 
 ## Quick Start
@@ -50,3 +48,8 @@ const run = await runsApi.postRunV1RunsPost({
 const latest = await runsApi.getRunV1RunsRunIdGet({ runId: run.run_id });
 console.log(latest.status);
 ```
+
+## Release
+
+- Push a tag in the format `ts-client-v0.3.0`.
+- GitHub Actions workflow `ts-client-publish-npm.yml` will validate the package version, build it, and publish to npm.

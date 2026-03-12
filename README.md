@@ -161,6 +161,8 @@ latest, _, _ := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjec
 Recorder package release tags:
 
 - PyPI SDK: `sdk-v0.3.0` (publishes to PyPI)
+- TypeScript API client (npm): `ts-client-v0.3.0` (publishes `@sepurux/client` to npm)
+- Go API client module: `clients/go/v0.3.0` (creates a GitHub release; consumable via `go get github.com/sepurux/sepurux-platform/clients/go@v0.3.0`)
 - TypeScript recorder (npm): `ts-recorder-v0.2.0` (publishes to npm)
 - Go recorder module: `clients/go-recorder/v0.2.0` (creates GitHub release; consumable via `go get ...@v0.2.0`)
 ## Run Inspector Endpoints

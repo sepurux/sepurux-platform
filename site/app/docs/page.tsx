@@ -234,9 +234,7 @@ curl -X POST ${apiBaseUrl}/v1/tools \\
 # TypeScript and Go clients in this repo are generated from the same schema.
 make gen-clients`;
 
-  const typescriptInstallSnippet = `cd clients/typescript
-npm install
-npm run build`;
+  const typescriptInstallSnippet = `npm install @sepurux/client`;
 
   const typescriptClientSnippet = `import { Configuration, RunsApi, TracesApi } from "@sepurux/client";
 
@@ -268,8 +266,7 @@ const run = await runsApi.postRunV1RunsPost({
 
 console.log(run.run_id);`;
 
-  const goInstallSnippet = `cd clients/go
-go build ./...`;
+  const goInstallSnippet = `go get github.com/sepurux/sepurux-platform/clients/go@v0.3.0`;
 
   const goClientSnippet = `package main
 
@@ -278,7 +275,7 @@ import (
   "fmt"
   "os"
 
-  sepuruxclient "github.com/sepurux/go-sdk"
+  sepuruxclient "github.com/sepurux/sepurux-platform/clients/go"
 )
 
 func main() {
@@ -529,7 +526,7 @@ func main() {
                       <h3 className="text-lg font-medium text-slate-950">Go client</h3>
                       <p className="mt-2 text-sm leading-7 text-slate-600">
                         The generated Go module in this repository uses the module path{" "}
-                        <code>github.com/sepurux/go-sdk</code>.
+                        <code>github.com/sepurux/sepurux-platform/clients/go</code>.
                       </p>
                     </div>
                     <CodeBlock code={goInstallSnippet} label="bash" />

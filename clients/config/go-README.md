@@ -2,6 +2,12 @@
 
 Generated from `clients/openapi.json` with OpenAPI Generator (`go`).
 
+## Install
+
+```bash
+go get github.com/sepurux/sepurux-platform/clients/go@v0.3.0
+```
+
 ## Regenerate
 
 ```bash
@@ -18,7 +24,7 @@ import (
 	"fmt"
 	"os"
 
-	sepuruxclient "github.com/sepurux/go-sdk"
+	sepuruxclient "github.com/sepurux/sepurux-platform/clients/go"
 )
 
 func main() {
@@ -62,3 +68,8 @@ func main() {
 	fmt.Println("run status:", latest.GetStatus())
 }
 ```
+
+## Release
+
+- Push a tag in the format `clients/go/v0.3.0`.
+- GitHub Actions workflow `go-client-release.yml` will run `go test` and create a GitHub release for the tagged module.
