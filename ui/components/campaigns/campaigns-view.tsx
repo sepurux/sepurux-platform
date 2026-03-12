@@ -28,12 +28,25 @@ export function CampaignsView() {
   const recommendedSystemPackNames = useMemo(
     () =>
       new Set([
+        "sepurux.max_chaos",
+        "sepurux.core.reliability",
         "core.reliability",
         "prompt.injection",
         "core.latency",
       ]),
     []
   );
+
+  const sortPacksForDisplay = (records: MutationPackMetadata[]) =>
+    [...records].sort((left, right) => {
+      if (right.coverage_score !== left.coverage_score) {
+        return right.coverage_score - left.coverage_score;
+      }
+      if (left.is_system !== right.is_system) {
+        return left.is_system ? -1 : 1;
+      }
+      return left.name.localeCompare(right.name);
+    });
 
   async function load() {
     setState({ status: "loading" });
@@ -76,8 +89,10 @@ export function CampaignsView() {
     if (!mutationPacks) {
       return [];
     }
-    return mutationPacks.filter(
-      (record) => record.is_system && recommendedSystemPackNames.has(record.name)
+    return sortPacksForDisplay(
+      mutationPacks.filter(
+        (record) => record.is_system && recommendedSystemPackNames.has(record.name)
+      )
     );
   }, [mutationPacks, recommendedSystemPackNames]);
 
@@ -85,9 +100,11 @@ export function CampaignsView() {
     if (!mutationPacks) {
       return [];
     }
-    return mutationPacks.filter(
-      (record) =>
-        !record.is_system || !recommendedSystemPackNames.has(record.name)
+    return sortPacksForDisplay(
+      mutationPacks.filter(
+        (record) =>
+          !record.is_system || !recommendedSystemPackNames.has(record.name)
+      )
     );
   }, [mutationPacks, recommendedSystemPackNames]);
 

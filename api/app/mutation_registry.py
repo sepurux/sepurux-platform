@@ -7,6 +7,8 @@ from typing import Any
 from app.mutation_packs import Mutation, RegisteredMutation
 
 PACK_MODULES = (
+    "app.mutation_packs.sepurux.core_reliability",
+    "app.mutation_packs.sepurux.max_chaos",
     "app.mutation_packs.core.reliability",
     "app.mutation_packs.core.latency",
     "app.mutation_packs.prompt.injection",

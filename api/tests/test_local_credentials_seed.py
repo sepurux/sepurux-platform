@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from app.auth import hash_api_key
-from app.models import ApiKey, Base, Project, ProjectMembership, Tenant, User
+from app.models import ApiKey, Base, MutationPack, Project, ProjectMembership, Tenant, User
+from app.mutation_registry import list_registered_pack_definitions
 from app.scripts import seed_local_credentials
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -69,3 +70,16 @@ def _assert_seeded_workspace(db: Session, *, email: str, pricing_tier: str, api_
     assert isinstance(project_tenant, Tenant)
     assert project.tenant_id == project_tenant.tenant_id
     assert project_tenant.pricing_tier == pricing_tier
+
+    packs = list(
+        db.scalars(
+            select(MutationPack)
+            .where(MutationPack.project_id == project.project_id)
+            .order_by(MutationPack.name.asc())
+        )
+    )
+    expected_names = sorted(
+        str(definition["name"]) for definition in list_registered_pack_definitions()
+    )
+    assert [pack.name for pack in packs] == expected_names
+    assert all(pack.is_system for pack in packs)

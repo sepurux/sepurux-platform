@@ -34,6 +34,8 @@ DATA_CORRUPTION_MUTATION_TYPES = {
 }
 
 RECOMMENDED_SYSTEM_PACK_NAMES = {
+    "sepurux.max_chaos",
+    "sepurux.core.reliability",
     "core.reliability",
     "prompt.injection",
     "tool.schema.break",
