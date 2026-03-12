@@ -1,29 +1,12 @@
-import { PlayCircle } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScreenshotPlaceholder } from "@/components/shared/screenshot-placeholder";
-import { buildAppAuthHref } from "@/lib/site";
 
 const logos = ["Northstar", "Helios", "Cresta", "Signal", "Orbit", "Vector"];
 
 export function HeroSection() {
-  const getAccessHref = buildAppAuthHref({
-    mode: "access",
-    intent: "signup",
-    plan: "team",
-    utmSource: "site",
-    utmMedium: "hero",
-    utmCampaign: "get-access",
-  });
-  const viewDemoHref = buildAppAuthHref({
-    mode: "demo",
-    preview: "envato",
-    utmSource: "site",
-    utmMedium: "hero",
-    utmCampaign: "view-demo",
-  });
-
   return (
     <section className="site-container pt-14 md:pt-20">
       <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
@@ -42,12 +25,7 @@ export function HeroSection() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <a href={getAccessHref}>Get access</a>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <a href={viewDemoHref}>
-                <PlayCircle className="h-4 w-4" /> View demo
-              </a>
+              <Link href="/book-demo">Book a demo</Link>
             </Button>
           </div>
           <div className="mt-10 flex flex-wrap items-center gap-2">
