@@ -8,6 +8,9 @@ Name | Type | Description | Notes
 **CanUploadTraces** | Pointer to **bool** |  | [optional] [default to false]
 **CanCreateCampaigns** | Pointer to **bool** |  | [optional] [default to false]
 **CanRunCampaigns** | Pointer to **bool** |  | [optional] [default to false]
+**CanManageMutationPacks** | Pointer to **bool** |  | [optional] [default to false]
+**CanManagePolicyPacks** | Pointer to **bool** |  | [optional] [default to false]
+**CanManageSecurityConfig** | Pointer to **bool** |  | [optional] [default to false]
 **CanManageWorkspace** | Pointer to **bool** |  | [optional] [default to false]
 **CanManageApiKeys** | Pointer to **bool** |  | [optional] [default to false]
 
@@ -129,6 +132,81 @@ SetCanRunCampaigns sets CanRunCampaigns field to given value.
 `func (o *AuthPermissionSet) HasCanRunCampaigns() bool`
 
 HasCanRunCampaigns returns a boolean if a field has been set.
+
+### GetCanManageMutationPacks
+
+`func (o *AuthPermissionSet) GetCanManageMutationPacks() bool`
+
+GetCanManageMutationPacks returns the CanManageMutationPacks field if non-nil, zero value otherwise.
+
+### GetCanManageMutationPacksOk
+
+`func (o *AuthPermissionSet) GetCanManageMutationPacksOk() (*bool, bool)`
+
+GetCanManageMutationPacksOk returns a tuple with the CanManageMutationPacks field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCanManageMutationPacks
+
+`func (o *AuthPermissionSet) SetCanManageMutationPacks(v bool)`
+
+SetCanManageMutationPacks sets CanManageMutationPacks field to given value.
+
+### HasCanManageMutationPacks
+
+`func (o *AuthPermissionSet) HasCanManageMutationPacks() bool`
+
+HasCanManageMutationPacks returns a boolean if a field has been set.
+
+### GetCanManagePolicyPacks
+
+`func (o *AuthPermissionSet) GetCanManagePolicyPacks() bool`
+
+GetCanManagePolicyPacks returns the CanManagePolicyPacks field if non-nil, zero value otherwise.
+
+### GetCanManagePolicyPacksOk
+
+`func (o *AuthPermissionSet) GetCanManagePolicyPacksOk() (*bool, bool)`
+
+GetCanManagePolicyPacksOk returns a tuple with the CanManagePolicyPacks field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCanManagePolicyPacks
+
+`func (o *AuthPermissionSet) SetCanManagePolicyPacks(v bool)`
+
+SetCanManagePolicyPacks sets CanManagePolicyPacks field to given value.
+
+### HasCanManagePolicyPacks
+
+`func (o *AuthPermissionSet) HasCanManagePolicyPacks() bool`
+
+HasCanManagePolicyPacks returns a boolean if a field has been set.
+
+### GetCanManageSecurityConfig
+
+`func (o *AuthPermissionSet) GetCanManageSecurityConfig() bool`
+
+GetCanManageSecurityConfig returns the CanManageSecurityConfig field if non-nil, zero value otherwise.
+
+### GetCanManageSecurityConfigOk
+
+`func (o *AuthPermissionSet) GetCanManageSecurityConfigOk() (*bool, bool)`
+
+GetCanManageSecurityConfigOk returns a tuple with the CanManageSecurityConfig field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCanManageSecurityConfig
+
+`func (o *AuthPermissionSet) SetCanManageSecurityConfig(v bool)`
+
+SetCanManageSecurityConfig sets CanManageSecurityConfig field to given value.
+
+### HasCanManageSecurityConfig
+
+`func (o *AuthPermissionSet) HasCanManageSecurityConfig() bool`
+
+HasCanManageSecurityConfig returns a boolean if a field has been set.
 
 ### GetCanManageWorkspace
 

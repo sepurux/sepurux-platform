@@ -29,16 +29,10 @@ router = APIRouter(prefix="/v1/mutation-packs", tags=["mutation-packs"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
-MutationPackReadScope = Annotated[
-    ProjectScope, Depends(require_visible_section("mutation-packs"))
-]
+MutationPackReadScope = Annotated[ProjectScope, Depends(require_visible_section("mutation-packs"))]
 MutationPackManageScope = Annotated[
     ProjectScope,
-    Depends(
-        require_permission(
-            "can_manage_mutation_packs", section_name="mutation-packs"
-        )
-    ),
+    Depends(require_permission("can_manage_mutation_packs", section_name="mutation-packs")),
 ]
 
 

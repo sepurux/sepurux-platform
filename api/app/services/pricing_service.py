@@ -99,12 +99,8 @@ def build_auth_permissions(role_name: str, pricing_tier: str | None) -> AuthPerm
     can_manage_mutation_packs = (
         normalized_role in {"admin", "developer"} and "mutation-packs" in visible_section_set
     )
-    can_manage_policy_packs = (
-        normalized_role == "admin" and "policies" in visible_section_set
-    )
-    can_manage_security_config = (
-        normalized_role == "admin" and "security" in visible_section_set
-    )
+    can_manage_policy_packs = normalized_role == "admin" and "policies" in visible_section_set
+    can_manage_security_config = normalized_role == "admin" and "security" in visible_section_set
     can_manage_workspace = normalized_role == "admin"
     can_manage_api_keys = normalized_role == "admin"
 
