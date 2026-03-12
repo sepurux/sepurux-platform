@@ -140,14 +140,24 @@ def build_run_insights(
         tool_name = str(hot_tool.get("tool") or "replay.tool")
         fail_count = _int(hot_tool.get("count"))
         fail_pct = _float(hot_tool.get("pct"))
+        if tool_name == "replay.execute":
+            title = "Stabilize replay.execute integration path"
+            recommendation = (
+                "Validate replay payloads before execution, enforce typed replay result "
+                "contracts, and classify replay-contract failures separately from "
+                "downstream tool errors."
+            )
+        else:
+            title = f"Stabilize {tool_name} integration path"
+            recommendation = (
+                f"Add tool-specific guardrails for {tool_name}: argument validation, "
+                "typed response contracts, and clearer error classification."
+            )
         insights.append(
             _insight(
                 insight_id=f"insight.tool_hotspot.{_slug(tool_name)}",
-                title=f"Stabilize {tool_name} integration path",
-                recommendation=(
-                    f"Add tool-specific guardrails for {tool_name}: argument validation, "
-                    "typed response contracts, and clearer error classification."
-                ),
+                title=title,
+                recommendation=recommendation,
                 why=(
                     f"{tool_name} accounts for {fail_count} failed attempts "
                     f"({round(fail_pct * 100, 1)}% of failures)."

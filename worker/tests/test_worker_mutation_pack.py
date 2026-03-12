@@ -435,3 +435,187 @@ def test_execute_run_fault_mutation_skips_internal_trace_load_tool(
     assert isinstance(events, list)
     assert events[-1]["type"] == "error"
     assert events[-1]["tool"] == "jira.create_issue"
+
+
+def test_execute_run_repeats_attempts_from_eval_set_count(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, artifacts = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Stable Rename Pack",
+                description="Always rename the status field",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "rename-status",
+                            "type": "schema.rename_field",
+                            "target": {"tool": "jira.*"},
+                            "params": {"from": "status", "to": "state"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Repeated Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"], "attempts_count": 3},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempts = list(
+            db.scalars(
+                select(ReplayAttempt)
+                .where(ReplayAttempt.run_id == run_id)
+                .order_by(ReplayAttempt.created_at.asc(), ReplayAttempt.attempt_id.asc())
+            )
+        )
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert len(attempts) == 3
+    assert all(attempt.result == "passed" for attempt in attempts)
+    assert run.summary["attempt_count"] == 3
+    assert run.summary["passed_count"] == 3
+    assert run.summary["pass_rate"] == 1.0
+    assert len(artifacts) == 3
+
+
+def test_execute_run_counterfactuals_use_applied_mutation_context(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+    captured_mutations: list[dict[str, object]] = []
+
+    def capture_counterfactuals(**kwargs: object) -> list[object]:
+        mutation = kwargs.get("mutation")
+        if isinstance(mutation, dict):
+            captured_mutations.append(mutation)
+        return []
+
+    monkeypatch.setattr(worker_module, "run_counterfactual_replays", capture_counterfactuals)
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Rate Limit Pack",
+                description="Always inject a rate limit failure",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "fault.rate_limit",
+                            "type": "fault.rate_limit",
+                            "target": {"tool": "jira.*"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Counterfactual Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "failed"
+    assert attempt.failure_reason == "rate_limited"
+    assert attempt.first_failure_tool == "jira.create_issue"
+    assert attempt.mutation_id == "fault.rate_limit"
+    assert len(captured_mutations) == 1
+    assert captured_mutations[0]["mutation_id"] == "fault.rate_limit"
+    assert captured_mutations[0]["tool"] == "jira.create_issue"
+    assert captured_mutations[0]["args"] == {"title": "Demo"}
+    assert captured_mutations[0]["failure_reason"] == "rate_limited"
+    assert captured_mutations[0]["force_fail"] is True
