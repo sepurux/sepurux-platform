@@ -121,3 +121,24 @@ def test_insights_are_sorted_by_confidence_desc() -> None:
     insights = build_run_insights(**payload)
     confidences = [item["confidence"] for item in insights]
     assert confidences == sorted(confidences, reverse=True)
+
+
+def test_replay_execute_hotspot_gets_replay_specific_recommendation() -> None:
+    payload = _base_inputs()
+    payload.update(
+        {
+            "failed_attempts": 2,
+            "failures_by_tool": [{"tool": "replay.execute", "count": 2, "pct": 1.0}],
+            "top_failure_reasons": [
+                {"reason": "replay_contract_invalid_args", "count": 2, "pct": 1.0}
+            ],
+        }
+    )
+
+    insights = build_run_insights(**payload)
+
+    replay_hotspot = next(
+        item for item in insights if item["id"] == "insight.tool_hotspot.replay.execute"
+    )
+    assert replay_hotspot["title"] == "Stabilize replay.execute integration path"
+    assert "typed replay result contracts" in replay_hotspot["recommendation"]
