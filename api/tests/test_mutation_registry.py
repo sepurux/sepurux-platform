@@ -8,6 +8,8 @@ def test_load_mutation_packs_returns_expected_registry_keys() -> None:
     registry = load_mutation_packs()
 
     assert set(registry) == {
+        "sepurux.core.reliability",
+        "sepurux.max_chaos",
         "core.reliability",
         "core.latency",
         "prompt.injection",
@@ -29,3 +31,15 @@ def test_registered_pack_definition_builds_engine_config() -> None:
     assert config["max_mutations_per_attempt"] == 2
     assert isinstance(config["mutations"], list)
     assert len(config["mutations"]) >= 1
+
+
+def test_registered_top_coverage_pack_definition_is_available() -> None:
+    definition = get_registered_pack_definition("sepurux.max_chaos")
+
+    assert definition is not None
+    assert definition["name"] == "sepurux.max_chaos"
+    config = definition["config"]
+    assert config["version"] == "0.1"
+    assert config["max_mutations_per_attempt"] == 3
+    assert isinstance(config["mutations"], list)
+    assert len(config["mutations"]) == 5
