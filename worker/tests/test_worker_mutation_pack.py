@@ -519,9 +519,11 @@ def test_execute_run_repeats_attempts_from_eval_set_count(
 
     assert len(attempts) == 3
     assert all(attempt.result == "passed" for attempt in attempts)
-    assert run.summary["attempt_count"] == 3
-    assert run.summary["passed_count"] == 3
-    assert run.summary["pass_rate"] == 1.0
+    summary = run.summary
+    assert isinstance(summary, dict)
+    assert summary["attempt_count"] == 3
+    assert summary["passed_count"] == 3
+    assert summary["pass_rate"] == 1.0
     assert len(artifacts) == 3
 
 
