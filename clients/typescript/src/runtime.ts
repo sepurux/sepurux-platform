@@ -344,6 +344,17 @@ export function mapValues(data: any, fn: (item: any) => any) {
   );
 }
 
+// OpenAPI Generator occasionally emits FromJSON/ToJSON calls for free-form
+// object fields without generating matching helpers. Treat those values as
+// pass-through JSON so the client remains buildable and preserves payloads.
+export function FromJSON<T = any>(value: T): T {
+    return value;
+}
+
+export function ToJSON<T = any>(value: T): T {
+    return value;
+}
+
 export function canConsumeForm(consumes: Consume[]): boolean {
     for (const consume of consumes) {
         if ('multipart/form-data' === consume.contentType) {

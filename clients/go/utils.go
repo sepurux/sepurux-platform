@@ -42,6 +42,45 @@ func PtrString(v string) *string { return &v }
 // PtrTime is helper routine that returns a pointer to given Time value.
 func PtrTime(v time.Time) *time.Time { return &v }
 
+// AnyOf represents free-form JSON object fields emitted by the generator.
+type AnyOf map[string]interface{}
+
+type NullableAnyOf struct {
+	value *AnyOf
+	isSet bool
+}
+
+func (v NullableAnyOf) Get() *AnyOf {
+	return v.value
+}
+
+func (v *NullableAnyOf) Set(val *AnyOf) {
+	v.value = val
+	v.isSet = true
+}
+
+func (v NullableAnyOf) IsSet() bool {
+	return v.isSet
+}
+
+func (v *NullableAnyOf) Unset() {
+	v.value = nil
+	v.isSet = false
+}
+
+func NewNullableAnyOf(val *AnyOf) *NullableAnyOf {
+	return &NullableAnyOf{value: val, isSet: true}
+}
+
+func (v NullableAnyOf) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.value)
+}
+
+func (v *NullableAnyOf) UnmarshalJSON(src []byte) error {
+	v.isSet = true
+	return json.Unmarshal(src, &v.value)
+}
+
 type NullableBool struct {
 	value *bool
 	isSet bool

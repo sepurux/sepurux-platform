@@ -1,8 +1,8 @@
 packageName: sepuruxclient
-packageVersion: 0.2.0
-moduleName: github.com/sepurux/go-sdk
+packageVersion: 0.3.0
+moduleName: github.com/sepurux/sepurux-platform/clients/go
 enumClassPrefix: true
 hideGenerationTimestamp: true
 gitHost: github.com
 gitUserId: sepurux
-gitRepoId: go-sdk
+gitRepoId: sepurux-platform
