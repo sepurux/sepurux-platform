@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sepurux import TraceBuilder
+from sepurux import TraceBuilder, sepurux_trace
 
 
 def test_trace_builder_schema_shape() -> None:
@@ -18,3 +18,13 @@ def test_trace_builder_schema_shape() -> None:
     assert trace["events"][0]["type"] == "model_step"
     assert trace["events"][1]["type"] == "tool_call"
     assert trace["events"][2]["type"] == "tool_result"
+
+
+def test_trace_context_supports_custom_source() -> None:
+    with sepurux_trace("demo_task", {"prompt": "hello"}, source="langsmith-like", trace_version="0.2") as rec:
+        rec.model_step("plan", {"goal": "create issue"})
+
+    trace = rec.to_trace()
+
+    assert trace["source"] == "langsmith-like"
+    assert trace["trace_version"] == "0.2"

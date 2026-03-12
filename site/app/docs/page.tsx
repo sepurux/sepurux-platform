@@ -102,30 +102,46 @@ SEPURUX_CAMPAIGN_ID=<campaign_uuid>
 SEPURUX_MUTATION_PACK=sepurux.core.reliability`;
 
   const sdkSnippet = `import os
-from sepurux import SepuruxClient, sepurux_trace
+from sepurux import SepuruxClient
 
-with SepuruxClient(
-    base_url="${apiBaseUrl}",
-    api_key=os.environ["SEPURUX_API_KEY"],
-    project_id=os.environ["SEPURUX_PROJECT_ID"],
-) as client:
-    with sepurux_trace("refund_flow", {"channel": "support"}) as recorder:
-        recorder.model_step(
+with SepuruxClient.from_env() as client:
+    with client.trace(
+        "refund_flow",
+        {"channel": "support"},
+        campaign_id=os.environ["SEPURUX_CAMPAIGN_ID"],
+        mutation_pack=os.environ["SEPURUX_MUTATION_PACK"],
+        source="python-sdk",
+    ) as trace:
+        trace.model_step(
             "triage_request",
             {"text": "Refund the duplicate charge"},
             output={"action": "refund", "risk": "medium"},
         )
-        recorder.tool_call(
+        trace.tool_call(
             "payments.refund",
             {"payment_id": "pay_123", "amount": 4200},
         )
-        recorder.tool_result(
+        trace.tool_result(
             "payments.refund",
             {"refund_id": "rf_123", "status": "queued"},
         )
 
-    trace_id = client.upload_trace(recorder.to_trace())
-    print(trace_id)`;
+    print(trace.trace_id)
+    print(trace.run_id)`;
+
+  const traceableSnippet = `from sepurux import configure, traceable
+
+configure()
+
+@traceable(campaign_id="refund_reliability")
+def score_refund_risk(amount: int, currency: str) -> dict:
+    return {
+        "risk": "medium",
+        "approve": amount < 10000,
+        "currency": currency,
+    }
+
+print(score_refund_risk(4200, "usd"))`;
 
   const sdkInstallSnippet = `# current repository install path
 pip install -e sdk`;
@@ -438,10 +454,14 @@ func main() {
                     <CodeBlock code={sdkSnippet} label="python" />
                   </div>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-7 text-slate-700">
-                  The Python SDK exposes higher-level helpers like <code>upload_trace</code>,{" "}
-                  <code>create_campaign</code>, <code>start_run</code>, <code>run_pack</code>, and{" "}
-                  <code>get_run</code>. It also sends the <code>X-Sepurux-SDK</code> header automatically.
+                <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-7 text-slate-700">
+                    The Python SDK now supports the easy path directly: <code>SepuruxClient.from_env()</code>,{" "}
+                    <code>client.trace(...)</code>, and <code>client.traceable(...)</code>. It still exposes the
+                    lower-level primitives like <code>upload_trace</code>, <code>create_campaign</code>,{" "}
+                    <code>start_run</code>, <code>run_pack</code>, and <code>get_run</code>.
+                  </div>
+                  <CodeBlock code={traceableSnippet} label="python" />
                 </div>
               </DocsSection>
 
