@@ -26,7 +26,7 @@ export default function CompanyPage() {
       </header>
 
       <section className="mt-12 grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card id="about">
           <CardHeader>
             <CardTitle>About</CardTitle>
           </CardHeader>
@@ -42,7 +42,7 @@ export default function CompanyPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="contact">
           <CardHeader>
             <CardTitle>Contact</CardTitle>
           </CardHeader>
