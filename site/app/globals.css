@@ -3,26 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --background: 220 17% 7%;
-  --surface: 220 14% 10%;
-  --sidebar: 220 15% 9%;
+  --background: 218 30% 8%;
+  --surface: 219 24% 11%;
+  --sidebar: 219 24% 10%;
   --foreground: 220 18% 95%;
-  --card: 220 12% 13%;
+  --card: 219 20% 14%;
   --card-foreground: 220 18% 95%;
-  --border: 220 10% 21%;
-  --input: 220 10% 16%;
-  --ring: 4 93% 58%;
-  --muted: 220 10% 16%;
+  --border: 218 17% 22%;
+  --input: 218 17% 17%;
+  --ring: 199 96% 49%;
+  --muted: 218 16% 17%;
   --muted-foreground: 220 11% 68%;
-  --accent: 220 10% 19%;
+  --accent: 218 17% 20%;
   --accent-foreground: 220 18% 95%;
-  --primary: 4 94% 58%;
+  --primary: 199 100% 49%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 5 78% 66%;
-  --secondary-foreground: 220 17% 7%;
+  --secondary: 198 96% 58%;
+  --secondary-foreground: 218 30% 8%;
   --success: 142 70% 45%;
-  --info: 220 13% 62%;
-  --neutral: 220 11% 64%;
+  --info: 204 58% 63%;
+  --neutral: 216 12% 66%;
   --warning: 38 92% 50%;
   --danger: 0 84% 60%;
 }
@@ -46,9 +46,9 @@ body {
   position: relative;
   isolation: isolate;
   background-image:
-    radial-gradient(circle at 10% -8%, rgba(255, 74, 64, 0.24), transparent 34%),
-    radial-gradient(circle at 92% 4%, rgba(120, 126, 138, 0.14), transparent 28%),
-    linear-gradient(165deg, rgba(255, 74, 64, 0.06) 0%, rgba(11, 15, 20, 0) 42%),
+    radial-gradient(circle at 10% -8%, rgba(0, 160, 248, 0.22), transparent 34%),
+    radial-gradient(circle at 92% 4%, rgba(118, 130, 148, 0.14), transparent 28%),
+    linear-gradient(165deg, rgba(0, 160, 248, 0.07) 0%, rgba(11, 15, 20, 0) 42%),
     linear-gradient(to top, rgba(11, 15, 20, 1), rgba(11, 15, 20, 1));
 }
 
@@ -58,7 +58,7 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 12%, rgba(255, 74, 64, 0.08), transparent 24%),
+    radial-gradient(circle at 18% 12%, rgba(0, 160, 248, 0.08), transparent 24%),
     repeating-linear-gradient(
       0deg,
       rgba(255, 255, 255, 0.022) 0,
@@ -76,7 +76,7 @@ body::before {
 
   .panel-surface {
     @apply rounded-[12px] border border-border bg-card shadow-panel shadow-black/50 backdrop-blur;
-    background-image: linear-gradient(175deg, rgba(255, 74, 64, 0.08), rgba(0, 0, 0, 0) 34%);
+    background-image: linear-gradient(175deg, rgba(0, 160, 248, 0.08), rgba(0, 0, 0, 0) 34%);
   }
 
   .faint-grid {
