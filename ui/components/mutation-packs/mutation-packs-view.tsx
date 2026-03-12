@@ -40,6 +40,19 @@ export function MutationPacksView() {
     };
   }, []);
 
+  const records =
+    state.status === "ready"
+      ? [...state.records].sort((left, right) => {
+          if (right.coverage_score !== left.coverage_score) {
+            return right.coverage_score - left.coverage_score;
+          }
+          if (left.is_system !== right.is_system) {
+            return left.is_system ? -1 : 1;
+          }
+          return left.name.localeCompare(right.name);
+        })
+      : [];
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
@@ -79,14 +92,14 @@ export function MutationPacksView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {state.records.length === 0 ? (
+                {records.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                       No mutation packs found for this project.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  state.records.map((record) => {
+                  records.map((record) => {
                     const listValue = record.config?.mutations;
                     const mutationCount = Array.isArray(listValue) ? listValue.length : 0;
                     return (

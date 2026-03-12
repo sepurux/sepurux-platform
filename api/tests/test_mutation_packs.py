@@ -227,6 +227,8 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
 
     system_rows = [row for row in payload if row["is_system"]]
     system_names = {row["name"] for row in system_rows}
+    assert "sepurux.max_chaos" in system_names
+    assert "sepurux.core.reliability" in system_names
     assert "core.reliability" in system_names
     assert "core.latency" in system_names
     assert "prompt.injection" in system_names
@@ -240,6 +242,10 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
     get_by_name = client.get("/v1/mutation-packs/core.reliability")
     assert get_by_name.status_code == 200
     assert get_by_name.json()["name"] == "core.reliability"
+
+    get_max_chaos = client.get("/v1/mutation-packs/sepurux.max_chaos")
+    assert get_max_chaos.status_code == 200
+    assert get_max_chaos.json()["coverage_score"] == 80
 
 
 def test_weak_custom_pack_returns_warning_and_include_system_filter_works(

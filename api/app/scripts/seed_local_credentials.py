@@ -14,6 +14,7 @@ from app.services.auth_service import (
     ROLE_DEVELOPER_ID,
     ROLE_VIEWER_ID,
 )
+from app.services.mutation_pack_service import ensure_system_mutation_packs
 
 
 @dataclass(frozen=True)
@@ -189,6 +190,7 @@ def _upsert_workspace(db: Session, workspace: SeededWorkspace) -> None:
         )
         db.add(project)
     db.commit()
+    ensure_system_mutation_packs(db, project_id=workspace.project_id)
 
     membership = db.scalar(
         select(ProjectMembership).where(
