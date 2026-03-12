@@ -550,6 +550,190 @@ def _max_timeline_event_index(events: list[dict[str, Any]]) -> int:
     return max_index
 
 
+def _campaign_attempt_repeats(campaign: Campaign) -> int:
+    eval_set = campaign.eval_set if isinstance(campaign.eval_set, dict) else {}
+    raw_attempts = eval_set.get("attempts_count")
+    if isinstance(raw_attempts, bool):
+        return 1
+    if isinstance(raw_attempts, int):
+        return max(1, raw_attempts)
+    if isinstance(raw_attempts, float):
+        return max(1, int(raw_attempts))
+    return 1
+
+
+def _select_applied_mutation(
+    mutation_trace: dict[str, Any] | None,
+    *,
+    failure_reason: str | None,
+    first_failure_tool: str | None,
+) -> dict[str, Any] | None:
+    if not isinstance(mutation_trace, dict):
+        return None
+    applied = mutation_trace.get("applied")
+    if not isinstance(applied, list):
+        return None
+
+    best: tuple[int, int, dict[str, Any]] | None = None
+    for item in applied:
+        if not isinstance(item, dict):
+            continue
+        score = 0
+        tool = item.get("tool")
+        if isinstance(tool, str) and tool and tool == first_failure_tool:
+            score += 3
+        details = item.get("details")
+        if isinstance(details, dict):
+            detail_reason = details.get("failure_reason")
+            if isinstance(detail_reason, str) and detail_reason and detail_reason == failure_reason:
+                score += 4
+        event_index = item.get("event_index")
+        sortable_event_index = event_index if isinstance(event_index, int) else -1
+        candidate = (score, sortable_event_index, item)
+        if best is None or candidate[:2] > best[:2]:
+            best = candidate
+
+    return best[2] if best is not None else None
+
+
+def _recorded_attempt_mutation_id(
+    *,
+    default_mutation_id: str,
+    mutation_trace: dict[str, Any] | None,
+    failure_reason: str | None,
+    first_failure_tool: str | None,
+) -> str:
+    applied_mutation = _select_applied_mutation(
+        mutation_trace,
+        failure_reason=failure_reason,
+        first_failure_tool=first_failure_tool,
+    )
+    if applied_mutation is None:
+        return default_mutation_id
+    mutation_id = applied_mutation.get("mutation_id")
+    if isinstance(mutation_id, str) and mutation_id:
+        return mutation_id
+    return default_mutation_id
+
+
+def _failure_tool_call_event(
+    *,
+    timeline_artifact: dict[str, Any],
+    first_failure_tool: str | None,
+    first_failure_event_index: int | None,
+) -> dict[str, Any] | None:
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        return None
+
+    candidate: dict[str, Any] | None = None
+    for position, event in enumerate(events):
+        if not isinstance(event, dict) or event.get("type") != "tool_call":
+            continue
+        tool = event.get("tool")
+        if first_failure_tool and tool != first_failure_tool:
+            continue
+        event_index = _coerce_event_index(event, fallback=position)
+        if first_failure_event_index is not None and event_index > first_failure_event_index:
+            continue
+        candidate = {
+            "tool": tool,
+            "args": event.get("args") if isinstance(event.get("args"), dict) else {},
+            "index": event_index,
+        }
+    return candidate
+
+
+def _default_error_type_for_failure_reason(failure_reason: str | None) -> str | None:
+    normalized = (failure_reason or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized == "timeout":
+        return "TimeoutError"
+    if normalized == "rate_limited":
+        return "RateLimitError"
+    if normalized in {"policy_blocked", "policy_denied"}:
+        return "PolicyDeniedError"
+    if normalized == "policy_requires_approval":
+        return "PolicyApprovalRequiredError"
+    if normalized == "opa_unavailable":
+        return "OPAUnavailableError"
+    if normalized == "prompt_injection_blocked":
+        return "PromptInjectionBlockedError"
+    if normalized.startswith("replay_contract_"):
+        return "ReplayContractError"
+    return "ReplayError"
+
+
+def _counterfactual_mutation_input(
+    *,
+    baseline_mutation: Any,
+    timeline_artifact: dict[str, Any],
+    mutation_trace: dict[str, Any] | None,
+    attempt_mutation_id: str,
+    failure_reason: str | None,
+    first_failure_tool: str | None,
+    first_failure_event_index: int | None,
+) -> Any:
+    mutation_obj = dict(baseline_mutation) if isinstance(baseline_mutation, dict) else {}
+    mutation_obj["mutation_id"] = attempt_mutation_id
+
+    tool_call = _failure_tool_call_event(
+        timeline_artifact=timeline_artifact,
+        first_failure_tool=first_failure_tool,
+        first_failure_event_index=first_failure_event_index,
+    )
+    if tool_call is not None:
+        tool_name = tool_call.get("tool")
+        if isinstance(tool_name, str) and tool_name:
+            mutation_obj["tool"] = tool_name
+        mutation_obj["args"] = (
+            tool_call.get("args") if isinstance(tool_call.get("args"), dict) else {}
+        )
+        mutation_obj["event"] = {
+            "type": "tool_call",
+            "tool": mutation_obj.get("tool"),
+            "args": mutation_obj["args"],
+            "index": tool_call.get("index"),
+        }
+        if isinstance(tool_call.get("index"), int):
+            mutation_obj["event_index"] = tool_call["index"]
+
+    applied_mutation = _select_applied_mutation(
+        mutation_trace,
+        failure_reason=failure_reason,
+        first_failure_tool=first_failure_tool,
+    )
+    if applied_mutation is not None:
+        details = applied_mutation.get("details")
+        if isinstance(details, dict):
+            detail_type = details.get("type")
+            if isinstance(details.get("error_type"), str) and details.get("error_type"):
+                mutation_obj["error_type"] = details["error_type"]
+            if detail_type == "schema.drop_field":
+                field_name = details.get("field")
+                if isinstance(field_name, str) and field_name:
+                    mutation_obj["missing_field"] = field_name
+            elif detail_type == "schema.rename_field":
+                from_field = details.get("from")
+                if isinstance(from_field, str) and from_field:
+                    mutation_obj["expected_field"] = from_field
+            elif detail_type == "fault.timeout":
+                timeout_ms = details.get("timeout_ms")
+                if isinstance(timeout_ms, int | float) and not isinstance(timeout_ms, bool):
+                    mutation_obj["timeout_ms"] = int(timeout_ms)
+
+    if failure_reason:
+        mutation_obj["force_fail"] = True
+        mutation_obj["failure_reason"] = failure_reason
+
+    mutation_obj.setdefault(
+        "error_type",
+        _default_error_type_for_failure_reason(failure_reason),
+    )
+    return mutation_obj or baseline_mutation
+
+
 def _enforce_injection_firewall(
     *,
     timeline_artifact: dict[str, Any],
@@ -758,7 +942,9 @@ def execute_run(run_id: str) -> None:
         run.status = "running"
         db.commit()
 
-        mutations = iter_mutations(campaign.mutation_set)
+        baseline_mutations = iter_mutations(campaign.mutation_set)
+        attempt_repeats = _campaign_attempt_repeats(campaign)
+        total_attempts = len(baseline_mutations) * attempt_repeats
         passed_count = 0
         failed_count = 0
         unsafe_count = 0
@@ -769,78 +955,41 @@ def execute_run(run_id: str) -> None:
         injection_blocks = 0
         injection_sanitizations = 0
 
-        for index, mutation in enumerate(mutations):
-            attempt_id = uuid4()
-            mutation_for_replay = mutation
-            pending_policy_events: list[dict[str, Any]] = []
-            if isinstance(policy_document, dict):
-                tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
-                _, commit_like = normalize_action(tool_name, policy_args)
-                policy_input = _build_policy_event_input(
-                    tool_name=tool_name,
-                    tool_args=policy_args,
-                    run_id=run.run_id,
-                    attempt_id=attempt_id,
-                    project_id=run.project_id,
-                    event_index=event_index,
-                )
-
-                event_decision = "allow"
-                event_reason = "allowed"
-                blocked_failure_reason: str | None = None
-                blocked_error_type = "PolicyDeniedError"
-                blocked_error_message = "Policy denied the tool call"
-
-                if policy_engine_name == "builtin":
-                    evaluation = evaluate_policy(
-                        policy_document,
+        attempt_index = 0
+        for baseline_index, mutation in enumerate(baseline_mutations):
+            for repeat_index in range(attempt_repeats):
+                attempt_id = uuid4()
+                mutation_for_replay = mutation
+                pending_policy_events: list[dict[str, Any]] = []
+                if isinstance(policy_document, dict):
+                    tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
+                    _, commit_like = normalize_action(tool_name, policy_args)
+                    policy_input = _build_policy_event_input(
                         tool_name=tool_name,
-                        args=policy_args,
+                        tool_args=policy_args,
+                        run_id=run.run_id,
+                        attempt_id=attempt_id,
+                        project_id=run.project_id,
                         event_index=event_index,
                     )
-                    event_decision = evaluation.decision
-                    event_reason = evaluation.reason
 
-                    if evaluation.decision == "require_approval":
-                        token_present = has_confirmation_token(
-                            policy_args,
-                            token_field=policy_token_field,
-                        )
-                        if token_present:
-                            event_decision = "allow"
-                            event_reason = f"{evaluation.reason}; approval token '{policy_token_field}' provided"
-                        else:
-                            policy_requires_approval += 1
-                            blocked_failure_reason = "policy_requires_approval"
-                            blocked_error_type = "PolicyApprovalRequiredError"
-                            blocked_error_message = evaluation.reason
-                    elif evaluation.decision == "deny":
-                        policy_denies += 1
-                        blocked_failure_reason = "policy_denied"
-                        blocked_error_type = "PolicyDeniedError"
-                        blocked_error_message = evaluation.reason
-                    else:
-                        event_decision = "allow"
-                        event_reason = "allowed by builtin policy"
-                elif policy_engine_name == "opa":
-                    try:
-                        opa_evaluation = evaluate_policy_with_opa(
-                            policy_input=policy_input,
-                            opa_url=settings.opa_url,
-                            timeout_seconds=settings.opa_timeout_seconds,
-                        )
-                    except OPAUnavailableError as exc:
-                        policy_denies += 1
-                        event_decision = "deny"
-                        event_reason = f"opa unavailable: {exc}"
-                        blocked_failure_reason = "opa_unavailable"
-                        blocked_error_type = "OPAUnavailableError"
-                        blocked_error_message = "OPA policy decision service unavailable"
-                    else:
-                        event_decision = opa_evaluation.decision
-                        event_reason = opa_evaluation.reason
+                    event_decision = "allow"
+                    event_reason = "allowed"
+                    blocked_failure_reason: str | None = None
+                    blocked_error_type = "PolicyDeniedError"
+                    blocked_error_message = "Policy denied the tool call"
 
-                        if opa_evaluation.decision == "require_approval":
+                    if policy_engine_name == "builtin":
+                        evaluation = evaluate_policy(
+                            policy_document,
+                            tool_name=tool_name,
+                            args=policy_args,
+                            event_index=event_index,
+                        )
+                        event_decision = evaluation.decision
+                        event_reason = evaluation.reason
+
+                        if evaluation.decision == "require_approval":
                             token_present = has_confirmation_token(
                                 policy_args,
                                 token_field=policy_token_field,
@@ -848,189 +997,246 @@ def execute_run(run_id: str) -> None:
                             if token_present:
                                 event_decision = "allow"
                                 event_reason = (
-                                    f"{opa_evaluation.reason}; "
-                                    f"approval token '{policy_token_field}' provided"
+                                    f"{evaluation.reason}; approval token "
+                                    f"'{policy_token_field}' provided"
                                 )
                             else:
                                 policy_requires_approval += 1
                                 blocked_failure_reason = "policy_requires_approval"
                                 blocked_error_type = "PolicyApprovalRequiredError"
-                                blocked_error_message = opa_evaluation.reason
-                        elif opa_evaluation.decision == "deny":
+                                blocked_error_message = evaluation.reason
+                        elif evaluation.decision == "deny":
                             policy_denies += 1
                             blocked_failure_reason = "policy_denied"
                             blocked_error_type = "PolicyDeniedError"
-                            blocked_error_message = opa_evaluation.reason
+                            blocked_error_message = evaluation.reason
                         else:
                             event_decision = "allow"
-                            if not event_reason:
-                                event_reason = "allowed by OPA policy"
-                else:
-                    event_decision = "allow"
-                    event_reason = (
-                        f"policy engine '{policy_engine_name}' not recognized in worker; "
-                        "defaulting to allow"
+                            event_reason = "allowed by builtin policy"
+                    elif policy_engine_name == "opa":
+                        try:
+                            opa_evaluation = evaluate_policy_with_opa(
+                                policy_input=policy_input,
+                                opa_url=settings.opa_url,
+                                timeout_seconds=settings.opa_timeout_seconds,
+                            )
+                        except OPAUnavailableError as exc:
+                            policy_denies += 1
+                            event_decision = "deny"
+                            event_reason = f"opa unavailable: {exc}"
+                            blocked_failure_reason = "opa_unavailable"
+                            blocked_error_type = "OPAUnavailableError"
+                            blocked_error_message = "OPA policy decision service unavailable"
+                        else:
+                            event_decision = opa_evaluation.decision
+                            event_reason = opa_evaluation.reason
+
+                            if opa_evaluation.decision == "require_approval":
+                                token_present = has_confirmation_token(
+                                    policy_args,
+                                    token_field=policy_token_field,
+                                )
+                                if token_present:
+                                    event_decision = "allow"
+                                    event_reason = (
+                                        f"{opa_evaluation.reason}; "
+                                        f"approval token '{policy_token_field}' provided"
+                                    )
+                                else:
+                                    policy_requires_approval += 1
+                                    blocked_failure_reason = "policy_requires_approval"
+                                    blocked_error_type = "PolicyApprovalRequiredError"
+                                    blocked_error_message = opa_evaluation.reason
+                            elif opa_evaluation.decision == "deny":
+                                policy_denies += 1
+                                blocked_failure_reason = "policy_denied"
+                                blocked_error_type = "PolicyDeniedError"
+                                blocked_error_message = opa_evaluation.reason
+                            else:
+                                event_decision = "allow"
+                                if not event_reason:
+                                    event_reason = "allowed by OPA policy"
+                    else:
+                        event_decision = "allow"
+                        event_reason = (
+                            f"policy engine '{policy_engine_name}' not recognized in worker; "
+                            "defaulting to allow"
+                        )
+
+                    pending_policy_events.append(
+                        {
+                            "event_index": event_index,
+                            "tool": tool_name,
+                            "action": "commit" if commit_like else "tool_call",
+                            "decision": event_decision,
+                            "reason": event_reason,
+                            "input": policy_input,
+                        }
                     )
+                    if blocked_failure_reason is not None:
+                        mutation_for_replay = _policy_blocked_mutation(
+                            mutation,
+                            failure_reason=blocked_failure_reason,
+                            error_type=blocked_error_type,
+                            error_message=blocked_error_message,
+                        )
 
-                pending_policy_events.append(
-                    {
-                        "event_index": event_index,
-                        "tool": tool_name,
-                        "action": "commit" if commit_like else "tool_call",
-                        "decision": event_decision,
-                        "reason": event_reason,
-                        "input": policy_input,
-                    }
-                )
-                if blocked_failure_reason is not None:
-                    mutation_for_replay = _policy_blocked_mutation(
-                        mutation,
-                        failure_reason=blocked_failure_reason,
-                        error_type=blocked_error_type,
-                        error_message=blocked_error_message,
-                    )
-
-            outcome = build_attempt_replay_outcome(
-                run_id=run.run_id,
-                attempt_id=attempt_id,
-                mutation=mutation_for_replay,
-                trace_s3_key=trace.s3_key,
-                default_mutation_id=f"mutation-{index}",
-                adapter_config=adapter_config,
-                retry_policy=retry_policy,
-            )
-            result = outcome.result
-            failure_reason = outcome.failure_reason
-            first_failure_event_index = outcome.first_failure_event_index
-            first_failure_tool = outcome.first_failure_tool
-            timeline_artifact = outcome.timeline_artifact
-            mutation_seed: int | None = None
-            mutation_trace: dict[str, Any] | None = None
-
-            if mutation_pack_config is not None:
-                mutation_result = apply_mutation_pack(
-                    mutation_pack_config,
+                outcome = build_attempt_replay_outcome(
                     run_id=run.run_id,
                     attempt_id=attempt_id,
-                    attempt_index=index,
-                    timeline_artifact=timeline_artifact,
-                )
-                mutation_seed = mutation_result.seed
-                mutation_trace = mutation_result.mutation_trace
-                timeline_artifact = mutation_result.timeline_artifact
-
-                if mutation_result.forced_failure_reason is not None:
-                    result = "failed"
-                    failure_reason = mutation_result.forced_failure_reason
-                    first_failure_event_index = mutation_result.first_failure_event_index
-                    first_failure_tool = mutation_result.first_failure_tool
-
-            (
-                timeline_artifact,
-                pending_security_events,
-                attempt_injection_blocks,
-                attempt_injection_sanitizations,
-                injection_failure_reason,
-                injection_failure_event_index,
-                injection_failure_tool,
-            ) = _enforce_injection_firewall(
-                timeline_artifact=timeline_artifact,
-                tool_zones=tool_zones,
-            )
-            injection_blocks += attempt_injection_blocks
-            injection_sanitizations += attempt_injection_sanitizations
-
-            if injection_failure_reason is not None:
-                result = "failed"
-                failure_reason = injection_failure_reason
-                first_failure_event_index = injection_failure_event_index
-                first_failure_tool = injection_failure_tool
-
-            timeline_artifact = _apply_sanitizer_to_timeline(
-                timeline_artifact,
-                sanitizer_config,
-            )
-
-            artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"
-            put_json_object(artifact_key, timeline_artifact)
-            tools_touched, tool_call_counts = _extract_tool_usage_metadata(timeline_artifact)
-
-            attempt_record = ReplayAttempt(
-                attempt_id=attempt_id,
-                project_id=run.project_id,
-                run_id=run.run_id,
-                mutation_id=outcome.mutation_id,
-                result=result,
-                failure_reason=failure_reason,
-                first_failure_event_index=first_failure_event_index,
-                first_failure_tool=first_failure_tool,
-                seed=mutation_seed,
-                mutation_trace=mutation_trace,
-                tools_touched=tools_touched,
-                tool_call_counts=tool_call_counts,
-                artifacts_s3_key=artifact_key,
-            )
-            db.add(attempt_record)
-            db.flush()
-
-            for event_payload in pending_policy_events:
-                db.add(
-                    PolicyEvent(
-                        policy_event_id=uuid4(),
-                        run_id=run.run_id,
-                        attempt_id=attempt_record.attempt_id,
-                        event_index=event_payload["event_index"],
-                        tool=event_payload["tool"],
-                        action=event_payload["action"],
-                        decision=event_payload["decision"],
-                        reason=event_payload["reason"],
-                        input=event_payload["input"],
-                    )
-                )
-            policy_events_count += len(pending_policy_events)
-
-            for event_payload in pending_security_events:
-                db.add(
-                    SecurityEvent(
-                        security_event_id=uuid4(),
-                        run_id=run.run_id,
-                        attempt_id=attempt_record.attempt_id,
-                        event_index=event_payload["event_index"],
-                        tool=event_payload["tool"],
-                        zone=event_payload["zone"],
-                        risk_score=event_payload["risk_score"],
-                        action=event_payload["action"],
-                        matches=event_payload["matches"],
-                    )
-                )
-            security_events_count += len(pending_security_events)
-
-            if result == "failed":
-                for counterfactual in run_counterfactual_replays(
-                    run_id=run.run_id,
-                    attempt=attempt_record,
-                    mutation=mutation,
+                    mutation=mutation_for_replay,
                     trace_s3_key=trace.s3_key,
-                ):
+                    default_mutation_id=f"mutation-{baseline_index}-{repeat_index}",
+                    adapter_config=adapter_config,
+                    retry_policy=retry_policy,
+                )
+                result = outcome.result
+                failure_reason = outcome.failure_reason
+                first_failure_event_index = outcome.first_failure_event_index
+                first_failure_tool = outcome.first_failure_tool
+                timeline_artifact = outcome.timeline_artifact
+                mutation_seed: int | None = None
+                mutation_trace: dict[str, Any] | None = None
+
+                if mutation_pack_config is not None:
+                    mutation_result = apply_mutation_pack(
+                        mutation_pack_config,
+                        run_id=run.run_id,
+                        attempt_id=attempt_id,
+                        attempt_index=attempt_index,
+                        timeline_artifact=timeline_artifact,
+                    )
+                    mutation_seed = mutation_result.seed
+                    mutation_trace = mutation_result.mutation_trace
+                    timeline_artifact = mutation_result.timeline_artifact
+
+                    if mutation_result.forced_failure_reason is not None:
+                        result = "failed"
+                        failure_reason = mutation_result.forced_failure_reason
+                        first_failure_event_index = mutation_result.first_failure_event_index
+                        first_failure_tool = mutation_result.first_failure_tool
+
+                (
+                    timeline_artifact,
+                    pending_security_events,
+                    attempt_injection_blocks,
+                    attempt_injection_sanitizations,
+                    injection_failure_reason,
+                    injection_failure_event_index,
+                    injection_failure_tool,
+                ) = _enforce_injection_firewall(
+                    timeline_artifact=timeline_artifact,
+                    tool_zones=tool_zones,
+                )
+                injection_blocks += attempt_injection_blocks
+                injection_sanitizations += attempt_injection_sanitizations
+
+                if injection_failure_reason is not None:
+                    result = "failed"
+                    failure_reason = injection_failure_reason
+                    first_failure_event_index = injection_failure_event_index
+                    first_failure_tool = injection_failure_tool
+
+                timeline_artifact = _apply_sanitizer_to_timeline(
+                    timeline_artifact,
+                    sanitizer_config,
+                )
+
+                artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"
+                put_json_object(artifact_key, timeline_artifact)
+                tools_touched, tool_call_counts = _extract_tool_usage_metadata(timeline_artifact)
+                recorded_mutation_id = _recorded_attempt_mutation_id(
+                    default_mutation_id=outcome.mutation_id,
+                    mutation_trace=mutation_trace,
+                    failure_reason=failure_reason,
+                    first_failure_tool=first_failure_tool,
+                )
+                counterfactual_mutation = _counterfactual_mutation_input(
+                    baseline_mutation=mutation_for_replay,
+                    timeline_artifact=timeline_artifact,
+                    mutation_trace=mutation_trace,
+                    attempt_mutation_id=recorded_mutation_id,
+                    failure_reason=failure_reason,
+                    first_failure_tool=first_failure_tool,
+                    first_failure_event_index=first_failure_event_index,
+                )
+
+                attempt_record = ReplayAttempt(
+                    attempt_id=attempt_id,
+                    project_id=run.project_id,
+                    run_id=run.run_id,
+                    mutation_id=recorded_mutation_id,
+                    result=result,
+                    failure_reason=failure_reason,
+                    first_failure_event_index=first_failure_event_index,
+                    first_failure_tool=first_failure_tool,
+                    seed=mutation_seed,
+                    mutation_trace=mutation_trace,
+                    tools_touched=tools_touched,
+                    tool_call_counts=tool_call_counts,
+                    artifacts_s3_key=artifact_key,
+                )
+                db.add(attempt_record)
+                db.flush()
+
+                for event_payload in pending_policy_events:
                     db.add(
-                        Counterfactual(
-                            counterfactual_id=uuid4(),
-                            project_id=run.project_id,
+                        PolicyEvent(
+                            policy_event_id=uuid4(),
+                            run_id=run.run_id,
                             attempt_id=attempt_record.attempt_id,
-                            strategy=counterfactual.strategy,
-                            result=counterfactual.result,
-                            failure_reason=counterfactual.failure_reason,
-                            metrics=counterfactual.metrics,
-                            diff=counterfactual.diff,
+                            event_index=event_payload["event_index"],
+                            tool=event_payload["tool"],
+                            action=event_payload["action"],
+                            decision=event_payload["decision"],
+                            reason=event_payload["reason"],
+                            input=event_payload["input"],
                         )
                     )
+                policy_events_count += len(pending_policy_events)
 
-            if result == "passed":
-                passed_count += 1
-            else:
-                failed_count += 1
-                if _is_unsafe_failure_reason(failure_reason):
-                    unsafe_count += 1
+                for event_payload in pending_security_events:
+                    db.add(
+                        SecurityEvent(
+                            security_event_id=uuid4(),
+                            run_id=run.run_id,
+                            attempt_id=attempt_record.attempt_id,
+                            event_index=event_payload["event_index"],
+                            tool=event_payload["tool"],
+                            zone=event_payload["zone"],
+                            risk_score=event_payload["risk_score"],
+                            action=event_payload["action"],
+                            matches=event_payload["matches"],
+                        )
+                    )
+                security_events_count += len(pending_security_events)
+
+                if result == "failed":
+                    for counterfactual in run_counterfactual_replays(
+                        run_id=run.run_id,
+                        attempt=attempt_record,
+                        mutation=counterfactual_mutation,
+                        trace_s3_key=trace.s3_key,
+                    ):
+                        db.add(
+                            Counterfactual(
+                                counterfactual_id=uuid4(),
+                                project_id=run.project_id,
+                                attempt_id=attempt_record.attempt_id,
+                                strategy=counterfactual.strategy,
+                                result=counterfactual.result,
+                                failure_reason=counterfactual.failure_reason,
+                                metrics=counterfactual.metrics,
+                                diff=counterfactual.diff,
+                            )
+                        )
+                if result == "passed":
+                    passed_count += 1
+                else:
+                    failed_count += 1
+                    if _is_unsafe_failure_reason(failure_reason):
+                        unsafe_count += 1
+                attempt_index += 1
 
         prior_summary = run.summary if isinstance(run.summary, dict) else {}
         ci_thresholds = prior_summary.get("ci_thresholds")
@@ -1038,11 +1244,11 @@ def execute_run(run_id: str) -> None:
         run.status = "completed"
         run.summary = {
             "timeline_version": "0.1",
-            "attempt_count": len(mutations),
+            "attempt_count": total_attempts,
             "passed_count": passed_count,
             "failures": failed_count,
             "failed_count": failed_count,
-            "pass_rate": round((passed_count / len(mutations)), 4) if mutations else 0.0,
+            "pass_rate": round((passed_count / total_attempts), 4) if total_attempts else 0.0,
             "unsafe_attempts": unsafe_count,
             "unsafe_count": unsafe_count,
             "policy_violations_total": policy_denies + policy_requires_approval,

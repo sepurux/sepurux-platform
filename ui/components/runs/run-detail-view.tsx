@@ -197,7 +197,11 @@ function RunStatsCards({
   async function handleApplyAndRerun(insight: RunStats["insights"][number]) {
     const templatePayload = templateFromInsight(insight);
     if (!templatePayload) {
-      setApplyError("No hardening template mapping available for this insight yet.");
+      setApplyError(
+        insight.id === "insight.tool_hotspot.replay.execute"
+          ? "replay.execute hotspots are replay-contract issues. Fix the campaign replay payload instead of applying a generic template."
+          : "No hardening template mapping available for this insight yet."
+      );
       return;
     }
 
@@ -576,7 +580,13 @@ function templateFromInsight(insight: RunStats["insights"][number]): {
       },
     };
   }
-  if (insight.id.startsWith("insight.retry_backoff.") || insight.id.startsWith("insight.tool_hotspot.")) {
+  if (insight.id === "insight.tool_hotspot.replay.execute") {
+    return null;
+  }
+  if (
+    insight.id.startsWith("insight.retry_backoff.") ||
+    insight.id.startsWith("insight.tool_hotspot.")
+  ) {
     return {
       name: "Template: Retry Policy",
       type: "retry_policy",
