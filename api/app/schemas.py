@@ -364,6 +364,9 @@ class AuthPermissionSet(BaseModel):
     can_upload_traces: bool = False
     can_create_campaigns: bool = False
     can_run_campaigns: bool = False
+    can_manage_mutation_packs: bool = False
+    can_manage_policy_packs: bool = False
+    can_manage_security_config: bool = False
     can_manage_workspace: bool = False
     can_manage_api_keys: bool = False
 

@@ -30,6 +30,7 @@ router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 DeveloperAuth = Annotated[TenantAuthContext, Depends(require_role("developer"))]
+PACK_DEFINITION_KEYS = frozenset({"target", "params", "probability", "weight"})
 
 
 def _to_campaign_metadata(campaign) -> CampaignMetadata:
@@ -42,6 +43,21 @@ def _to_campaign_metadata(campaign) -> CampaignMetadata:
         eval_set=campaign.eval_set,
         created_at=campaign.created_at,
     )
+
+
+def _looks_like_pack_definition(item: object) -> bool:
+    return isinstance(item, dict) and bool(PACK_DEFINITION_KEYS.intersection(item))
+
+
+def _mutation_set_contains_pack_definitions(mutation_set: object) -> bool:
+    if isinstance(mutation_set, list):
+        return any(_looks_like_pack_definition(item) for item in mutation_set)
+    if isinstance(mutation_set, dict):
+        nested_mutations = mutation_set.get("mutations")
+        if isinstance(nested_mutations, list):
+            return any(_looks_like_pack_definition(item) for item in nested_mutations)
+        return _looks_like_pack_definition(mutation_set)
+    return False
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=CampaignMetadata)
@@ -64,6 +80,17 @@ def post_campaign(
         is None
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found")
+
+    if payload.mutation_pack_id is not None and _mutation_set_contains_pack_definitions(
+        payload.mutation_set
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "Campaign mutation_set must contain replay mutations, not mutation-pack "
+                "definitions"
+            ),
+        )
 
     campaign = create_campaign(
         db,

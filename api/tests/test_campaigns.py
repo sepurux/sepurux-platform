@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base
+from app.models import Base, MutationPack
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -112,3 +112,62 @@ def test_list_campaigns_returns_records(
     names = [record["name"] for record in records]
     assert "Campaign One" in names
     assert "Campaign Two" in names
+
+
+def test_post_campaign_rejects_pack_definition_mutation_set_when_pack_attached(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, testing_session_local = campaign_test_context
+    mutation_pack_id = uuid4()
+
+    with testing_session_local() as db:
+        project_id = UUID(client.headers["X-Project-Id"])
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Fault Pack",
+                description="Timeout and schema chaos",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "timeout-jira",
+                            "type": "fault.timeout",
+                            "target": {"tool": "jira.*"},
+                            "params": {"prob": 1.0, "timeout_ms": 3000},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/campaigns",
+        json={
+            "name": "Pack-backed Campaign",
+            "mutation_pack_id": str(mutation_pack_id),
+            "mutation_set": [
+                {
+                    "mutation_id": "timeout-jira",
+                    "type": "fault.timeout",
+                    "target": {"tool": "jira.*"},
+                    "params": {"prob": 1.0, "timeout_ms": 3000},
+                    "probability": 1.0,
+                    "weight": 1.0,
+                }
+            ],
+            "eval_set": {"checks": ["status"]},
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": (
+            "Campaign mutation_set must contain replay mutations, not mutation-pack "
+            "definitions"
+        )
+    }

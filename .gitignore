@@ -55,6 +55,7 @@ cover/
 node_modules/
 .next/
 out/
+*.tsbuildinfo
 
 # Keep marketing site source tracked
 !site/lib/

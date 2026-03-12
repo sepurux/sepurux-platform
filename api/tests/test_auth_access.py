@@ -174,6 +174,9 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert payload["plan_name"] == "Team"
     assert payload["role_name"] == "developer"
     assert payload["permissions"]["can_run_campaigns"] is True
+    assert payload["permissions"]["can_manage_mutation_packs"] is True
+    assert payload["permissions"]["can_manage_policy_packs"] is False
+    assert payload["permissions"]["can_manage_security_config"] is False
     assert payload["permissions"]["can_manage_api_keys"] is False
     assert "campaigns" in payload["permissions"]["visible_sections"]
     assert "audit" not in payload["permissions"]["visible_sections"]
@@ -218,3 +221,6 @@ def test_viewer_login_gets_read_only_dashboard_sections(
     assert payload["permissions"]["visible_sections"] == ["dashboard", "reports", "settings"]
     assert payload["permissions"]["can_upload_traces"] is False
     assert payload["permissions"]["can_create_campaigns"] is False
+    assert payload["permissions"]["can_manage_mutation_packs"] is False
+    assert payload["permissions"]["can_manage_policy_packs"] is False
+    assert payload["permissions"]["can_manage_security_config"] is False

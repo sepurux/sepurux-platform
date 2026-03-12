@@ -10,6 +10,7 @@ import {
   type PolicyPackVersionMetadata,
 } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ export function PolicyPackDetailView({
 }: {
   policyPackId: string;
 }) {
+  const authSession = useAuthSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [rollingBackVersion, setRollingBackVersion] = useState<number | null>(null);
   const [confirmRollbackVersion, setConfirmRollbackVersion] = useState<number | null>(
@@ -50,6 +52,12 @@ export function PolicyPackDetailView({
   );
   const [diffFromVersionId, setDiffFromVersionId] = useState<string>("");
   const [diffToVersionId, setDiffToVersionId] = useState<string>("");
+  const [policyDraft, setPolicyDraft] = useState("{}");
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const canManagePolicyPacks =
+    authSession?.permissions.can_manage_policy_packs ?? false;
 
   async function load() {
     setState({ status: "loading" });
@@ -97,6 +105,13 @@ export function PolicyPackDetailView({
     setDiffFromVersionId((previous ?? latest).version_id);
   }, [state, diffFromVersionId, diffToVersionId]);
 
+  useEffect(() => {
+    if (state.status !== "ready") {
+      return;
+    }
+    setPolicyDraft(JSON.stringify(state.record.policy ?? {}, null, 2));
+  }, [state]);
+
   function onRequestRollback(versionNumber: number) {
     setConfirmRollbackVersion(versionNumber);
   }
@@ -121,6 +136,27 @@ export function PolicyPackDetailView({
       return;
     }
     setConfirmRollbackVersion(null);
+  }
+
+  async function onSavePolicy() {
+    if (state.status !== "ready") {
+      return;
+    }
+    setSaveError(null);
+    setSavingPolicy(true);
+    try {
+      const parsedPolicy = JSON.parse(policyDraft) as Record<string, unknown>;
+      await api.updatePolicyPack(policyPackId, { policy: parsedPolicy });
+      await load();
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        setSaveError("Policy JSON must be valid JSON");
+      } else {
+        setSaveError(error instanceof Error ? error.message : "Failed to update policy pack");
+      }
+    } finally {
+      setSavingPolicy(false);
+    }
   }
 
   return (
@@ -164,10 +200,16 @@ export function PolicyPackDetailView({
           onChangeDiffTo={setDiffToVersionId}
           onRequestRollback={onRequestRollback}
           rollingBackVersion={rollingBackVersion}
+          canManagePolicyPacks={canManagePolicyPacks}
+          policyDraft={policyDraft}
+          onChangePolicyDraft={setPolicyDraft}
+          onSavePolicy={onSavePolicy}
+          savingPolicy={savingPolicy}
+          saveError={saveError}
         />
       )}
 
-      {confirmRollbackVersion !== null ? (
+      {confirmRollbackVersion !== null && canManagePolicyPacks ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/65"
@@ -219,6 +261,12 @@ function PolicyPackPanels({
   onChangeDiffTo,
   onRequestRollback,
   rollingBackVersion,
+  canManagePolicyPacks,
+  policyDraft,
+  onChangePolicyDraft,
+  onSavePolicy,
+  savingPolicy,
+  saveError,
 }: {
   record: PolicyPackMetadata;
   versions: PolicyPackVersionMetadata[];
@@ -228,6 +276,12 @@ function PolicyPackPanels({
   onChangeDiffTo: (value: string) => void;
   onRequestRollback: (versionNumber: number) => void;
   rollingBackVersion: number | null;
+  canManagePolicyPacks: boolean;
+  policyDraft: string;
+  onChangePolicyDraft: (value: string) => void;
+  onSavePolicy: () => Promise<void>;
+  savingPolicy: boolean;
+  saveError: string | null;
 }) {
   const defaults = record.policy?.defaults as { unknown_tools?: string } | undefined;
   const unknownTools = defaults?.unknown_tools ?? "allow";
@@ -312,9 +366,33 @@ function PolicyPackPanels({
               <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
                 Active Policy JSON
               </p>
-              <pre className="max-h-[420px] overflow-auto rounded-md border border-border/70 bg-background/70 p-3 text-xs text-muted-foreground">
-                <code>{JSON.stringify(record.policy ?? {}, null, 2)}</code>
-              </pre>
+              {canManagePolicyPacks ? (
+                <div className="space-y-3">
+                  <textarea
+                    className="min-h-[320px] w-full rounded-md border border-border/70 bg-background/70 p-3 font-mono text-xs text-foreground"
+                    value={policyDraft}
+                    onChange={(event) => onChangePolicyDraft(event.target.value)}
+                    spellCheck={false}
+                  />
+                  {saveError ? (
+                    <p className="text-sm text-rose-200">{saveError}</p>
+                  ) : null}
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void onSavePolicy()}
+                      disabled={savingPolicy}
+                    >
+                      {savingPolicy ? "Saving..." : "Save Policy"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <pre className="max-h-[420px] overflow-auto rounded-md border border-border/70 bg-background/70 p-3 text-xs text-muted-foreground">
+                  <code>{JSON.stringify(record.policy ?? {}, null, 2)}</code>
+                </pre>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -365,16 +443,20 @@ function PolicyPackPanels({
                       {version.created_by || "--"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={version.is_active || rollingBackVersion === version.version_number}
-                        onClick={() => onRequestRollback(version.version_number)}
-                      >
-                        {rollingBackVersion === version.version_number
-                          ? "Rolling back..."
-                          : "Rollback"}
-                      </Button>
+                      {canManagePolicyPacks ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={version.is_active || rollingBackVersion === version.version_number}
+                          onClick={() => onRequestRollback(version.version_number)}
+                        >
+                          {rollingBackVersion === version.version_number
+                            ? "Rolling back..."
+                            : "Rollback"}
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Admin only</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
