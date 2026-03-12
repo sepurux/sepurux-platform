@@ -1,16 +1,44 @@
 from __future__ import annotations
 
+import functools
+import os
 import warnings
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 from uuid import UUID
 
 import httpx
 
+from .recorder import TraceRecorder, safe_json_value
 from .types import RunStatus, TracePayload
 
 SDK_PACKAGE_NAME = "sepurux"
 DEMO_API_KEY = "demo_sepurux_key"
+DEFAULT_BASE_URL = "http://localhost:8000"
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+class ManagedTraceRecorder(TraceRecorder):
+    def __init__(
+        self,
+        task_name: str,
+        task_input: dict[str, Any] | None = None,
+        *,
+        source: str = "sdk",
+        trace_version: str = "0.1",
+    ) -> None:
+        super().__init__(
+            task_name=task_name,
+            task_input=task_input,
+            source=source,
+            trace_version=trace_version,
+        )
+        self.trace_id: str | None = None
+        self.run_id: str | None = None
+        self.upload_error: Exception | None = None
 
 
 class SepuruxClient:
@@ -41,6 +69,28 @@ class SepuruxClient:
         )
         if self.demo_mode:
             warnings.warn("This is a limited demo environment.", stacklevel=2)
+
+    @classmethod
+    def from_env(
+        cls,
+        *,
+        base_url_env: str = "SEPURUX_API_BASE_URL",
+        api_key_env: str = "SEPURUX_API_KEY",
+        project_id_env: str = "SEPURUX_PROJECT_ID",
+        default_base_url: str = DEFAULT_BASE_URL,
+        timeout: float = 30,
+        sdk_header: str | None = None,
+        demo_mode: bool = False,
+    ) -> SepuruxClient:
+        base_url = os.getenv(base_url_env, default_base_url)
+        return cls(
+            base_url=base_url,
+            api_key=os.getenv(api_key_env),
+            project_id=os.getenv(project_id_env),
+            timeout=timeout,
+            sdk_header=sdk_header,
+            demo_mode=demo_mode,
+        )
 
     def close(self) -> None:
         self._client.close()
@@ -154,6 +204,101 @@ class SepuruxClient:
         response.raise_for_status()
         return _parse_json_response(response)
 
+    @contextmanager
+    def trace(
+        self,
+        task_name: str,
+        task_input: dict[str, Any] | None = None,
+        *,
+        source: str = "sdk",
+        trace_version: str = "0.1",
+        campaign_id: str | None = None,
+        mutation_pack: str | None = None,
+        raise_on_error: bool = False,
+        error_tool: str | None = None,
+    ) -> Iterator[ManagedTraceRecorder]:
+        if mutation_pack and not campaign_id:
+            raise ValueError("campaign_id is required when mutation_pack is provided")
+
+        recorder = ManagedTraceRecorder(
+            task_name=task_name,
+            task_input=task_input,
+            source=source,
+            trace_version=trace_version,
+        )
+
+        try:
+            yield recorder
+        except Exception as exc:
+            recorder.error(tool=error_tool, message=str(exc))
+            try:
+                self._finalize_trace(
+                    recorder,
+                    campaign_id=campaign_id,
+                    mutation_pack=mutation_pack,
+                )
+            except Exception as finalize_exc:
+                recorder.upload_error = finalize_exc
+            raise
+        else:
+            try:
+                self._finalize_trace(
+                    recorder,
+                    campaign_id=campaign_id,
+                    mutation_pack=mutation_pack,
+                )
+            except Exception as finalize_exc:
+                recorder.upload_error = finalize_exc
+                if raise_on_error:
+                    raise
+
+    def traceable(
+        self,
+        *,
+        name: str | None = None,
+        campaign_id: str | None = None,
+        mutation_pack: str | None = None,
+        source: str = "sdk",
+        raise_on_error: bool = False,
+    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+        if mutation_pack and not campaign_id:
+            raise ValueError("campaign_id is required when mutation_pack is provided")
+
+        def decorator(func: Callable[P, R]) -> Callable[P, R]:
+            @functools.wraps(func)
+            def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+                task_name = name or func.__name__
+                task_input = {
+                    "function": func.__name__,
+                    "args": safe_json_value(list(args)),
+                    "kwargs": safe_json_value(dict(kwargs)),
+                }
+
+                with self.trace(
+                    task_name,
+                    task_input=task_input,
+                    source=source,
+                    campaign_id=campaign_id,
+                    mutation_pack=mutation_pack,
+                    raise_on_error=raise_on_error,
+                    error_tool=func.__name__,
+                ) as recorder:
+                    recorder.model_step(
+                        "function.call",
+                        {"qualname": getattr(func, "__qualname__", func.__name__)},
+                    )
+                    result = func(*args, **kwargs)
+                    recorder.model_step(
+                        "function.return",
+                        {"ok": True},
+                        output=safe_json_value(result),
+                    )
+                    return result
+
+            return wrapper
+
+        return decorator
+
     def run_campaign(
         self,
         campaign_name_or_id: str,
@@ -218,6 +363,27 @@ class SepuruxClient:
             if name == campaign_name_or_id and isinstance(campaign_id, str):
                 return campaign_id
         raise ValueError(f"Campaign not found: {campaign_name_or_id}")
+
+    def _finalize_trace(
+        self,
+        recorder: ManagedTraceRecorder,
+        *,
+        campaign_id: str | None = None,
+        mutation_pack: str | None = None,
+    ) -> None:
+        recorder.trace_id = self.upload_trace(recorder.to_trace())
+        if campaign_id:
+            resolved_campaign_id = self._resolve_campaign_id(campaign_id)
+            if mutation_pack:
+                recorder.run_id = self.run_pack(
+                    campaign_id=resolved_campaign_id,
+                    mutation_pack=mutation_pack,
+                )
+            else:
+                recorder.run_id = self.start_run(
+                    trace_id=recorder.trace_id,
+                    campaign_id=resolved_campaign_id,
+                )
 
 
 def _parse_json_response(response: httpx.Response) -> dict[str, Any]:
