@@ -7,13 +7,20 @@ import { ArrowLeft, RefreshCcw } from "lucide-react";
 
 import {
   api,
-  type HardeningTemplateType,
+  type AttemptTimeline,
   type PolicyEventListItem,
+  type ReplayAttemptDetail,
   type ReplayAttemptListItem,
   type RunMetadata,
   type RunStats,
 } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
+import {
+  buildTemplateFromInsightEvidence,
+  compareFailureReasonShift,
+  getInsightAutoFixAvailability,
+  selectAttemptForInsight,
+} from "@/lib/run-fixes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,6 +177,7 @@ function RunDetailPanels({
         <RunStatsCards
           runId={runId}
           stats={stats}
+          attempts={attempts}
           onNavigateToRun={onNavigateToRun}
         />
         <AttemptsTable attempts={attempts} />
@@ -183,10 +191,12 @@ function RunDetailPanels({
 function RunStatsCards({
   runId,
   stats,
+  attempts,
   onNavigateToRun,
 }: {
   runId: string;
   stats: RunStats | null;
+  attempts: ReplayAttemptListItem[];
   onNavigateToRun: (targetRunId: string) => void;
 }) {
   const lethalMutations = stats?.most_lethal_mutations ?? [];
@@ -195,21 +205,29 @@ function RunStatsCards({
   const [applyError, setApplyError] = useState<string | null>(null);
 
   async function handleApplyAndRerun(insight: RunStats["insights"][number]) {
-    const templatePayload = templateFromInsight(insight);
-    if (!templatePayload) {
-      setApplyError(
-        insight.id === "insight.tool_hotspot.replay.execute"
-          ? "replay.execute hotspots are replay-contract issues. Fix the campaign replay payload instead of applying a generic template."
-          : "No hardening template mapping available for this insight yet."
-      );
+    const availability = getInsightAutoFixAvailability(insight);
+    if (!availability.supported) {
+      setApplyError(availability.reason ?? "No hardening template mapping available for this insight yet.");
       return;
     }
 
     setApplyError(null);
     setApplyingInsightId(insight.id);
     try {
-      const template = await api.createTemplate(templatePayload);
-      const result = await api.applyTemplateToRun(runId, template.template_id);
+      const matchedAttempt = selectAttemptForInsight(insight, attempts);
+      const [attemptDetail, attemptTimeline] = await loadAttemptEvidence(matchedAttempt);
+      const { template, reason } = buildTemplateFromInsightEvidence(insight, {
+        attempt: matchedAttempt,
+        detail: attemptDetail,
+        timeline: attemptTimeline,
+      });
+      if (!template) {
+        setApplyError(reason ?? "No hardening template mapping available for this insight yet.");
+        return;
+      }
+
+      const createdTemplate = await api.createTemplate(template);
+      const result = await api.applyTemplateToRun(runId, createdTemplate.template_id);
       onNavigateToRun(result.new_run_id);
     } catch (error) {
       setApplyError(error instanceof Error ? error.message : "Failed to apply template");
@@ -311,64 +329,12 @@ function RunStatsCards({
             </div>
           ) : (
             insights.map((insight) => (
-              <div
+              <InsightRecommendationCard
                 key={insight.id}
-                className="rounded-md border border-border/60 bg-muted/15 p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground" title={insight.title}>
-                      {insight.title}
-                    </p>
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{insight.recommendation}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant={insight.confidence >= 0.75 ? "success" : insight.confidence >= 0.6 ? "warning" : "outline"}>
-                      {formatPercent(insight.confidence, 0)}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={applyingInsightId === insight.id}
-                      onClick={() => void handleApplyAndRerun(insight)}
-                    >
-                      {applyingInsightId === insight.id ? "Applying..." : "Apply & Rerun"}
-                    </Button>
-                  </div>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">{insight.why}</p>
-                <details className="mt-2 rounded border border-border/50 bg-background/40 p-2">
-                  <summary className="cursor-pointer text-xs font-medium text-foreground">
-                    View evidence
-                  </summary>
-                  <div className="mt-2 space-y-2 text-xs text-muted-foreground">
-                    <p>
-                      Tools:{" "}
-                      {insight.evidence.top_tools.length > 0
-                        ? insight.evidence.top_tools
-                            .map((item) => `${item.tool} (${item.count})`)
-                            .join(", ")
-                        : "--"}
-                    </p>
-                    <p>
-                      Mutations:{" "}
-                      {insight.evidence.top_mutations.length > 0
-                        ? insight.evidence.top_mutations
-                            .map((item) => `${item.mutation_id} (${item.count})`)
-                            .join(", ")
-                        : "--"}
-                    </p>
-                    <p>
-                      Reasons:{" "}
-                      {insight.evidence.top_reasons.length > 0
-                        ? insight.evidence.top_reasons
-                            .map((item) => `${item.reason} (${item.count})`)
-                            .join(", ")
-                        : "--"}
-                    </p>
-                  </div>
-                </details>
-              </div>
+                insight={insight}
+                isApplying={applyingInsightId === insight.id}
+                onApply={() => void handleApplyAndRerun(insight)}
+              />
             ))
           )}
         </CardContent>
@@ -545,74 +511,6 @@ function sourceRunIdFromSummary(summary: Record<string, unknown> | null): string
   return typeof sourceRunId === "string" && sourceRunId ? sourceRunId : null;
 }
 
-function templateFromInsight(insight: RunStats["insights"][number]): {
-  name: string;
-  type: HardeningTemplateType;
-  config: Record<string, unknown>;
-} | null {
-  if (insight.id.startsWith("insight.approval_tokens.")) {
-    return {
-      name: "Template: Approval Token Gate",
-      type: "policy_pack",
-      config: {
-        policy: {
-          version: "0.1",
-          defaults: { unknown_tools: "allow" },
-          approval: { token_field: "confirmation_token" },
-          irreversible: {
-            tools: ["payments.refund", "jira.create_issue(commit)", "jira.create_issue_commit"],
-          },
-        },
-        engine: "builtin",
-      },
-    };
-  }
-  if (insight.id.startsWith("insight.schema_adapter.")) {
-    return {
-      name: "Template: Schema Adapter",
-      type: "schema_adapter",
-      config: {
-        mappings: {
-          issueType: "issue_type",
-          status: "state",
-          description: "details",
-        },
-      },
-    };
-  }
-  if (insight.id === "insight.tool_hotspot.replay.execute") {
-    return null;
-  }
-  if (
-    insight.id.startsWith("insight.retry_backoff.") ||
-    insight.id.startsWith("insight.tool_hotspot.")
-  ) {
-    return {
-      name: "Template: Retry Policy",
-      type: "retry_policy",
-      config: {
-        max_retries: 3,
-        backoff_ms: 300,
-      },
-    };
-  }
-  if (insight.id.startsWith("insight.output_sanitizer.")) {
-    return {
-      name: "Template: Output Sanitizer",
-      type: "sanitizer",
-      config: {
-        fields: ["text", "content", "message", "summary"],
-        patterns: [
-          "ignore previous instructions",
-          "disregard previous instructions",
-          "system override",
-        ],
-      },
-    };
-  }
-  return null;
-}
-
 function RunComparisonCard({
   baselineRun,
   baselineStats,
@@ -633,6 +531,7 @@ function RunComparisonCard({
   const baselinePassRate = derivePassRate(baselineRun, baselineStats);
   const currentPassRate = derivePassRate(currentRun, currentStats);
   const baselinePolicyViolations = derivePolicyViolationCount(baselineRun, []);
+  const failureReasonShift = compareFailureReasonShift(baselineStats, currentStats);
 
   return (
     <Card>
@@ -643,7 +542,12 @@ function RunComparisonCard({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div
+          className={cn(
+            "grid gap-4 sm:grid-cols-2",
+            failureReasonShift ? "xl:grid-cols-3" : null,
+          )}
+        >
           <div className="rounded-md border border-border/60 bg-muted/15 p-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Pass Rate</p>
             <p className="mt-2 text-sm text-foreground">
@@ -656,10 +560,133 @@ function RunComparisonCard({
               {baselinePolicyViolations} → {currentPolicyViolations}
             </p>
           </div>
+          {failureReasonShift ? (
+            <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Dominant Failure Reason</p>
+                  <p className="mt-2 text-sm text-foreground">
+                    {failureReasonShift.baseline.reason} {failureReasonShift.baseline.count} • {formatPercent(failureReasonShift.baseline.pct, 0)}
+                    {" → "}
+                    {failureReasonShift.currentSameReason.count} • {formatPercent(failureReasonShift.currentSameReason.pct, 0)}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    failureReasonShift.trend === "improved"
+                      ? "success"
+                      : failureReasonShift.trend === "worsened"
+                        ? "danger"
+                        : "outline"
+                  }
+                >
+                  {failureReasonShift.trend}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {failureReasonShift.currentSameReason.count === 0
+                  ? "The rerun cleared the dominant baseline failure reason."
+                  : failureReasonShift.currentTop && failureReasonShift.currentTop.reason !== failureReasonShift.baseline.reason
+                    ? `Current top failure reason is ${failureReasonShift.currentTop.reason}.`
+                    : "The same failure reason is still leading the rerun."}
+              </p>
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function InsightRecommendationCard({
+  insight,
+  isApplying,
+  onApply,
+}: {
+  insight: RunStats["insights"][number];
+  isApplying: boolean;
+  onApply: () => void;
+}) {
+  const availability = getInsightAutoFixAvailability(insight);
+
+  return (
+    <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-foreground" title={insight.title}>
+            {insight.title}
+          </p>
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{insight.recommendation}</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <Badge variant={insight.confidence >= 0.75 ? "success" : insight.confidence >= 0.6 ? "warning" : "outline"}>
+            {formatPercent(insight.confidence, 0)}
+          </Badge>
+          {availability.supported ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isApplying}
+              onClick={onApply}
+            >
+              {isApplying ? "Applying..." : "Apply & Rerun"}
+            </Button>
+          ) : (
+            <Badge variant="outline">Manual fix</Badge>
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{insight.why}</p>
+      {!availability.supported && availability.reason ? (
+        <p className="mt-2 text-xs text-muted-foreground">{availability.reason}</p>
+      ) : null}
+      <details className="mt-2 rounded border border-border/50 bg-background/40 p-2">
+        <summary className="cursor-pointer text-xs font-medium text-foreground">
+          View evidence
+        </summary>
+        <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+          <p>
+            Tools:{" "}
+            {insight.evidence.top_tools.length > 0
+              ? insight.evidence.top_tools
+                  .map((item) => `${item.tool} (${item.count})`)
+                  .join(", ")
+              : "--"}
+          </p>
+          <p>
+            Mutations:{" "}
+            {insight.evidence.top_mutations.length > 0
+              ? insight.evidence.top_mutations
+                  .map((item) => `${item.mutation_id} (${item.count})`)
+                  .join(", ")
+              : "--"}
+          </p>
+          <p>
+            Reasons:{" "}
+            {insight.evidence.top_reasons.length > 0
+              ? insight.evidence.top_reasons
+                  .map((item) => `${item.reason} (${item.count})`)
+                  .join(", ")
+              : "--"}
+          </p>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+async function loadAttemptEvidence(
+  attempt: ReplayAttemptListItem | null,
+): Promise<[ReplayAttemptDetail | null, AttemptTimeline | null]> {
+  if (!attempt) {
+    return [null, null];
+  }
+
+  const [detail, timeline] = await Promise.all([
+    api.getAttempt(attempt.attempt_id).catch(() => null),
+    api.getAttemptTimeline(attempt.attempt_id).catch(() => null),
+  ]);
+  return [detail, timeline];
 }
 
 function derivePassRate(run: RunMetadata, stats: RunStats | null): number {
