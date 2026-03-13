@@ -9,18 +9,21 @@ const features = [
   { icon: Braces, label: "Inspect tool calls and model outputs" },
 ];
 
-const sdkExample = `from sepurux import SepuruxClient, sepurux_trace
+const sdkExample = `from sepurux import SepuruxClient
 
-client = SepuruxClient(base_url="https://api.sepurux.com", api_key=os.getenv("SEPURUX_API_KEY"))
+with SepuruxClient.from_env() as client:
+    with client.trace(
+        "incident_triage",
+        {"incident_id": "INC-4321"},
+        campaign_id=os.getenv("SEPURUX_CAMPAIGN_ID"),
+        mutation_pack="sepurux.core.reliability",
+    ) as trace:
+        trace.tool_call("alerts.fetch_active", {"service": "payments"})
+        trace.tool_result("alerts.fetch_active", {"count": 4})
+        trace.model_step("triage_llm", {"prompt": "summarize"}, {"severity": "high"})
 
-with sepurux_trace("incident_triage", {"incident_id": "INC-4321"}) as rec:
-    rec.tool_call("alerts.fetch_active", {"service": "payments"})
-    rec.tool_result("alerts.fetch_active", {"count": 4})
-    rec.model_step("triage_llm", {"prompt": "summarize"}, {"severity": "high"})
-
-trace_id = client.upload_trace(rec.to_trace())
-# Optional: trigger replay campaign
-run_id = client.start_run(trace_id=trace_id, campaign_id=os.getenv("SEPURUX_CAMPAIGN_ID"))`;
+    print(trace.trace_id)
+    print(trace.run_id)`;
 
 export function ReplayTracesSection() {
   return (

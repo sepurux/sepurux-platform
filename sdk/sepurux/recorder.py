@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import warnings
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
@@ -13,6 +14,13 @@ if TYPE_CHECKING:
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+_SEPURUX_TRACE_DEPRECATION = (
+    "sepurux_trace() is deprecated; prefer SepuruxClient.trace(...) or sepurux.trace(...)."
+)
+_RECORD_TRACE_DEPRECATION = (
+    "record_trace() is deprecated; prefer SepuruxClient.traceable(...) or sepurux.traceable(...)."
+)
 
 
 class TraceRecorder:
@@ -57,6 +65,7 @@ def sepurux_trace(
     source: str = "sdk",
     trace_version: str = "0.1",
 ) -> Iterator[TraceRecorder]:
+    warnings.warn(_SEPURUX_TRACE_DEPRECATION, DeprecationWarning, stacklevel=2)
     recorder = TraceRecorder(
         task_name=task_name,
         task_input=task_input,
@@ -74,6 +83,7 @@ def record_trace(
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Backward-compatible alias for the easier client traceable decorator."""
 
+    warnings.warn(_RECORD_TRACE_DEPRECATION, DeprecationWarning, stacklevel=2)
     return client.traceable(name=task_name, campaign_id=campaign_id, raise_on_error=False)
 
 
