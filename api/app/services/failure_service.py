@@ -1,12 +1,24 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any
+from typing import Any, Literal, TypedDict
 from uuid import UUID
 
 from app.models import Failure
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
+
+
+class FailureBreakdownItem(TypedDict):
+    type: str
+    count: int
+
+
+class CampaignReliabilityResult(TypedDict):
+    reliability_score: float
+    status: Literal["healthy", "warning", "critical"]
+    classified_failures: int
+    failure_breakdown: list[FailureBreakdownItem]
 
 
 def list_failures_for_campaign(
@@ -34,7 +46,7 @@ def calculate_campaign_reliability(
     project_id: UUID,
     campaign_id: UUID,
     run_id: UUID | None = None,
-) -> dict[str, float | str]:
+) -> CampaignReliabilityResult:
     severity_counts: Counter[str] = Counter()
     failure_breakdown: Counter[str] = Counter()
 
@@ -56,17 +68,19 @@ def calculate_campaign_reliability(
     elif score < 90:
         status = "warning"
 
+    breakdown_items: list[FailureBreakdownItem] = [
+        {"type": failure_type, "count": count}
+        for failure_type, count in sorted(
+            failure_breakdown.items(),
+            key=lambda item: (-item[1], item[0]),
+        )
+    ]
+
     return {
         "reliability_score": float(score),
-        "status": status,
+        "status": cast_status(status),
         "classified_failures": sum(failure_breakdown.values()),
-        "failure_breakdown": [
-            {"type": failure_type, "count": count}
-            for failure_type, count in sorted(
-                failure_breakdown.items(),
-                key=lambda item: (-item[1], item[0]),
-            )
-        ],
+        "failure_breakdown": breakdown_items,
     }
 
 
@@ -100,3 +114,11 @@ def _failure_query(
     if run_id is not None:
         query = query.where(Failure.run_id == run_id)
     return query
+
+
+def cast_status(status: str) -> Literal["healthy", "warning", "critical"]:
+    if status == "critical":
+        return "critical"
+    if status == "warning":
+        return "warning"
+    return "healthy"

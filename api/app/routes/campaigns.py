@@ -7,6 +7,7 @@ from app.auth import ProjectScope, TenantAuthContext, require_project_scope, req
 from app.db import get_db
 from app.schemas import (
     CampaignCreateRequest,
+    CampaignFailureBreakdownItem,
     CampaignFailureRecord,
     CampaignMetadata,
     CampaignReliabilityResponse,
@@ -173,13 +174,19 @@ def get_campaign_reliability(
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
+    reliability = calculate_campaign_reliability(
+        db,
+        project_id=project_scope.project_id,
+        campaign_id=campaign_id,
+        run_id=run_id,
+    )
     return CampaignReliabilityResponse(
-        **calculate_campaign_reliability(
-            db,
-            project_id=project_scope.project_id,
-            campaign_id=campaign_id,
-            run_id=run_id,
-        )
+        reliability_score=reliability["reliability_score"],
+        status=reliability["status"],
+        classified_failures=reliability["classified_failures"],
+        failure_breakdown=[
+            CampaignFailureBreakdownItem(**item) for item in reliability["failure_breakdown"]
+        ],
     )
 
 

@@ -164,13 +164,12 @@ def _extract_tool_usage_metadata(
 def _failure_breakdown_items(
     counts: Counter[str],
 ) -> list[dict[str, int | str]]:
-    items = [
-        {"type": failure_type, "count": count}
-        for failure_type, count in sorted(
-            counts.items(),
-            key=lambda item: (-item[1], item[0]),
-        )
-    ]
+    items: list[dict[str, int | str]] = []
+    for failure_type, count in sorted(
+        counts.items(),
+        key=lambda item: (-item[1], item[0]),
+    ):
+        items.append({"type": failure_type, "count": count})
     return items
 
 
