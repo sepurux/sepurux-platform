@@ -98,9 +98,9 @@ The SDK automatically sends `X-Sepurux-SDK: py/<version>` on requests.
 Use `sdk_header` only if you need to override it manually.
 
 Methods:
-- `upload_trace(trace: dict) -> str`
 - `trace(task_name, task_input=None, campaign_id=None, mutation_pack=None) -> recorder`
 - `traceable(name=None, campaign_id=None, mutation_pack=None) -> decorator`
+- `upload_trace(trace: dict) -> str`
 - `create_campaign(name, mutation_set, eval_set, mutation_pack_id=None) -> str`
 - `start_run(trace_id, campaign_id, thresholds=None) -> str`
 - `run_pack(campaign_id, mutation_pack) -> str`
@@ -119,31 +119,12 @@ Methods:
 }
 ```
 
-### Recorder
+### Recommended tracing flow
 
-Use a low-level context manager when you want to build the trace manually:
-
-```python
-from sepurux import sepurux_trace
-
-with sepurux_trace("task_name", {"input": "value"}) as rec:
-    rec.model_step("name", {"foo": "bar"}, output={"ok": True})
-    rec.tool_call("tool.name", {"arg": 1})
-    rec.tool_result("tool.name", {"result": "ok"})
-    rec.error(message="something happened", tool="tool.name")
-```
-
-### Decorator
-
-```python
-from sepurux import record_trace
-
-@record_trace(client=client, campaign_id="<campaign_id>")
-def run_business_logic(x: int) -> int:
-    return x * 2
-```
-
-The decorator preserves the function return value and attempts to upload/start runs in the background path without interrupting normal execution.
+Use `client.trace(...)`, `client.traceable(...)`, or the global `trace(...)` / `traceable(...)`
+helpers as the default integration path. Legacy helpers like `sepurux_trace(...)` and
+`record_trace(...)` remain available for compatibility, but they are deprecated and no longer
+the documented path.
 
 ### Server-side pack execution
 
@@ -151,13 +132,6 @@ The decorator preserves the function return value and attempts to upload/start r
 run_id = client.run_campaign("demo_campaign", mutation_pack="core.reliability")
 ```
 
-## Example script
-
-See `examples/sdk_demo.py`.
-
-```bash
-python sdk/examples/sdk_demo.py
-```
 
 Optional environment variables:
 - `SEPURUX_API_BASE_URL` (default `http://localhost:8000`)
@@ -165,15 +139,3 @@ Optional environment variables:
 - `SEPURUX_API_KEY`
 - `SEPURUX_PROJECT_ID`
 - `SEPURUX_CAMPAIGN_ID` (if provided, script starts a run)
-
-## Publish to PyPI (CI)
-
-This repository includes `.github/workflows/sdk-publish-pypi.yml` to publish the SDK directly to PyPI.
-
-Setup:
-- Add `PYPI_API_TOKEN` in GitHub repository secrets.
-- Ensure the package version in `sdk/pyproject.toml` is new.
-
-Release:
-- Push a tag like `sdk-v0.3.0` to trigger publish.
-- Or run the workflow manually from GitHub Actions.

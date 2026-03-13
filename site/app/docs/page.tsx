@@ -31,7 +31,7 @@ const useCases = [
   {
     href: "#clients",
     title: "Use TypeScript and Go clients",
-    recommendation: "Generated TypeScript and Go clients from the hosted OpenAPI schema",
+    recommendation: "Env-aware recorder clients with automatic trace upload and optional run execution",
   },
   {
     href: "#policy-security",
@@ -231,42 +231,33 @@ curl -X POST ${apiBaseUrl}/v1/tools \\
 
   const clientSnippet = `curl -fsSL "${openApiUrl}" -o clients/openapi.json
 
-# TypeScript and Go clients in this repo are generated from the same schema.
+# Regenerate the low-level API clients from the running schema when needed.
 make gen-clients`;
 
-  const typescriptInstallSnippet = `npm install @sepurux/client`;
+  const typescriptInstallSnippet = `npm install @sepurux/recorder`;
 
-  const typescriptClientSnippet = `import { Configuration, RunsApi, TracesApi } from "@sepurux/client";
+  const typescriptClientSnippet = `import { SepuruxClient } from "@sepurux/recorder";
 
-const config = new Configuration({
-  basePath: "${apiBaseUrl}",
-  headers: {
-    "X-API-Key": process.env.SEPURUX_API_KEY ?? "",
-    "X-Project-Id": process.env.SEPURUX_PROJECT_ID ?? "",
+const client = SepuruxClient.fromEnv();
+
+const recorder = await client.trace(
+  "refund_flow",
+  { ticketId: "t-123" },
+  async (trace) => {
+    trace.modelStep("triage_request", { text: "Refund the duplicate charge" }, { action: "refund" });
+    trace.toolCall("payments.refund", { payment_id: "pay_123", amount: 4200 });
+    trace.toolResult("payments.refund", { refund_id: "rf_123", status: "queued" });
   },
-});
-
-const tracesApi = new TracesApi(config);
-const trace = await tracesApi.postTraceV1TracesPost({
-  body: {
-    trace_version: "0.1",
-    source: "typescript-client",
-    task: { name: "demo-task", input: { prompt: "hello" } },
-    events: [{ type: "model_step", name: "assistant", output: { text: "hi" } }],
+  {
+    campaignId: process.env.SEPURUX_CAMPAIGN_ID,
+    mutationPack: "sepurux.core.reliability",
   },
-});
+);
 
-const runsApi = new RunsApi(config);
-const run = await runsApi.postRunV1RunsPost({
-  runCreateRequest: {
-    trace_id: trace.trace_id,
-    campaign_id: process.env.SEPURUX_CAMPAIGN_ID ?? "",
-  },
-});
+console.log(recorder.traceId);
+console.log(recorder.runId);`;
 
-console.log(run.run_id);`;
-
-  const goInstallSnippet = `go get github.com/sepurux/sepurux-platform/clients/go@v0.3.0`;
+  const goInstallSnippet = `go get github.com/sepurux/go-recorder@v0.3.0`;
 
   const goClientSnippet = `package main
 
@@ -275,38 +266,39 @@ import (
   "fmt"
   "os"
 
-  sepuruxclient "github.com/sepurux/sepurux-platform/clients/go"
+  sepuruxrecorder "github.com/sepurux/go-recorder"
 )
 
 func main() {
-  cfg := sepuruxclient.NewConfiguration()
-  cfg.Servers = sepuruxclient.ServerConfigurations{{URL: "${apiBaseUrl}"}}
-  cfg.AddDefaultHeader("X-API-Key", os.Getenv("SEPURUX_API_KEY"))
+  client, err := sepuruxrecorder.NewClientFromEnv()
+  if err != nil {
+    panic(err)
+  }
 
-  client := sepuruxclient.NewAPIClient(cfg)
   ctx := context.Background()
-  projectID := os.Getenv("SEPURUX_PROJECT_ID")
   campaignID := os.Getenv("SEPURUX_CAMPAIGN_ID")
 
-  traceBody := map[string]interface{}{
-    "trace_version": "0.1",
-    "source": "go-client",
-    "task": map[string]interface{}{"name": "demo-task", "input": map[string]interface{}{"prompt": "hello"}},
-    "events": []map[string]interface{}{{"type": "model_step", "name": "assistant"}},
-  }
-
-  trace, _, err := client.TracesAPI.PostTraceV1TracesPost(ctx).Body(traceBody).XProjectId(projectID).Execute()
+  recorder, err := client.Trace(
+    ctx,
+    "refund_flow",
+    map[string]any{"ticketId": "t-123"},
+    sepuruxrecorder.TraceOptions{
+      CampaignID: campaignID,
+      MutationPack: "sepurux.core.reliability",
+    },
+    func(trace *sepuruxrecorder.ManagedRecorder) error {
+      trace.ModelStep("triage_request", map[string]any{"text": "Refund the duplicate charge"}, map[string]any{"action": "refund"})
+      trace.ToolCall("payments.refund", map[string]any{"payment_id": "pay_123", "amount": 4200})
+      trace.ToolResult("payments.refund", map[string]any{"refund_id": "rf_123", "status": "queued"})
+      return nil
+    },
+  )
   if err != nil {
     panic(err)
   }
 
-  runReq := sepuruxclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
-  run, _, err := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
-  if err != nil {
-    panic(err)
-  }
-
-  fmt.Println("run id:", run.GetRunId())
+  fmt.Println("trace id:", recorder.TraceID)
+  fmt.Println("run id:", recorder.RunID)
 }`;
 
   const apiSnippet = `curl -X POST ${apiBaseUrl}/v1/traces \\
@@ -499,7 +491,7 @@ func main() {
               <DocsSection
                 id="clients"
                 title="Use TypeScript and Go clients"
-                description="The hosted OpenAPI document is the source of truth for generated TypeScript and Go clients. The repository already checks in generated clients, and you can regenerate them whenever the API surface changes."
+                description="Use the recorder helpers as the default integration path for TypeScript and Go. They read the standard Sepurux environment variables, upload traces automatically, and can enqueue campaign runs in the same call. The generated OpenAPI clients still exist for low-level endpoint access."
               >
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-medium text-slate-900">Regenerate clients from OpenAPI</p>
@@ -511,10 +503,10 @@ func main() {
                 <div className="grid gap-5 xl:grid-cols-2">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-lg font-medium text-slate-950">TypeScript client</h3>
+                      <h3 className="text-lg font-medium text-slate-950">TypeScript recorder</h3>
                       <p className="mt-2 text-sm leading-7 text-slate-600">
-                        The generated TypeScript package uses the name <code>@sepurux/client</code> and is built
-                        from the <code>typescript-fetch</code> generator.
+                        Use <code>@sepurux/recorder</code> for the easy path. It is the TypeScript equivalent of the
+                        Python SDK’s <code>SepuruxClient.from_env()</code> and <code>client.trace(...)</code> flow.
                       </p>
                     </div>
                     <CodeBlock code={typescriptInstallSnippet} label="bash" />
@@ -523,10 +515,10 @@ func main() {
 
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-lg font-medium text-slate-950">Go client</h3>
+                      <h3 className="text-lg font-medium text-slate-950">Go recorder</h3>
                       <p className="mt-2 text-sm leading-7 text-slate-600">
-                        The generated Go module in this repository uses the module path{" "}
-                        <code>github.com/sepurux/sepurux-platform/clients/go</code>.
+                        Use <code>github.com/sepurux/go-recorder</code> for the default Go path. The generated Go API
+                        client remains available for low-level admin or control-plane endpoints when you need raw access.
                       </p>
                     </div>
                     <CodeBlock code={goInstallSnippet} label="bash" />

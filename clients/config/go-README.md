@@ -2,6 +2,9 @@
 
 Generated from `clients/openapi.json` with OpenAPI Generator (`go`).
 
+For the easiest tracing flow, use `github.com/sepurux/go-recorder`. This package is the
+low-level generated API client for cases where you need direct endpoint access beyond managed tracing.
+
 ## Install
 
 ```bash
@@ -14,7 +17,7 @@ go get github.com/sepurux/sepurux-platform/clients/go@v0.3.0
 make gen-clients
 ```
 
-## Quick Start
+## Recommended tracing path
 
 ```go
 package main
@@ -24,48 +27,31 @@ import (
 	"fmt"
 	"os"
 
-	sepuruxclient "github.com/sepurux/sepurux-platform/clients/go"
+	sepuruxrecorder "github.com/sepurux/go-recorder"
 )
 
 func main() {
-	baseURL := os.Getenv("SEPURUX_BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:8000"
-	}
-
-	cfg := sepuruxclient.NewConfiguration()
-	cfg.Servers = sepuruxclient.ServerConfigurations{{URL: baseURL}}
-	cfg.AddDefaultHeader("X-API-Key", os.Getenv("SEPURUX_API_KEY"))
-
-	client := sepuruxclient.NewAPIClient(cfg)
-	ctx := context.Background()
-	projectID := os.Getenv("SEPURUX_PROJECT_ID")
-	campaignID := os.Getenv("SEPURUX_CAMPAIGN_ID")
-
-	traceBody := map[string]interface{}{
-		"trace_version": "0.1",
-		"source":        "sdk",
-		"task":          map[string]interface{}{"name": "demo-task", "input": map[string]interface{}{"prompt": "hello"}},
-		"events":        []map[string]interface{}{{"type": "model_step", "name": "assistant"}},
-	}
-
-	trace, _, err := client.TracesAPI.PostTraceV1TracesPost(ctx).Body(traceBody).XProjectId(projectID).Execute()
+	client, err := sepuruxrecorder.NewClientFromEnv()
 	if err != nil {
 		panic(err)
 	}
 
-	runReq := sepuruxclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
-	run, _, err := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
+	recorder, err := client.Trace(
+		context.Background(),
+		"demo-task",
+		map[string]any{"prompt": "hello"},
+		sepuruxrecorder.TraceOptions{CampaignID: os.Getenv("SEPURUX_CAMPAIGN_ID")},
+		func(trace *sepuruxrecorder.ManagedRecorder) error {
+			trace.ModelStep("assistant", map[string]any{"prompt": "hello"}, map[string]any{"text": "hi"})
+			return nil
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
 
-	latest, _, err := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjectId(projectID).Execute()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("run status:", latest.GetStatus())
+	fmt.Println("trace id:", recorder.TraceID)
+	fmt.Println("run id:", recorder.RunID)
 }
 ```
 

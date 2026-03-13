@@ -121,50 +121,63 @@ make gen-clients
 TypeScript integration with recorder helper:
 
 ```ts
-import { Configuration, RunsApi, TracesApi } from "@sepurux/client";
-import { TraceRecorder } from "@sepurux/recorder";
+import { SepuruxClient } from "@sepurux/recorder";
 
-const recorder = new TraceRecorder("demo-task", { ticketId: 123 });
-recorder.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
-recorder.toolCall("jira.create_issue", { project: "OPS", title: "Bug" });
-recorder.toolResult("jira.create_issue", { key: "OPS-123" });
+const client = SepuruxClient.fromEnv();
 
-const cfg = new Configuration({ basePath: "http://localhost:8000", headers: { "X-API-Key": API_KEY } });
-const traces = new TracesApi(cfg);
-const trace = await traces.postTraceV1TracesPost({ xProjectId: PROJECT_ID, body: recorder.toTrace() });
-const runs = new RunsApi(cfg);
-const run = await runs.postRunV1RunsPost({ xProjectId: PROJECT_ID, runCreateRequest: { trace_id: trace.trace_id, campaign_id: CAMPAIGN_ID } });
-const latest = await runs.getRunV1RunsRunIdGet({ runId: run.run_id });
-console.log(latest.status);
+const recorder = await client.trace(
+  "demo-task",
+  { ticketId: 123 },
+  async (trace) => {
+    trace.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
+    trace.toolCall("jira.create_issue", { project: "OPS", title: "Bug" });
+    trace.toolResult("jira.create_issue", { key: "OPS-123" });
+  },
+  { campaignId: CAMPAIGN_ID, mutationPack: "sepurux.core.reliability" },
+);
+
+console.log(recorder.traceId);
+console.log(recorder.runId);
 ```
 
 Go integration with recorder helper:
 
 ```go
-recorder := sepuruxrecorder.NewRecorder("demo-task", map[string]any{"ticketId": 123})
-recorder.ModelStep("planner", map[string]any{"prompt": "triage issue"}, map[string]any{"plan": "call jira"})
-recorder.ToolCall("jira.create_issue", map[string]any{"project": "OPS", "title": "Bug"})
-recorder.ToolResult("jira.create_issue", map[string]any{"key": "OPS-123"})
-cfg := sepuruxclient.NewConfiguration()
-cfg.Servers = sepuruxclient.ServerConfigurations{{URL: "http://localhost:8000"}}
-cfg.AddDefaultHeader("X-API-Key", apiKey)
-client := sepuruxclient.NewAPIClient(cfg)
+client, err := sepuruxrecorder.NewClientFromEnv()
+if err != nil {
+  panic(err)
+}
 
-trace, _, _ := client.TracesAPI.PostTraceV1TracesPost(ctx).
-  Body(recorder.Trace()).
-  XProjectId(projectID).Execute()
-runReq := sepuruxclient.NewRunCreateRequest(trace.GetTraceId(), campaignID)
-run, _, _ := client.RunsAPI.PostRunV1RunsPost(ctx).RunCreateRequest(*runReq).XProjectId(projectID).Execute()
-latest, _, _ := client.RunsAPI.GetRunV1RunsRunIdGet(ctx, run.GetRunId()).XProjectId(projectID).Execute()
+recorder, err := client.Trace(
+  ctx,
+  "demo-task",
+  map[string]any{"ticketId": 123},
+  sepuruxrecorder.TraceOptions{
+    CampaignID:   campaignID,
+    MutationPack: "sepurux.core.reliability",
+  },
+  func(trace *sepuruxrecorder.ManagedRecorder) error {
+    trace.ModelStep("planner", map[string]any{"prompt": "triage issue"}, map[string]any{"plan": "call jira"})
+    trace.ToolCall("jira.create_issue", map[string]any{"project": "OPS", "title": "Bug"})
+    trace.ToolResult("jira.create_issue", map[string]any{"key": "OPS-123"})
+    return nil
+  },
+)
+if err != nil {
+  panic(err)
+}
+
+fmt.Println(recorder.TraceID)
+fmt.Println(recorder.RunID)
 ```
 
 Recorder package release tags:
 
-- PyPI SDK: `sdk-v0.3.0` (publishes to PyPI)
+- PyPI SDK: `sdk-v0.4.0` (publishes to PyPI)
 - TypeScript API client (npm): `ts-client-v0.3.0` (publishes `@sepurux/client` to npm)
 - Go API client module: `clients/go/v0.3.0` (creates a GitHub release; consumable via `go get github.com/sepurux/sepurux-platform/clients/go@v0.3.0`)
-- TypeScript recorder (npm): `ts-recorder-v0.2.0` (publishes to npm)
-- Go recorder module: `clients/go-recorder/v0.2.0` (creates GitHub release; consumable via `go get ...@v0.2.0`)
+- TypeScript recorder (npm): `ts-recorder-v0.3.0` (publishes to npm)
+- Go recorder module: `clients/go-recorder/v0.3.0` (creates GitHub release; consumable via `go get ...@v0.3.0`)
 ## Run Inspector Endpoints
 
 List attempts for a run:
