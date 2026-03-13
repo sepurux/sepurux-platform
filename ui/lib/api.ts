@@ -44,6 +44,26 @@ export type RunMetadata = {
   created_at: string;
 };
 
+export type CampaignFailure = {
+  failure_id: string;
+  run_id: string;
+  campaign_id: string;
+  trace_id: string;
+  mutation: string;
+  type: string;
+  severity: "critical" | "high" | "medium" | "low";
+  description: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type CampaignReliability = {
+  reliability_score: number;
+  status: "healthy" | "warning" | "critical";
+  classified_failures: number;
+  failure_breakdown: Array<{ type: string; count: number }>;
+};
+
 export type ReplayAttemptListItem = {
   attempt_id: string;
   mutation_id: string;
@@ -616,6 +636,22 @@ export const api = {
     requestJson<CampaignMetadata[]>("/v1/campaigns", {
       limit: options?.limit ?? 50,
       offset: options?.offset ?? 0,
+    }),
+  listCampaignFailures: (
+    campaignId: string,
+    options?: { run_id?: string; limit?: number; offset?: number }
+  ) =>
+    requestJson<CampaignFailure[]>(`/v1/campaigns/${campaignId}/failures`, {
+      run_id: options?.run_id,
+      limit: clampLimit(options?.limit, 200),
+      offset: options?.offset ?? 0,
+    }),
+  getCampaignReliability: (
+    campaignId: string,
+    options?: { run_id?: string }
+  ) =>
+    requestJson<CampaignReliability>(`/v1/campaigns/${campaignId}/reliability`, {
+      run_id: options?.run_id,
     }),
   createCampaign: (payload: {
     name: string;

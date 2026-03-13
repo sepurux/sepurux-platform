@@ -72,6 +72,31 @@ class CampaignRunPackResponse(BaseModel):
     created_at: datetime
 
 
+class CampaignFailureRecord(BaseModel):
+    failure_id: UUID
+    run_id: UUID
+    campaign_id: UUID
+    trace_id: UUID
+    mutation: str
+    type: str
+    severity: Literal["critical", "high", "medium", "low"]
+    description: str
+    metadata: dict[str, Any] | None = None
+    created_at: datetime
+
+
+class CampaignFailureBreakdownItem(BaseModel):
+    type: str
+    count: int
+
+
+class CampaignReliabilityResponse(BaseModel):
+    reliability_score: float
+    status: Literal["healthy", "warning", "critical"]
+    classified_failures: int = 0
+    failure_breakdown: list[CampaignFailureBreakdownItem] = Field(default_factory=list)
+
+
 class ReplayAttemptListItem(BaseModel):
     attempt_id: UUID
     mutation_id: str

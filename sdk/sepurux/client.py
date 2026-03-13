@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import os
+import time
 import warnings
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -12,7 +13,7 @@ from uuid import UUID
 import httpx
 
 from .recorder import TraceRecorder, safe_json_value
-from .types import RunStatus, TracePayload
+from .types import CampaignReliability, CampaignRunResult, FailureRecord, RunStatus, TracePayload
 
 SDK_PACKAGE_NAME = "sepurux"
 DEMO_API_KEY = "demo_sepurux_key"
@@ -305,13 +306,58 @@ class SepuruxClient:
         *,
         trace: dict[str, Any] | None = None,
         mutation_pack: str | None = None,
-    ) -> str:
+        wait_for_completion: bool = True,
+        timeout_seconds: float = 60,
+        poll_interval: float = 1.0,
+    ) -> CampaignRunResult:
         campaign_id = self._resolve_campaign_id(campaign_name_or_id)
+        trace_id: str | None = None
         if mutation_pack:
-            return self.run_pack(campaign_id=campaign_id, mutation_pack=mutation_pack)
-        trace_payload = trace or _build_demo_trace(campaign_name_or_id)
-        trace_id = self.upload_trace(trace_payload)
-        return self.start_run(trace_id=trace_id, campaign_id=campaign_id)
+            run_id = self.run_pack(campaign_id=campaign_id, mutation_pack=mutation_pack)
+        else:
+            trace_payload = trace or _build_demo_trace(campaign_name_or_id)
+            trace_id = self.upload_trace(trace_payload)
+            run_id = self.start_run(trace_id=trace_id, campaign_id=campaign_id)
+
+        if not wait_for_completion:
+            return {
+                "run_id": run_id,
+                "campaign_id": campaign_id,
+                "trace_id": trace_id,
+                "status": "queued",
+                "summary": None,
+                "reliability_score": None,
+                "reliability_status": None,
+                "failures": [],
+            }
+
+        run_status = self._wait_for_run_completion(
+            run_id,
+            timeout_seconds=timeout_seconds,
+            poll_interval=poll_interval,
+        )
+        reliability: CampaignReliability | None = None
+        failures: list[FailureRecord] = []
+        if run_status["status"] not in {"queued", "running", "pending"}:
+            reliability = self.get_campaign_reliability(campaign_id, run_id=run_id)
+            failures = self.get_campaign_failures(campaign_id, run_id=run_id)
+
+        return {
+            "run_id": run_id,
+            "campaign_id": campaign_id,
+            "trace_id": trace_id,
+            "status": run_status["status"],
+            "summary": run_status.get("summary"),
+            "reliability_score": (
+                float(reliability["reliability_score"])
+                if reliability is not None and isinstance(reliability.get("reliability_score"), int | float)
+                else None
+            ),
+            "reliability_status": (
+                str(reliability["status"]) if reliability is not None and isinstance(reliability.get("status"), str) else None
+            ),
+            "failures": failures,
+        }
 
     def get_run(self, run_id: str) -> RunStatus:
         response = self._client.get(
@@ -326,6 +372,53 @@ class SepuruxClient:
             "run_id": str(payload.get("run_id") or run_id),
             "status": str(payload.get("status") or "unknown"),
             "summary": summary if isinstance(summary, dict) else None,
+        }
+
+    def get_campaign_failures(
+        self,
+        campaign_id: str,
+        *,
+        run_id: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[FailureRecord]:
+        params: dict[str, Any] = {"limit": limit, "offset": offset}
+        if run_id:
+            params["run_id"] = run_id
+        response = self._client.get(
+            f"/v1/campaigns/{campaign_id}/failures",
+            headers=self._request_headers(),
+            params=params,
+        )
+        response.raise_for_status()
+        payload = _parse_json_list_response(response)
+        return [item for item in payload if isinstance(item, dict)]
+
+    def get_campaign_reliability(
+        self,
+        campaign_id: str,
+        *,
+        run_id: str | None = None,
+    ) -> CampaignReliability:
+        params: dict[str, Any] = {}
+        if run_id:
+            params["run_id"] = run_id
+        response = self._client.get(
+            f"/v1/campaigns/{campaign_id}/reliability",
+            headers=self._request_headers(),
+            params=params,
+        )
+        response.raise_for_status()
+        payload = _parse_json_response(response)
+        return {
+            "reliability_score": float(payload.get("reliability_score", 0.0)),
+            "status": str(payload.get("status") or "healthy"),
+            "classified_failures": int(payload.get("classified_failures", 0)),
+            "failure_breakdown": (
+                payload.get("failure_breakdown")
+                if isinstance(payload.get("failure_breakdown"), list)
+                else []
+            ),
         }
 
     def __enter__(self) -> SepuruxClient:
@@ -385,11 +478,32 @@ class SepuruxClient:
                     campaign_id=resolved_campaign_id,
                 )
 
+    def _wait_for_run_completion(
+        self,
+        run_id: str,
+        *,
+        timeout_seconds: float,
+        poll_interval: float,
+    ) -> RunStatus:
+        deadline = time.monotonic() + timeout_seconds
+        run_status = self.get_run(run_id)
+        while run_status["status"] in {"queued", "running", "pending"} and time.monotonic() < deadline:
+            time.sleep(poll_interval)
+            run_status = self.get_run(run_id)
+        return run_status
+
 
 def _parse_json_response(response: httpx.Response) -> dict[str, Any]:
     data = response.json()
     if not isinstance(data, dict):
         raise ValueError("Expected JSON object response")
+    return data
+
+
+def _parse_json_list_response(response: httpx.Response) -> list[Any]:
+    data = response.json()
+    if not isinstance(data, list):
+        raise ValueError("Expected JSON array response")
     return data
 
 

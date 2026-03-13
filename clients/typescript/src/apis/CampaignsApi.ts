@@ -16,7 +16,9 @@
 import * as runtime from '../runtime';
 import type {
   CampaignCreateRequest,
+  CampaignFailureRecord,
   CampaignMetadata,
+  CampaignReliabilityResponse,
   CampaignRunPackRequest,
   CampaignRunPackResponse,
   HTTPValidationError,
@@ -24,8 +26,12 @@ import type {
 import {
     CampaignCreateRequestFromJSON,
     CampaignCreateRequestToJSON,
+    CampaignFailureRecordFromJSON,
+    CampaignFailureRecordToJSON,
     CampaignMetadataFromJSON,
     CampaignMetadataToJSON,
+    CampaignReliabilityResponseFromJSON,
+    CampaignReliabilityResponseToJSON,
     CampaignRunPackRequestFromJSON,
     CampaignRunPackRequestToJSON,
     CampaignRunPackResponseFromJSON,
@@ -33,6 +39,20 @@ import {
     HTTPValidationErrorFromJSON,
     HTTPValidationErrorToJSON,
 } from '../models/index';
+
+export interface GetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest {
+    campaignId: string;
+    runId?: string | null;
+    limit?: number;
+    offset?: number;
+    xProjectId?: string | null;
+}
+
+export interface GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest {
+    campaignId: string;
+    runId?: string | null;
+    xProjectId?: string | null;
+}
 
 export interface GetCampaignV1CampaignsCampaignIdGetRequest {
     campaignId: string;
@@ -60,6 +80,96 @@ export interface PostCampaignV1CampaignsPostRequest {
  * 
  */
 export class CampaignsApi extends runtime.BaseAPI {
+
+    /**
+     * Get Campaign Failures
+     */
+    async getCampaignFailuresV1CampaignsCampaignIdFailuresGetRaw(requestParameters: GetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<CampaignFailureRecord>>> {
+        if (requestParameters['campaignId'] == null) {
+            throw new runtime.RequiredError(
+                'campaignId',
+                'Required parameter "campaignId" was null or undefined when calling getCampaignFailuresV1CampaignsCampaignIdFailuresGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['runId'] != null) {
+            queryParameters['run_id'] = requestParameters['runId'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/campaigns/{campaign_id}/failures`.replace(`{${"campaign_id"}}`, encodeURIComponent(String(requestParameters['campaignId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(CampaignFailureRecordFromJSON));
+    }
+
+    /**
+     * Get Campaign Failures
+     */
+    async getCampaignFailuresV1CampaignsCampaignIdFailuresGet(requestParameters: GetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<CampaignFailureRecord>> {
+        const response = await this.getCampaignFailuresV1CampaignsCampaignIdFailuresGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get Campaign Reliability
+     */
+    async getCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRaw(requestParameters: GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CampaignReliabilityResponse>> {
+        if (requestParameters['campaignId'] == null) {
+            throw new runtime.RequiredError(
+                'campaignId',
+                'Required parameter "campaignId" was null or undefined when calling getCampaignReliabilityV1CampaignsCampaignIdReliabilityGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['runId'] != null) {
+            queryParameters['run_id'] = requestParameters['runId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/campaigns/{campaign_id}/reliability`.replace(`{${"campaign_id"}}`, encodeURIComponent(String(requestParameters['campaignId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CampaignReliabilityResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Campaign Reliability
+     */
+    async getCampaignReliabilityV1CampaignsCampaignIdReliabilityGet(requestParameters: GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CampaignReliabilityResponse> {
+        const response = await this.getCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Get Campaign

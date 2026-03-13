@@ -10,7 +10,17 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import worker as worker_module
-from models import AuditEvent, Base, Campaign, MutationPack, ReplayAttempt, Run, Trace, Webhook
+from models import (
+    AuditEvent,
+    Base,
+    Campaign,
+    Failure,
+    MutationPack,
+    ReplayAttempt,
+    Run,
+    Trace,
+    Webhook,
+)
 from webhooks import generate_webhook_signature
 
 
@@ -621,3 +631,95 @@ def test_execute_run_counterfactuals_use_applied_mutation_context(
     assert captured_mutations[0]["args"] == {"title": "Demo"}
     assert captured_mutations[0]["failure_reason"] == "rate_limited"
     assert captured_mutations[0]["force_fail"] is True
+
+
+def test_execute_run_persists_failure_records_and_reliability_summary(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Timeout Pack",
+                description="Always timeout jira calls",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "fault.timeout",
+                            "type": "fault.timeout",
+                            "target": {"tool": "jira.*"},
+                            "params": {"timeout_ms": 3000},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Failure Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Failure"},
+                    }
+                ],
+                eval_set={"checks": ["status"], "attempts_count": 2},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        failures = list(
+            db.scalars(
+                select(Failure).where(Failure.run_id == run_id).order_by(Failure.created_at.asc())
+            )
+        )
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert len(failures) == 2
+    assert all(failure.failure_type == "tool_timeout" for failure in failures)
+    assert all(failure.severity == "high" for failure in failures)
+
+    summary = run.summary
+    assert isinstance(summary, dict)
+    assert summary["attempt_count"] == 2
+    assert summary["failed_count"] == 2
+    assert summary["reliability_score"] == 90.0
+    assert summary["reliability_status"] == "healthy"
+    assert summary["classified_failures"] == 2
+    assert summary["failure_breakdown"] == [{"type": "tool_timeout", "count": 2}]
