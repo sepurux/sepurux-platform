@@ -80,7 +80,9 @@ def serialize_failure_record(failure: Failure) -> dict[str, Any]:
         "type": failure.failure_type,
         "severity": failure.severity,
         "description": failure.description,
-        "metadata": failure.failure_metadata if isinstance(failure.failure_metadata, dict) else None,
+        "metadata": (
+            failure.failure_metadata if isinstance(failure.failure_metadata, dict) else None
+        ),
         "created_at": failure.created_at,
     }
 

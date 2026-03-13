@@ -705,7 +705,9 @@ def test_execute_run_persists_failure_records_and_reliability_summary(
 
     with testing_session_local() as db:
         failures = list(
-            db.scalars(select(Failure).where(Failure.run_id == run_id).order_by(Failure.created_at.asc()))
+            db.scalars(
+                select(Failure).where(Failure.run_id == run_id).order_by(Failure.created_at.asc())
+            )
         )
         run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
 

@@ -18,9 +18,15 @@ FAILURE_TYPES = frozenset(
 )
 
 SEVERITY_LEVELS = frozenset({"critical", "high", "medium", "low"})
-SCHEMA_FAILURE_REASONS = frozenset({"schema_drift", "schema_mismatch", "missing_field", "type_mismatch"})
-POLICY_FAILURE_REASONS = frozenset({"policy_blocked", "policy_denied", "policy_requires_approval", "opa_unavailable"})
-JSON_FAILURE_REASONS = frozenset({"json_decode_error", "json_parse_error", "replay_contract_invalid_response"})
+SCHEMA_FAILURE_REASONS = frozenset(
+    {"schema_drift", "schema_mismatch", "missing_field", "type_mismatch"}
+)
+POLICY_FAILURE_REASONS = frozenset(
+    {"policy_blocked", "policy_denied", "policy_requires_approval", "opa_unavailable"}
+)
+JSON_FAILURE_REASONS = frozenset(
+    {"json_decode_error", "json_parse_error", "replay_contract_invalid_response"}
+)
 
 
 @dataclass(frozen=True)
@@ -81,7 +87,9 @@ def classify_failure(
             failure_type="prompt_injection",
             severity="critical",
             description="Prompt injection content reached the replay path and triggered a security block.",
-            metadata=_base_metadata(step, result, latency_ms=latency_ms, security_action=security_action),
+            metadata=_base_metadata(
+                step, result, latency_ms=latency_ms, security_action=security_action
+            ),
         )
 
     if security_action == "block":
@@ -89,10 +97,16 @@ def classify_failure(
             failure_type="unsafe_tool_call",
             severity="critical",
             description="An unsafe tool interaction was blocked by the Sepurux security layer.",
-            metadata=_base_metadata(step, result, latency_ms=latency_ms, security_action=security_action),
+            metadata=_base_metadata(
+                step, result, latency_ms=latency_ms, security_action=security_action
+            ),
         )
 
-    if failure_reason in JSON_FAILURE_REASONS or error_code in JSON_FAILURE_REASONS or "json" in error_message:
+    if (
+        failure_reason in JSON_FAILURE_REASONS
+        or error_code in JSON_FAILURE_REASONS
+        or "json" in error_message
+    ):
         return FailureClassification(
             failure_type="json_parse_error",
             severity="high",
@@ -140,12 +154,16 @@ def classify_failure(
             metadata=_base_metadata(step, result, latency_ms=latency_ms),
         )
 
-    if security_action in {"sanitize", "allow"} and _has_high_risk_security_event(result.security_events):
+    if security_action in {"sanitize", "allow"} and _has_high_risk_security_event(
+        result.security_events
+    ):
         return FailureClassification(
             failure_type="unsafe_tool_call",
             severity="critical",
             description="A tool interaction crossed the configured Sepurux security risk threshold.",
-            metadata=_base_metadata(step, result, latency_ms=latency_ms, security_action=security_action),
+            metadata=_base_metadata(
+                step, result, latency_ms=latency_ms, security_action=security_action
+            ),
         )
 
     return None
