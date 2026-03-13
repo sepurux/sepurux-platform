@@ -465,6 +465,121 @@ paths:
       summary: Get Campaign
       tags:
       - campaigns
+  /v1/campaigns/{campaign_id}/failures:
+    get:
+      operationId: get_campaign_failures_v1_campaigns__campaign_id__failures_get
+      parameters:
+      - explode: false
+        in: path
+        name: campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Campaign Id
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: run_id
+        required: false
+        schema:
+          format: uuid
+          nullable: true
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 200
+          maximum: 500
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/CampaignFailureRecord'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Campaign Failures
+      tags:
+      - campaigns
+  /v1/campaigns/{campaign_id}/reliability:
+    get:
+      operationId: get_campaign_reliability_v1_campaigns__campaign_id__reliability_get
+      parameters:
+      - explode: false
+        in: path
+        name: campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Campaign Id
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: run_id
+        required: false
+        schema:
+          format: uuid
+          nullable: true
+          type: string
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignReliabilityResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Campaign Reliability
+      tags:
+      - campaigns
   /v1/campaigns/{campaign_id}/run-pack:
     post:
       operationId: post_campaign_run_pack_v1_campaigns__campaign_id__run_pack_post
@@ -2618,6 +2733,86 @@ components:
       - mutation_set
       - name
       title: CampaignCreateRequest
+    CampaignFailureBreakdownItem:
+      example:
+        count: 1
+        type: type
+      properties:
+        type:
+          title: Type
+          type: string
+        count:
+          title: Count
+          type: integer
+      required:
+      - count
+      - type
+      title: CampaignFailureBreakdownItem
+    CampaignFailureRecord:
+      example:
+        severity: critical
+        mutation: mutation
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        metadata:
+          key: ""
+        run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        description: description
+        created_at: 2000-01-23T04:56:07.000+00:00
+        failure_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        type: type
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        failure_id:
+          format: uuid
+          title: Failure Id
+          type: string
+        run_id:
+          format: uuid
+          title: Run Id
+          type: string
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        mutation:
+          title: Mutation
+          type: string
+        type:
+          title: Type
+          type: string
+        severity:
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+          title: Severity
+          type: string
+        description:
+          title: Description
+          type: string
+        metadata:
+          additionalProperties: {}
+          nullable: true
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - campaign_id
+      - created_at
+      - description
+      - failure_id
+      - mutation
+      - run_id
+      - severity
+      - trace_id
+      - type
+      title: CampaignFailureRecord
     CampaignMetadata:
       example:
         mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -2656,6 +2851,39 @@ components:
       - name
       - status
       title: CampaignMetadata
+    CampaignReliabilityResponse:
+      example:
+        classified_failures: 6
+        reliability_score: 0.8008281904610115
+        status: healthy
+        failure_breakdown:
+        - count: 1
+          type: type
+        - count: 1
+          type: type
+      properties:
+        reliability_score:
+          title: Reliability Score
+          type: number
+        status:
+          enum:
+          - healthy
+          - warning
+          - critical
+          title: Status
+          type: string
+        classified_failures:
+          default: 0
+          title: Classified Failures
+          type: integer
+        failure_breakdown:
+          items:
+            $ref: '#/components/schemas/CampaignFailureBreakdownItem'
+          type: array
+      required:
+      - reliability_score
+      - status
+      title: CampaignReliabilityResponse
     CampaignRunPackRequest:
       example:
         pack: pack

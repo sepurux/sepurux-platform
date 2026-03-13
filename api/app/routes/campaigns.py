@@ -7,7 +7,10 @@ from app.auth import ProjectScope, TenantAuthContext, require_project_scope, req
 from app.db import get_db
 from app.schemas import (
     CampaignCreateRequest,
+    CampaignFailureBreakdownItem,
+    CampaignFailureRecord,
     CampaignMetadata,
+    CampaignReliabilityResponse,
     CampaignRunPackRequest,
     CampaignRunPackResponse,
 )
@@ -20,6 +23,11 @@ from app.services.demo_service import (
     enforce_demo_run_limits,
     enforce_demo_run_pack_limits,
 )
+from app.services.failure_service import (
+    calculate_campaign_reliability,
+    list_failures_for_campaign,
+    serialize_failure_record,
+)
 from app.services.mutation_pack_service import ensure_registered_mutation_pack, get_mutation_pack
 from app.services.run_service import create_run_pack_and_enqueue
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -31,6 +39,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 DeveloperAuth = Annotated[TenantAuthContext, Depends(require_role("developer"))]
 PACK_DEFINITION_KEYS = frozenset({"target", "params", "probability", "weight"})
+RUN_ID_QUERY = Query(None)
 
 
 def _to_campaign_metadata(campaign) -> CampaignMetadata:
@@ -128,6 +137,57 @@ def get_campaign(
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
     return _to_campaign_metadata(campaign)
+
+
+@router.get("/{campaign_id}/failures", response_model=list[CampaignFailureRecord])
+def get_campaign_failures(
+    campaign_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    run_id: UUID | None = RUN_ID_QUERY,
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> list[CampaignFailureRecord]:
+    campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    failures = list_failures_for_campaign(
+        db,
+        project_id=project_scope.project_id,
+        campaign_id=campaign_id,
+        run_id=run_id,
+        limit=limit,
+        offset=offset,
+    )
+    return [CampaignFailureRecord(**serialize_failure_record(failure)) for failure in failures]
+
+
+@router.get("/{campaign_id}/reliability", response_model=CampaignReliabilityResponse)
+def get_campaign_reliability(
+    campaign_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    run_id: UUID | None = RUN_ID_QUERY,
+) -> CampaignReliabilityResponse:
+    campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    reliability = calculate_campaign_reliability(
+        db,
+        project_id=project_scope.project_id,
+        campaign_id=campaign_id,
+        run_id=run_id,
+    )
+    return CampaignReliabilityResponse(
+        reliability_score=reliability["reliability_score"],
+        status=reliability["status"],
+        classified_failures=reliability["classified_failures"],
+        failure_breakdown=[
+            CampaignFailureBreakdownItem(**item) for item in reliability["failure_breakdown"]
+        ],
+    )
 
 
 @router.post(

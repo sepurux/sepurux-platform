@@ -35,7 +35,10 @@ src/models/CIRunCreateResponse.ts
 src/models/CIRunStatusResponse.ts
 src/models/CIRunThresholds.ts
 src/models/CampaignCreateRequest.ts
+src/models/CampaignFailureBreakdownItem.ts
+src/models/CampaignFailureRecord.ts
 src/models/CampaignMetadata.ts
+src/models/CampaignReliabilityResponse.ts
 src/models/CampaignRunPackRequest.ts
 src/models/CampaignRunPackResponse.ts
 src/models/CounterfactualListItem.ts

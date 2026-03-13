@@ -205,6 +205,24 @@ class ReplayAttempt(Base):
     )
 
 
+class Failure(Base):
+    __tablename__ = "failures"
+
+    failure_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    run_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    campaign_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    trace_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    mutation_name: Mapped[str] = mapped_column(Text, nullable=False)
+    failure_type: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    failure_metadata: Mapped[Any | None] = mapped_column("metadata", JSONB_COMPAT, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class Counterfactual(Base):
     __tablename__ = "counterfactuals"
 

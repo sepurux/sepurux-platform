@@ -23,6 +23,288 @@ import (
 // CampaignsAPIService CampaignsAPI service
 type CampaignsAPIService service
 
+type ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest struct {
+	ctx context.Context
+	ApiService *CampaignsAPIService
+	campaignId string
+	runId *string
+	limit *int32
+	offset *int32
+	xProjectId *string
+}
+
+func (r ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest) RunId(runId string) ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest {
+	r.runId = &runId
+	return r
+}
+
+func (r ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest) Limit(limit int32) ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest) Offset(offset int32) ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest {
+	r.offset = &offset
+	return r
+}
+
+func (r ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest) XProjectId(xProjectId string) ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest {
+	r.xProjectId = &xProjectId
+	return r
+}
+
+func (r ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest) Execute() ([]CampaignFailureRecord, *http.Response, error) {
+	return r.ApiService.GetCampaignFailuresV1CampaignsCampaignIdFailuresGetExecute(r)
+}
+
+/*
+GetCampaignFailuresV1CampaignsCampaignIdFailuresGet Get Campaign Failures
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param campaignId
+ @return ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest
+*/
+func (a *CampaignsAPIService) GetCampaignFailuresV1CampaignsCampaignIdFailuresGet(ctx context.Context, campaignId string) ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest {
+	return ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest{
+		ApiService: a,
+		ctx: ctx,
+		campaignId: campaignId,
+	}
+}
+
+// Execute executes the request
+//  @return []CampaignFailureRecord
+func (a *CampaignsAPIService) GetCampaignFailuresV1CampaignsCampaignIdFailuresGetExecute(r ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest) ([]CampaignFailureRecord, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  []CampaignFailureRecord
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CampaignsAPIService.GetCampaignFailuresV1CampaignsCampaignIdFailuresGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/campaigns/{campaign_id}/failures"
+	localVarPath = strings.Replace(localVarPath, "{"+"campaign_id"+"}", url.PathEscape(parameterValueToString(r.campaignId, "campaignId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.runId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "run_id", r.runId, "form", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "form", "")
+	} else {
+		var defaultValue int32 = 200
+		r.limit = &defaultValue
+	}
+	if r.offset != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "offset", r.offset, "form", "")
+	} else {
+		var defaultValue int32 = 0
+		r.offset = &defaultValue
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.xProjectId != nil {
+		parameterAddToHeaderOrQuery(localVarHeaderParams, "X-Project-Id", r.xProjectId, "simple", "")
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest struct {
+	ctx context.Context
+	ApiService *CampaignsAPIService
+	campaignId string
+	runId *string
+	xProjectId *string
+}
+
+func (r ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest) RunId(runId string) ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest {
+	r.runId = &runId
+	return r
+}
+
+func (r ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest) XProjectId(xProjectId string) ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest {
+	r.xProjectId = &xProjectId
+	return r
+}
+
+func (r ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest) Execute() (*CampaignReliabilityResponse, *http.Response, error) {
+	return r.ApiService.GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetExecute(r)
+}
+
+/*
+GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGet Get Campaign Reliability
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param campaignId
+ @return ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest
+*/
+func (a *CampaignsAPIService) GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGet(ctx context.Context, campaignId string) ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest {
+	return ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest{
+		ApiService: a,
+		ctx: ctx,
+		campaignId: campaignId,
+	}
+}
+
+// Execute executes the request
+//  @return CampaignReliabilityResponse
+func (a *CampaignsAPIService) GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetExecute(r ApiGetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetRequest) (*CampaignReliabilityResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *CampaignReliabilityResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CampaignsAPIService.GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/campaigns/{campaign_id}/reliability"
+	localVarPath = strings.Replace(localVarPath, "{"+"campaign_id"+"}", url.PathEscape(parameterValueToString(r.campaignId, "campaignId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.runId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "run_id", r.runId, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.xProjectId != nil {
+		parameterAddToHeaderOrQuery(localVarHeaderParams, "X-Project-Id", r.xProjectId, "simple", "")
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiGetCampaignV1CampaignsCampaignIdGetRequest struct {
 	ctx context.Context
 	ApiService *CampaignsAPIService

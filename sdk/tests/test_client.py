@@ -21,8 +21,46 @@ class _RequestCapture:
             return httpx.Response(201, json={"campaign_id": "campaign-created"})
         if request.url.path == "/v1/runs":
             return httpx.Response(201, json={"run_id": "run-456"})
+        if request.url.path == "/v1/runs/run-456":
+            return httpx.Response(
+                200,
+                json={"run_id": "run-456", "status": "completed", "summary": {"attempt_count": 5}},
+            )
+        if request.url.path == "/v1/runs/run-123":
+            return httpx.Response(
+                200,
+                json={"run_id": "run-123", "status": "completed", "summary": {"attempt_count": 5}},
+            )
         if request.url.path == "/v1/campaigns/campaign-123/run-pack":
             return httpx.Response(201, json={"run_id": "run-123"})
+        if request.url.path == "/v1/campaigns/campaign-123/reliability":
+            return httpx.Response(
+                200,
+                json={
+                    "reliability_score": 82.0,
+                    "status": "warning",
+                    "classified_failures": 2,
+                    "failure_breakdown": [{"type": "tool_timeout", "count": 1}],
+                },
+            )
+        if request.url.path == "/v1/campaigns/campaign-123/failures":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "failure_id": "failure-1",
+                        "run_id": request.url.params.get("run_id") or "run-123",
+                        "campaign_id": "campaign-123",
+                        "trace_id": "trace-123",
+                        "mutation": "core.reliability",
+                        "type": "tool_timeout",
+                        "severity": "high",
+                        "description": "timeout",
+                        "metadata": {"tool": "jira.create_issue"},
+                        "created_at": "2026-03-12T00:00:00Z",
+                    }
+                ],
+            )
         return httpx.Response(404, json={"detail": "not found"})
 
 
@@ -256,12 +294,46 @@ def test_run_campaign_prefers_server_side_run_pack_when_requested() -> None:
         headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
     )
 
-    run_id = client.run_campaign("demo_campaign", mutation_pack="core.reliability")
+    result = client.run_campaign("demo_campaign", mutation_pack="core.reliability")
 
-    assert run_id == "run-123"
+    assert result["run_id"] == "run-123"
+    assert result["reliability_score"] == 82.0
+    assert result["reliability_status"] == "warning"
+    assert result["failures"][0]["type"] == "tool_timeout"
     assert [request.url.path for request in capture.requests] == [
         "/v1/campaigns",
         "/v1/campaigns/campaign-123/run-pack",
+        "/v1/runs/run-123",
+        "/v1/campaigns/campaign-123/reliability",
+        "/v1/campaigns/campaign-123/failures",
+    ]
+
+
+def test_run_campaign_can_return_partial_result_without_waiting() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    result = client.run_campaign("demo_campaign", wait_for_completion=False)
+
+    assert result["status"] == "queued"
+    assert result["reliability_score"] is None
+    assert result["failures"] == []
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/campaigns",
+        "/v1/traces",
+        "/v1/runs",
     ]
 
 
