@@ -7,6 +7,8 @@ import { ArrowLeft, RefreshCcw } from "lucide-react";
 
 import {
   api,
+  type CampaignFailure,
+  type CampaignReliability,
   type AttemptTimeline,
   type PolicyEventListItem,
   type ReplayAttemptDetail,
@@ -36,6 +38,8 @@ type LoadState =
       stats: RunStats | null;
       attempts: ReplayAttemptListItem[];
       policyEvents: PolicyEventListItem[];
+      failures: CampaignFailure[];
+      reliability: CampaignReliability | null;
       baselineRun: RunMetadata | null;
       baselineStats: RunStats | null;
     };
@@ -52,6 +56,14 @@ export function RunDetailView({ runId }: { runId: string }) {
         api.getRunStats(runId).catch(() => null),
         api.listRunAttempts(runId, { limit: 200, offset: 0 }),
         api.listRunPolicyEvents(runId, { limit: 200, offset: 0 }).catch(() => []),
+      ]);
+      const [reliability, failures] = await Promise.all([
+        api
+          .getCampaignReliability(run.campaign_id, { run_id: runId })
+          .catch(() => null),
+        api
+          .listCampaignFailures(run.campaign_id, { run_id: runId, limit: 200, offset: 0 })
+          .catch(() => []),
       ]);
 
       let baselineRun: RunMetadata | null = null;
@@ -70,6 +82,8 @@ export function RunDetailView({ runId }: { runId: string }) {
         stats: statsResult,
         attempts,
         policyEvents,
+        failures,
+        reliability,
         baselineRun,
         baselineStats,
       });
@@ -107,6 +121,8 @@ export function RunDetailView({ runId }: { runId: string }) {
           stats={state.stats}
           attempts={state.attempts}
           policyEvents={state.policyEvents}
+          failures={state.failures}
+          reliability={state.reliability}
           baselineRun={state.baselineRun}
           baselineStats={state.baselineStats}
           runId={runId}
@@ -122,6 +138,8 @@ function RunDetailPanels({
   stats,
   attempts,
   policyEvents,
+  failures,
+  reliability,
   baselineRun,
   baselineStats,
   runId,
@@ -131,6 +149,8 @@ function RunDetailPanels({
   stats: RunStats | null;
   attempts: ReplayAttemptListItem[];
   policyEvents: PolicyEventListItem[];
+  failures: CampaignFailure[];
+  reliability: CampaignReliability | null;
   baselineRun: RunMetadata | null;
   baselineStats: RunStats | null;
   runId: string;
@@ -155,11 +175,18 @@ function RunDetailPanels({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
             <StatTile label="Attempts" value={String(derived.total)} />
             <StatTile label="Passed" value={String(derived.passed)} tone="success" />
             <StatTile label="Failed" value={String(derived.failed)} tone="danger" />
             <StatTile label="Pass Rate" value={derived.passRateLabel} tone="info" />
+            <StatTile
+              label="Reliability Score"
+              value={
+                reliability ? formatPercent(reliability.reliability_score / 100, 1) : "n/a"
+              }
+              tone={reliability?.status === "critical" ? "danger" : reliability?.status === "warning" ? "info" : "success"}
+            />
             <StatTile label="Policy Violations" value={String(policyViolationCount)} tone={policyViolationCount > 0 ? "danger" : "default"} />
           </div>
         </CardContent>
@@ -178,6 +205,8 @@ function RunDetailPanels({
           runId={runId}
           stats={stats}
           attempts={attempts}
+          failures={failures}
+          reliability={reliability}
           onNavigateToRun={onNavigateToRun}
         />
         <AttemptsTable attempts={attempts} />
@@ -192,11 +221,15 @@ function RunStatsCards({
   runId,
   stats,
   attempts,
+  failures,
+  reliability,
   onNavigateToRun,
 }: {
   runId: string;
   stats: RunStats | null;
   attempts: ReplayAttemptListItem[];
+  failures: CampaignFailure[];
+  reliability: CampaignReliability | null;
   onNavigateToRun: (targetRunId: string) => void;
 }) {
   const lethalMutations = stats?.most_lethal_mutations ?? [];
@@ -240,6 +273,66 @@ function RunStatsCards({
     <div className="space-y-6">
       <Card>
         <CardHeader>
+          <CardTitle>Reliability</CardTitle>
+          <CardDescription>Run-scoped reliability score computed from classified failure severity.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {reliability ? (
+            <>
+              <div className="flex items-end justify-between gap-4 rounded-md border border-border/60 bg-muted/15 px-4 py-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Score</p>
+                  <p className="text-3xl font-semibold text-foreground">
+                    {formatPercent(reliability.reliability_score / 100, 1)}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    reliability.status === "critical"
+                      ? "danger"
+                      : reliability.status === "warning"
+                        ? "warning"
+                        : "success"
+                  }
+                >
+                  {reliability.status}
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {reliability.classified_failures} classified failure
+                {reliability.classified_failures === 1 ? "" : "s"}
+              </div>
+            </>
+          ) : (
+            <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
+              Reliability data is not available for this run yet.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Failures by Category</CardTitle>
+          <CardDescription>Classifier output across all failed attempts in this run.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {(reliability?.failure_breakdown ?? []).slice(0, 8).map((item) => (
+            <div key={item.type} className="flex items-center justify-between rounded-md border border-border/60 bg-muted/15 px-3 py-2">
+              <span className="truncate text-sm text-foreground">{item.type}</span>
+              <Badge variant="danger">{item.count}</Badge>
+            </div>
+          ))}
+          {(!reliability || reliability.failure_breakdown.length === 0) && (
+            <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
+              No classified failures available yet.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Failure Breakdown by Tool</CardTitle>
           <CardDescription>Top failing tools for this run.</CardDescription>
         </CardHeader>
@@ -273,6 +366,43 @@ function RunStatsCards({
           {(!stats || stats.top_failure_reasons.length === 0) && (
             <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
               No failure reason data available yet.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Failure Records</CardTitle>
+          <CardDescription>Latest classified failures for this run.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {failures.slice(0, 5).map((failure) => (
+            <div
+              key={failure.failure_id}
+              className="rounded-md border border-border/60 bg-muted/15 px-3 py-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-foreground">{failure.type}</p>
+                <Badge
+                  variant={
+                    failure.severity === "critical"
+                      ? "danger"
+                      : failure.severity === "high"
+                        ? "warning"
+                        : "outline"
+                  }
+                >
+                  {failure.severity}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{failure.description}</p>
+              <p className="mt-2 text-xs text-muted-foreground">Mutation: {failure.mutation}</p>
+            </div>
+          ))}
+          {failures.length === 0 && (
+            <div className="rounded-md border border-dashed border-border/70 bg-muted/15 p-4 text-sm text-muted-foreground">
+              No classified failure records available yet.
             </div>
           )}
         </CardContent>

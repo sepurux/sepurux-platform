@@ -105,6 +105,8 @@ Methods:
 - `start_run(trace_id, campaign_id, thresholds=None) -> str`
 - `run_pack(campaign_id, mutation_pack) -> str`
 - `get_run(run_id) -> dict`
+- `get_campaign_failures(campaign_id, run_id=None) -> list[dict]`
+- `get_campaign_reliability(campaign_id, run_id=None) -> dict`
 
 ### `TraceBuilder`
 
@@ -129,7 +131,10 @@ the documented path.
 ### Server-side pack execution
 
 ```python
-run_id = client.run_campaign("demo_campaign", mutation_pack="core.reliability")
+result = client.run_campaign("demo_campaign", mutation_pack="core.reliability")
+print(result["run_id"])
+print(result["reliability_score"])
+print([failure["type"] for failure in result["failures"]])
 ```
 
 

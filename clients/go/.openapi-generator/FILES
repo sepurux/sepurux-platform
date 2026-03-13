@@ -40,7 +40,10 @@ docs/CIRunCreateResponse.md
 docs/CIRunStatusResponse.md
 docs/CIRunThresholds.md
 docs/CampaignCreateRequest.md
+docs/CampaignFailureBreakdownItem.md
+docs/CampaignFailureRecord.md
 docs/CampaignMetadata.md
+docs/CampaignReliabilityResponse.md
 docs/CampaignRunPackRequest.md
 docs/CampaignRunPackResponse.md
 docs/CampaignsAPI.md
@@ -130,7 +133,10 @@ model_auth_permission_set.go
 model_auth_session_metadata.go
 model_auth_session_response.go
 model_campaign_create_request.go
+model_campaign_failure_breakdown_item.go
+model_campaign_failure_record.go
 model_campaign_metadata.go
+model_campaign_reliability_response.go
 model_campaign_run_pack_request.go
 model_campaign_run_pack_response.go
 model_ci_run_create_request.go

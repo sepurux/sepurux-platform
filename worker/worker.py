@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -14,10 +14,12 @@ from sqlalchemy.orm import Session
 from config import get_settings
 from counterfactuals import run_counterfactual_replays
 from db import get_session
+from failure_classifier import FailureClassificationInput, classify_attempt_failure
 from models import (
     AuditEvent,
     Campaign,
     Counterfactual,
+    Failure,
     HardeningTemplate,
     MutationPack,
     PolicyEvent,
@@ -39,6 +41,7 @@ from policy_engine import (
     has_confirmation_token,
     normalize_action,
 )
+from reliability_score import calculate_reliability_score
 from replayer import (
     ReplayAdapterConfig,
     RetryPolicyConfig,
@@ -156,6 +159,19 @@ def _extract_tool_usage_metadata(
         tool_call_counts[tool] = tool_call_counts.get(tool, 0) + 1
 
     return list(ordered_tools.keys()), tool_call_counts
+
+
+def _failure_breakdown_items(
+    counts: Counter[str],
+) -> list[dict[str, int | str]]:
+    items = [
+        {"type": failure_type, "count": count}
+        for failure_type, count in sorted(
+            counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )
+    ]
+    return items
 
 
 def _is_unsafe_failure_reason(failure_reason: str | None) -> bool:
@@ -954,6 +970,8 @@ def execute_run(run_id: str) -> None:
         security_events_count = 0
         injection_blocks = 0
         injection_sanitizations = 0
+        failure_type_counts: Counter[str] = Counter()
+        severity_counts: Counter[str] = Counter()
 
         attempt_index = 0
         for baseline_index, mutation in enumerate(baseline_mutations):
@@ -1212,6 +1230,34 @@ def execute_run(run_id: str) -> None:
                 security_events_count += len(pending_security_events)
 
                 if result == "failed":
+                    classification = classify_attempt_failure(
+                        FailureClassificationInput(
+                            failure_reason=failure_reason,
+                            first_failure_tool=first_failure_tool,
+                            first_failure_event_index=first_failure_event_index,
+                            timeline_artifact=timeline_artifact,
+                            mutation_trace=mutation_trace,
+                            policy_events=pending_policy_events,
+                            security_events=pending_security_events,
+                            mutation_name=recorded_mutation_id,
+                        )
+                    )
+                    db.add(
+                        Failure(
+                            failure_id=uuid4(),
+                            project_id=run.project_id,
+                            run_id=run.run_id,
+                            campaign_id=run.campaign_id,
+                            trace_id=run.trace_id,
+                            mutation_name=recorded_mutation_id,
+                            failure_type=classification.failure_type,
+                            severity=classification.severity,
+                            description=classification.description,
+                            failure_metadata=classification.metadata,
+                        )
+                    )
+                    failure_type_counts[classification.failure_type] += 1
+                    severity_counts[classification.severity] += 1
                     for counterfactual in run_counterfactual_replays(
                         run_id=run.run_id,
                         attempt=attempt_record,
@@ -1240,6 +1286,11 @@ def execute_run(run_id: str) -> None:
 
         prior_summary = run.summary if isinstance(run.summary, dict) else {}
         ci_thresholds = prior_summary.get("ci_thresholds")
+        reliability = calculate_reliability_score(
+            critical=severity_counts.get("critical", 0),
+            high=severity_counts.get("high", 0),
+            medium=severity_counts.get("medium", 0),
+        )
 
         run.status = "completed"
         run.summary = {
@@ -1261,6 +1312,11 @@ def execute_run(run_id: str) -> None:
             "security_events_count": security_events_count,
             "injection_blocks": injection_blocks,
             "injection_sanitizations": injection_sanitizations,
+            "reliability_score": reliability["score"],
+            "reliability_status": reliability["status"],
+            "failure_breakdown": _failure_breakdown_items(failure_type_counts),
+            "failure_severity_breakdown": dict(severity_counts),
+            "classified_failures": sum(failure_type_counts.values()),
             "applied_templates": applied_templates_summary,
             "applied_template_count": len(applied_templates_summary),
             "template_overrides": {
