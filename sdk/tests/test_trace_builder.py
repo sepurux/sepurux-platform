@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from sepurux import TraceBuilder, sepurux_trace
 
 
@@ -21,8 +22,14 @@ def test_trace_builder_schema_shape() -> None:
 
 
 def test_trace_context_supports_custom_source() -> None:
-    with sepurux_trace("demo_task", {"prompt": "hello"}, source="langsmith-like", trace_version="0.2") as rec:
-        rec.model_step("plan", {"goal": "create issue"})
+    with pytest.warns(DeprecationWarning, match="SepuruxClient.trace"):
+        with sepurux_trace(
+            "demo_task",
+            {"prompt": "hello"},
+            source="langsmith-like",
+            trace_version="0.2",
+        ) as rec:
+            rec.model_step("plan", {"goal": "create issue"})
 
     trace = rec.to_trace()
 

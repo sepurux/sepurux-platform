@@ -1,51 +1,50 @@
 # Sepurux TypeScript Recorder
 
-`@sepurux/recorder` provides a lightweight helper for building
-Sepurux trace payloads (`trace_version = 0.1`) in non-Python projects.
+`@sepurux/recorder` provides the recommended TypeScript integration path for Sepurux:
+env-aware client setup, managed trace upload, and optional campaign execution.
 
 ## API
 
-- `new TraceRecorder(taskName, taskInput?)`
-- `modelStep(name, input, output?)`
-- `toolCall(tool, args)`
-- `toolResult(tool, result)`
-- `error(message, tool?)`
-- `toTrace()`
+- `SepuruxClient.fromEnv()`
+- `client.trace(taskName, taskInput, handler, options?)`
+- `client.startTrace(taskName, taskInput, options?)`
+- `configure(...)`
+- `trace(taskName, taskInput, handler, options?)`
+- Low-level compatibility: `TraceRecorder.buildTrace()`
 
-## Example (with generated TypeScript client)
+## Quick start
 
 ```ts
-import { Configuration, RunsApi, TracesApi } from "@sepurux/client";
-import { TraceRecorder } from "@sepurux/recorder";
+import { SepuruxClient } from "@sepurux/recorder";
 
-const recorder = new TraceRecorder("issue-triage", { issueId: 123 });
-recorder.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
-recorder.toolCall("jira.create_issue", { project: "OPS", title: "Bug" });
-recorder.toolResult("jira.create_issue", { key: "OPS-123" });
+const client = SepuruxClient.fromEnv();
 
-const config = new Configuration({
-  basePath: process.env.SEPURUX_BASE_URL ?? "http://localhost:8000",
-  headers: { "X-API-Key": process.env.SEPURUX_API_KEY ?? "" },
-});
-
-const tracesApi = new TracesApi(config);
-const trace = await tracesApi.postTraceV1TracesPost({
-  xProjectId: process.env.SEPURUX_PROJECT_ID ?? "",
-  body: recorder.toTrace(),
-});
-
-const runsApi = new RunsApi(config);
-await runsApi.postRunV1RunsPost({
-  xProjectId: process.env.SEPURUX_PROJECT_ID ?? "",
-  runCreateRequest: {
-    trace_id: trace.trace_id,
-    campaign_id: process.env.SEPURUX_CAMPAIGN_ID ?? "",
+const recorder = await client.trace(
+  "issue-triage",
+  { issueId: 123 },
+  async (trace) => {
+    trace.modelStep("planner", { prompt: "triage issue" }, { plan: "call jira" });
+    trace.toolCall("jira.create_issue", { project: "OPS", title: "Bug" });
+    trace.toolResult("jira.create_issue", { key: "OPS-123" });
   },
-});
+  {
+    campaignId: process.env.SEPURUX_CAMPAIGN_ID,
+    mutationPack: "sepurux.core.reliability",
+  },
+);
+
+console.log(recorder.traceId);
+console.log(recorder.runId);
 ```
+
+Set these environment variables first:
+- `SEPURUX_API_BASE_URL` (defaults to `http://localhost:8000`)
+- `SEPURUX_API_KEY`
+- `SEPURUX_PROJECT_ID`
+- `SEPURUX_CAMPAIGN_ID` if you want the trace to enqueue a run automatically
 
 ## Release
 
-- Push a tag in the format `ts-recorder-v0.2.0` (must match `package.json` version).
+- Push a tag in the format `ts-recorder-v0.3.0` (must match `package.json` version).
 - GitHub Actions workflow `ts-recorder-publish-npm.yml` will test, pack, and publish to npm.
 - Required repo secret: `NPM_TOKEN`.

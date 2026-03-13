@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
-from sepurux import SepuruxClient, configure, trace, traceable
+from sepurux import SepuruxClient, configure, record_trace, trace, traceable
 
 
 class _RequestCapture:
@@ -262,4 +262,33 @@ def test_run_campaign_prefers_server_side_run_pack_when_requested() -> None:
     assert [request.url.path for request in capture.requests] == [
         "/v1/campaigns",
         "/v1/campaigns/campaign-123/run-pack",
+    ]
+
+
+def test_record_trace_warns_and_preserves_return_value() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    with pytest.warns(DeprecationWarning, match="traceable"):
+        @record_trace(client=client, campaign_id="demo_campaign")
+        def multiply(x: int, y: int) -> int:
+            return x * y
+
+    assert multiply(2, 5) == 10
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/traces",
+        "/v1/campaigns",
+        "/v1/runs",
     ]
