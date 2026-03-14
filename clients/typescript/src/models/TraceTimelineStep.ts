@@ -94,10 +94,10 @@ export interface TraceTimelineStep {
     finished_at?: Date | null;
     /**
      * 
-     * @type {object}
+     * @type {{ [key: string]: any; }}
      * @memberof TraceTimelineStep
      */
-    metadata?: object | null;
+    metadata?: { [key: string]: any; } | null;
 }
 
 /**

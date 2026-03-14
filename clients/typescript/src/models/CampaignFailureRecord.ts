@@ -69,10 +69,10 @@ export interface CampaignFailureRecord {
     description: string;
     /**
      * 
-     * @type {object}
+     * @type {{ [key: string]: any; }}
      * @memberof CampaignFailureRecord
      */
-    metadata?: object | null;
+    metadata?: { [key: string]: any; } | null;
     /**
      * 
      * @type {Date}

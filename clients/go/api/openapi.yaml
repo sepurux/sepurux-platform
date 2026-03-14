@@ -331,9 +331,9 @@ paths:
           content:
             application/json:
               schema:
+                additionalProperties: {}
                 title: Response Get Attempt Timeline V1 Attempts  Attempt Id  Timeline
                   Get
-                type: object
           description: Successful Response
         "422":
           content:
@@ -2792,7 +2792,8 @@ components:
         severity: critical
         mutation: mutation
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
-        metadata: "{}"
+        metadata:
+          key: ""
         run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         description: description
         created_at: 2000-01-23T04:56:07.000+00:00
@@ -2834,8 +2835,8 @@ components:
           title: Description
           type: string
         metadata:
+          additionalProperties: {}
           nullable: true
-          type: object
         created_at:
           format: date-time
           title: Created At
@@ -4772,7 +4773,8 @@ components:
         task_name: task_name
         sdk_meta: sdk_meta
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
-        normalized_summary: "{}"
+        normalized_summary:
+          key: ""
         trace_version: trace_version
         payload: ""
         s3_key: s3_key
@@ -4808,8 +4810,8 @@ components:
               type: string
           nullable: true
         normalized_summary:
+          additionalProperties: {}
           nullable: true
-          type: object
         s3_key:
           title: S3 Key
           type: string
@@ -4833,7 +4835,8 @@ components:
       example:
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         mutation_name: mutation_name
-        metadata: "{}"
+        metadata:
+          key: ""
         finished_at: 2000-01-23T04:56:07.000+00:00
         step_type: step_type
         step_name: step_name
@@ -4883,8 +4886,8 @@ components:
           nullable: true
           type: string
         metadata:
+          additionalProperties: {}
           nullable: true
-          type: object
       required:
       - id
       - started_at

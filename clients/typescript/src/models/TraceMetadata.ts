@@ -63,10 +63,10 @@ export interface TraceMetadata {
     validation_errors?: Array<{ [key: string]: string; }> | null;
     /**
      * 
-     * @type {object}
+     * @type {{ [key: string]: any; }}
      * @memberof TraceMetadata
      */
-    normalized_summary?: object | null;
+    normalized_summary?: { [key: string]: any; } | null;
     /**
      * 
      * @type {string}
