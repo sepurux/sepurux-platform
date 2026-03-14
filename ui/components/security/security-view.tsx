@@ -1,13 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import {
-  api,
-  type SecurityEventListItem,
-  type ToolRegistryMetadata,
-} from "@/lib/api";
+import { api, type SecurityEventListItem } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +32,6 @@ export function SecurityView() {
   const searchParams = useSearchParams();
   const toolFilter = (searchParams.get("tool") ?? "").trim().toLowerCase();
   const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [toolRegistry, setToolRegistry] = useState<ToolRegistryMetadata[]>([]);
-  const [toolName, setToolName] = useState("");
-  const [toolZone, setToolZone] = useState("untrusted");
-  const [toolConfigError, setToolConfigError] = useState<string | null>(null);
-  const [creatingTool, setCreatingTool] = useState(false);
-  const [savingToolId, setSavingToolId] = useState<string | null>(null);
 
   const canManageSecurityConfig =
     authSession?.permissions.can_manage_security_config ?? false;
@@ -51,22 +42,26 @@ export function SecurityView() {
     async function load() {
       setState({ status: "loading" });
       try {
-        const [runs, tools] = await Promise.all([api.listRuns(25), api.listTools()]);
+        const runs = await api.listRuns(25);
         const eventResults = await Promise.allSettled(
           runs.map((run) => api.listRunSecurityEvents(run.run_id, { limit: 200, offset: 0 }))
         );
         const events = eventResults
-          .filter((result): result is PromiseFulfilledResult<SecurityEventListItem[]> => result.status === "fulfilled")
+          .filter(
+            (result): result is PromiseFulfilledResult<SecurityEventListItem[]> =>
+              result.status === "fulfilled"
+          )
           .flatMap((result) => result.value)
           .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 
-        if (cancelled) return;
-        setToolRegistry(
-          [...tools].sort((left, right) => left.name.localeCompare(right.name))
-        );
+        if (cancelled) {
+          return;
+        }
         setState({ status: "ready", events });
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setState({
           status: "error",
           message: error instanceof Error ? error.message : "Failed to load security data",
@@ -81,52 +76,20 @@ export function SecurityView() {
     };
   }, []);
 
-  async function onCreateTool(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setToolConfigError(null);
-    setCreatingTool(true);
-
-    try {
-      await api.createTool({ name: toolName, zone: toolZone });
-      const tools = await api.listTools();
-      setToolRegistry(
-        [...tools].sort((left, right) => left.name.localeCompare(right.name))
-      );
-      setToolName("");
-      setToolZone("untrusted");
-    } catch (error) {
-      setToolConfigError(error instanceof Error ? error.message : "Failed to create tool zone");
-    } finally {
-      setCreatingTool(false);
-    }
-  }
-
-  async function onUpdateToolZone(toolId: string, zone: string) {
-    setToolConfigError(null);
-    setSavingToolId(toolId);
-
-    try {
-      const updated = await api.updateToolZone(toolId, zone);
-      setToolRegistry((currentValue) =>
-        currentValue
-          .map((item) => (item.tool_id === toolId ? updated : item))
-          .sort((left, right) => left.name.localeCompare(right.name))
-      );
-    } catch (error) {
-      setToolConfigError(error instanceof Error ? error.message : "Failed to update tool zone");
-    } finally {
-      setSavingToolId(null);
-    }
-  }
-
   const filteredEvents = useMemo(() => {
-    if (state.status !== "ready") return [] as SecurityEventListItem[];
-    if (!toolFilter) return state.events;
+    if (state.status !== "ready") {
+      return [] as SecurityEventListItem[];
+    }
+    if (!toolFilter) {
+      return state.events;
+    }
     return state.events.filter((event) => event.tool.toLowerCase().includes(toolFilter));
   }, [state, toolFilter]);
 
   const topRiskyTools = useMemo(() => {
-    if (state.status !== "ready") return [] as ToolRiskSummary[];
+    if (state.status !== "ready") {
+      return [] as ToolRiskSummary[];
+    }
 
     const byTool = new Map<string, ToolRiskSummary>();
     for (const event of filteredEvents) {
@@ -138,12 +101,17 @@ export function SecurityView() {
         avgRisk: 0,
         maxRisk: 0,
       };
-      if (event.action === "block") current.blocks += 1;
-      else if (event.action === "sanitize") current.sanitizes += 1;
-      else current.allows += 1;
+      if (event.action === "block") {
+        current.blocks += 1;
+      } else if (event.action === "sanitize") {
+        current.sanitizes += 1;
+      } else {
+        current.allows += 1;
+      }
 
       const total = current.blocks + current.sanitizes + current.allows;
-      current.avgRisk = total === 1 ? event.risk_score : ((current.avgRisk * (total - 1)) + event.risk_score) / total;
+      current.avgRisk =
+        total === 1 ? event.risk_score : ((current.avgRisk * (total - 1)) + event.risk_score) / total;
       current.maxRisk = Math.max(current.maxRisk, event.risk_score);
       byTool.set(event.tool, current);
     }
@@ -161,11 +129,18 @@ export function SecurityView() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Security</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Trust-zone prompt injection firewall activity and risky tool outputs.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Security</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Trust-zone prompt injection firewall activity and risky tool outputs.
+          </p>
+        </div>
+        {canManageSecurityConfig ? (
+          <Button asChild>
+            <Link href="/security/tools">Manage Tool Zones</Link>
+          </Button>
+        ) : null}
       </div>
 
       {state.status === "loading" ? (
@@ -180,107 +155,6 @@ export function SecurityView() {
         </Card>
       ) : (
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tool Zones</CardTitle>
-              <CardDescription>
-                Tool trust boundaries follow workspace RBAC and plan access.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {canManageSecurityConfig ? (
-                <form
-                  className="grid gap-4 rounded-md border border-border/60 bg-muted/10 p-4 md:grid-cols-[1.4fr_0.8fr_auto]"
-                  onSubmit={onCreateTool}
-                >
-                  <label className="space-y-1 text-sm">
-                    <span className="text-muted-foreground">Tool Name</span>
-                    <input
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                      value={toolName}
-                      onChange={(event) => setToolName(event.target.value)}
-                      placeholder="jira.create_issue"
-                      required
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm">
-                    <span className="text-muted-foreground">Zone</span>
-                    <select
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                      value={toolZone}
-                      onChange={(event) => setToolZone(event.target.value)}
-                    >
-                      <option value="trusted">trusted</option>
-                      <option value="untrusted">untrusted</option>
-                    </select>
-                  </label>
-                  <div className="flex items-end">
-                    <Button type="submit" disabled={creatingTool}>
-                      {creatingTool ? "Saving..." : "Add Tool"}
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Tool-zone management is restricted to admin memberships on plans with security access.
-                </p>
-              )}
-
-              {toolConfigError ? (
-                <p className="text-sm text-rose-200">{toolConfigError}</p>
-              ) : null}
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tool</TableHead>
-                    <TableHead>Zone</TableHead>
-                    <TableHead className="text-right">Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {toolRegistry.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                        No tool zones configured yet.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    toolRegistry.map((tool) => (
-                      <TableRow key={tool.tool_id}>
-                        <TableCell className="font-mono text-xs text-foreground">
-                          {tool.name}
-                        </TableCell>
-                        <TableCell>
-                          {canManageSecurityConfig ? (
-                            <select
-                              className="rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
-                              value={tool.zone}
-                              disabled={savingToolId === tool.tool_id}
-                              onChange={(event) =>
-                                void onUpdateToolZone(tool.tool_id, event.target.value)
-                              }
-                            >
-                              <option value="trusted">trusted</option>
-                              <option value="untrusted">untrusted</option>
-                            </select>
-                          ) : (
-                            <Badge variant={tool.zone === "trusted" ? "default" : "warning"}>
-                              {tool.zone}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {formatRelativeDate(tool.created_at)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Top Risky Tools</CardTitle>
@@ -379,7 +253,9 @@ export function SecurityView() {
                           {event.tool}
                         </TableCell>
                         <TableCell className="text-muted-foreground">{event.zone}</TableCell>
-                        <TableCell className="text-muted-foreground">{Math.round(event.risk_score * 100)}%</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {Math.round(event.risk_score * 100)}%
+                        </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {shortId(event.run_id, 10)}
                         </TableCell>
