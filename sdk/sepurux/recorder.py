@@ -44,11 +44,42 @@ class TraceRecorder:
     def model_step(self, name: str, input: Any, output: Any | None = None) -> None:
         self._builder.add_model_step(name=name, input=input, output=output)
 
+    def prompt(self, input: Any, *, name: str | None = None) -> None:
+        self._builder.add_prompt(input=input, name=name)
+
+    def llm_call(
+        self,
+        name: str,
+        input: Any,
+        output: Any | None = None,
+        *,
+        latency_ms: int | None = None,
+        status: str = "success",
+    ) -> None:
+        self._builder.add_llm_call(
+            name=name,
+            input=input,
+            output=output,
+            latency_ms=latency_ms,
+            status=status,
+        )
+
     def tool_call(self, tool: str, args: dict[str, Any]) -> None:
         self._builder.add_tool_call(tool=tool, args=args)
 
     def tool_result(self, tool: str, result: Any) -> None:
         self._builder.add_tool_result(tool=tool, result=result)
+
+    def mutation(
+        self, mutation_name: str, *, input: Any | None = None, output: Any | None = None
+    ) -> None:
+        self._builder.add_mutation(mutation_name=mutation_name, input=input, output=output)
+
+    def agent_output(self, output: Any, *, name: str = "Agent Output") -> None:
+        self._builder.add_agent_output(output=output, name=name)
+
+    def retry(self, name: str, *, retries: int = 1) -> None:
+        self._builder.add_retry(name=name, retries=retries)
 
     def error(self, tool: str | None = None, message: str = "") -> None:
         self._builder.add_error(message=message, tool=tool)

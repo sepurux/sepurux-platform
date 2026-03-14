@@ -4,7 +4,18 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 SUPPORTED_TRACE_VERSIONS = {"0.1", "0.2"}
-SUPPORTED_EVENT_TYPES = {"tool_call", "tool_result", "model", "error"}
+SUPPORTED_EVENT_TYPES = {
+    "prompt",
+    "llm_call",
+    "tool_call",
+    "tool_result",
+    "model",
+    "mutation",
+    "agent_output",
+    "retry",
+    "error",
+    "failure",
+}
 
 
 def validate_and_normalize_trace(
@@ -59,7 +70,10 @@ def validate_and_normalize_trace(
                 issues.append(
                     {
                         "path": f"{event_path}.type",
-                        "message": "must be one of tool_call, tool_result, model, error",
+                        "message": (
+                            "must be one of prompt, llm_call, tool_call, tool_result, model, "
+                            "mutation, agent_output, retry, error, failure"
+                        ),
                     }
                 )
                 continue
@@ -118,6 +132,28 @@ def validate_and_normalize_trace(
 
                 if isinstance(tool, str):
                     normalized_event["tool"] = tool
+            elif event_type in {"prompt", "llm_call", "mutation", "agent_output", "retry"}:
+                name = normalized_event.get("name")
+                if not isinstance(name, str) or not name.strip():
+                    if event_type == "prompt":
+                        task_name = task.get("name") if isinstance(task, dict) else None
+                        if isinstance(task_name, str) and task_name.strip():
+                            normalized_event["name"] = task_name
+                    elif event_type in {"llm_call", "agent_output"}:
+                        normalized_event.setdefault("name", event_type.replace("_", " ").title())
+                    elif event_type == "mutation":
+                        mutation_name = normalized_event.get("mutation_name")
+                        if isinstance(mutation_name, str) and mutation_name.strip():
+                            normalized_event["name"] = mutation_name
+                    elif event_type == "retry":
+                        tool_name = normalized_event.get("tool")
+                        if isinstance(tool_name, str) and tool_name.strip():
+                            normalized_event["name"] = tool_name
+            elif event_type in {"error", "failure"}:
+                if "error" not in normalized_event and "message" in normalized_event:
+                    normalized_event["error"] = {
+                        "message": normalized_event.get("message"),
+                    }
 
             normalized_events.append(normalized_event)
 
@@ -152,6 +188,11 @@ def normalized_trace_summary(normalized_payload: Any) -> dict[str, Any] | None:
     tool_results = 0
     model_events = 0
     error_events = 0
+    prompt_events = 0
+    llm_events = 0
+    mutation_events = 0
+    retry_events = 0
+    agent_output_events = 0
     first_event_type: str | None = None
     last_event_type: str | None = None
 
@@ -173,7 +214,20 @@ def normalized_trace_summary(normalized_payload: Any) -> dict[str, Any] | None:
             tool_results += 1
         elif event_type == "model":
             model_events += 1
+            llm_events += 1
+        elif event_type == "llm_call":
+            llm_events += 1
+        elif event_type == "prompt":
+            prompt_events += 1
+        elif event_type == "mutation":
+            mutation_events += 1
+        elif event_type == "retry":
+            retry_events += 1
+        elif event_type == "agent_output":
+            agent_output_events += 1
         elif event_type == "error":
+            error_events += 1
+        elif event_type == "failure":
             error_events += 1
 
     return {
@@ -183,6 +237,11 @@ def normalized_trace_summary(normalized_payload: Any) -> dict[str, Any] | None:
         "tool_calls": tool_calls,
         "tool_results": tool_results,
         "model_events": model_events,
+        "prompt_events": prompt_events,
+        "llm_events": llm_events,
+        "mutation_events": mutation_events,
+        "retry_events": retry_events,
+        "agent_output_events": agent_output_events,
         "error_events": error_events,
         "first_event_type": first_event_type,
         "last_event_type": last_event_type,

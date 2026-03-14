@@ -5,11 +5,12 @@ from uuid import UUID
 
 from app.auth import ProjectScope, TenantAuthContext, require_project_scope, require_role
 from app.db import get_db
-from app.schemas import TraceMetadata
+from app.schemas import TraceMetadata, TraceTimelineStep
 from app.services.audit_service import actor_from_request
 from app.services.demo_service import enforce_demo_trace_upload_limits
 from app.services.trace_intake import create_trace, get_trace_payload, list_traces, trace_metadata
 from app.services.trace_intake import get_trace as get_trace_record
+from app.services.trace_step_service import ensure_trace_steps_for_trace, serialize_trace_step
 from app.services.trace_validation import validate_and_normalize_trace
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
@@ -102,3 +103,16 @@ def get_trace_by_id(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trace not found")
     payload = get_trace_payload(trace) if include_payload else None
     return TraceMetadata(**trace_metadata(trace, payload=payload))
+
+
+@router.get("/{trace_id}/timeline", response_model=list[TraceTimelineStep])
+def get_trace_timeline(
+    trace_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+) -> list[TraceTimelineStep]:
+    trace = get_trace_record(db=db, project_id=project_scope.project_id, trace_id=trace_id)
+    if trace is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trace not found")
+    steps = ensure_trace_steps_for_trace(db, trace=trace)
+    return [TraceTimelineStep(**serialize_trace_step(step)) for step in steps]

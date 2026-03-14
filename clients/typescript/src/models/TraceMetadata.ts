@@ -42,6 +42,12 @@ export interface TraceMetadata {
      * @type {string}
      * @memberof TraceMetadata
      */
+    task_name?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TraceMetadata
+     */
     sdk_meta?: string | null;
     /**
      * 
@@ -107,6 +113,7 @@ export function TraceMetadataFromJSONTyped(json: any, ignoreDiscriminator: boole
         'trace_id': json['trace_id'],
         'source': json['source'],
         'trace_version': json['trace_version'],
+        'task_name': json['task_name'] == null ? undefined : json['task_name'],
         'sdk_meta': json['sdk_meta'] == null ? undefined : json['sdk_meta'],
         'validation_status': json['validation_status'],
         'validation_errors': json['validation_errors'] == null ? undefined : json['validation_errors'],
@@ -126,6 +133,7 @@ export function TraceMetadataToJSON(value?: TraceMetadata | null): any {
         'trace_id': value['trace_id'],
         'source': value['source'],
         'trace_version': value['trace_version'],
+        'task_name': value['task_name'],
         'sdk_meta': value['sdk_meta'],
         'validation_status': value['validation_status'],
         'validation_errors': value['validation_errors'],

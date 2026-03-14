@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Trace
+from app.models import Base, Trace, TraceStep
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -101,6 +101,7 @@ def test_post_trace_accepts_valid_trace_and_persists_metadata(
     trace_id = UUID(data["trace_id"])
     assert data["source"] == "sdk"
     assert data["trace_version"] == "0.1"
+    assert data["task_name"] == "jira_sync"
     assert data["validation_status"] == "valid"
     assert data["sdk_meta"] is None
     assert data["s3_key"] == f"traces/{trace_id}.json"
@@ -122,6 +123,17 @@ def test_post_trace_accepts_valid_trace_and_persists_metadata(
         assert events[1]["index"] == 1
         assert isinstance(events[1]["timestamp"], str)
         assert row.s3_key == data["s3_key"]
+        trace_steps = list(
+            db.scalars(
+                select(TraceStep)
+                .where(TraceStep.trace_id == trace_id)
+                .order_by(TraceStep.started_at.asc())
+            )
+        )
+        assert [step.step_type for step in trace_steps] == ["prompt", "tool_call"]
+        assert trace_steps[1].step_name == "jira.create_issue"
+        assert trace_steps[1].status == "success"
+        assert trace_steps[1].output_payload == {"ok": True, "issue_id": "CRASH-123"}
 
 
 def test_get_trace_returns_metadata(
@@ -138,6 +150,7 @@ def test_get_trace_returns_metadata(
     assert data["trace_id"] == trace_id
     assert data["source"] == "python-sdk"
     assert data["trace_version"] == "0.1"
+    assert data["task_name"] == "jira_sync"
     assert data["validation_status"] == "valid"
     assert data["s3_key"] == f"traces/{trace_id}.json"
     assert data["payload"] is None
@@ -194,6 +207,63 @@ def test_get_trace_returns_404_when_missing(
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Trace not found"}
+
+
+def test_get_trace_timeline_returns_ordered_steps(
+    trace_test_context: tuple[TestClient, sessionmaker[Session], dict[str, object]],
+) -> None:
+    client, _, _ = trace_test_context
+    payload = {
+        "trace_version": "0.2",
+        "source": "sdk",
+        "task": {
+            "name": "customer_support_agent",
+            "input": {"prompt": "Find the customer balance"},
+        },
+        "events": [
+            {
+                "type": "llm_call",
+                "name": "planner",
+                "input": {"prompt": "Plan the balance lookup"},
+                "output": {"tool": "payments.get_balance"},
+                "latency_ms": 220,
+            },
+            {
+                "type": "tool_call",
+                "tool": "payments.get_balance",
+                "args": {"user_id": "u_123"},
+            },
+            {
+                "type": "tool_result",
+                "tool": "payments.get_balance",
+                "result": {"ok": True, "balance": 42},
+            },
+            {
+                "type": "agent_output",
+                "name": "final",
+                "output": {"message": "Balance is 42"},
+            },
+        ],
+    }
+
+    create_response = client.post("/v1/traces", json=payload)
+    assert create_response.status_code == 201
+    trace_id = create_response.json()["trace_id"]
+
+    response = client.get(f"/v1/traces/{trace_id}/timeline")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [item["step_type"] for item in data] == [
+        "prompt",
+        "llm_call",
+        "tool_call",
+        "agent_output",
+    ]
+    assert data[1]["latency_ms"] == 220
+    assert data[2]["step_name"] == "payments.get_balance"
+    assert data[2]["status"] == "success"
+    assert data[2]["output_payload"] == {"ok": True, "balance": 42}
 
 
 def test_post_trace_rejects_invalid_trace_with_structured_details(
