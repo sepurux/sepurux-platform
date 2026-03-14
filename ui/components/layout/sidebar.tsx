@@ -1,54 +1,157 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
   Bell,
   Bug,
+  ChevronDown,
   FileSearch,
   FlaskConical,
   Home,
   PlayCircle,
   ScrollText,
   Settings,
-  ShieldAlert,
   Shield,
+  ShieldAlert,
 } from "lucide-react";
 
-import type { AuthSessionMetadata } from "@/lib/api";
+import type { AuthPermissionSet, AuthSessionMetadata } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-type NavItem = {
+type NavLinkItem = {
   href: string;
   label: string;
   section: string;
   icon: React.ComponentType<{ className?: string }>;
 };
 
-const primaryItems: NavItem[] = [
+type NavGroupChild = {
+  href: string;
+  label: string;
+  permission?: keyof AuthPermissionSet;
+};
+
+type NavGroup = {
+  label: string;
+  section: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: NavGroupChild[];
+};
+
+const primaryItems: NavLinkItem[] = [
   { href: "/dashboard", label: "Dashboard", section: "dashboard", icon: Home },
   { href: "/traces", label: "Traces", section: "traces", icon: FileSearch },
-  { href: "/campaigns", label: "Campaigns", section: "campaigns", icon: FlaskConical },
   { href: "/runs", label: "Runs", section: "runs", icon: PlayCircle },
   { href: "/reports", label: "Reports", section: "reports", icon: ScrollText },
-  { href: "/mutation-packs", label: "Mutation Packs", section: "mutation-packs", icon: Bug },
-  { href: "/policies", label: "Policies", section: "policies", icon: Shield },
-  { href: "/security", label: "Security", section: "security", icon: ShieldAlert },
   { href: "/audit", label: "Audit", section: "audit", icon: ScrollText },
   { href: "/webhooks", label: "Webhooks", section: "webhooks", icon: Bell },
   { href: "/settings", label: "Settings", section: "settings", icon: Settings },
 ];
 
+const groupedItems: NavGroup[] = [
+  {
+    label: "Campaigns",
+    section: "campaigns",
+    icon: FlaskConical,
+    children: [
+      { href: "/campaigns", label: "View Campaigns" },
+      { href: "/campaigns/new", label: "Create Campaign", permission: "can_create_campaigns" },
+    ],
+  },
+  {
+    label: "Mutation Packs",
+    section: "mutation-packs",
+    icon: Bug,
+    children: [
+      { href: "/mutation-packs", label: "View Packs" },
+      {
+        href: "/mutation-packs/new",
+        label: "Create Pack",
+        permission: "can_manage_mutation_packs",
+      },
+    ],
+  },
+  {
+    label: "Policies",
+    section: "policies",
+    icon: Shield,
+    children: [
+      { href: "/policies", label: "View Policies" },
+      {
+        href: "/policies/new",
+        label: "Create Policy Pack",
+        permission: "can_manage_policy_packs",
+      },
+    ],
+  },
+  {
+    label: "Security",
+    section: "security",
+    icon: ShieldAlert,
+    children: [
+      { href: "/security", label: "View Events" },
+      {
+        href: "/security/tools",
+        label: "Manage Tool Zones",
+        permission: "can_manage_security_config",
+      },
+    ],
+  },
+];
+
 export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | null }) {
   const pathname = usePathname();
-  const visibleSections = new Set(authSession?.permissions.visible_sections ?? []);
+  const visibleSections = useMemo(
+    () => new Set(authSession?.permissions.visible_sections ?? []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [authSession?.permissions.visible_sections?.join(",")]
+  );
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
   const items = primaryItems.filter(
     (item) => visibleSections.size === 0 || visibleSections.has(item.section)
   );
+  const dashboardItem = items.find((item) => item.href === "/dashboard") ?? null;
+  const trailingItems = items.filter((item) => item.href !== "/dashboard");
+  const groups = useMemo(
+    () =>
+      groupedItems
+        .filter((group) => visibleSections.size === 0 || visibleSections.has(group.section))
+        .map((group) => ({
+          ...group,
+          children: group.children.filter((child) => {
+            if (!child.permission) {
+              return true;
+            }
+            return authSession?.permissions[child.permission] ?? false;
+          }),
+        }))
+        .filter((group) => group.children.length > 0),
+    [authSession?.permissions, visibleSections]
+  );
+
+  useEffect(() => {
+    setExpandedGroups((currentValue) => {
+      let changed = false;
+      const nextValue = { ...currentValue };
+      for (const group of groups) {
+        const active = group.children.some(
+          (child) => pathname === child.href || pathname.startsWith(child.href + "/")
+        );
+        if (active && !nextValue[group.section]) {
+          nextValue[group.section] = true;
+          changed = true;
+        }
+      }
+      return changed ? nextValue : currentValue;
+    });
+  }, [groups, pathname]);
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border bg-sidebar/95 p-4 backdrop-blur xl:flex xl:flex-col">
+    <aside className="relative z-30 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border bg-sidebar/95 p-4 backdrop-blur xl:flex xl:flex-col">
       <div className="mb-4 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
         <div className="grid h-10 w-10 place-items-center rounded-md border border-info/20 bg-info/10 text-info">
           <Activity className="h-5 w-5" />
@@ -64,9 +167,114 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1.5">
-        {items.map((item) => {
-          const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
+      <nav className="relative z-30 flex-1 space-y-1.5 pointer-events-auto">
+        {dashboardItem ? (
+          <Link
+            href={dashboardItem.href}
+            className={cn(
+              "relative z-30 group flex items-center gap-3 rounded-md border-l-2 border-l-transparent border-transparent px-3 py-2.5 text-sm transition",
+              pathname === dashboardItem.href
+                ? "border-l-primary bg-muted/45 text-foreground shadow-insetSoft"
+                : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground",
+            )}
+          >
+            <dashboardItem.icon
+              className={cn(
+                "h-4 w-4",
+                pathname === dashboardItem.href
+                  ? "text-primary"
+                  : "text-muted-foreground group-hover:text-foreground"
+              )}
+            />
+            <span className="flex-1">{dashboardItem.label}</span>
+          </Link>
+        ) : null}
+
+        {groups.map((group) => {
+          const active = group.children.some(
+            (child) => pathname === child.href || pathname.startsWith(child.href + "/")
+          );
+          const expanded = expandedGroups[group.section] ?? active;
+          const Icon = group.icon;
+          const primaryChild = group.children[0];
+
+          return (
+            <div key={group.section} className="space-y-1">
+              <div
+                className={cn(
+                  "flex items-center rounded-md border-l-2 border-l-transparent border-transparent text-sm transition",
+                  active
+                    ? "border-l-primary bg-muted/45 text-foreground shadow-insetSoft"
+                    : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground",
+                )}
+              >
+                <Link
+                  href={primaryChild.href}
+                  className="group flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5"
+                >
+                  <Icon
+                    className={cn(
+                        "h-4 w-4 shrink-0",
+                      active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                  />
+                  <span className="truncate text-left">{group.label}</span>
+                </Link>
+                <button
+                  type="button"
+                  aria-label={expanded ? `Collapse ${group.label}` : `Expand ${group.label}`}
+                  className="relative z-40 shrink-0 px-3 py-2.5"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setExpandedGroups((currentValue) => ({
+                      ...currentValue,
+                      [group.section]: !expanded,
+                    }));
+                  }}
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      expanded ? "rotate-180 text-foreground" : "text-muted-foreground"
+                    )}
+                  />
+                </button>
+              </div>
+
+              {expanded ? (
+                <div className="relative z-30 space-y-1 pl-6">
+                  {group.children.map((child) => {
+                    const childActive =
+                      pathname === child.href || pathname.startsWith(child.href + "/");
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={cn(
+                          "relative z-30 block rounded-md px-3 py-2 text-sm transition",
+                          childActive
+                            ? "bg-muted/35 text-foreground shadow-insetSoft"
+                            : "text-muted-foreground hover:bg-accent/35 hover:text-foreground",
+                        )}
+                      >
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {trailingItems.map((item) => {
+          const active =
+            pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
 
           return (
@@ -74,7 +282,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
               key={item.label}
               href={item.href}
               className={cn(
-                "group flex items-center gap-3 rounded-md border-l-2 border-l-transparent border-transparent px-3 py-2.5 text-sm transition",
+                "relative z-30 group flex items-center gap-3 rounded-md border-l-2 border-l-transparent border-transparent px-3 py-2.5 text-sm transition",
                 active
                   ? "border-l-primary bg-muted/45 text-foreground shadow-insetSoft"
                   : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground",
