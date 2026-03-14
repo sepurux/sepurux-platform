@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **TraceId** | **string** |  | 
 **Source** | **string** |  | 
 **TraceVersion** | **string** |  | 
+**TaskName** | Pointer to **NullableString** |  | [optional] 
 **SdkMeta** | Pointer to **NullableString** |  | [optional] 
 **ValidationStatus** | **string** |  | 
 **ValidationErrors** | Pointer to **[]map[string]string** |  | [optional] 
@@ -94,6 +95,41 @@ and a boolean to check if the value has been set.
 SetTraceVersion sets TraceVersion field to given value.
 
 
+### GetTaskName
+
+`func (o *TraceMetadata) GetTaskName() string`
+
+GetTaskName returns the TaskName field if non-nil, zero value otherwise.
+
+### GetTaskNameOk
+
+`func (o *TraceMetadata) GetTaskNameOk() (*string, bool)`
+
+GetTaskNameOk returns a tuple with the TaskName field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTaskName
+
+`func (o *TraceMetadata) SetTaskName(v string)`
+
+SetTaskName sets TaskName field to given value.
+
+### HasTaskName
+
+`func (o *TraceMetadata) HasTaskName() bool`
+
+HasTaskName returns a boolean if a field has been set.
+
+### SetTaskNameNil
+
+`func (o *TraceMetadata) SetTaskNameNil(b bool)`
+
+ SetTaskNameNil sets the value for TaskName to be an explicit nil
+
+### UnsetTaskName
+`func (o *TraceMetadata) UnsetTaskName()`
+
+UnsetTaskName ensures that no value is present for TaskName, not even an explicit nil
 ### GetSdkMeta
 
 `func (o *TraceMetadata) GetSdkMeta() string`

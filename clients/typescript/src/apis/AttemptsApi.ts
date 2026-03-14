@@ -43,7 +43,7 @@ export class AttemptsApi extends runtime.BaseAPI {
     /**
      * Get Attempt Timeline
      */
-    async getAttemptTimelineV1AttemptsAttemptIdTimelineGetRaw(requestParameters: GetAttemptTimelineV1AttemptsAttemptIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: any; }>> {
+    async getAttemptTimelineV1AttemptsAttemptIdTimelineGetRaw(requestParameters: GetAttemptTimelineV1AttemptsAttemptIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
         if (requestParameters['attemptId'] == null) {
             throw new runtime.RequiredError(
                 'attemptId',
@@ -72,7 +72,7 @@ export class AttemptsApi extends runtime.BaseAPI {
     /**
      * Get Attempt Timeline
      */
-    async getAttemptTimelineV1AttemptsAttemptIdTimelineGet(requestParameters: GetAttemptTimelineV1AttemptsAttemptIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: any; }> {
+    async getAttemptTimelineV1AttemptsAttemptIdTimelineGet(requestParameters: GetAttemptTimelineV1AttemptsAttemptIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
         const response = await this.getAttemptTimelineV1AttemptsAttemptIdTimelineGetRaw(requestParameters, initOverrides);
         return await response.value();
     }

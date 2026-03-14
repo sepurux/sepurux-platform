@@ -99,6 +99,7 @@ docs/RunStatsResponse.md
 docs/RunsAPI.md
 docs/SecurityEventListItem.md
 docs/SignupRequest.md
+docs/Status.md
 docs/TemplatesAPI.md
 docs/ToolCount.md
 docs/ToolCountPct.md
@@ -112,6 +113,7 @@ docs/ToolRegistryZoneUpdateRequest.md
 docs/ToolUsageStatsItem.md
 docs/ToolsAPI.md
 docs/TraceMetadata.md
+docs/TraceTimelineStep.md
 docs/TracesAPI.md
 docs/ValidationError.md
 docs/ValidationErrorLocInner.md
@@ -187,6 +189,7 @@ model_run_metadata.go
 model_run_stats_response.go
 model_security_event_list_item.go
 model_signup_request.go
+model_status.go
 model_tool_count.go
 model_tool_count_pct.go
 model_tool_fragility_item.go
@@ -198,6 +201,7 @@ model_tool_registry_metadata.go
 model_tool_registry_zone_update_request.go
 model_tool_usage_stats_item.go
 model_trace_metadata.go
+model_trace_timeline_step.go
 model_validation_error.go
 model_validation_error_loc_inner.go
 model_webhook_create_request.go

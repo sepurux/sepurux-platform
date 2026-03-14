@@ -16,7 +16,7 @@ def test_trace_builder_schema_shape() -> None:
     assert trace["source"] == "sdk"
     assert trace["task"] == {"name": "demo_task", "input": {"prompt": "hello"}}
     assert len(trace["events"]) == 3
-    assert trace["events"][0]["type"] == "model_step"
+    assert trace["events"][0]["type"] == "model"
     assert trace["events"][1]["type"] == "tool_call"
     assert trace["events"][2]["type"] == "tool_result"
 
@@ -35,3 +35,28 @@ def test_trace_context_supports_custom_source() -> None:
 
     assert trace["source"] == "langsmith-like"
     assert trace["trace_version"] == "0.2"
+
+
+def test_trace_builder_supports_timeline_friendly_step_types() -> None:
+    builder = TraceBuilder("customer_support_agent", {"prompt": "Find the balance"})
+    builder.add_prompt({"prompt": "Find the balance"})
+    builder.add_llm_call(
+        "planner", {"goal": "fetch balance"}, {"tool": "payments.get_balance"}, latency_ms=220
+    )
+    builder.add_mutation("latency_spike", input={"tool": "payments.get_balance"})
+    builder.add_retry("payments.get_balance", retries=2)
+    builder.add_agent_output({"message": "Balance is 42"})
+    builder.add_error("tool timed out", tool="payments.get_balance")
+
+    trace = builder.to_trace()
+
+    assert [event["type"] for event in trace["events"]] == [
+        "prompt",
+        "llm_call",
+        "mutation",
+        "retry",
+        "agent_output",
+        "failure",
+    ]
+    assert trace["events"][1]["latency_ms"] == 220
+    assert trace["events"][5]["status"] == "error"

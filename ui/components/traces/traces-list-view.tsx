@@ -74,6 +74,7 @@ export function TracesListView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Trace ID</TableHead>
+                  <TableHead>Task / Agent</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Version</TableHead>
                   <TableHead>SDK</TableHead>
@@ -84,7 +85,7 @@ export function TracesListView() {
               <TableBody>
                 {state.traces.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                       No traces yet - upload via SDK or curl.
                     </TableCell>
                   </TableRow>
@@ -97,6 +98,13 @@ export function TracesListView() {
                     >
                       <TableCell className="font-mono text-xs text-foreground" title={trace.trace_id}>
                         {shortId(trace.trace_id, 20)}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {trace.task_name ? (
+                          <span className="font-medium">{trace.task_name}</span>
+                        ) : (
+                          <span className="text-muted-foreground">--</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{trace.source}</TableCell>
                       <TableCell className="text-foreground">{trace.trace_version}</TableCell>

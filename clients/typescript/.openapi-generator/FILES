@@ -85,6 +85,7 @@ src/models/RunMetadata.ts
 src/models/RunStatsResponse.ts
 src/models/SecurityEventListItem.ts
 src/models/SignupRequest.ts
+src/models/Status.ts
 src/models/ToolCount.ts
 src/models/ToolCountPct.ts
 src/models/ToolFragilityItem.ts
@@ -96,6 +97,7 @@ src/models/ToolRegistryMetadata.ts
 src/models/ToolRegistryZoneUpdateRequest.ts
 src/models/ToolUsageStatsItem.ts
 src/models/TraceMetadata.ts
+src/models/TraceTimelineStep.ts
 src/models/ValidationError.ts
 src/models/ValidationErrorLocInner.ts
 src/models/WebhookCreateRequest.ts

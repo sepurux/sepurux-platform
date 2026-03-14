@@ -13,7 +13,15 @@ from uuid import UUID
 import httpx
 
 from .recorder import TraceRecorder, safe_json_value
-from .types import CampaignReliability, CampaignRunResult, FailureRecord, RunStatus, TracePayload
+from .types import (
+    CampaignReliability,
+    CampaignRunResult,
+    FailureRecord,
+    RunStatus,
+    TraceMetadata,
+    TracePayload,
+    TraceTimelineStep,
+)
 
 SDK_PACKAGE_NAME = "sepurux"
 DEMO_API_KEY = "demo_sepurux_key"
@@ -112,6 +120,35 @@ class SepuruxClient:
         if not isinstance(trace_id, str) or not trace_id:
             raise ValueError("Trace upload succeeded but trace_id was missing")
         return trace_id
+
+    def list_traces(self, *, limit: int = 50, offset: int = 0) -> list[TraceMetadata]:
+        response = self._client.get(
+            "/v1/traces",
+            headers=self._request_headers(),
+            params={"limit": limit, "offset": offset},
+        )
+        response.raise_for_status()
+        payload = _parse_json_list_response(response)
+        return [item for item in payload if isinstance(item, dict)]
+
+    def get_trace(self, trace_id: str, *, include_payload: bool = False) -> TraceMetadata:
+        response = self._client.get(
+            f"/v1/traces/{trace_id}",
+            headers=self._request_headers(),
+            params={"include_payload": "true"} if include_payload else None,
+        )
+        response.raise_for_status()
+        payload = _parse_json_response(response)
+        return payload
+
+    def get_trace_timeline(self, trace_id: str) -> list[TraceTimelineStep]:
+        response = self._client.get(
+            f"/v1/traces/{trace_id}/timeline",
+            headers=self._request_headers(),
+        )
+        response.raise_for_status()
+        payload = _parse_json_list_response(response)
+        return [item for item in payload if isinstance(item, dict)]
 
     def create_campaign(
         self,
@@ -227,6 +264,8 @@ class SepuruxClient:
             source=source,
             trace_version=trace_version,
         )
+        if task_input is not None:
+            recorder.prompt(safe_json_value(task_input), name=task_name)
 
         try:
             yield recorder
@@ -294,6 +333,7 @@ class SepuruxClient:
                         {"ok": True},
                         output=safe_json_value(result),
                     )
+                    recorder.agent_output(safe_json_value(result), name=task_name)
                     return result
 
             return wrapper
@@ -350,11 +390,14 @@ class SepuruxClient:
             "summary": run_status.get("summary"),
             "reliability_score": (
                 float(reliability["reliability_score"])
-                if reliability is not None and isinstance(reliability.get("reliability_score"), int | float)
+                if reliability is not None
+                and isinstance(reliability.get("reliability_score"), int | float)
                 else None
             ),
             "reliability_status": (
-                str(reliability["status"]) if reliability is not None and isinstance(reliability.get("status"), str) else None
+                str(reliability["status"])
+                if reliability is not None and isinstance(reliability.get("status"), str)
+                else None
             ),
             "failures": failures,
         }
@@ -487,7 +530,9 @@ class SepuruxClient:
     ) -> RunStatus:
         deadline = time.monotonic() + timeout_seconds
         run_status = self.get_run(run_id)
-        while run_status["status"] in {"queued", "running", "pending"} and time.monotonic() < deadline:
+        while (
+            run_status["status"] in {"queued", "running", "pending"} and time.monotonic() < deadline
+        ):
             time.sleep(poll_interval)
             run_status = self.get_run(run_id)
         return run_status

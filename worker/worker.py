@@ -50,6 +50,7 @@ from replayer import (
 )
 from security import detect_prompt_injection, sanitize_untrusted_text
 from storage import put_json_object
+from trace_steps import persist_attempt_trace_steps
 from webhooks import is_webhook_subscribed, send_signed_webhook
 
 logger = logging.getLogger(__name__)
@@ -1195,6 +1196,15 @@ def execute_run(run_id: str) -> None:
                 )
                 db.add(attempt_record)
                 db.flush()
+                persist_attempt_trace_steps(
+                    db,
+                    project_id=run.project_id,
+                    trace_id=run.trace_id,
+                    run_id=run.run_id,
+                    attempt_id=attempt_record.attempt_id,
+                    timeline_artifact=timeline_artifact,
+                    mutation_trace=mutation_trace,
+                )
 
                 for event_payload in pending_policy_events:
                     db.add(

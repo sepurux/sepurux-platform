@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 from sepurux import SepuruxClient, configure, record_trace, trace, traceable
@@ -12,7 +14,57 @@ class _RequestCapture:
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
         if request.url.path == "/v1/traces":
+            if request.method == "GET":
+                return httpx.Response(
+                    200,
+                    json=[
+                        {
+                            "trace_id": "trace-123",
+                            "source": "sdk",
+                            "trace_version": "0.2",
+                            "task_name": "customer_support_agent",
+                            "validation_status": "valid",
+                            "s3_key": "traces/trace-123.json",
+                            "created_at": "2026-03-14T00:00:00Z",
+                        }
+                    ],
+                )
             return httpx.Response(201, json={"trace_id": "trace-123"})
+        if request.url.path == "/v1/traces/trace-123":
+            return httpx.Response(
+                200,
+                json={
+                    "trace_id": "trace-123",
+                    "source": "sdk",
+                    "trace_version": "0.2",
+                    "task_name": "customer_support_agent",
+                    "validation_status": "valid",
+                    "s3_key": "traces/trace-123.json",
+                    "payload": (
+                        {"events": []} if request.url.params.get("include_payload") else None
+                    ),
+                    "created_at": "2026-03-14T00:00:00Z",
+                },
+            )
+        if request.url.path == "/v1/traces/trace-123/timeline":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "step-1",
+                        "trace_id": "trace-123",
+                        "step_type": "prompt",
+                        "step_name": "customer_support_agent",
+                        "status": "success",
+                        "input_payload": {"prompt": "Find the balance"},
+                        "output_payload": None,
+                        "latency_ms": 0,
+                        "started_at": "2026-03-14T00:00:00Z",
+                        "finished_at": "2026-03-14T00:00:00Z",
+                        "metadata": {"source": "trace_upload"},
+                    }
+                ],
+            )
         if request.url.path == "/v1/campaigns":
             if request.method == "GET":
                 return httpx.Response(
@@ -96,6 +148,36 @@ def test_upload_trace_uses_traces_endpoint_and_headers() -> None:
     assert request.headers.get("X-API-Key") == "key-1"
     assert request.headers.get("X-Project-Id") == "project-1"
     assert request.headers.get("X-Sepurux-SDK", "").startswith("py/")
+
+
+def test_trace_catalog_methods_use_trace_endpoints() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    traces = client.list_traces()
+    trace = client.get_trace("trace-123", include_payload=True)
+    timeline = client.get_trace_timeline("trace-123")
+
+    assert traces[0]["task_name"] == "customer_support_agent"
+    assert trace["payload"] == {"events": []}
+    assert timeline[0]["step_type"] == "prompt"
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/traces",
+        "/v1/traces/trace-123",
+        "/v1/traces/trace-123/timeline",
+    ]
 
 
 def test_upload_trace_uses_explicit_sdk_header_override() -> None:
@@ -219,6 +301,9 @@ def test_trace_context_auto_uploads_and_starts_run() -> None:
         "/v1/campaigns",
         "/v1/runs",
     ]
+    uploaded_trace = json.loads(capture.requests[0].content.decode())
+    assert uploaded_trace["events"][0]["type"] == "prompt"
+    assert uploaded_trace["events"][1]["type"] == "model"
 
 
 def test_traceable_decorator_records_and_uploads() -> None:
@@ -247,6 +332,9 @@ def test_traceable_decorator_records_and_uploads() -> None:
         "/v1/campaigns",
         "/v1/runs",
     ]
+    uploaded_trace = json.loads(capture.requests[0].content.decode())
+    assert uploaded_trace["events"][0]["type"] == "prompt"
+    assert uploaded_trace["events"][-1]["type"] == "agent_output"
 
 
 def test_global_configure_and_traceable_use_default_client() -> None:
@@ -354,6 +442,7 @@ def test_record_trace_warns_and_preserves_return_value() -> None:
     )
 
     with pytest.warns(DeprecationWarning, match="traceable"):
+
         @record_trace(client=client, campaign_id="demo_campaign")
         def multiply(x: int, y: int) -> int:
             return x * y

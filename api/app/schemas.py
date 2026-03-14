@@ -11,6 +11,7 @@ class TraceMetadata(BaseModel):
     trace_id: UUID
     source: str
     trace_version: str
+    task_name: str | None = None
     sdk_meta: str | None = None
     validation_status: str
     validation_errors: list[dict[str, str]] | None = None
@@ -18,6 +19,21 @@ class TraceMetadata(BaseModel):
     s3_key: str
     payload: Any | None = None
     created_at: datetime
+
+
+class TraceTimelineStep(BaseModel):
+    id: UUID
+    trace_id: UUID
+    step_type: str
+    step_name: str
+    mutation_name: str | None = None
+    status: Literal["success", "error", "timeout", "retry"] | str
+    input_payload: Any | None = None
+    output_payload: Any | None = None
+    latency_ms: int | None = None
+    started_at: datetime
+    finished_at: datetime | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class CampaignCreateRequest(BaseModel):
