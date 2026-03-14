@@ -72,6 +72,24 @@ class Trace(Base):
     )
 
 
+class TraceStep(Base):
+    __tablename__ = "trace_steps"
+
+    trace_step_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    trace_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    step_type: Mapped[str] = mapped_column(Text, nullable=False)
+    step_name: Mapped[str] = mapped_column(Text, nullable=False)
+    mutation_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+    input_payload: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    output_payload: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    step_metadata: Mapped[Any | None] = mapped_column("metadata", JSONB_COMPAT, nullable=True)
+
+
 class Campaign(Base):
     __tablename__ = "campaigns"
 

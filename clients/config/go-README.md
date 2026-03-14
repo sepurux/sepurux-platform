@@ -8,7 +8,7 @@ low-level generated API client for cases where you need direct endpoint access b
 ## Install
 
 ```bash
-go get github.com/sepurux/sepurux-platform/clients/go@v0.3.0
+go get github.com/sepurux/sepurux-platform/clients/go@v0.4.0
 ```
 
 ## Regenerate
@@ -57,5 +57,5 @@ func main() {
 
 ## Release
 
-- Push a tag in the format `clients/go/v0.3.0`.
+- Push a tag in the format `clients/go/v0.4.0`.
 - GitHub Actions workflow `go-client-release.yml` will run `go test` and create a GitHub release for the tagged module.

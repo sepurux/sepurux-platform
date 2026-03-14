@@ -5,6 +5,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**GetTraceByIdV1TracesTraceIdGet**](TracesAPI.md#GetTraceByIdV1TracesTraceIdGet) | **Get** /v1/traces/{trace_id} | Get Trace By Id
+[**GetTraceTimelineV1TracesTraceIdTimelineGet**](TracesAPI.md#GetTraceTimelineV1TracesTraceIdTimelineGet) | **Get** /v1/traces/{trace_id}/timeline | Get Trace Timeline
 [**GetTracesV1TracesGet**](TracesAPI.md#GetTracesV1TracesGet) | **Get** /v1/traces | Get Traces
 [**PostTraceV1TracesPost**](TracesAPI.md#PostTraceV1TracesPost) | **Post** /v1/traces | Post Trace
 
@@ -67,6 +68,76 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**TraceMetadata**](TraceMetadata.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## GetTraceTimelineV1TracesTraceIdTimelineGet
+
+> []TraceTimelineStep GetTraceTimelineV1TracesTraceIdTimelineGet(ctx, traceId).XProjectId(xProjectId).Execute()
+
+Get Trace Timeline
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	traceId := "38400000-8cf0-11bd-b23e-10b96e4ef00d" // string | 
+	xProjectId := "xProjectId_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.TracesAPI.GetTraceTimelineV1TracesTraceIdTimelineGet(context.Background(), traceId).XProjectId(xProjectId).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `TracesAPI.GetTraceTimelineV1TracesTraceIdTimelineGet``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `GetTraceTimelineV1TracesTraceIdTimelineGet`: []TraceTimelineStep
+	fmt.Fprintf(os.Stdout, "Response from `TracesAPI.GetTraceTimelineV1TracesTraceIdTimelineGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**traceId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiGetTraceTimelineV1TracesTraceIdTimelineGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **xProjectId** | **string** |  | 
+
+### Return type
+
+[**[]TraceTimelineStep**](TraceTimelineStep.md)
 
 ### Authorization
 

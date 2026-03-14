@@ -19,6 +19,7 @@ from models import (
     ReplayAttempt,
     Run,
     Trace,
+    TraceStep,
     Webhook,
 )
 from webhooks import generate_webhook_signature
@@ -125,6 +126,13 @@ def test_execute_run_with_mutation_pack_persists_seed_and_trace(
             select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
         ).scalar_one()
         run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+        trace_steps = list(
+            db.scalars(
+                select(TraceStep)
+                .where(TraceStep.trace_id == trace_id)
+                .order_by(TraceStep.started_at.asc(), TraceStep.trace_step_id.asc())
+            )
+        )
 
     assert attempt.result == "passed"
     assert attempt.seed is not None
@@ -137,6 +145,14 @@ def test_execute_run_with_mutation_pack_persists_seed_and_trace(
     assert run.status == "completed"
     assert isinstance(run.summary, dict)
     assert run.summary.get("attempt_count") == 1
+    assert any(
+        step.step_type == "mutation" and step.mutation_name == "rename-status"
+        for step in trace_steps
+    )
+    assert any(
+        step.step_type == "tool_call" and step.step_name == "jira.create_issue"
+        for step in trace_steps
+    )
 
     assert artifacts
     artifact_payload = next(iter(artifacts.values()))

@@ -17,17 +17,25 @@ import * as runtime from '../runtime';
 import type {
   HTTPValidationError,
   TraceMetadata,
+  TraceTimelineStep,
 } from '../models/index';
 import {
     HTTPValidationErrorFromJSON,
     HTTPValidationErrorToJSON,
     TraceMetadataFromJSON,
     TraceMetadataToJSON,
+    TraceTimelineStepFromJSON,
+    TraceTimelineStepToJSON,
 } from '../models/index';
 
 export interface GetTraceByIdV1TracesTraceIdGetRequest {
     traceId: string;
     includePayload?: boolean;
+    xProjectId?: string | null;
+}
+
+export interface GetTraceTimelineV1TracesTraceIdTimelineGetRequest {
+    traceId: string;
     xProjectId?: string | null;
 }
 
@@ -85,6 +93,43 @@ export class TracesApi extends runtime.BaseAPI {
      */
     async getTraceByIdV1TracesTraceIdGet(requestParameters: GetTraceByIdV1TracesTraceIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TraceMetadata> {
         const response = await this.getTraceByIdV1TracesTraceIdGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get Trace Timeline
+     */
+    async getTraceTimelineV1TracesTraceIdTimelineGetRaw(requestParameters: GetTraceTimelineV1TracesTraceIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<TraceTimelineStep>>> {
+        if (requestParameters['traceId'] == null) {
+            throw new runtime.RequiredError(
+                'traceId',
+                'Required parameter "traceId" was null or undefined when calling getTraceTimelineV1TracesTraceIdTimelineGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/traces/{trace_id}/timeline`.replace(`{${"trace_id"}}`, encodeURIComponent(String(requestParameters['traceId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(TraceTimelineStepFromJSON));
+    }
+
+    /**
+     * Get Trace Timeline
+     */
+    async getTraceTimelineV1TracesTraceIdTimelineGet(requestParameters: GetTraceTimelineV1TracesTraceIdTimelineGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<TraceTimelineStep>> {
+        const response = await this.getTraceTimelineV1TracesTraceIdTimelineGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

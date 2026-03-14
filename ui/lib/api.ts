@@ -2,6 +2,7 @@ export type TraceMetadata = {
   trace_id: string;
   source: string;
   trace_version: string;
+  task_name: string | null;
   sdk_meta: string | null;
   validation_status: string;
   validation_errors?: Array<{ path: string; message: string }> | null;
@@ -19,6 +20,29 @@ export type TraceMetadata = {
   s3_key: string;
   payload?: Record<string, unknown> | unknown[] | null;
   created_at: string;
+};
+
+export type TraceTimelineStep = {
+  id: string;
+  trace_id: string;
+  step_type:
+    | "prompt"
+    | "llm_call"
+    | "tool_call"
+    | "mutation"
+    | "agent_output"
+    | "retry"
+    | "failure"
+    | string;
+  step_name: string;
+  mutation_name: string | null;
+  status: "success" | "error" | "timeout" | "retry" | string;
+  input_payload?: Record<string, unknown> | unknown[] | string | number | boolean | null;
+  output_payload?: Record<string, unknown> | unknown[] | string | number | boolean | null;
+  latency_ms: number | null;
+  started_at: string;
+  finished_at: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type CampaignMetadata = {
@@ -632,6 +656,8 @@ export const api = {
     requestJson<TraceMetadata>(`/v1/traces/${traceId}`, {
       include_payload: options?.includePayload ? "true" : undefined,
     }),
+  getTraceTimeline: (traceId: string) =>
+    requestJson<TraceTimelineStep[]>(`/v1/traces/${traceId}/timeline`),
   listCampaigns: (options?: { limit?: number; offset?: number }) =>
     requestJson<CampaignMetadata[]>("/v1/campaigns", {
       limit: options?.limit ?? 50,

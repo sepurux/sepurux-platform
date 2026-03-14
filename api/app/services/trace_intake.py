@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from app.models import Trace
 from app.services.audit_service import create_audit_event
+from app.services.trace_step_service import create_trace_steps_for_trace
 from app.services.trace_validation import normalized_trace_summary
 from app.storage import get_json_object, put_json_object
 from sqlalchemy import select
@@ -41,6 +42,12 @@ def create_trace(
         s3_key=s3_key,
     )
     db.add(trace)
+    db.flush()
+    create_trace_steps_for_trace(
+        db,
+        trace=trace,
+        normalized_payload=normalized_payload,
+    )
     db.commit()
     db.refresh(trace)
     create_audit_event(
@@ -90,10 +97,18 @@ def get_trace_payload(trace: Trace) -> Any | None:
 
 
 def trace_metadata(trace: Trace, *, payload: Any | None = None) -> dict[str, Any]:
+    task_name: str | None = None
+    if isinstance(trace.normalized_payload, dict):
+        task = trace.normalized_payload.get("task")
+        if isinstance(task, dict):
+            task_name_value = task.get("name")
+            if isinstance(task_name_value, str) and task_name_value.strip():
+                task_name = task_name_value
     return {
         "trace_id": trace.trace_id,
         "source": trace.source,
         "trace_version": trace.trace_version,
+        "task_name": task_name,
         "sdk_meta": trace.sdk_meta,
         "validation_status": trace.validation_status,
         "validation_errors": trace.validation_errors,

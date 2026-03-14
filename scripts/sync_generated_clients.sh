@@ -41,7 +41,8 @@ for ts_model in \
   "${ROOT_DIR}/clients/typescript/src/models/ReplayAttemptDetail.ts" \
   "${ROOT_DIR}/clients/typescript/src/models/RunMetadata.ts" \
   "${ROOT_DIR}/clients/typescript/src/models/SecurityEventListItem.ts" \
-  "${ROOT_DIR}/clients/typescript/src/models/TraceMetadata.ts"; do
+  "${ROOT_DIR}/clients/typescript/src/models/TraceMetadata.ts" \
+  "${ROOT_DIR}/clients/typescript/src/models/TraceTimelineStep.ts"; do
   if [ -f "${ts_model}" ]; then
     perl -0pi -e "s/import \\{ mapValues \\} from '\\.\\.\\/runtime';/import { FromJSON, ToJSON, mapValues } from '..\\/runtime';/g" "${ts_model}"
   fi

@@ -25,6 +25,7 @@ type TraceMetadata struct {
 	TraceId string `json:"trace_id"`
 	Source string `json:"source"`
 	TraceVersion string `json:"trace_version"`
+	TaskName NullableString `json:"task_name,omitempty"`
 	SdkMeta NullableString `json:"sdk_meta,omitempty"`
 	ValidationStatus string `json:"validation_status"`
 	ValidationErrors []map[string]string `json:"validation_errors,omitempty"`
@@ -129,6 +130,48 @@ func (o *TraceMetadata) GetTraceVersionOk() (*string, bool) {
 // SetTraceVersion sets field value
 func (o *TraceMetadata) SetTraceVersion(v string) {
 	o.TraceVersion = v
+}
+
+// GetTaskName returns the TaskName field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *TraceMetadata) GetTaskName() string {
+	if o == nil || IsNil(o.TaskName.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.TaskName.Get()
+}
+
+// GetTaskNameOk returns a tuple with the TaskName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *TraceMetadata) GetTaskNameOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.TaskName.Get(), o.TaskName.IsSet()
+}
+
+// HasTaskName returns a boolean if a field has been set.
+func (o *TraceMetadata) HasTaskName() bool {
+	if o != nil && o.TaskName.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetTaskName gets a reference to the given NullableString and assigns it to the TaskName field.
+func (o *TraceMetadata) SetTaskName(v string) {
+	o.TaskName.Set(&v)
+}
+// SetTaskNameNil sets the value for TaskName to be an explicit nil
+func (o *TraceMetadata) SetTaskNameNil() {
+	o.TaskName.Set(nil)
+}
+
+// UnsetTaskName ensures that no value is present for TaskName, not even an explicit nil
+func (o *TraceMetadata) UnsetTaskName() {
+	o.TaskName.Unset()
 }
 
 // GetSdkMeta returns the SdkMeta field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -366,6 +409,9 @@ func (o TraceMetadata) ToMap() (map[string]interface{}, error) {
 	toSerialize["trace_id"] = o.TraceId
 	toSerialize["source"] = o.Source
 	toSerialize["trace_version"] = o.TraceVersion
+	if o.TaskName.IsSet() {
+		toSerialize["task_name"] = o.TaskName.Get()
+	}
 	if o.SdkMeta.IsSet() {
 		toSerialize["sdk_meta"] = o.SdkMeta.Get()
 	}

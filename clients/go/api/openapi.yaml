@@ -1915,6 +1915,45 @@ paths:
       summary: Get Trace By Id
       tags:
       - traces
+  /v1/traces/{trace_id}/timeline:
+    get:
+      operationId: get_trace_timeline_v1_traces__trace_id__timeline_get
+      parameters:
+      - explode: false
+        in: path
+        name: trace_id
+        required: true
+        schema:
+          format: uuid
+          title: Trace Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TraceTimelineStep'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Trace Timeline
+      tags:
+      - traces
   /v1/webhooks:
     get:
       operationId: get_webhooks_v1_webhooks_get
@@ -4731,6 +4770,7 @@ components:
       title: ToolUsageStatsItem
     TraceMetadata:
       example:
+        task_name: task_name
         sdk_meta: sdk_meta
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         normalized_summary:
@@ -4754,6 +4794,9 @@ components:
           type: string
         trace_version:
           title: Trace Version
+          type: string
+        task_name:
+          nullable: true
           type: string
         sdk_meta:
           nullable: true
@@ -4788,6 +4831,71 @@ components:
       - trace_version
       - validation_status
       title: TraceMetadata
+    TraceTimelineStep:
+      example:
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        mutation_name: mutation_name
+        metadata:
+          key: ""
+        finished_at: 2000-01-23T04:56:07.000+00:00
+        step_type: step_type
+        step_name: step_name
+        input_payload: ""
+        output_payload: ""
+        started_at: 2000-01-23T04:56:07.000+00:00
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        status: success
+        latency_ms: 0
+      properties:
+        id:
+          format: uuid
+          title: Id
+          type: string
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        step_type:
+          title: Step Type
+          type: string
+        step_name:
+          title: Step Name
+          type: string
+        mutation_name:
+          nullable: true
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        input_payload:
+          anyOf: []
+          nullable: true
+          title: Input Payload
+        output_payload:
+          anyOf: []
+          nullable: true
+          title: Output Payload
+        latency_ms:
+          nullable: true
+          type: integer
+        started_at:
+          format: date-time
+          title: Started At
+          type: string
+        finished_at:
+          format: date-time
+          nullable: true
+          type: string
+        metadata:
+          additionalProperties: {}
+          nullable: true
+      required:
+      - id
+      - started_at
+      - status
+      - step_name
+      - step_type
+      - trace_id
+      title: TraceTimelineStep
     ValidationError:
       example:
         msg: msg
@@ -4973,6 +5081,16 @@ components:
           nullable: true
           type: boolean
       title: WebhookUpdateRequest
+    Status:
+      anyOf:
+      - enum:
+        - success
+        - error
+        - timeout
+        - retry
+        type: string
+      - type: string
+      title: Status
     ValidationError_loc_inner:
       anyOf:
       - type: string

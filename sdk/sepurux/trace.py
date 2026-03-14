@@ -30,51 +30,149 @@ class TraceBuilder:
         self._task_input = task_input or {}
         self._events: list[TraceEvent] = []
 
+    def add_prompt(
+        self,
+        input: Any,
+        *,
+        name: str | None = None,
+    ) -> TraceBuilder:
+        return self._append_event(
+            {
+                "type": "prompt",
+                "timestamp": _utc_now_iso(),
+                "name": name or self._task_name,
+                "input": input,
+                "status": "success",
+            }
+        )
+
+    def add_llm_call(
+        self,
+        name: str,
+        input: Any,
+        output: Any | None = None,
+        *,
+        latency_ms: int | None = None,
+        status: str = "success",
+    ) -> TraceBuilder:
+        event: TraceEvent = {
+            "type": "llm_call",
+            "timestamp": _utc_now_iso(),
+            "name": name,
+            "input": input,
+            "status": status,
+        }
+        if output is not None:
+            event["output"] = output
+        if latency_ms is not None:
+            event["latency_ms"] = latency_ms
+        return self._append_event(event)
+
     def add_model_step(
         self,
         name: str,
         input: Any,
         output: Any | None = None,
     ) -> TraceBuilder:
-        event: TraceEvent = {
-            "type": "model_step",
-            "timestamp": _utc_now_iso(),
-            "name": name,
-            "input": input,
-        }
-        if output is not None:
-            event["output"] = output
-        self._events.append(event)
-        return self
+        return self._append_event(
+            {
+                "type": "model",
+                "timestamp": _utc_now_iso(),
+                "name": name,
+                "input": input,
+                **({"output": output} if output is not None else {}),
+            }
+        )
 
-    def add_tool_call(self, tool: str, args: dict[str, Any]) -> TraceBuilder:
+    def add_tool_call(
+        self,
+        tool: str,
+        args: dict[str, Any],
+        *,
+        latency_ms: int | None = None,
+        status: str | None = None,
+    ) -> TraceBuilder:
         event: TraceEvent = {
             "type": "tool_call",
             "timestamp": _utc_now_iso(),
             "tool": tool,
             "args": args,
         }
-        self._events.append(event)
-        return self
+        if latency_ms is not None:
+            event["latency_ms"] = latency_ms
+        if status is not None:
+            event["status"] = status
+        return self._append_event(event)
 
     def add_tool_result(self, tool: str, result: Any) -> TraceBuilder:
+        return self._append_event(
+            {
+                "type": "tool_result",
+                "timestamp": _utc_now_iso(),
+                "tool": tool,
+                "result": result,
+            }
+        )
+
+    def add_mutation(
+        self,
+        mutation_name: str,
+        *,
+        input: Any | None = None,
+        output: Any | None = None,
+    ) -> TraceBuilder:
         event: TraceEvent = {
-            "type": "tool_result",
+            "type": "mutation",
             "timestamp": _utc_now_iso(),
-            "tool": tool,
-            "result": result,
+            "name": mutation_name,
+            "mutation_name": mutation_name,
+            "status": "success",
         }
-        self._events.append(event)
-        return self
+        if input is not None:
+            event["input"] = input
+        if output is not None:
+            event["output"] = output
+        return self._append_event(event)
+
+    def add_agent_output(
+        self,
+        output: Any,
+        *,
+        name: str = "Agent Output",
+    ) -> TraceBuilder:
+        return self._append_event(
+            {
+                "type": "agent_output",
+                "timestamp": _utc_now_iso(),
+                "name": name,
+                "output": output,
+                "status": "success",
+            }
+        )
+
+    def add_retry(self, name: str, *, retries: int = 1) -> TraceBuilder:
+        return self._append_event(
+            {
+                "type": "retry",
+                "timestamp": _utc_now_iso(),
+                "name": name,
+                "input": {"retries": retries},
+                "status": "retry",
+            }
+        )
 
     def add_error(self, message: str, tool: str | None = None) -> TraceBuilder:
         event: TraceEvent = {
-            "type": "error",
+            "type": "failure",
             "timestamp": _utc_now_iso(),
-            "message": message,
+            "error": {"message": message},
+            "status": "error",
         }
         if tool:
             event["tool"] = tool
+        return self._append_event(event)
+
+    def _append_event(self, event: TraceEvent) -> TraceBuilder:
         self._events.append(event)
         return self
 
