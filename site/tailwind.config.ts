@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 const config: Config = {
   darkMode: ["class"],
@@ -12,6 +13,11 @@ const config: Config = {
       }
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-body)", ...defaultTheme.fontFamily.sans],
+        display: ["var(--font-display)", ...defaultTheme.fontFamily.sans],
+        mono: ["var(--font-mono)", ...defaultTheme.fontFamily.mono],
+      },
       colors: {
         background: "hsl(var(--background))",
         surface: "hsl(var(--surface))",
@@ -41,15 +47,20 @@ const config: Config = {
         sm: "8px"
       },
       boxShadow: {
-        panel: "0 10px 34px rgba(0,0,0,0.38)",
-        insetSoft: "inset 0 1px 0 rgba(255,255,255,0.04)"
+        panel: "0 30px 90px rgba(2,6,23,0.46)",
+        glow: "0 0 0 1px rgba(56,189,248,0.14), 0 30px 100px rgba(37,99,235,0.26)",
+        button: "0 18px 48px rgba(37,99,235,0.34)",
+        insetSoft: "inset 0 1px 0 rgba(255,255,255,0.06)",
       },
       backgroundImage: {
-        "grid-faint": "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)"
-      }
-    }
+        "grid-faint": "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)",
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-hero":
+          "radial-gradient(circle at 30% 20%, rgba(56,189,248,0.35), transparent 40%), radial-gradient(circle at 72% 14%, rgba(37,99,235,0.28), transparent 34%), radial-gradient(circle at 84% 82%, rgba(99,102,241,0.18), transparent 38%)",
+      },
+    },
   },
-  plugins: [require("tailwindcss-animate")]
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;

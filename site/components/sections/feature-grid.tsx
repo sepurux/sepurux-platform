@@ -1,65 +1,67 @@
-import { Binary, Bug, ClipboardList, GitPullRequestArrow, LockKeyhole, RotateCcw } from "lucide-react";
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 
 const features = [
   {
-    icon: RotateCcw,
-    title: "Deterministic Replays",
-    description: "Reconstruct the exact tool sequence and isolate regressions with confidence.",
+    title: "Mutation Testing",
+    description: "Stress your agent with schema drift, timeouts, rate limits, and poisoning before release.",
+    mediaType: "video" as const,
+    src: "/videos/mutation.mp4",
   },
   {
-    icon: Bug,
-    title: "Mutation Packs",
-    description: "Stress agents with schema drift, timeouts, rate limits, and poisoning scenarios.",
+    title: "Trace Replay",
+    description: "Rewind the exact agent execution and inspect the prompt, tool call, and break point.",
+    mediaType: "video" as const,
+    src: "/videos/replay.mp4",
   },
   {
-    icon: ClipboardList,
-    title: "Run Inspector",
-    description: "Find the first failing step fast with timeline-aware diagnostics.",
-  },
-  {
-    icon: Binary,
-    title: "Counterfactual Fixes",
-    description: "Run what-if replays to verify remediations before shipping changes.",
-  },
-  {
-    icon: LockKeyhole,
-    title: "Policy Packs",
-    description: "Enforce approval gates and safe-action controls during replay.",
-  },
-  {
-    icon: GitPullRequestArrow,
-    title: "GitHub PR Gate",
-    description: "Block merges when reliability thresholds fail in CI.",
+    title: "Reliability Score",
+    description: "Turn failures into a report and a score that teams can understand at a glance.",
+    mediaType: "image" as const,
+    src: "/images/reliability.png",
   },
 ];
 
 export function FeatureGrid() {
   return (
-    <section className="site-container mt-24">
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">Features</p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-          Reliability workflows built for agent platform teams.
+    <section className="site-container mt-24 sm:mt-28">
+      <div className="mx-auto mb-10 max-w-3xl text-center">
+        <p className="section-kicker">Features</p>
+        <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-white md:text-5xl">
+          Product surfaces, not icon marketing.
         </h2>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {features.map((feature) => {
-          const Icon = feature.icon;
-          return (
-            <Card key={feature.title} className="transition-transform duration-200 hover:-translate-y-1">
-              <CardHeader>
-                <div className="mb-3 inline-flex w-fit rounded-md border border-primary/25 bg-primary/10 p-2">
-                  <Icon className="h-5 w-5 text-primary" />
+      <div className="grid gap-8 lg:grid-cols-3 lg:gap-12">
+        {features.map((feature, index) => {
+            return (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                whileHover={{ y: -6, scale: 1.01 }}
+                transition={{ duration: 0.35, ease: "easeOut", delay: index * 0.05 }}
+                className="group rounded-xl border border-neutral-900 bg-black p-6 transition-colors hover:border-blue-500/70"
+              >
+                <div className="overflow-hidden rounded-xl border border-neutral-900 bg-neutral-950">
+                  {feature.mediaType === "video" ? (
+                    <video className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" autoPlay muted loop playsInline preload="auto">
+                      <source src={feature.src} type="video/mp4" />
+                    </video>
+                  ) : (
+                    <img
+                      src={feature.src}
+                      alt={feature.title}
+                      className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                    />
+                  )}
                 </div>
-                <CardTitle>{feature.title}</CardTitle>
-                <CardDescription>{feature.description}</CardDescription>
-              </CardHeader>
-              <CardContent />
-            </Card>
-          );
+                <h3 className="mt-6 font-display text-2xl font-semibold text-white">{feature.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-neutral-500">{feature.description}</p>
+              </motion.div>
+            );
         })}
       </div>
     </section>
