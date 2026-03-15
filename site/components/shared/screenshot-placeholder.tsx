@@ -33,26 +33,26 @@ export function ScreenshotPlaceholder({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-border/80 bg-card/90 p-4 shadow-panel shadow-black/40",
+        "relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-4 shadow-panel shadow-black/60 backdrop-blur-xl",
         className
       )}
     >
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/56">{title}</p>
         <div className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-danger/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-warning/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-success/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-danger/80" />
+          <span className="h-2.5 w-2.5 rounded-full bg-warning/80" />
+          <span className="h-2.5 w-2.5 rounded-full bg-success/80" />
         </div>
       </div>
-      <div className="faint-grid rounded-lg border border-border/70 bg-muted/20 p-4">
+      <div className="faint-grid rounded-[22px] border border-white/8 bg-black/25 p-4">
         {command ? (
-          <div className="rounded-md border border-border/70 bg-background/80 p-3 font-mono text-xs">
-            <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+          <div className="rounded-2xl border border-white/8 bg-black/30 p-3 font-mono text-xs">
+            <div className="mb-2 flex items-center gap-2 text-white/46">
               <span className="h-2 w-2 rounded-full bg-success/80" />
               <span>{terminalLabel ?? "run-inspector.sh"}</span>
             </div>
-            <div className="flex items-center text-primary">
+            <div className="flex items-center text-secondary">
               <span className="mr-2 text-success">$</span>
               <span
                 className={cn(
@@ -65,7 +65,7 @@ export function ScreenshotPlaceholder({
               </span>
               {animateCommand ? <span className="terminal-caret ml-0.5" aria-hidden /> : null}
             </div>
-            <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
+            <div className="mt-3 space-y-1 text-[11px] text-white/58">
               {lines.map((line) => (
                 <p key={line}>{line}</p>
               ))}
@@ -73,13 +73,13 @@ export function ScreenshotPlaceholder({
           </div>
         ) : (
           <div className="grid gap-3">
-            <div className="h-3 w-2/3 rounded bg-secondary/40" />
-            <div className="h-3 w-5/6 rounded bg-muted" />
-            <div className="h-20 rounded-md border border-border/70 bg-background/70" />
+            <div className="h-3 w-2/3 rounded-full bg-secondary/40" />
+            <div className="h-3 w-5/6 rounded-full bg-white/10" />
+            <div className="h-20 rounded-2xl border border-white/8 bg-black/30" />
             <div className="grid grid-cols-3 gap-2">
-              <div className="h-8 rounded border border-border/70 bg-background/50" />
-              <div className="h-8 rounded border border-border/70 bg-background/50" />
-              <div className="h-8 rounded border border-border/70 bg-background/50" />
+              <div className="h-8 rounded-xl border border-white/8 bg-black/20" />
+              <div className="h-8 rounded-xl border border-white/8 bg-black/20" />
+              <div className="h-8 rounded-xl border border-white/8 bg-black/20" />
             </div>
           </div>
         )}

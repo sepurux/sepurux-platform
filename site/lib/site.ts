@@ -15,6 +15,9 @@ export const siteConfig = {
   url: process.env.NEXT_PUBLIC_SITE_URL || defaultSiteUrl,
   appUrl: process.env.NEXT_PUBLIC_APP_URL || defaultAppUrl,
   linkedinUrl: process.env.NEXT_PUBLIC_LINKEDIN_URL || "https://www.linkedin.com/company/sepurux/",
+  githubUrl: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/sepurux/sepurux-platform",
+  discordUrl: process.env.NEXT_PUBLIC_DISCORD_URL || "https://discord.gg/sepurux",
+  twitterUrl: process.env.NEXT_PUBLIC_TWITTER_URL || "https://x.com/sepurux",
   logo: `/logo.png?v=${siteAssetVersion}`,
   ogImage: `/logo.png?v=${siteAssetVersion}`,
 };

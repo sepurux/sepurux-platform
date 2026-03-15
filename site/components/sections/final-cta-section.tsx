@@ -1,26 +1,25 @@
-import Link from "next/link";
-
 import { Button } from "@/components/ui/button";
+import { buildAppAuthHref } from "@/lib/site";
 
 export function FinalCtaSection() {
   return (
-    <section className="site-container mt-24 pb-6">
-      <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card px-6 py-10 md:px-10 md:py-14">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.22),transparent_42%),radial-gradient(circle_at_bottom_left,rgba(34,211,238,0.12),transparent_38%)]" />
-        <p className="relative text-xs uppercase tracking-[0.16em] text-secondary">Start now</p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-          Start Breaking Your Agents Safely
+    <section className="site-container mt-24 pb-8 sm:mt-28">
+      <div className="relative overflow-hidden rounded-[32px] border border-neutral-900 bg-neutral-950 px-6 py-12 backdrop-blur-xl md:px-10 md:py-16">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(37,99,235,0.18),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(37,99,235,0.12),transparent_26%)]" />
+        <p className="relative section-kicker">Start now</p>
+        <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-white md:text-5xl">
+          Start breaking your AI agents safely.
         </h2>
-        <p className="relative mt-4 max-w-2xl text-muted-foreground">
+        <p className="relative mt-5 max-w-2xl text-base leading-8 text-neutral-500">
           Push changes faster with deterministic replays, mutation stress tests, and policy-aware CI
           checks.
         </p>
         <div className="relative mt-8 flex flex-wrap gap-3">
           <Button asChild size="lg">
-            <Link href="/product">Get Started</Link>
+            <a href={buildAppAuthHref({ mode: "access", intent: "signup" })}>Get Started</a>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link href="/docs">View Docs</Link>
+            <a href={buildAppAuthHref({ mode: "demo" })}>View Demo</a>
           </Button>
         </div>
       </div>

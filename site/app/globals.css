@@ -3,28 +3,28 @@
 @tailwind utilities;
 
 :root {
-  --background: 218 30% 8%;
-  --surface: 219 24% 11%;
-  --sidebar: 219 24% 10%;
-  --foreground: 220 18% 95%;
-  --card: 219 20% 14%;
-  --card-foreground: 220 18% 95%;
-  --border: 218 17% 22%;
-  --input: 218 17% 17%;
-  --ring: 199 96% 49%;
-  --muted: 218 16% 17%;
-  --muted-foreground: 220 11% 68%;
-  --accent: 218 17% 20%;
-  --accent-foreground: 220 18% 95%;
-  --primary: 199 100% 49%;
+  --background: 0 0% 0%;
+  --surface: 240 10% 5%;
+  --sidebar: 240 10% 5%;
+  --foreground: 0 0% 100%;
+  --card: 240 10% 6%;
+  --card-foreground: 0 0% 100%;
+  --border: 240 10% 14%;
+  --input: 240 10% 10%;
+  --ring: 218 82% 53%;
+  --muted: 240 6% 8%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 198 93% 60%;
+  --accent-foreground: 224 39% 8%;
+  --primary: 220 83% 53%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 198 96% 58%;
-  --secondary-foreground: 218 30% 8%;
-  --success: 142 70% 45%;
-  --info: 204 58% 63%;
-  --neutral: 216 12% 66%;
-  --warning: 38 92% 50%;
-  --danger: 0 84% 60%;
+  --secondary: 198 93% 60%;
+  --secondary-foreground: 224 39% 8%;
+  --success: 160 84% 39%;
+  --info: 205 90% 65%;
+  --neutral: 215 20% 65%;
+  --warning: 41 96% 56%;
+  --danger: 0 89% 68%;
 }
 
 * {
@@ -46,10 +46,9 @@ body {
   position: relative;
   isolation: isolate;
   background-image:
-    radial-gradient(circle at 10% -8%, rgba(0, 160, 248, 0.22), transparent 34%),
-    radial-gradient(circle at 92% 4%, rgba(118, 130, 148, 0.14), transparent 28%),
-    linear-gradient(165deg, rgba(0, 160, 248, 0.07) 0%, rgba(11, 15, 20, 0) 42%),
-    linear-gradient(to top, rgba(11, 15, 20, 1), rgba(11, 15, 20, 1));
+    radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.08), transparent 16%),
+    radial-gradient(circle at 82% 16%, rgba(37, 99, 235, 0.05), transparent 16%),
+    linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(3, 5, 10, 1) 100%);
 }
 
 body::before {
@@ -58,30 +57,49 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 12%, rgba(0, 160, 248, 0.08), transparent 24%),
+    radial-gradient(circle at 18% 14%, rgba(37, 99, 235, 0.02), transparent 20%),
+    radial-gradient(circle at 78% 76%, rgba(56, 189, 248, 0.02), transparent 20%),
     repeating-linear-gradient(
       0deg,
-      rgba(255, 255, 255, 0.022) 0,
-      rgba(255, 255, 255, 0.022) 1px,
+      rgba(31, 31, 35, 0.45) 0,
+      rgba(31, 31, 35, 0.45) 1px,
       transparent 1px,
-      transparent 26px
+      transparent 64px
     );
   z-index: -1;
 }
 
 @layer components {
   .site-container {
-    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6;
+    @apply mx-auto w-full max-w-[1280px] px-5 sm:px-6 lg:px-8;
   }
 
   .panel-surface {
-    @apply rounded-[12px] border border-border bg-card shadow-panel shadow-black/50 backdrop-blur;
-    background-image: linear-gradient(175deg, rgba(0, 160, 248, 0.08), rgba(0, 0, 0, 0) 34%);
+    @apply rounded-[24px] border border-border bg-card shadow-panel shadow-black/50 backdrop-blur-xl;
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+      radial-gradient(circle at top left, rgba(37, 99, 235, 0.05), transparent 28%);
+  }
+
+  .glass-outline {
+    @apply border border-border bg-black/70 backdrop-blur-xl;
+  }
+
+  .section-kicker {
+    @apply text-[11px] font-medium uppercase tracking-[0.22em] text-secondary/80;
+  }
+
+  .hero-title {
+    font-family: var(--font-display), sans-serif;
+    font-size: clamp(2.75rem, 6vw, 5.5rem);
+    font-weight: 600;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
   }
 
   .faint-grid {
-    background-size: 18px 18px;
-    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.035) 1px, transparent 0);
+    background-size: 22px 22px;
+    background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.12) 1px, transparent 0);
   }
 
   .terminal-type-command {
@@ -135,10 +153,10 @@ body::before {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(10, 10, 12, 0.95);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(59, 130, 246, 0.32);
   border-radius: 999px;
 }

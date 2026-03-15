@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 
 import { HeroSection } from "@/components/sections/hero-section";
-import { ProblemSection } from "@/components/sections/problem-section";
-import { ReplayTracesSection } from "@/components/sections/replay-traces-section";
-import { MutationTestingSection } from "@/components/sections/mutation-testing-section";
-import { PolicyGatesSection } from "@/components/sections/policy-gates-section";
-import { CIGuardrailsSection } from "@/components/sections/ci-guardrails-section";
+import { FeatureGrid } from "@/components/sections/feature-grid";
 import { DashboardPreviewSection } from "@/components/sections/dashboard-preview-section";
+import { HowItWorksSection } from "@/components/sections/how-it-works-section";
 import { FinalCtaSection } from "@/components/sections/final-cta-section";
+import { ScreenshotGallerySection } from "@/components/sections/screenshot-gallery-section";
 import { buildPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -21,12 +19,10 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <ProblemSection />
-      <ReplayTracesSection />
-      <MutationTestingSection />
-      <PolicyGatesSection />
-      <CIGuardrailsSection />
       <DashboardPreviewSection />
+      <FeatureGrid />
+      <HowItWorksSection />
+      <ScreenshotGallerySection />
       <FinalCtaSection />
     </>
   );
