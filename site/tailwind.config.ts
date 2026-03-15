@@ -37,7 +37,7 @@ const config: Config = {
         secondary: "hsl(var(--secondary))",
         success: "hsl(var(--success))",
         info: "hsl(var(--info))",
-        neutral: "hsl(var(--neutral))",
+        "neutral-muted": "hsl(var(--neutral))",
         warning: "hsl(var(--warning))",
         danger: "hsl(var(--danger))"
       },

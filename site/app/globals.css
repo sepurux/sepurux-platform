@@ -58,14 +58,7 @@ body::before {
   pointer-events: none;
   background:
     radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.015), transparent 20%),
-    radial-gradient(circle at 78% 76%, rgba(255, 255, 255, 0.015), transparent 20%),
-    repeating-linear-gradient(
-      0deg,
-      rgba(31, 31, 35, 0.45) 0,
-      rgba(31, 31, 35, 0.45) 1px,
-      transparent 1px,
-      transparent 64px
-    );
+    radial-gradient(circle at 78% 76%, rgba(255, 255, 255, 0.015), transparent 20%);
   z-index: -1;
 }
 
@@ -94,6 +87,22 @@ body::before {
     font-size: clamp(2.75rem, 6vw, 5.5rem);
     font-weight: 600;
     line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+
+  .page-hero-title {
+    font-family: var(--font-display), sans-serif;
+    font-size: clamp(2.4rem, 5.5vw, 5rem);
+    font-weight: 600;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+
+  .section-heading {
+    font-family: var(--font-display), sans-serif;
+    font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+    font-weight: 600;
+    line-height: 1.05;
     letter-spacing: -0.03em;
   }
 

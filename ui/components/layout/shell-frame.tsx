@@ -25,6 +25,7 @@ const PUBLIC_API_KEY =
   "";
 
 function sectionForPath(pathname: string) {
+  if (pathname.startsWith("/billing")) return "billing";
   if (pathname.startsWith("/reports")) return "reports";
   if (pathname.startsWith("/traces")) return "traces";
   if (pathname.startsWith("/campaigns")) return "campaigns";
@@ -40,6 +41,8 @@ function sectionForPath(pathname: string) {
 
 function pathForSection(section: string) {
   switch (section) {
+    case "billing":
+      return "/billing";
     case "reports":
       return "/reports";
     case "traces":
@@ -155,6 +158,12 @@ export function ShellFrame({ children }: { children: ReactNode }) {
         <Sidebar authSession={authSession} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <TopBar authSession={authSession} />
+          {pathname.startsWith("/dashboard") && authSession?.is_low_credit ? (
+            <div className="border-b border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 md:px-6">
+              Credits are running low. This workspace has {authSession.credits_balance ?? 0} credits remaining.
+              Upgrade the plan or top up credits before the next campaign run is blocked.
+            </div>
+          ) : null}
           <main className="faint-grid flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
         </div>
       </div>

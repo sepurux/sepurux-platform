@@ -77,12 +77,12 @@ const modules = [
 
 export default function ProductPage() {
   return (
-    <div className="pb-24">
-      <section className="border-b border-slate-200 bg-white text-slate-950">
+    <div>
+      <section className="bg-white">
         <div className="site-container py-16 md:py-24">
           <div className="max-w-4xl">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Product</p>
-            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight md:text-6xl">
+            <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">Product</p>
+            <h1 className="page-hero-title mt-4 text-slate-950">
               Reliability workflow for production AI agents.
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
@@ -91,15 +91,15 @@ export default function ProductPage() {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-px overflow-hidden rounded-[28px] border border-slate-200 bg-slate-200 md:grid-cols-3">
+          <div className="mt-12 grid gap-px overflow-hidden rounded-[28px] bg-neutral-100 md:grid-cols-3">
             {[
               ["Trace-first", "Capture the real execution path before you speculate."],
               ["Failure-aware", "Classify breakpoints and reliability regressions automatically."],
               ["Gate-ready", "Turn evidence into policy and release decisions."],
             ].map(([title, copy]) => (
-              <div key={title} className="bg-white px-6 py-6">
+              <div key={title} className="bg-white px-6 py-7">
                 <p className="text-sm font-semibold text-slate-950">{title}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">{copy}</p>
+                <p className="mt-2 text-sm leading-7 text-slate-500">{copy}</p>
               </div>
             ))}
           </div>
@@ -113,11 +113,7 @@ export default function ProductPage() {
         return (
           <section
             key={module.title}
-            className={
-              dark
-                ? "border-b border-neutral-900 bg-black text-white"
-                : "border-b border-slate-200 bg-[#f7f7f8] text-slate-950"
-            }
+            className={dark ? "bg-black text-white" : "bg-white text-slate-950"}
           >
             <div className="site-container py-16 md:py-24">
               <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
@@ -125,16 +121,16 @@ export default function ProductPage() {
                   <div
                     className={
                       dark
-                        ? "inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-500/25 bg-blue-500/10"
-                        : "inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50"
+                        ? "inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]"
+                        : "inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50"
                     }
                   >
-                    <Icon className={dark ? "h-5 w-5 text-blue-400" : "h-5 w-5 text-blue-600"} />
+                    <Icon className={dark ? "h-5 w-5 text-white/50" : "h-5 w-5 text-neutral-500"} />
                   </div>
-                  <p className={dark ? "mt-5 text-xs uppercase tracking-[0.16em] text-white/50" : "mt-5 text-xs uppercase tracking-[0.16em] text-slate-500"}>
+                  <p className={dark ? "mt-5 text-[11px] font-medium uppercase tracking-[0.22em] text-white/40" : "mt-5 text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400"}>
                     {module.eyebrow}
                   </p>
-                  <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight md:text-5xl">
+                  <h2 className="section-heading mt-3">
                     {module.title}
                   </h2>
                   <p className={dark ? "mt-5 text-lg leading-8 text-neutral-400" : "mt-5 text-lg leading-8 text-slate-600"}>
@@ -147,7 +143,7 @@ export default function ProductPage() {
                         key={bullet}
                         className={dark ? "flex items-start gap-3 text-sm text-neutral-300" : "flex items-start gap-3 text-sm text-slate-600"}
                       >
-                        <CheckCircle2 className={dark ? "mt-0.5 h-4 w-4 shrink-0 text-blue-400" : "mt-0.5 h-4 w-4 shrink-0 text-blue-600"} />
+                        <CheckCircle2 className={dark ? "mt-0.5 h-4 w-4 shrink-0 text-white/40" : "mt-0.5 h-4 w-4 shrink-0 text-neutral-400"} />
                         <span>{bullet}</span>
                       </li>
                     ))}
@@ -157,13 +153,13 @@ export default function ProductPage() {
                 <div
                   className={
                     dark
-                      ? "rounded-[32px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.4)]"
-                      : "rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_30px_90px_rgba(15,23,42,0.08)]"
+                      ? "rounded-[32px] border border-white/8 bg-white/[0.03] p-6"
+                      : "rounded-[32px] border border-neutral-100 bg-neutral-50 p-6"
                   }
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className={dark ? "text-xs uppercase tracking-[0.16em] text-white/45" : "text-xs uppercase tracking-[0.16em] text-slate-500"}>
+                      <p className={dark ? "text-[11px] font-medium uppercase tracking-[0.22em] text-white/35" : "text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400"}>
                         Surface {String(index + 1).padStart(2, "0")}
                       </p>
                       <p className={dark ? "mt-2 text-lg font-medium text-white" : "mt-2 text-lg font-medium text-slate-950"}>
@@ -173,37 +169,37 @@ export default function ProductPage() {
                     <span
                       className={
                         dark
-                          ? "inline-flex rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300"
-                          : "inline-flex rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                          ? "inline-flex rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-medium text-white/50"
+                          : "inline-flex rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-500"
                       }
                     >
                       Sepurux
                     </span>
                   </div>
 
-                  <div className={dark ? "mt-6 space-y-3 rounded-[24px] border border-white/8 bg-black/40 p-4" : "mt-6 space-y-3 rounded-[24px] border border-slate-200 bg-[#f7f7f8] p-4"}>
+                  <div className={dark ? "mt-6 space-y-2.5 rounded-[24px] border border-white/8 bg-black/40 p-4" : "mt-6 space-y-2.5 rounded-[24px] border border-neutral-200 bg-white p-4"}>
                     {module.visualRows.map((row, rowIndex) => (
                       <div
                         key={row}
                         className={
                           dark
-                            ? "flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
-                            : "flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            ? "flex items-center justify-between rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3"
+                            : "flex items-center justify-between rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-3"
                         }
                       >
                         <div className="flex items-center gap-3">
                           <span
                             className={
                               dark
-                                ? "h-2.5 w-2.5 rounded-full bg-blue-400"
-                                : "h-2.5 w-2.5 rounded-full bg-blue-600"
+                                ? "h-2 w-2 rounded-full bg-white/30"
+                                : "h-2 w-2 rounded-full bg-neutral-300"
                             }
                           />
-                          <span className={dark ? "font-mono text-sm text-white/88" : "font-mono text-sm text-slate-800"}>
+                          <span className={dark ? "font-mono text-sm text-white/80" : "font-mono text-sm text-slate-700"}>
                             {row}
                           </span>
                         </div>
-                        <span className={dark ? "text-xs uppercase tracking-[0.16em] text-white/35" : "text-xs uppercase tracking-[0.16em] text-slate-400"}>
+                        <span className={dark ? "text-xs uppercase tracking-[0.16em] text-white/25" : "text-xs uppercase tracking-[0.16em] text-slate-400"}>
                           {String(rowIndex + 1).padStart(2, "0")}
                         </span>
                       </div>
@@ -216,11 +212,11 @@ export default function ProductPage() {
         );
       })}
 
-      <section className="border-b border-neutral-900 bg-black text-white">
+      <section className="bg-black text-white">
         <div className="site-container py-16 md:py-24">
           <div className="max-w-4xl">
-            <p className="text-xs uppercase tracking-[0.16em] text-white/45">System flow</p>
-            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight md:text-5xl">
+            <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">System flow</p>
+            <h2 className="section-heading mt-3">
               Trace to CI decision.
             </h2>
             <p className="mt-5 text-lg leading-8 text-neutral-400">
@@ -229,13 +225,13 @@ export default function ProductPage() {
             </p>
           </div>
 
-          <div className="mt-10 overflow-x-auto rounded-[32px] border border-white/10 bg-white/[0.03] p-6">
+          <div className="mt-10 overflow-x-auto rounded-[32px] border border-white/8 bg-white/[0.03] p-6">
             <div className="min-w-[840px]">
               <div className="grid grid-cols-6 gap-4">
                 {["trace", "run", "attempts", "policy_events", "analytics", "ci_decision"].map((item, index) => (
-                  <div key={item} className="rounded-[24px] border border-white/10 bg-black/50 px-4 py-5">
-                    <p className="text-xs uppercase tracking-[0.16em] text-white/35">0{index + 1}</p>
-                    <p className="mt-2 font-mono text-sm text-white/90">{item}</p>
+                  <div key={item} className="rounded-[24px] border border-white/8 bg-black/50 px-4 py-5">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/30">0{index + 1}</p>
+                    <p className="mt-2 font-mono text-sm text-white/80">{item}</p>
                   </div>
                 ))}
               </div>

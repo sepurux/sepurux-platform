@@ -410,6 +410,7 @@ class AuthPermissionSet(BaseModel):
     can_manage_security_config: bool = False
     can_manage_workspace: bool = False
     can_manage_api_keys: bool = False
+    can_manage_billing: bool = False
 
 
 class AuthSessionMetadata(BaseModel):
@@ -424,6 +425,13 @@ class AuthSessionMetadata(BaseModel):
     email: str | None = None
     name: str | None = None
     is_demo: bool = False
+    billing_plan_name: str | None = None
+    credits_balance: int | None = None
+    monthly_credits: int | None = None
+    topup_credits: int | None = None
+    queue_priority: Literal["normal", "priority"] | None = None
+    low_credit_threshold: int | None = None
+    is_low_credit: bool = False
     permissions: AuthPermissionSet
 
 
@@ -442,6 +450,55 @@ class LoginRequest(BaseModel):
 
 class AuthSessionResponse(AuthSessionMetadata):
     api_key: str
+
+
+class SubscriptionPlanMetadata(BaseModel):
+    plan_id: UUID
+    name: str
+    monthly_price: int
+    monthly_credits: int
+    features: dict[str, Any]
+    created_at: datetime
+
+
+class UserSubscriptionMetadata(BaseModel):
+    subscription_id: UUID
+    plan_id: UUID
+    plan_name: str | None = None
+    monthly_price: int | None = None
+    monthly_credits: int | None = None
+    queue_priority: Literal["normal", "priority"] = "normal"
+    status: str
+    start_date: datetime
+    renewal_date: datetime
+
+
+class CreditWalletMetadata(BaseModel):
+    wallet_id: UUID
+    balance: int
+    monthly_credits: int
+    topup_credits: int
+    queue_priority: Literal["normal", "priority"] = "normal"
+    low_credit_threshold: int = 50
+    is_low_credit: bool = False
+    updated_at: datetime
+
+
+class CreditTransactionMetadata(BaseModel):
+    transaction_id: UUID
+    user_id: UUID
+    amount: int
+    type: Literal["usage", "monthly_grant", "topup_purchase"]
+    reason: str
+    created_at: datetime
+
+
+class BillingSubscribeRequest(BaseModel):
+    plan_id: UUID
+
+
+class BillingTopupRequest(BaseModel):
+    credits: int = Field(gt=0)
 
 
 class PolicyPackCreateRequest(BaseModel):

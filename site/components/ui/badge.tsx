@@ -13,7 +13,7 @@ const badgeVariants = cva(
         danger: "border-danger/45 bg-danger/15 text-danger",
         warning: "border-warning/45 bg-warning/15 text-warning",
         info: "border-info/45 bg-info/15 text-info",
-        neutral: "border-neutral/45 bg-neutral/15 text-neutral",
+        neutral: "border-neutral-muted/45 bg-neutral-muted/15 text-neutral-muted",
         outline: "border-border/80 text-muted-foreground",
       },
     },

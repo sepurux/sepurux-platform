@@ -144,9 +144,10 @@ def _create_run_record(
     return run
 
 
-def enqueue_execute_run(run: Run) -> None:
+def enqueue_execute_run(run: Run, *, queue_priority: str = "normal") -> None:
     # Use a fully-qualified function path so RQ workers can import it reliably.
-    get_run_queue().enqueue("worker.execute_run", str(run.run_id))
+    queue = get_run_queue() if queue_priority == "normal" else get_run_queue(priority=queue_priority)
+    queue.enqueue("worker.execute_run", str(run.run_id))
 
 
 def create_run_and_enqueue(
@@ -157,6 +158,7 @@ def create_run_and_enqueue(
     campaign_id: UUID,
     mutation_pack_id: UUID | None = None,
     policy_pack_id: UUID | None = None,
+    queue_priority: str = "normal",
     actor: str | None = None,
 ) -> Run:
     run = create_run(
@@ -168,7 +170,7 @@ def create_run_and_enqueue(
         policy_pack_id=policy_pack_id,
         actor=actor,
     )
-    enqueue_execute_run(run)
+    enqueue_execute_run(run, queue_priority=queue_priority)
     return run
 
 
@@ -202,7 +204,7 @@ def create_ci_run_and_enqueue(
         summary={"ci_thresholds": thresholds},
         actor=actor,
     )
-    enqueue_execute_run(run)
+    enqueue_execute_run(run, queue_priority="normal")
     return run
 
 
@@ -257,6 +259,7 @@ def create_run_pack_and_enqueue(
     project_id: UUID,
     campaign: Campaign,
     mutation_pack: MutationPack,
+    queue_priority: str = "normal",
     actor: str | None = None,
 ) -> Run:
     trace_payload = _build_synthetic_campaign_trace_payload(
@@ -281,6 +284,7 @@ def create_run_pack_and_enqueue(
         trace_id=trace.trace_id,
         campaign_id=campaign.campaign_id,
         mutation_pack_id=mutation_pack.mutation_pack_id,
+        queue_priority=queue_priority,
         actor=actor,
     )
 

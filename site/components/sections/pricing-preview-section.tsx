@@ -20,7 +20,7 @@ export function PricingPreviewSection() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {pricingTiers.map((tier) => (
           <Card key={tier.tier} className={tier.featured ? "border-primary/40" : undefined}>
             <CardHeader>

@@ -72,7 +72,10 @@ def test_signup_bootstraps_workspace_and_session(
     assert payload["plan_name"] == "Enterprise"
     assert payload["role_name"] == "admin"
     assert payload["permissions"]["can_manage_api_keys"] is True
+    assert payload["permissions"]["can_manage_billing"] is True
     assert "audit" in payload["permissions"]["visible_sections"]
+    assert payload["billing_plan_name"] == "Enterprise"
+    assert payload["credits_balance"] == 50000
     assert payload["api_key"].startswith("cl_")
 
     project_id = UUID(payload["project_id"])
@@ -130,6 +133,7 @@ def test_signup_with_starter_plan_hides_team_and_enterprise_sections(
 
     assert payload["pricing_tier"] == "starter"
     assert payload["plan_name"] == "Starter"
+    assert "billing" in payload["permissions"]["visible_sections"]
     assert "mutation-packs" in payload["permissions"]["visible_sections"]
     assert "policies" not in payload["permissions"]["visible_sections"]
     assert "audit" not in payload["permissions"]["visible_sections"]
@@ -178,6 +182,7 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert payload["permissions"]["can_manage_policy_packs"] is False
     assert payload["permissions"]["can_manage_security_config"] is False
     assert payload["permissions"]["can_manage_api_keys"] is False
+    assert payload["permissions"]["can_manage_billing"] is False
     assert "campaigns" in payload["permissions"]["visible_sections"]
     assert "audit" not in payload["permissions"]["visible_sections"]
 
@@ -218,9 +223,10 @@ def test_viewer_login_gets_read_only_dashboard_sections(
     payload = response.json()
     assert payload["pricing_tier"] == "starter"
     assert payload["role_name"] == "viewer"
-    assert payload["permissions"]["visible_sections"] == ["dashboard", "reports", "settings"]
+    assert payload["permissions"]["visible_sections"] == ["dashboard", "billing", "reports", "settings"]
     assert payload["permissions"]["can_upload_traces"] is False
     assert payload["permissions"]["can_create_campaigns"] is False
     assert payload["permissions"]["can_manage_mutation_packs"] is False
     assert payload["permissions"]["can_manage_policy_packs"] is False
     assert payload["permissions"]["can_manage_security_config"] is False
+    assert payload["permissions"]["can_manage_billing"] is False

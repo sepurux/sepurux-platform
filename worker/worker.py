@@ -1372,8 +1372,9 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = get_settings()
     connection = redis.from_url(settings.redis_url)
-    queue = Queue("sepurux", connection=connection)
-    worker = Worker([queue], connection=connection)
+    priority_queue = Queue("sepurux-priority", connection=connection)
+    default_queue = Queue("sepurux", connection=connection)
+    worker = Worker([priority_queue, default_queue], connection=connection)
     worker.work()
 
 

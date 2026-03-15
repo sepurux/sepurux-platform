@@ -66,7 +66,7 @@ function DocsSection({
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-28 border-t border-slate-200 pt-10 first:border-t-0 first:pt-0">
+    <section id={id} className="scroll-mt-28 border-t border-neutral-100 pt-10 first:border-t-0 first:pt-0">
       <h2 className="text-2xl font-semibold tracking-tight text-slate-950">{title}</h2>
       <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 md:text-[15px]">{description}</p>
       <div className="mt-6 space-y-6">{children}</div>
@@ -76,13 +76,13 @@ function DocsSection({
 
 function CodeBlock({ code, label }: { code: string; label?: string }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[#f8fafc]">
+    <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-50">
       {label ? (
-        <div className="border-b border-slate-200 bg-[#f1f5f9] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <div className="border-b border-neutral-100 bg-neutral-100/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
           {label}
         </div>
       ) : null}
-      <pre className="overflow-x-auto px-4 py-4 text-xs leading-6 text-[#334155] md:px-5 md:py-5">
+      <pre className="overflow-x-auto px-4 py-4 text-xs leading-6 text-slate-700 md:px-5 md:py-5">
         <code>{code}</code>
       </pre>
     </div>
@@ -327,12 +327,12 @@ func main() {
 
   return (
     <div className="min-h-[calc(100vh-5rem)] w-full bg-white text-slate-900">
-      <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500 md:px-8">
+      <div className="border-b border-neutral-100 bg-neutral-50 px-6 py-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500 md:px-8">
         Docs / Common use cases
       </div>
 
       <div className="w-full lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="border-b border-slate-200 bg-slate-50/80 px-6 py-6 lg:min-h-full lg:border-b-0 lg:border-r lg:px-5">
+        <aside className="border-b border-neutral-100 bg-neutral-50/80 px-6 py-6 lg:min-h-full lg:border-b-0 lg:border-r lg:px-5">
           <div className="lg:sticky lg:top-28">
             <div className="mx-auto max-w-[220px] lg:max-w-none">
               <p className="text-sm font-semibold text-slate-900">Documentation</p>
@@ -345,7 +345,7 @@ func main() {
                   <a
                     key={useCase.href}
                     href={useCase.href}
-                    className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                    className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-neutral-100 hover:text-slate-950"
                   >
                     {useCase.title}
                   </a>
@@ -373,7 +373,7 @@ func main() {
                   href={referenceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-neutral-50"
                 >
                   Reference docs
                   <ArrowUpRight className="h-4 w-4" />
@@ -382,23 +382,23 @@ func main() {
                   href={openApiUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-neutral-50"
                 >
                   OpenAPI schema
                   <ArrowUpRight className="h-4 w-4" />
                 </a>
                 <Link
                   href="/product"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-neutral-50"
                 >
                   Product overview
                 </Link>
               </div>
             </header>
 
-            <div className="mt-10 overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="min-w-full divide-y divide-slate-200 text-left">
-                <thead className="bg-slate-50">
+            <div className="mt-10 overflow-x-auto rounded-2xl border border-neutral-100">
+              <table className="min-w-full divide-y divide-neutral-100 text-left">
+                <thead className="bg-neutral-50">
                   <tr>
                     <th className="px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                       Use case
@@ -408,7 +408,7 @@ func main() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
+                <tbody className="divide-y divide-neutral-100 bg-white">
                   {useCases.map((useCase) => (
                     <tr key={useCase.href}>
                       <td className="px-5 py-4 align-top">
@@ -430,7 +430,7 @@ func main() {
                 description="The Python SDK is the fastest path from a real agent workflow to a trace in Sepurux. Use a project API key, the project UUID, and the hosted base URL."
               >
                 <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-5">
                     <p className="text-sm font-medium text-slate-900">Install and environment</p>
                     <div className="mt-4">
                       <CodeBlock code={sdkInstallSnippet} label="bash" />
@@ -444,7 +444,7 @@ func main() {
                   </div>
                 </div>
                 <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-7 text-slate-700">
+                  <div className="rounded-2xl border border-neutral-100 bg-neutral-50 px-5 py-4 text-sm leading-7 text-slate-700">
                     The Python SDK now supports the easy path directly: <code>SepuruxClient.from_env()</code>,{" "}
                     <code>client.trace(...)</code>, and <code>client.traceable(...)</code>. It still exposes the
                     lower-level primitives like <code>upload_trace</code>, <code>create_campaign</code>,{" "}
@@ -460,7 +460,7 @@ func main() {
                 description="Campaigns are project-scoped. Their mutation_set should contain replay mutations only, while pack definitions live in mutation packs and are attached by pack ID or selected at run time."
               >
                 <CodeBlock code={campaignSnippet} label="bash" />
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-7 text-amber-900">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-5 py-4 text-sm leading-7 text-slate-700">
                   The Campaigns page now exposes the full campaign UUID. Copy that value directly into{" "}
                   <code>SEPURUX_CAMPAIGN_ID</code> or pass it to the SDK. Do not paste mutation-pack definitions
                   into <code>mutation_set</code>.
@@ -472,13 +472,13 @@ func main() {
                 title="Create team-specific mutation packs"
                 description="Every project is seeded with useful system packs immediately. When the membership bundle allows it, developers and admins can add custom packs that reflect tool-specific schema drift, retry behavior, or prompt injection risks."
               >
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-5">
                   <p className="text-sm font-medium text-slate-900">Seeded system packs</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {seededPacks.map((pack) => (
                       <span
                         key={pack}
-                        className="rounded-full border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700"
+                        className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm text-slate-700"
                       >
                         {pack}
                       </span>
@@ -493,7 +493,7 @@ func main() {
                 title="Use TypeScript and Go clients"
                 description="Use the recorder helpers as the default integration path for TypeScript and Go. They read the standard Sepurux environment variables, upload traces automatically, and can enqueue campaign runs in the same call. The generated OpenAPI clients still exist for low-level endpoint access."
               >
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-5">
                   <p className="text-sm font-medium text-slate-900">Regenerate clients from OpenAPI</p>
                   <div className="mt-4">
                     <CodeBlock code={clientSnippet} label="bash" />
