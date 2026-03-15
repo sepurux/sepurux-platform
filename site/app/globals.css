@@ -11,20 +11,20 @@
   --card-foreground: 0 0% 100%;
   --border: 240 10% 14%;
   --input: 240 10% 10%;
-  --ring: 218 82% 53%;
+  --ring: 0 0% 100%;
   --muted: 240 6% 8%;
   --muted-foreground: 240 5% 65%;
-  --accent: 198 93% 60%;
-  --accent-foreground: 224 39% 8%;
-  --primary: 220 83% 53%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 198 93% 60%;
-  --secondary-foreground: 224 39% 8%;
-  --success: 160 84% 39%;
-  --info: 205 90% 65%;
+  --accent: 0 0% 92%;
+  --accent-foreground: 0 0% 4%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 4%;
+  --secondary: 0 0% 78%;
+  --secondary-foreground: 0 0% 4%;
+  --success: 0 0% 76%;
+  --info: 0 0% 78%;
   --neutral: 215 20% 65%;
-  --warning: 41 96% 56%;
-  --danger: 0 89% 68%;
+  --warning: 0 0% 58%;
+  --danger: 0 0% 64%;
 }
 
 * {
@@ -46,8 +46,8 @@ body {
   position: relative;
   isolation: isolate;
   background-image:
-    radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.08), transparent 16%),
-    radial-gradient(circle at 82% 16%, rgba(37, 99, 235, 0.05), transparent 16%),
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.05), transparent 16%),
+    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.03), transparent 16%),
     linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(3, 5, 10, 1) 100%);
 }
 
@@ -57,8 +57,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 14%, rgba(37, 99, 235, 0.02), transparent 20%),
-    radial-gradient(circle at 78% 76%, rgba(56, 189, 248, 0.02), transparent 20%),
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.015), transparent 20%),
+    radial-gradient(circle at 78% 76%, rgba(255, 255, 255, 0.015), transparent 20%),
     repeating-linear-gradient(
       0deg,
       rgba(31, 31, 35, 0.45) 0,
@@ -78,7 +78,7 @@ body::before {
     @apply rounded-[24px] border border-border bg-card shadow-panel shadow-black/50 backdrop-blur-xl;
     background-image:
       linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
-      radial-gradient(circle at top left, rgba(37, 99, 235, 0.05), transparent 28%);
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.04), transparent 28%);
   }
 
   .glass-outline {
@@ -86,7 +86,7 @@ body::before {
   }
 
   .section-kicker {
-    @apply text-[11px] font-medium uppercase tracking-[0.22em] text-secondary/80;
+    @apply text-[11px] font-medium uppercase tracking-[0.22em] text-white/60;
   }
 
   .hero-title {
@@ -111,7 +111,7 @@ body::before {
     display: inline-block;
     width: 1px;
     height: 1em;
-    background: hsl(var(--secondary));
+    background: rgba(255, 255, 255, 0.72);
     animation: caret-blink 1s steps(1, end) infinite;
   }
 }
@@ -157,6 +157,6 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.32);
+  background: rgba(255, 255, 255, 0.24);
   border-radius: 999px;
 }
