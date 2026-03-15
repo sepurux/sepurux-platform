@@ -98,6 +98,9 @@ class UserSubscription(Base):
     status: Mapped[str] = mapped_column(
         Text, nullable=False, default="active", server_default=text("'active'")
     )
+    stripe_customer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stripe_price_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     renewal_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -129,6 +132,17 @@ class CreditTransaction(Base):
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     type: Mapped[str] = mapped_column(Text, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class BillingWebhookEvent(Base):
+    __tablename__ = "billing_webhook_events"
+
+    event_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    provider: Mapped[str] = mapped_column(Text, nullable=False)
+    event_type: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

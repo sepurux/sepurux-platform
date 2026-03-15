@@ -50,6 +50,8 @@ if cors_origins:
 async def api_key_auth_middleware(request: Request, call_next):
     if request.method == "OPTIONS":
         return await call_next(request)
+    if request.url.path == "/v1/billing/webhook":
+        return await call_next(request)
     if request.url.path.startswith("/v1/ci"):
         return await call_next(request)
     if not request.url.path.startswith("/v1"):

@@ -26,6 +26,7 @@ type SubscriptionPlanMetadata struct {
 	Name string `json:"name"`
 	MonthlyPrice int32 `json:"monthly_price"`
 	MonthlyCredits int32 `json:"monthly_credits"`
+	CheckoutEnabled *bool `json:"checkout_enabled,omitempty"`
 	Features map[string]interface{} `json:"features"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -42,6 +43,8 @@ func NewSubscriptionPlanMetadata(planId string, name string, monthlyPrice int32,
 	this.Name = name
 	this.MonthlyPrice = monthlyPrice
 	this.MonthlyCredits = monthlyCredits
+	var checkoutEnabled bool = false
+	this.CheckoutEnabled = &checkoutEnabled
 	this.Features = features
 	this.CreatedAt = createdAt
 	return &this
@@ -52,6 +55,8 @@ func NewSubscriptionPlanMetadata(planId string, name string, monthlyPrice int32,
 // but it doesn't guarantee that properties required by API are set
 func NewSubscriptionPlanMetadataWithDefaults() *SubscriptionPlanMetadata {
 	this := SubscriptionPlanMetadata{}
+	var checkoutEnabled bool = false
+	this.CheckoutEnabled = &checkoutEnabled
 	return &this
 }
 
@@ -151,6 +156,38 @@ func (o *SubscriptionPlanMetadata) SetMonthlyCredits(v int32) {
 	o.MonthlyCredits = v
 }
 
+// GetCheckoutEnabled returns the CheckoutEnabled field value if set, zero value otherwise.
+func (o *SubscriptionPlanMetadata) GetCheckoutEnabled() bool {
+	if o == nil || IsNil(o.CheckoutEnabled) {
+		var ret bool
+		return ret
+	}
+	return *o.CheckoutEnabled
+}
+
+// GetCheckoutEnabledOk returns a tuple with the CheckoutEnabled field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SubscriptionPlanMetadata) GetCheckoutEnabledOk() (*bool, bool) {
+	if o == nil || IsNil(o.CheckoutEnabled) {
+		return nil, false
+	}
+	return o.CheckoutEnabled, true
+}
+
+// HasCheckoutEnabled returns a boolean if a field has been set.
+func (o *SubscriptionPlanMetadata) HasCheckoutEnabled() bool {
+	if o != nil && !IsNil(o.CheckoutEnabled) {
+		return true
+	}
+
+	return false
+}
+
+// SetCheckoutEnabled gets a reference to the given bool and assigns it to the CheckoutEnabled field.
+func (o *SubscriptionPlanMetadata) SetCheckoutEnabled(v bool) {
+	o.CheckoutEnabled = &v
+}
+
 // GetFeatures returns the Features field value
 func (o *SubscriptionPlanMetadata) GetFeatures() map[string]interface{} {
 	if o == nil {
@@ -213,6 +250,9 @@ func (o SubscriptionPlanMetadata) ToMap() (map[string]interface{}, error) {
 	toSerialize["name"] = o.Name
 	toSerialize["monthly_price"] = o.MonthlyPrice
 	toSerialize["monthly_credits"] = o.MonthlyCredits
+	if !IsNil(o.CheckoutEnabled) {
+		toSerialize["checkout_enabled"] = o.CheckoutEnabled
+	}
 	toSerialize["features"] = o.Features
 	toSerialize["created_at"] = o.CreatedAt
 	return toSerialize, nil

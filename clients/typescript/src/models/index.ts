@@ -8,6 +8,7 @@ export * from './AuditEventListItem';
 export * from './AuthPermissionSet';
 export * from './AuthSessionMetadata';
 export * from './AuthSessionResponse';
+export * from './BillingRedirectSessionResponse';
 export * from './BillingSubscribeRequest';
 export * from './BillingTopupRequest';
 export * from './CIRunCreateRequest';

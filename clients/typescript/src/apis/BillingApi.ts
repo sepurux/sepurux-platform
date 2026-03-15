@@ -15,6 +15,7 @@
 
 import * as runtime from '../runtime';
 import type {
+  BillingRedirectSessionResponse,
   BillingSubscribeRequest,
   BillingTopupRequest,
   CreditWalletMetadata,
@@ -23,6 +24,8 @@ import type {
   UserSubscriptionMetadata,
 } from '../models/index';
 import {
+    BillingRedirectSessionResponseFromJSON,
+    BillingRedirectSessionResponseToJSON,
     BillingSubscribeRequestFromJSON,
     BillingSubscribeRequestToJSON,
     BillingTopupRequestFromJSON,
@@ -46,6 +49,10 @@ export interface GetBillingPlansV1BillingPlansGetRequest {
 }
 
 export interface GetBillingSubscriptionV1BillingSubscriptionGetRequest {
+    xProjectId?: string | null;
+}
+
+export interface PostBillingPortalV1BillingPortalPostRequest {
     xProjectId?: string | null;
 }
 
@@ -155,9 +162,39 @@ export class BillingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Post Billing Portal
+     */
+    async postBillingPortalV1BillingPortalPostRaw(requestParameters: PostBillingPortalV1BillingPortalPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BillingRedirectSessionResponse>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/billing/portal`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => BillingRedirectSessionResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Post Billing Portal
+     */
+    async postBillingPortalV1BillingPortalPost(requestParameters: PostBillingPortalV1BillingPortalPostRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BillingRedirectSessionResponse> {
+        const response = await this.postBillingPortalV1BillingPortalPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Post Billing Subscribe
      */
-    async postBillingSubscribeV1BillingSubscribePostRaw(requestParameters: PostBillingSubscribeV1BillingSubscribePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserSubscriptionMetadata>> {
+    async postBillingSubscribeV1BillingSubscribePostRaw(requestParameters: PostBillingSubscribeV1BillingSubscribePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BillingRedirectSessionResponse>> {
         if (requestParameters['billingSubscribeRequest'] == null) {
             throw new runtime.RequiredError(
                 'billingSubscribeRequest',
@@ -183,13 +220,13 @@ export class BillingApi extends runtime.BaseAPI {
             body: BillingSubscribeRequestToJSON(requestParameters['billingSubscribeRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => UserSubscriptionMetadataFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => BillingRedirectSessionResponseFromJSON(jsonValue));
     }
 
     /**
      * Post Billing Subscribe
      */
-    async postBillingSubscribeV1BillingSubscribePost(requestParameters: PostBillingSubscribeV1BillingSubscribePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserSubscriptionMetadata> {
+    async postBillingSubscribeV1BillingSubscribePost(requestParameters: PostBillingSubscribeV1BillingSubscribePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BillingRedirectSessionResponse> {
         const response = await this.postBillingSubscribeV1BillingSubscribePostRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -197,7 +234,7 @@ export class BillingApi extends runtime.BaseAPI {
     /**
      * Post Billing Topup
      */
-    async postBillingTopupV1BillingTopupPostRaw(requestParameters: PostBillingTopupV1BillingTopupPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreditWalletMetadata>> {
+    async postBillingTopupV1BillingTopupPostRaw(requestParameters: PostBillingTopupV1BillingTopupPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BillingRedirectSessionResponse>> {
         if (requestParameters['billingTopupRequest'] == null) {
             throw new runtime.RequiredError(
                 'billingTopupRequest',
@@ -223,13 +260,13 @@ export class BillingApi extends runtime.BaseAPI {
             body: BillingTopupRequestToJSON(requestParameters['billingTopupRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => CreditWalletMetadataFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => BillingRedirectSessionResponseFromJSON(jsonValue));
     }
 
     /**
      * Post Billing Topup
      */
-    async postBillingTopupV1BillingTopupPost(requestParameters: PostBillingTopupV1BillingTopupPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreditWalletMetadata> {
+    async postBillingTopupV1BillingTopupPost(requestParameters: PostBillingTopupV1BillingTopupPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BillingRedirectSessionResponse> {
         const response = await this.postBillingTopupV1BillingTopupPostRaw(requestParameters, initOverrides);
         return await response.value();
     }

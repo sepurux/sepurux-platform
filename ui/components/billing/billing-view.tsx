@@ -26,6 +26,7 @@ export function BillingView() {
   const [topupCredits, setTopupCredits] = useState(1000);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
   const [topupBusy, setTopupBusy] = useState(false);
+  const [portalBusy, setPortalBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const canManageBilling = authSession?.permissions.can_manage_billing ?? false;
@@ -63,11 +64,10 @@ export function BillingView() {
     setBusyPlanId(planId);
     setActionError(null);
     try {
-      await api.subscribeToPlan({ plan_id: planId });
-      await loadBilling();
-      window.location.reload();
+      const redirect = await api.subscribeToPlan({ plan_id: planId });
+      window.location.assign(redirect.url);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to update subscription");
+      setActionError(error instanceof Error ? error.message : "Failed to start checkout");
     } finally {
       setBusyPlanId(null);
     }
@@ -78,13 +78,25 @@ export function BillingView() {
     setTopupBusy(true);
     setActionError(null);
     try {
-      await api.topupCredits({ credits: topupCredits });
-      await loadBilling();
-      window.location.reload();
+      const redirect = await api.topupCredits({ credits: topupCredits });
+      window.location.assign(redirect.url);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Failed to purchase credits");
+      setActionError(error instanceof Error ? error.message : "Failed to start top-up checkout");
     } finally {
       setTopupBusy(false);
+    }
+  }
+
+  async function handleOpenPortal() {
+    setPortalBusy(true);
+    setActionError(null);
+    try {
+      const redirect = await api.openBillingPortal();
+      window.location.assign(redirect.url);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to open billing portal");
+    } finally {
+      setPortalBusy(false);
     }
   }
 
@@ -194,10 +206,23 @@ export function BillingView() {
                     {new Date(state.subscription.renewal_date).toLocaleDateString()}
                   </span>
                 </p>
+                <p>
+                  Billing provider:{" "}
+                  <span className="font-medium capitalize text-foreground">
+                    {state.subscription.billing_provider ?? "manual"}
+                  </span>
+                </p>
               </div>
-              <Badge variant={state.wallet.is_low_credit ? "warning" : "default"}>
-                {state.wallet.queue_priority} queue
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={state.wallet.is_low_credit ? "warning" : "default"}>
+                  {state.wallet.queue_priority} queue
+                </Badge>
+                {canManageBilling && state.subscription.portal_available ? (
+                  <Button variant="outline" onClick={() => void handleOpenPortal()} disabled={portalBusy}>
+                    {portalBusy ? "Opening..." : "Manage billing"}
+                  </Button>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
 
@@ -212,6 +237,12 @@ export function BillingView() {
                     ? (plan.features.queue_priority as string)
                     : "normal";
                 const isCurrent = plan.plan_id === currentPlanId;
+                const isCheckoutEnabled = plan.checkout_enabled;
+                const planActionLabel = isCurrent
+                  ? "Current plan"
+                  : isCheckoutEnabled
+                    ? "Upgrade"
+                    : "Contact sales";
 
                 return (
                   <Card key={plan.plan_id} className={isCurrent ? "border-blue-400/40" : undefined}>
@@ -246,11 +277,16 @@ export function BillingView() {
                       <Button
                         className="w-full"
                         variant={isCurrent ? "outline" : "default"}
-                        disabled={!canManageBilling || isCurrent || busyPlanId === plan.plan_id}
+                        disabled={!canManageBilling || isCurrent || busyPlanId === plan.plan_id || !isCheckoutEnabled}
                         onClick={() => void handleSubscribe(plan.plan_id)}
                       >
-                        {busyPlanId === plan.plan_id ? "Updating..." : isCurrent ? "Current plan" : "Upgrade"}
+                        {busyPlanId === plan.plan_id ? "Redirecting..." : planActionLabel}
                       </Button>
+                      {!isCheckoutEnabled && !isCurrent ? (
+                        <p className="text-xs text-muted-foreground">
+                          This plan is quote-based. Contact the Sepurux team to activate it.
+                        </p>
+                      ) : null}
                     </CardContent>
                   </Card>
                 );

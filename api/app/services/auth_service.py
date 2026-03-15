@@ -127,7 +127,11 @@ def signup_user(
         role_id=admin_role.role_id,
     )
 
-    db.add_all([tenant, user, project, membership])
+    # Flush parent rows first so PostgreSQL sees the tenant/user before
+    # dependent project and membership inserts in the same signup flow.
+    db.add_all([tenant, user])
+    db.flush()
+    db.add_all([project, membership])
     db.commit()
     ensure_system_mutation_packs(db, project_id=project.project_id)
 

@@ -37,6 +37,7 @@ docs/AuthPermissionSet.md
 docs/AuthSessionMetadata.md
 docs/AuthSessionResponse.md
 docs/BillingAPI.md
+docs/BillingRedirectSessionResponse.md
 docs/BillingSubscribeRequest.md
 docs/BillingTopupRequest.md
 docs/CIRunCreateRequest.md
@@ -141,6 +142,7 @@ model_audit_event_list_item.go
 model_auth_permission_set.go
 model_auth_session_metadata.go
 model_auth_session_response.go
+model_billing_redirect_session_response.go
 model_billing_subscribe_request.go
 model_billing_topup_request.go
 model_campaign_create_request.go

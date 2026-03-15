@@ -29,6 +29,8 @@ type UserSubscriptionMetadata struct {
 	MonthlyCredits NullableInt32 `json:"monthly_credits,omitempty"`
 	QueuePriority *string `json:"queue_priority,omitempty"`
 	Status string `json:"status"`
+	BillingProvider NullableString `json:"billing_provider,omitempty"`
+	PortalAvailable *bool `json:"portal_available,omitempty"`
 	StartDate time.Time `json:"start_date"`
 	RenewalDate time.Time `json:"renewal_date"`
 }
@@ -46,6 +48,8 @@ func NewUserSubscriptionMetadata(subscriptionId string, planId string, status st
 	var queuePriority string = "normal"
 	this.QueuePriority = &queuePriority
 	this.Status = status
+	var portalAvailable bool = false
+	this.PortalAvailable = &portalAvailable
 	this.StartDate = startDate
 	this.RenewalDate = renewalDate
 	return &this
@@ -58,6 +62,8 @@ func NewUserSubscriptionMetadataWithDefaults() *UserSubscriptionMetadata {
 	this := UserSubscriptionMetadata{}
 	var queuePriority string = "normal"
 	this.QueuePriority = &queuePriority
+	var portalAvailable bool = false
+	this.PortalAvailable = &portalAvailable
 	return &this
 }
 
@@ -291,6 +297,80 @@ func (o *UserSubscriptionMetadata) SetStatus(v string) {
 	o.Status = v
 }
 
+// GetBillingProvider returns the BillingProvider field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *UserSubscriptionMetadata) GetBillingProvider() string {
+	if o == nil || IsNil(o.BillingProvider.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.BillingProvider.Get()
+}
+
+// GetBillingProviderOk returns a tuple with the BillingProvider field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *UserSubscriptionMetadata) GetBillingProviderOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.BillingProvider.Get(), o.BillingProvider.IsSet()
+}
+
+// HasBillingProvider returns a boolean if a field has been set.
+func (o *UserSubscriptionMetadata) HasBillingProvider() bool {
+	if o != nil && o.BillingProvider.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetBillingProvider gets a reference to the given NullableString and assigns it to the BillingProvider field.
+func (o *UserSubscriptionMetadata) SetBillingProvider(v string) {
+	o.BillingProvider.Set(&v)
+}
+// SetBillingProviderNil sets the value for BillingProvider to be an explicit nil
+func (o *UserSubscriptionMetadata) SetBillingProviderNil() {
+	o.BillingProvider.Set(nil)
+}
+
+// UnsetBillingProvider ensures that no value is present for BillingProvider, not even an explicit nil
+func (o *UserSubscriptionMetadata) UnsetBillingProvider() {
+	o.BillingProvider.Unset()
+}
+
+// GetPortalAvailable returns the PortalAvailable field value if set, zero value otherwise.
+func (o *UserSubscriptionMetadata) GetPortalAvailable() bool {
+	if o == nil || IsNil(o.PortalAvailable) {
+		var ret bool
+		return ret
+	}
+	return *o.PortalAvailable
+}
+
+// GetPortalAvailableOk returns a tuple with the PortalAvailable field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UserSubscriptionMetadata) GetPortalAvailableOk() (*bool, bool) {
+	if o == nil || IsNil(o.PortalAvailable) {
+		return nil, false
+	}
+	return o.PortalAvailable, true
+}
+
+// HasPortalAvailable returns a boolean if a field has been set.
+func (o *UserSubscriptionMetadata) HasPortalAvailable() bool {
+	if o != nil && !IsNil(o.PortalAvailable) {
+		return true
+	}
+
+	return false
+}
+
+// SetPortalAvailable gets a reference to the given bool and assigns it to the PortalAvailable field.
+func (o *UserSubscriptionMetadata) SetPortalAvailable(v bool) {
+	o.PortalAvailable = &v
+}
+
 // GetStartDate returns the StartDate field value
 func (o *UserSubscriptionMetadata) GetStartDate() time.Time {
 	if o == nil {
@@ -364,6 +444,12 @@ func (o UserSubscriptionMetadata) ToMap() (map[string]interface{}, error) {
 		toSerialize["queue_priority"] = o.QueuePriority
 	}
 	toSerialize["status"] = o.Status
+	if o.BillingProvider.IsSet() {
+		toSerialize["billing_provider"] = o.BillingProvider.Get()
+	}
+	if !IsNil(o.PortalAvailable) {
+		toSerialize["portal_available"] = o.PortalAvailable
+	}
 	toSerialize["start_date"] = o.StartDate
 	toSerialize["renewal_date"] = o.RenewalDate
 	return toSerialize, nil
