@@ -26,6 +26,8 @@ def monthly_credit_grant() -> dict[str, int]:
         plans = {plan.plan_id: plan for plan in db.scalars(select(SubscriptionPlan)).all()}
 
         for subscription in subscriptions:
+            if subscription.stripe_subscription_id:
+                continue
             if subscription.renewal_date > effective_now:
                 continue
 

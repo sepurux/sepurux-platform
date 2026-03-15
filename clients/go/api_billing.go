@@ -370,6 +370,122 @@ func (a *BillingAPIService) GetBillingSubscriptionV1BillingSubscriptionGetExecut
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiPostBillingPortalV1BillingPortalPostRequest struct {
+	ctx context.Context
+	ApiService *BillingAPIService
+	xProjectId *string
+}
+
+func (r ApiPostBillingPortalV1BillingPortalPostRequest) XProjectId(xProjectId string) ApiPostBillingPortalV1BillingPortalPostRequest {
+	r.xProjectId = &xProjectId
+	return r
+}
+
+func (r ApiPostBillingPortalV1BillingPortalPostRequest) Execute() (*BillingRedirectSessionResponse, *http.Response, error) {
+	return r.ApiService.PostBillingPortalV1BillingPortalPostExecute(r)
+}
+
+/*
+PostBillingPortalV1BillingPortalPost Post Billing Portal
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiPostBillingPortalV1BillingPortalPostRequest
+*/
+func (a *BillingAPIService) PostBillingPortalV1BillingPortalPost(ctx context.Context) ApiPostBillingPortalV1BillingPortalPostRequest {
+	return ApiPostBillingPortalV1BillingPortalPostRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return BillingRedirectSessionResponse
+func (a *BillingAPIService) PostBillingPortalV1BillingPortalPostExecute(r ApiPostBillingPortalV1BillingPortalPostRequest) (*BillingRedirectSessionResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *BillingRedirectSessionResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BillingAPIService.PostBillingPortalV1BillingPortalPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/billing/portal"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.xProjectId != nil {
+		parameterAddToHeaderOrQuery(localVarHeaderParams, "X-Project-Id", r.xProjectId, "simple", "")
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiPostBillingSubscribeV1BillingSubscribePostRequest struct {
 	ctx context.Context
 	ApiService *BillingAPIService
@@ -387,7 +503,7 @@ func (r ApiPostBillingSubscribeV1BillingSubscribePostRequest) XProjectId(xProjec
 	return r
 }
 
-func (r ApiPostBillingSubscribeV1BillingSubscribePostRequest) Execute() (*UserSubscriptionMetadata, *http.Response, error) {
+func (r ApiPostBillingSubscribeV1BillingSubscribePostRequest) Execute() (*BillingRedirectSessionResponse, *http.Response, error) {
 	return r.ApiService.PostBillingSubscribeV1BillingSubscribePostExecute(r)
 }
 
@@ -405,13 +521,13 @@ func (a *BillingAPIService) PostBillingSubscribeV1BillingSubscribePost(ctx conte
 }
 
 // Execute executes the request
-//  @return UserSubscriptionMetadata
-func (a *BillingAPIService) PostBillingSubscribeV1BillingSubscribePostExecute(r ApiPostBillingSubscribeV1BillingSubscribePostRequest) (*UserSubscriptionMetadata, *http.Response, error) {
+//  @return BillingRedirectSessionResponse
+func (a *BillingAPIService) PostBillingSubscribeV1BillingSubscribePostExecute(r ApiPostBillingSubscribeV1BillingSubscribePostRequest) (*BillingRedirectSessionResponse, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  *UserSubscriptionMetadata
+		localVarReturnValue  *BillingRedirectSessionResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BillingAPIService.PostBillingSubscribeV1BillingSubscribePost")
@@ -514,7 +630,7 @@ func (r ApiPostBillingTopupV1BillingTopupPostRequest) XProjectId(xProjectId stri
 	return r
 }
 
-func (r ApiPostBillingTopupV1BillingTopupPostRequest) Execute() (*CreditWalletMetadata, *http.Response, error) {
+func (r ApiPostBillingTopupV1BillingTopupPostRequest) Execute() (*BillingRedirectSessionResponse, *http.Response, error) {
 	return r.ApiService.PostBillingTopupV1BillingTopupPostExecute(r)
 }
 
@@ -532,13 +648,13 @@ func (a *BillingAPIService) PostBillingTopupV1BillingTopupPost(ctx context.Conte
 }
 
 // Execute executes the request
-//  @return CreditWalletMetadata
-func (a *BillingAPIService) PostBillingTopupV1BillingTopupPostExecute(r ApiPostBillingTopupV1BillingTopupPostRequest) (*CreditWalletMetadata, *http.Response, error) {
+//  @return BillingRedirectSessionResponse
+func (a *BillingAPIService) PostBillingTopupV1BillingTopupPostExecute(r ApiPostBillingTopupV1BillingTopupPostRequest) (*BillingRedirectSessionResponse, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  *CreditWalletMetadata
+		localVarReturnValue  *BillingRedirectSessionResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "BillingAPIService.PostBillingTopupV1BillingTopupPost")

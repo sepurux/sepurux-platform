@@ -45,6 +45,12 @@ export interface SubscriptionPlanMetadata {
     monthly_credits: number;
     /**
      * 
+     * @type {boolean}
+     * @memberof SubscriptionPlanMetadata
+     */
+    checkout_enabled?: boolean;
+    /**
+     * 
      * @type {{ [key: string]: any; }}
      * @memberof SubscriptionPlanMetadata
      */
@@ -84,6 +90,7 @@ export function SubscriptionPlanMetadataFromJSONTyped(json: any, ignoreDiscrimin
         'name': json['name'],
         'monthly_price': json['monthly_price'],
         'monthly_credits': json['monthly_credits'],
+        'checkout_enabled': json['checkout_enabled'] == null ? undefined : json['checkout_enabled'],
         'features': json['features'],
         'created_at': (new Date(json['created_at'])),
     };
@@ -99,6 +106,7 @@ export function SubscriptionPlanMetadataToJSON(value?: SubscriptionPlanMetadata 
         'name': value['name'],
         'monthly_price': value['monthly_price'],
         'monthly_credits': value['monthly_credits'],
+        'checkout_enabled': value['checkout_enabled'],
         'features': value['features'],
         'created_at': ((value['created_at']).toISOString()),
     };

@@ -63,6 +63,18 @@ export interface UserSubscriptionMetadata {
     status: string;
     /**
      * 
+     * @type {string}
+     * @memberof UserSubscriptionMetadata
+     */
+    billing_provider?: string | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof UserSubscriptionMetadata
+     */
+    portal_available?: boolean;
+    /**
+     * 
      * @type {Date}
      * @memberof UserSubscriptionMetadata
      */
@@ -115,6 +127,8 @@ export function UserSubscriptionMetadataFromJSONTyped(json: any, ignoreDiscrimin
         'monthly_credits': json['monthly_credits'] == null ? undefined : json['monthly_credits'],
         'queue_priority': json['queue_priority'] == null ? undefined : json['queue_priority'],
         'status': json['status'],
+        'billing_provider': json['billing_provider'] == null ? undefined : json['billing_provider'],
+        'portal_available': json['portal_available'] == null ? undefined : json['portal_available'],
         'start_date': (new Date(json['start_date'])),
         'renewal_date': (new Date(json['renewal_date'])),
     };
@@ -133,6 +147,8 @@ export function UserSubscriptionMetadataToJSON(value?: UserSubscriptionMetadata 
         'monthly_credits': value['monthly_credits'],
         'queue_priority': value['queue_priority'],
         'status': value['status'],
+        'billing_provider': value['billing_provider'],
+        'portal_available': value['portal_available'],
         'start_date': ((value['start_date']).toISOString()),
         'renewal_date': ((value['renewal_date']).toISOString()),
     };

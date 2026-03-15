@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -7,6 +8,7 @@ from uuid import UUID, uuid4
 
 from app.auth import TenantAuthContext
 from app.models import (
+    BillingWebhookEvent,
     CreditTransaction,
     CreditWallet,
     Project,
@@ -24,6 +26,7 @@ FREE_PLAN_ID = UUID("30000000-0000-0000-0000-000000000001")
 PRO_PLAN_ID = UUID("30000000-0000-0000-0000-000000000002")
 TEAM_PLAN_ID = UUID("30000000-0000-0000-0000-000000000003")
 ENTERPRISE_PLAN_ID = UUID("30000000-0000-0000-0000-000000000004")
+STRIPE_PROVIDER = "stripe"
 
 TRANSACTION_USAGE = "usage"
 TRANSACTION_MONTHLY_GRANT = "monthly_grant"
@@ -100,6 +103,12 @@ PLAN_NAME_BY_PRICING_TIER = {
     "starter": "Free",
     "team": "Team",
     "enterprise": "Enterprise",
+}
+
+STRIPE_PRICE_ENV_BY_PLAN_NAME = {
+    "Pro": "STRIPE_PRICE_PRO_MONTHLY",
+    "Team": "STRIPE_PRICE_TEAM_MONTHLY",
+    "Enterprise": "STRIPE_PRICE_ENTERPRISE_MONTHLY",
 }
 
 
@@ -187,6 +196,18 @@ def get_credit_wallet(db: Session, *, user_id: UUID) -> CreditWallet | None:
     return db.scalar(select(CreditWallet).where(CreditWallet.user_id == user_id))
 
 
+def get_user_subscription_by_stripe_subscription_id(
+    db: Session,
+    *,
+    stripe_subscription_id: str,
+) -> UserSubscription | None:
+    return db.scalar(
+        select(UserSubscription).where(
+            UserSubscription.stripe_subscription_id == stripe_subscription_id
+        )
+    )
+
+
 def _default_plan_name(pricing_tier: str | None) -> str:
     normalized_tier = normalize_pricing_tier(pricing_tier or DEFAULT_PRICING_TIER)
     return PLAN_NAME_BY_PRICING_TIER[normalized_tier]
@@ -222,6 +243,17 @@ def _workspace_tier_for_plan(plan: SubscriptionPlan | None) -> str:
     return DEFAULT_PRICING_TIER
 
 
+def self_serve_checkout_enabled_for_plan(plan: SubscriptionPlan | None) -> bool:
+    if not isinstance(plan, SubscriptionPlan):
+        return False
+    if plan.monthly_price <= 0:
+        return False
+    env_name = STRIPE_PRICE_ENV_BY_PLAN_NAME.get(plan.name)
+    if env_name is None:
+        return False
+    return bool(os.getenv("STRIPE_SECRET_KEY")) and bool(os.getenv(env_name))
+
+
 def _create_credit_transaction(
     db: Session,
     *,
@@ -236,6 +268,31 @@ def _create_credit_transaction(
         amount=amount,
         type=transaction_type,
         reason=reason,
+    )
+    db.add(record)
+    return record
+
+
+def has_processed_billing_webhook_event(db: Session, *, event_id: str) -> bool:
+    return (
+        db.scalar(
+            select(BillingWebhookEvent.event_id).where(BillingWebhookEvent.event_id == event_id)
+        )
+        is not None
+    )
+
+
+def mark_billing_webhook_event_processed(
+    db: Session,
+    *,
+    event_id: str,
+    event_type: str,
+    provider: str = STRIPE_PROVIDER,
+) -> BillingWebhookEvent:
+    record = BillingWebhookEvent(
+        event_id=event_id,
+        event_type=event_type,
+        provider=provider,
     )
     db.add(record)
     return record
@@ -316,21 +373,17 @@ def ensure_user_billing(
     return subscription, wallet, plan
 
 
-def _charge_topup_provider(*, user_id: UUID, credits: int) -> None:
-    if credits <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Credits must be greater than zero",
-        )
-    _ = user_id
-
-
 def subscribe_user(
     db: Session,
     *,
     user_id: UUID,
     plan_id: UUID,
     tenant_id: UUID | None = None,
+    stripe_customer_id: str | None = None,
+    stripe_subscription_id: str | None = None,
+    stripe_price_id: str | None = None,
+    ensure_minimum_monthly_credits: int | None = None,
+    transaction_reason: str | None = None,
 ) -> tuple[UserSubscription, CreditWallet, SubscriptionPlan]:
     ensure_default_subscription_plans(db)
     plan = get_subscription_plan(db, plan_id=plan_id)
@@ -370,7 +423,29 @@ def subscribe_user(
 
     subscription.plan_id = plan.plan_id
     subscription.status = "active"
+    if stripe_customer_id is not None:
+        subscription.stripe_customer_id = stripe_customer_id
+    if stripe_subscription_id is not None:
+        subscription.stripe_subscription_id = stripe_subscription_id
+    if stripe_price_id is not None:
+        subscription.stripe_price_id = stripe_price_id
     db.add(subscription)
+
+    if (
+        ensure_minimum_monthly_credits is not None
+        and wallet.monthly_credits < ensure_minimum_monthly_credits
+    ):
+        grant_amount = ensure_minimum_monthly_credits - wallet.monthly_credits
+        wallet.monthly_credits = ensure_minimum_monthly_credits
+        wallet.balance = wallet.monthly_credits + wallet.topup_credits
+        db.add(wallet)
+        _create_credit_transaction(
+            db,
+            user_id=user_id,
+            amount=grant_amount,
+            transaction_type=TRANSACTION_MONTHLY_GRANT,
+            reason=transaction_reason or f"subscription change grant ({plan.name})",
+        )
 
     if tenant_id is not None:
         tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == tenant_id))
@@ -390,10 +465,16 @@ def topup_credits(
     user_id: UUID,
     credits: int,
     pricing_tier: str | None = None,
+    reason: str | None = None,
 ) -> CreditWallet:
+    if credits <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Credits must be greater than zero",
+        )
+
     subscription, wallet, _ = ensure_user_billing(db, user_id=user_id, pricing_tier=pricing_tier)
     _ = subscription
-    _charge_topup_provider(user_id=user_id, credits=credits)
 
     wallet.topup_credits += credits
     wallet.balance = wallet.monthly_credits + wallet.topup_credits
@@ -403,11 +484,77 @@ def topup_credits(
         user_id=user_id,
         amount=credits,
         transaction_type=TRANSACTION_TOPUP_PURCHASE,
-        reason=f"manual top-up purchase ({credits} credits)",
+        reason=reason or f"top-up purchase ({credits} credits)",
     )
     db.commit()
     db.refresh(wallet)
     return wallet
+
+
+def apply_subscription_cycle_grant(
+    db: Session,
+    *,
+    subscription: UserSubscription,
+    plan: SubscriptionPlan,
+    renewal_date: datetime,
+    reason: str,
+) -> tuple[UserSubscription, CreditWallet]:
+    wallet = get_credit_wallet(db, user_id=subscription.user_id)
+    if wallet is None:
+        wallet = CreditWallet(
+            wallet_id=uuid4(),
+            user_id=subscription.user_id,
+            balance=0,
+            monthly_credits=0,
+            topup_credits=0,
+        )
+        db.add(wallet)
+        db.flush()
+
+    subscription.plan_id = plan.plan_id
+    subscription.status = "active"
+    subscription.renewal_date = renewal_date
+    wallet.monthly_credits += plan.monthly_credits
+    wallet.balance = wallet.monthly_credits + wallet.topup_credits
+    db.add_all([subscription, wallet])
+    _create_credit_transaction(
+        db,
+        user_id=subscription.user_id,
+        amount=plan.monthly_credits,
+        transaction_type=TRANSACTION_MONTHLY_GRANT,
+        reason=reason,
+    )
+    db.commit()
+    db.refresh(subscription)
+    db.refresh(wallet)
+    return subscription, wallet
+
+
+def cancel_user_subscription(
+    db: Session,
+    *,
+    subscription: UserSubscription,
+    tenant_id: UUID | None = None,
+) -> tuple[UserSubscription, SubscriptionPlan]:
+    free_plan = get_subscription_plan(db, plan_id=FREE_PLAN_ID)
+    if free_plan is None:
+        raise BillingSubjectNotFoundError("Free subscription plan not found")
+
+    subscription.plan_id = free_plan.plan_id
+    subscription.status = "canceled"
+    subscription.stripe_subscription_id = None
+    subscription.stripe_price_id = None
+    db.add(subscription)
+
+    if tenant_id is not None:
+        tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == tenant_id))
+        if isinstance(tenant, Tenant):
+            tenant.pricing_tier = _workspace_tier_for_plan(free_plan)
+            db.add(tenant)
+
+    db.commit()
+    db.refresh(subscription)
+    return subscription, free_plan
 
 
 def consume_credits(
@@ -464,6 +611,8 @@ def grant_due_monthly_credits(
     plan_map = {plan.plan_id: plan for plan in list_subscription_plans(db)}
 
     for subscription in subscriptions:
+        if subscription.stripe_subscription_id:
+            continue
         renewal_date = subscription.renewal_date
         if renewal_date.tzinfo is None:
             renewal_date = renewal_date.replace(tzinfo=UTC)
@@ -637,6 +786,7 @@ def serialize_subscription_plan(plan: SubscriptionPlan) -> dict[str, Any]:
         "name": plan.name,
         "monthly_price": plan.monthly_price,
         "monthly_credits": plan.monthly_credits,
+        "checkout_enabled": self_serve_checkout_enabled_for_plan(plan),
         "features": plan.features,
         "created_at": plan.created_at,
     }
@@ -679,6 +829,8 @@ def serialize_user_subscription(
         ),
         "queue_priority": queue_priority,
         "status": subscription.status,
+        "billing_provider": STRIPE_PROVIDER if subscription.stripe_customer_id else None,
+        "portal_available": bool(subscription.stripe_customer_id),
         "start_date": subscription.start_date,
         "renewal_date": subscription.renewal_date,
     }

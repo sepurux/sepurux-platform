@@ -457,6 +457,7 @@ class SubscriptionPlanMetadata(BaseModel):
     name: str
     monthly_price: int
     monthly_credits: int
+    checkout_enabled: bool = False
     features: dict[str, Any]
     created_at: datetime
 
@@ -469,6 +470,8 @@ class UserSubscriptionMetadata(BaseModel):
     monthly_credits: int | None = None
     queue_priority: Literal["normal", "priority"] = "normal"
     status: str
+    billing_provider: str | None = None
+    portal_available: bool = False
     start_date: datetime
     renewal_date: datetime
 
@@ -499,6 +502,13 @@ class BillingSubscribeRequest(BaseModel):
 
 class BillingTopupRequest(BaseModel):
     credits: int = Field(gt=0)
+
+
+class BillingRedirectSessionResponse(BaseModel):
+    provider: str
+    flow: Literal["checkout", "portal"]
+    url: str
+    session_id: str | None = None
 
 
 class PolicyPackCreateRequest(BaseModel):

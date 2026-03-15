@@ -98,6 +98,11 @@ Update at least:
 - `MINIO_ROOT_PASSWORD`
 - `S3_SECRET_KEY`
 - `CORS_ALLOW_ORIGINS`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_PRO_MONTHLY`
+- `STRIPE_PRICE_TEAM_MONTHLY`
+- `STRIPE_PRICE_ENTERPRISE_MONTHLY`
 
 Review:
 
@@ -114,6 +119,13 @@ Keep:
 - `NEXT_PUBLIC_API_BASE_URL=http://api:8000`
 
 The UI detects the internal `api` hostname in the browser and switches to its built-in `/api/backend` proxy automatically.
+
+Stripe notes:
+
+- `STRIPE_SECRET_KEY` should be your live secret key from Stripe.
+- `STRIPE_WEBHOOK_SECRET` should come from the Stripe webhook endpoint you create for Sepurux.
+- `STRIPE_PRICE_*` values should be the recurring monthly Stripe Price IDs for `Pro`, `Team`, and `Enterprise`.
+- `STRIPE_TOPUP_CENTS_PER_CREDIT=1` means `1000` credits costs `$10.00`. Change this if your credit pricing changes.
 
 ## 6. Start The Stack
 
@@ -133,14 +145,33 @@ Tail logs:
 docker compose --env-file infra/.env.hetzner -f infra/docker-compose.hetzner.yml logs -f
 ```
 
-## 7. Seed Demo Credentials (Optional)
+## 7. Add The Stripe Webhook
+
+In Stripe, create a webhook endpoint pointing to:
+
+```text
+https://app.sepurux.dev/api/backend/v1/billing/webhook
+```
+
+Subscribe it to at least:
+
+- `checkout.session.completed`
+- `invoice.paid`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+
+Then copy Stripe's signing secret into:
+
+- `STRIPE_WEBHOOK_SECRET`
+
+## 8. Seed Demo Credentials (Optional)
 
 ```bash
 docker compose --env-file infra/.env.hetzner -f infra/docker-compose.hetzner.yml exec api \
   python -m app.scripts.seed_local_credentials
 ```
 
-## 8. Open The App
+## 9. Open The App
 
 Visit:
 
