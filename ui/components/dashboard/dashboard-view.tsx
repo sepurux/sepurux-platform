@@ -48,7 +48,7 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; data: DashboardData };
 
-const CHART_LINE = "#38BDF8";
+const CHART_LINE = "#00e5cc";
 const CHART_GRID = "#1E2936";
 const CHART_AXIS = "#94A3B8";
 const TOOLTIP_BG = "#121821";

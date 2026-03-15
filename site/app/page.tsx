@@ -1,11 +1,13 @@
+// site/app/page.tsx
 import type { Metadata } from "next";
 
 import { HeroSection } from "@/components/sections/hero-section";
-import { FeatureGrid } from "@/components/sections/feature-grid";
+import { SocialProofSection } from "@/components/sections/social-proof-section";
 import { DashboardPreviewSection } from "@/components/sections/dashboard-preview-section";
+import { FeatureGrid } from "@/components/sections/feature-grid";
 import { HowItWorksSection } from "@/components/sections/how-it-works-section";
-import { FinalCtaSection } from "@/components/sections/final-cta-section";
 import { ScreenshotGallerySection } from "@/components/sections/screenshot-gallery-section";
+import { FinalCtaSection } from "@/components/sections/final-cta-section";
 import { buildPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -19,6 +21,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
+      <SocialProofSection />
       <DashboardPreviewSection />
       <FeatureGrid />
       <HowItWorksSection />

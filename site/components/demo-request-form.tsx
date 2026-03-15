@@ -1,12 +1,18 @@
+// site/components/demo-request-form.tsx
 "use client";
 
 import { FormEvent, useState } from "react";
-
-import { Button } from "@/components/ui/button";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 
 type DemoRole = "Platform Eng" | "Security" | "Product" | "Founder" | "Other";
 
 const roles: DemoRole[] = ["Platform Eng", "Security", "Product", "Founder", "Other"];
+
+const fieldClass =
+  "h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm text-white outline-none placeholder:text-white/30 transition focus:border-[rgba(0,229,204,0.4)] focus:bg-white/[0.06] focus:ring-2 focus:ring-[rgba(0,229,204,0.12)]";
+
+const labelClass = "block space-y-1.5 text-sm";
+const labelTextClass = "text-xs font-medium uppercase tracking-[0.14em] text-white/40";
 
 export function DemoRequestForm() {
   const [email, setEmail] = useState("");
@@ -38,7 +44,7 @@ export function DemoRequestForm() {
       }
 
       setStatus("success");
-      setMessage(payload?.message || "Thanks. We will reach out to schedule your demo.");
+      setMessage(payload?.message || "Thanks. We'll reach out to schedule your demo.");
       setEmail("");
       setRole("Platform Eng");
       setCompany("");
@@ -50,65 +56,90 @@ export function DemoRequestForm() {
     }
   }
 
+  if (status === "success") {
+    return (
+      <div
+        className="flex min-h-[360px] flex-col items-center justify-center rounded-[24px] border p-10 text-center"
+        style={{
+          borderColor: "rgba(0,229,204,0.2)",
+          background: "rgba(0,229,204,0.04)",
+        }}
+      >
+        <div
+          className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border"
+          style={{ borderColor: "rgba(0,229,204,0.3)", background: "rgba(0,229,204,0.08)" }}
+        >
+          <CheckCircle2 className="h-7 w-7" style={{ color: "var(--accent-teal)" }} />
+        </div>
+        <h2 className="text-xl font-semibold text-white">Request received</h2>
+        <p className="mt-3 max-w-sm text-sm leading-7 text-neutral-400">{message}</p>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={onSubmit} className="space-y-5 rounded-2xl border border-border/80 bg-card/85 p-6 shadow-panel shadow-black/30">
+    <form
+      onSubmit={onSubmit}
+      className="space-y-5 rounded-[24px] border border-white/8 bg-white/[0.03] p-6 md:p-8"
+    >
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 text-sm">
-          <span className="text-muted-foreground">Work email</span>
+        <label className={labelClass}>
+          <span className={labelTextClass}>Work email</span>
           <input
             required
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(e) => setEmail(e.target.value)}
+            className={fieldClass}
             placeholder="you@company.com"
           />
         </label>
 
-        <label className="space-y-2 text-sm">
-          <span className="text-muted-foreground">Role</span>
+        <label className={labelClass}>
+          <span className={labelTextClass}>Role</span>
           <select
             value={role}
-            onChange={(event) => setRole(event.target.value as DemoRole)}
-            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(e) => setRole(e.target.value as DemoRole)}
+            className={`${fieldClass} appearance-none`}
           >
             {roles.map((item) => (
-              <option key={item} value={item}>
+              <option key={item} value={item} className="bg-neutral-900 text-white">
                 {item}
               </option>
             ))}
           </select>
         </label>
 
-        <label className="space-y-2 text-sm md:col-span-2">
-          <span className="text-muted-foreground">Company</span>
+        <label className={`${labelClass} md:col-span-2`}>
+          <span className={labelTextClass}>Company</span>
           <input
             required
             type="text"
             value={company}
-            onChange={(event) => setCompany(event.target.value)}
-            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(e) => setCompany(e.target.value)}
+            className={fieldClass}
             placeholder="Acme Inc"
           />
         </label>
 
-        <label className="space-y-2 text-sm md:col-span-2">
-          <span className="text-muted-foreground">What do you want to see in the demo?</span>
+        <label className={`${labelClass} md:col-span-2`}>
+          <span className={labelTextClass}>What do you want to see?</span>
           <textarea
             required
             value={useCase}
-            onChange={(event) => setUseCase(event.target.value)}
-            className="min-h-32 w-full rounded-lg border border-input bg-background px-3 py-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(e) => setUseCase(e.target.value)}
+            className={`${fieldClass} h-auto min-h-32 py-3`}
             placeholder="Example: We want to see campaign creation from the SDK, seeded mutation packs, and policy gating for agent tool calls."
           />
         </label>
 
+        {/* honeypot */}
         <label className="hidden" aria-hidden>
           Website
           <input
             type="text"
             value={website}
-            onChange={(event) => setWebsite(event.target.value)}
+            onChange={(e) => setWebsite(e.target.value)}
             tabIndex={-1}
             autoComplete="off"
           />
@@ -116,21 +147,30 @@ export function DemoRequestForm() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button size="lg" type="submit" disabled={status === "loading"}>
-          {status === "loading" ? "Submitting..." : "Book demo"}
-        </Button>
-        {message ? (
-          <p
-            className={
-              status === "success"
-                ? "text-sm text-success"
-                : status === "error"
-                  ? "text-sm text-danger"
-                  : "text-sm text-muted-foreground"
-            }
-          >
-            {message}
-          </p>
+        <button
+          type="submit"
+          disabled={status === "loading"}
+          className="teal-glow-btn inline-flex h-11 items-center justify-center gap-2 rounded-full border px-6 text-sm font-semibold text-white disabled:opacity-50"
+          style={{
+            borderColor: "rgba(0,229,204,0.35)",
+            background: "rgba(0,229,204,0.08)",
+          }}
+        >
+          {status === "loading" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            <>
+              Book demo
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
+        </button>
+
+        {message && status === "error" ? (
+          <p className="text-sm text-rose-400">{message}</p>
         ) : null}
       </div>
     </form>

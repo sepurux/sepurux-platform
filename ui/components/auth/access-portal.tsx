@@ -1,13 +1,22 @@
+// ui/components/auth/access-portal.tsx
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ExternalLink, KeyRound, Loader2, LogIn, MonitorPlay, Sparkles, UserPlus } from "lucide-react";
+import {
+  ExternalLink,
+  KeyRound,
+  Loader2,
+  LogIn,
+  MonitorPlay,
+  Sparkles,
+  UserPlus,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, type AuthSessionResponse, type DemoInfoResponse } from "@/lib/api";
 import { clearStoredAuthSession, setStoredAuthSession } from "@/lib/auth-session";
 import {
@@ -34,6 +43,17 @@ const DEMO_CAMPAIGN_STORAGE_KEY = "sepurux.demoCampaign";
 type AccessMode = "demo" | "access";
 type AccessIntent = "signup" | "login";
 const DEFAULT_SIGNUP_PLAN: PricingTier = "team";
+
+const TEAL = "#00e5cc";
+const TEAL_DIM = "rgba(0,229,204,0.12)";
+const TEAL_BORDER = "rgba(0,229,204,0.3)";
+
+const leftPanelFeatures = [
+  "Replay exact agent executions step by step",
+  "Inject schema drift, timeouts, and poisoning",
+  "Gate merges on reliability score thresholds",
+  "Policy checks before irreversible tool calls",
+];
 
 function normalizeNextPath(rawPath: string | null) {
   if (!rawPath || !rawPath.startsWith("/")) {
@@ -63,6 +83,64 @@ function resolveBaseForBrowser(inputBaseUrl: string) {
     return candidate;
   }
   return candidate;
+}
+
+// ── Shared field style ──────────────────────────────────────────────────────
+const fieldClass =
+  "w-full rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition focus:border-[rgba(0,229,204,0.5)] focus:ring-2 focus:ring-[rgba(0,229,204,0.12)]";
+
+// ── Segmented control tab ───────────────────────────────────────────────────
+function Tab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-lg px-4 py-1.5 text-xs font-semibold tracking-wide transition-all"
+      style={
+        active
+          ? { background: TEAL_DIM, color: TEAL, border: `1px solid ${TEAL_BORDER}` }
+          : { color: "var(--color-muted-foreground)", border: "1px solid transparent" }
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+// ── Teal primary button ─────────────────────────────────────────────────────
+function TealButton({
+  type = "button",
+  disabled,
+  onClick,
+  children,
+}: {
+  type?: "button" | "submit";
+  disabled?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-black transition-all disabled:opacity-50"
+      style={{
+        background: disabled ? "rgba(0,229,204,0.4)" : TEAL,
+        boxShadow: disabled ? "none" : "0 0 0 1px rgba(0,229,204,0.4), 0 4px 24px rgba(0,229,204,0.2)",
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function AccessPortal() {
@@ -106,25 +184,17 @@ export function AccessPortal() {
     async function loadDemoInfo() {
       try {
         const payload = await api.getDemoInfo();
-        if (!cancelled) {
-          setDemoInfo(payload);
-        }
+        if (!cancelled) setDemoInfo(payload);
       } catch {
-        if (!cancelled) {
-          setDemoInfo(null);
-        }
+        if (!cancelled) setDemoInfo(null);
       }
     }
     void loadDemoInfo();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (mode !== "demo") {
-      return;
-    }
+    if (mode !== "demo") return;
     void handleActivateDemo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
@@ -135,7 +205,6 @@ export function AccessPortal() {
     setStoredApiKey(session.api_key);
     setStoredProjectId(session.project_id);
     setStoredAuthSession(sessionMetadata);
-
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(DEMO_PREVIEW_FLAG_KEY);
       window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
@@ -155,16 +224,13 @@ export function AccessPortal() {
     try {
       const session = await api.createDemoSession();
       const resolvedBase = resolveBaseForBrowser(DEFAULT_API_BASE_URL);
-
       setStoredApiBaseUrl(resolvedBase);
       setStoredApiKey(session.api_key);
       setStoredProjectId(session.project_id);
-
       if (typeof window !== "undefined") {
         window.localStorage.setItem(DEMO_PREVIEW_FLAG_KEY, "1");
         window.localStorage.setItem(DEMO_CAMPAIGN_STORAGE_KEY, session.demo_campaign);
       }
-
       const authSession = await refreshSessionFromStoredCredentials();
       setStoredAuthSession({ ...authSession, is_demo: true });
       router.replace(nextPath);
@@ -180,9 +246,7 @@ export function AccessPortal() {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("mode", nextMode);
     nextUrl.searchParams.set("intent", nextIntent);
-    if (nextPlan) {
-      nextUrl.searchParams.set("plan", nextPlan);
-    }
+    if (nextPlan) nextUrl.searchParams.set("plan", nextPlan);
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -239,10 +303,7 @@ export function AccessPortal() {
     try {
       const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
       const session = await api.login(
-        {
-          email: loginEmail.trim(),
-          password: loginPassword,
-        },
+        { email: loginEmail.trim(), password: loginPassword },
         { baseUrl: resolvedBase }
       );
       await persistSession(session, resolvedBase);
@@ -262,12 +323,10 @@ export function AccessPortal() {
       setErrorMessage("API key is required");
       return;
     }
-
     setConnecting(true);
     setErrorMessage(null);
     try {
       const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
-
       setStoredApiBaseUrl(resolvedBase);
       setStoredApiKey(trimmedApiKey);
       if (projectId.trim()) {
@@ -275,12 +334,10 @@ export function AccessPortal() {
       } else {
         clearStoredProjectId();
       }
-
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(DEMO_PREVIEW_FLAG_KEY);
         window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
       }
-
       await refreshSessionFromStoredCredentials();
       router.replace(nextPath);
     } catch (error) {
@@ -306,340 +363,377 @@ export function AccessPortal() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <div className="mb-6 flex items-center justify-between">
-        <Link href={DEFAULT_SITE_URL} className="text-sm text-blue-200 hover:text-blue-100">
-          <span className="inline-flex items-center gap-1">
-            Back to site <ExternalLink className="h-3.5 w-3.5" />
-          </span>
-        </Link>
-      </div>
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-4">
+      <div
+        className="grid w-full max-w-4xl overflow-hidden rounded-[28px] border border-border/60 lg:grid-cols-[1fr_1fr]"
+        style={{ background: "hsl(var(--card))" }}
+      >
+        {/* ── Left branded panel ── */}
+        <div
+          className="relative hidden flex-col justify-between overflow-hidden p-8 lg:flex"
+          style={{ background: "hsl(214 27% 4%)" }}
+        >
+          {/* teal orb */}
+          <div
+            className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(0,229,204,0.18) 0%, transparent 70%)",
+              filter: "blur(40px)",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-16 right-0 h-48 w-48 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(0,229,204,0.10) 0%, transparent 70%)",
+              filter: "blur(30px)",
+            }}
+          />
 
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle className="text-2xl">Sepurux Access</CardTitle>
-            <CardDescription>
-              Create a workspace account, sign back in, or launch the seeded demo environment.
-            </CardDescription>
-            <div className="inline-flex w-fit items-center rounded-lg border border-border/70 bg-muted/40 p-1">
-              <button
-                type="button"
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                  mode === "demo"
-                    ? "bg-blue-400/15 text-blue-100"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => handleModeSwitch("demo")}
-              >
-                View Demo
-              </button>
-              <button
-                type="button"
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                  mode === "access"
-                    ? "bg-blue-400/15 text-blue-100"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => handleModeSwitch("access")}
-              >
-                Get Access
-              </button>
+          <div className="relative z-10">
+            {/* Logo */}
+            <div className="mb-10 flex items-center gap-2.5">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: TEAL }}
+              />
+              <span className="font-display text-base font-bold tracking-tight text-white">
+                Sepurux
+              </span>
             </div>
-          </CardHeader>
-          <CardContent>
-            {mode === "demo" ? (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-100">
-                  <p className="font-medium">Seeded Demo Workspace</p>
-                  <p className="mt-1 text-blue-100/80">
-                    We issue a short-lived demo session and route you into a resettable shared dataset.
-                  </p>
-                  {demoInfo ? (
-                    <p className="mt-2 text-blue-100/80">
-                      Limits: {demoInfo.limits.campaigns_per_hour}/hr campaigns, {" "}
-                      {demoInfo.limits.mutations_per_run}/run mutations.
-                    </p>
-                  ) : null}
-                </div>
 
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={() => void handleActivateDemo()}
-                  disabled={loadingDemo}
-                >
-                  {loadingDemo ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Loading demo workspace...
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-2">
-                      <MonitorPlay className="h-4 w-4" /> Enter demo dashboard
-                    </span>
-                  )}
-                </Button>
+            <p
+              className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em]"
+              style={{ color: TEAL }}
+            >
+              Chaos engineering for AI
+            </p>
+            <h2 className="mb-6 text-2xl font-bold leading-snug tracking-tight text-white">
+              Break things in staging.<br />Ship with confidence.
+            </h2>
+
+            <ul className="space-y-3">
+              {leftPanelFeatures.map((f) => (
+                <li key={f} className="flex items-start gap-2.5 text-sm text-white/60">
+                  <CheckCircle2
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    style={{ color: TEAL }}
+                  />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* bottom stats */}
+          <div className="relative z-10">
+            <div
+              className="grid grid-cols-2 gap-3 rounded-2xl border p-4"
+              style={{ borderColor: "rgba(0,229,204,0.15)", background: "rgba(0,229,204,0.04)" }}
+            >
+              {[
+                { value: "12", label: "Pilot teams" },
+                { value: "99.2%", label: "Detection rate" },
+                { value: "< 200ms", label: "Replay latency" },
+                { value: "3", label: "Enterprise evals" },
+              ].map(({ value, label }) => (
+                <div key={label}>
+                  <p className="text-lg font-bold text-white">{value}</p>
+                  <p className="text-xs text-white/40">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right form panel ── */}
+        <div className="flex flex-col gap-6 p-8">
+          {/* back link */}
+          <div className="flex items-center justify-between">
+            <Link
+              href={DEFAULT_SITE_URL}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Back to site
+            </Link>
+
+            {/* mode tabs */}
+            <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
+              <Tab active={mode === "demo"} onClick={() => handleModeSwitch("demo")}>
+                <span className="flex items-center gap-1.5">
+                  <MonitorPlay className="h-3 w-3" /> Demo
+                </span>
+              </Tab>
+              <Tab active={mode === "access"} onClick={() => handleModeSwitch("access")}>
+                <span className="flex items-center gap-1.5">
+                  <KeyRound className="h-3 w-3" /> Get Access
+                </span>
+              </Tab>
+            </div>
+          </div>
+
+          {/* heading */}
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              {mode === "demo"
+                ? "Try the seeded demo"
+                : intent === "signup"
+                ? "Create your workspace"
+                : "Welcome back"}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {mode === "demo"
+                ? "A short-lived session with pre-loaded trace and campaign data."
+                : intent === "signup"
+                ? "Your workspace unlocks as soon as you're in."
+                : "Sign in to access your reliability dashboard."}
+            </p>
+          </div>
+
+          {/* ── DEMO MODE ── */}
+          {mode === "demo" ? (
+            <div className="space-y-4">
+              <div
+                className="rounded-xl border p-4 text-sm"
+                style={{ borderColor: "rgba(0,229,204,0.2)", background: "rgba(0,229,204,0.05)" }}
+              >
+                <p className="font-semibold" style={{ color: TEAL }}>Seeded demo workspace</p>
+                <p className="mt-1 text-white/60">
+                  Isolated session, resettable dataset — no credentials needed.
+                </p>
+                {demoInfo ? (
+                  <p className="mt-2 text-xs text-white/40">
+                    Limits: {demoInfo.limits.campaigns_per_hour}/hr campaigns,{" "}
+                    {demoInfo.limits.mutations_per_run}/run mutations.
+                  </p>
+                ) : null}
               </div>
-            ) : (
-              <div className="space-y-5">
-                <label className="block space-y-1 text-sm">
-                  <span className="text-muted-foreground">API Base URL</span>
+
+              <TealButton onClick={() => void handleActivateDemo()} disabled={loadingDemo}>
+                {loadingDemo ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading demo workspace...
+                  </>
+                ) : (
+                  <>
+                    <MonitorPlay className="h-4 w-4" />
+                    Enter demo dashboard
+                  </>
+                )}
+              </TealButton>
+            </div>
+          ) : (
+            /* ── ACCESS MODE ── */
+            <div className="space-y-4">
+              {/* intent tabs */}
+              <div className="flex items-center gap-1 w-fit rounded-xl border border-border/60 bg-muted/30 p-1">
+                <Tab active={intent === "signup"} onClick={() => handleIntentSwitch("signup")}>
+                  <span className="flex items-center gap-1.5"><UserPlus className="h-3 w-3" /> Sign up</span>
+                </Tab>
+                <Tab active={intent === "login"} onClick={() => handleIntentSwitch("login")}>
+                  <span className="flex items-center gap-1.5"><LogIn className="h-3 w-3" /> Log in</span>
+                </Tab>
+              </div>
+
+              {/* API Base URL — collapsed by default */}
+              <details className="text-sm">
+                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                  API Base URL (advanced)
+                </summary>
+                <div className="mt-2">
                   <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                    className={fieldClass}
                     value={apiBaseUrl}
-                    onChange={(event) => setApiBaseUrl(event.target.value)}
+                    onChange={(e) => setApiBaseUrl(e.target.value)}
                     placeholder="/api/backend"
                   />
-                </label>
-
-                <div className="inline-flex w-fit items-center rounded-lg border border-border/70 bg-muted/40 p-1">
-                  <button
-                    type="button"
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                      intent === "signup"
-                        ? "bg-blue-400/15 text-blue-100"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => handleIntentSwitch("signup")}
-                  >
-                    Sign up
-                  </button>
-                  <button
-                    type="button"
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                      intent === "login"
-                        ? "bg-blue-400/15 text-blue-100"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => handleIntentSwitch("login")}
-                  >
-                    Log in
-                  </button>
                 </div>
+              </details>
 
-                {intent === "signup" ? (
-                  <form className="space-y-4" onSubmit={handleSignup}>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Workspace plan</span>
-                        <span className="text-xs uppercase tracking-[0.14em] text-blue-200">
-                          {selectedPlanDefinition.name}
-                        </span>
-                      </div>
-                      <div className="grid gap-2 md:grid-cols-3">
-                        {pricingTierDefinitions.map((plan) => {
-                          const active = plan.tier === signupPlan;
-                          return (
-                            <button
-                              key={plan.tier}
-                              type="button"
-                              onClick={() => handlePlanSwitch(plan.tier)}
-                              className={`rounded-lg border p-3 text-left transition ${
-                                active
-                                  ? "border-blue-400/60 bg-blue-500/10 shadow-[0_0_0_1px_rgba(96,165,250,0.18)]"
-                                  : "border-border/70 bg-muted/20 hover:border-border hover:bg-muted/35"
-                              }`}
-                            >
-                              <p className="text-sm font-medium text-foreground">{plan.name}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{plan.summary}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        This plan controls which dashboard surfaces unlock after signup.
-                      </p>
+              {/* ── SIGN UP FORM ── */}
+              {intent === "signup" ? (
+                <form className="space-y-3" onSubmit={handleSignup}>
+                  {/* plan selector */}
+                  <div>
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">Workspace plan</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {pricingTierDefinitions.map((plan) => {
+                        const active = plan.tier === signupPlan;
+                        return (
+                          <button
+                            key={plan.tier}
+                            type="button"
+                            onClick={() => handlePlanSwitch(plan.tier)}
+                            className="rounded-xl border p-3 text-left text-xs transition-all"
+                            style={
+                              active
+                                ? {
+                                    borderColor: TEAL_BORDER,
+                                    background: TEAL_DIM,
+                                    boxShadow: `0 0 0 1px ${TEAL_BORDER}`,
+                                  }
+                                : {
+                                    borderColor: "hsl(var(--border))",
+                                    background: "hsl(var(--muted)/0.3)",
+                                  }
+                            }
+                          >
+                            <p className="font-semibold text-foreground">{plan.name}</p>
+                            <p className="mt-0.5 text-muted-foreground">{plan.summary}</p>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Name</span>
-                      <input
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={signupName}
-                        onChange={(event) => setSignupName(event.target.value)}
-                        placeholder="Ada Lovelace"
-                      />
-                    </label>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Work email</span>
-                      <input
-                        type="email"
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={signupEmail}
-                        onChange={(event) => setSignupEmail(event.target.value)}
-                        placeholder="you@company.com"
-                        required
-                      />
-                    </label>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Password</span>
-                      <input
-                        type="password"
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={signupPassword}
-                        onChange={(event) => setSignupPassword(event.target.value)}
-                        placeholder="Minimum 8 characters"
-                        minLength={8}
-                        required
-                      />
-                    </label>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Project name</span>
-                      <input
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={signupProjectName}
-                        onChange={(event) => setSignupProjectName(event.target.value)}
-                        placeholder="Fraud Agent Sandbox"
-                      />
-                    </label>
+                  </div>
 
-                    <Button type="submit" className="w-full" disabled={submittingAccess}>
-                      {submittingAccess ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" /> Creating workspace...
-                        </span>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">Name</span>
+                    <input
+                      className={fieldClass}
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      placeholder="Ada Lovelace"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">Work email</span>
+                    <input
+                      type="email"
+                      className={fieldClass}
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      placeholder="you@company.com"
+                      required
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">Password</span>
+                    <input
+                      type="password"
+                      className={fieldClass}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                      minLength={8}
+                      required
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">Project name</span>
+                    <input
+                      className={fieldClass}
+                      value={signupProjectName}
+                      onChange={(e) => setSignupProjectName(e.target.value)}
+                      placeholder="Fraud Agent Sandbox"
+                    />
+                  </label>
+
+                  <TealButton type="submit" disabled={submittingAccess}>
+                    {submittingAccess ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Creating workspace...</>
+                    ) : (
+                      <><UserPlus className="h-4 w-4" /> Create account<ArrowRight className="h-3.5 w-3.5" /></>
+                    )}
+                  </TealButton>
+                </form>
+              ) : (
+                /* ── LOG IN FORM ── */
+                <form className="space-y-3" onSubmit={handleLogin}>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">Email</span>
+                    <input
+                      type="email"
+                      className={fieldClass}
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="you@company.com"
+                      required
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">Password</span>
+                    <input
+                      type="password"
+                      className={fieldClass}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="Your password"
+                      minLength={8}
+                      required
+                    />
+                  </label>
+
+                  <TealButton type="submit" disabled={submittingAccess}>
+                    {submittingAccess ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
+                    ) : (
+                      <><LogIn className="h-4 w-4" /> Log in to dashboard</>
+                    )}
+                  </TealButton>
+                </form>
+              )}
+
+              {/* API key fallback */}
+              <details className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm">
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                  Use an existing API key instead
+                </summary>
+                <form className="mt-4 space-y-3" onSubmit={handleManualConnect}>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">API Key</span>
+                    <input
+                      className={fieldClass}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="cl_..."
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-muted-foreground">Project ID (optional)</span>
+                    <input
+                      className={fieldClass}
+                      value={projectId}
+                      onChange={(e) => setProjectId(e.target.value)}
+                      placeholder="UUID"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <TealButton type="submit" disabled={connecting}>
+                      {connecting ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Connecting...</>
                       ) : (
-                        <span className="inline-flex items-center gap-2">
-                          <UserPlus className="h-4 w-4" /> Create account and open dashboard
-                        </span>
+                        <><KeyRound className="h-4 w-4" /> Continue with API key</>
                       )}
-                    </Button>
-                  </form>
-                ) : (
-                  <form className="space-y-4" onSubmit={handleLogin}>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Email</span>
-                      <input
-                        type="email"
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={loginEmail}
-                        onChange={(event) => setLoginEmail(event.target.value)}
-                        placeholder="you@company.com"
-                        required
-                      />
-                    </label>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Password</span>
-                      <input
-                        type="password"
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={loginPassword}
-                        onChange={(event) => setLoginPassword(event.target.value)}
-                        placeholder="Your password"
-                        minLength={8}
-                        required
-                      />
-                    </label>
-
-                    <Button type="submit" className="w-full" disabled={submittingAccess}>
-                      {submittingAccess ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-2">
-                          <LogIn className="h-4 w-4" /> Log in to dashboard
-                        </span>
-                      )}
-                    </Button>
-                  </form>
-                )}
-
-                <details className="rounded-lg border border-border/70 bg-muted/25 p-4">
-                  <summary className="cursor-pointer text-sm font-medium text-foreground">
-                    Use an existing API key instead
-                  </summary>
-                  <form className="mt-4 space-y-4" onSubmit={handleManualConnect}>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">API Key</span>
-                      <input
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={apiKey}
-                        onChange={(event) => setApiKey(event.target.value)}
-                        placeholder="cl_..."
-                      />
-                    </label>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Project ID (optional)</span>
-                      <input
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={projectId}
-                        onChange={(event) => setProjectId(event.target.value)}
-                        placeholder="UUID"
-                      />
-                    </label>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="submit" disabled={connecting}>
-                        {connecting ? (
-                          <span className="inline-flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" /> Connecting...
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-2">
-                            <KeyRound className="h-4 w-4" /> Continue with API key
-                          </span>
-                        )}
-                      </Button>
-                      <Button type="button" variant="outline" onClick={resetStoredCredentials}>
-                        Reset
-                      </Button>
-                    </div>
-                  </form>
-                </details>
-              </div>
-            )}
-
-            {errorMessage ? (
-              <div className="mt-4 rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">
-                {errorMessage}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card/70">
-          <CardHeader>
-            <CardTitle>Access model</CardTitle>
-            <CardDescription>
-              Role-aware dashboard entry with plan-based menus, demo isolation, and per-session keys.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
-              <p className="font-medium text-foreground">
-                Selected plan: {selectedPlanDefinition.name}
-              </p>
-              <p className="mt-1">{selectedPlanDefinition.summary}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Includes: {selectedPlanDefinition.menuHighlights.join(", ")}
-              </p>
+                    </TealButton>
+                    <button
+                      type="button"
+                      onClick={resetStoredCredentials}
+                      className="rounded-xl border border-border/60 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </form>
+              </details>
             </div>
-            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
-              <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <UserPlus className="h-4 w-4 text-blue-300" /> Sign up
-              </p>
-              <p className="mt-1">
-                Creates a workspace on the selected plan, makes you the admin for the first project, and issues a project-scoped session key.
-              </p>
+          )}
+
+          {/* error */}
+          {errorMessage ? (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              {errorMessage}
             </div>
-            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
-              <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <LogIn className="h-4 w-4 text-blue-300" /> Log in
-              </p>
-              <p className="mt-1">
-                Restores your role-aware dashboard session and uses the backend RBAC model to gate access.
-              </p>
+          ) : null}
+
+          {/* plan preview footer (access mode only) */}
+          {mode === "access" && (
+            <div className="mt-auto rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{selectedPlanDefinition.name}</span>
+              {" — "}{selectedPlanDefinition.menuHighlights.join(", ")}
             </div>
-            <div className="rounded-md border border-border/60 bg-muted/30 p-3">
-              <p className="inline-flex items-center gap-2 font-medium text-foreground">
-                <Sparkles className="h-4 w-4 text-blue-300" /> View Demo
-              </p>
-              <p className="mt-1">
-                Generates a short-lived demo key mapped to seeded data without exposing shared credentials.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
     </div>
   );
