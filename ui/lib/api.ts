@@ -379,6 +379,7 @@ export type SubscriptionPlanMetadata = {
   name: string;
   monthly_price: number;
   monthly_credits: number;
+  checkout_enabled: boolean;
   features: Record<string, unknown>;
   created_at: string;
 };
@@ -391,6 +392,8 @@ export type UserSubscriptionMetadata = {
   monthly_credits: number | null;
   queue_priority: "normal" | "priority";
   status: string;
+  billing_provider: string | null;
+  portal_available: boolean;
   start_date: string;
   renewal_date: string;
 };
@@ -413,6 +416,13 @@ export type CreditTransactionMetadata = {
   type: "usage" | "monthly_grant" | "topup_purchase";
   reason: string;
   created_at: string;
+};
+
+export type BillingRedirectSessionResponse = {
+  provider: string;
+  flow: "checkout" | "portal";
+  url: string;
+  session_id: string | null;
 };
 
 export type ToolRegistryMetadata = {
@@ -697,9 +707,10 @@ export const api = {
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
   subscribeToPlan: (payload: { plan_id: string }) =>
-    postJson<UserSubscriptionMetadata, typeof payload>("/v1/billing/subscribe", payload),
+    postJson<BillingRedirectSessionResponse, typeof payload>("/v1/billing/subscribe", payload),
   topupCredits: (payload: { credits: number }) =>
-    postJson<CreditWalletMetadata, typeof payload>("/v1/billing/topup", payload),
+    postJson<BillingRedirectSessionResponse, typeof payload>("/v1/billing/topup", payload),
+  openBillingPortal: () => postJson<BillingRedirectSessionResponse, Record<string, never>>("/v1/billing/portal", {}),
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),

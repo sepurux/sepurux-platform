@@ -11,6 +11,8 @@ Name | Type | Description | Notes
 **MonthlyCredits** | Pointer to **NullableInt32** |  | [optional] 
 **QueuePriority** | Pointer to **string** |  | [optional] [default to "normal"]
 **Status** | **string** |  | 
+**BillingProvider** | Pointer to **NullableString** |  | [optional] 
+**PortalAvailable** | Pointer to **bool** |  | [optional] [default to false]
 **StartDate** | **time.Time** |  | 
 **RenewalDate** | **time.Time** |  | 
 
@@ -222,6 +224,66 @@ and a boolean to check if the value has been set.
 
 SetStatus sets Status field to given value.
 
+
+### GetBillingProvider
+
+`func (o *UserSubscriptionMetadata) GetBillingProvider() string`
+
+GetBillingProvider returns the BillingProvider field if non-nil, zero value otherwise.
+
+### GetBillingProviderOk
+
+`func (o *UserSubscriptionMetadata) GetBillingProviderOk() (*string, bool)`
+
+GetBillingProviderOk returns a tuple with the BillingProvider field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetBillingProvider
+
+`func (o *UserSubscriptionMetadata) SetBillingProvider(v string)`
+
+SetBillingProvider sets BillingProvider field to given value.
+
+### HasBillingProvider
+
+`func (o *UserSubscriptionMetadata) HasBillingProvider() bool`
+
+HasBillingProvider returns a boolean if a field has been set.
+
+### SetBillingProviderNil
+
+`func (o *UserSubscriptionMetadata) SetBillingProviderNil(b bool)`
+
+ SetBillingProviderNil sets the value for BillingProvider to be an explicit nil
+
+### UnsetBillingProvider
+`func (o *UserSubscriptionMetadata) UnsetBillingProvider()`
+
+UnsetBillingProvider ensures that no value is present for BillingProvider, not even an explicit nil
+### GetPortalAvailable
+
+`func (o *UserSubscriptionMetadata) GetPortalAvailable() bool`
+
+GetPortalAvailable returns the PortalAvailable field if non-nil, zero value otherwise.
+
+### GetPortalAvailableOk
+
+`func (o *UserSubscriptionMetadata) GetPortalAvailableOk() (*bool, bool)`
+
+GetPortalAvailableOk returns a tuple with the PortalAvailable field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPortalAvailable
+
+`func (o *UserSubscriptionMetadata) SetPortalAvailable(v bool)`
+
+SetPortalAvailable sets PortalAvailable field to given value.
+
+### HasPortalAvailable
+
+`func (o *UserSubscriptionMetadata) HasPortalAvailable() bool`
+
+HasPortalAvailable returns a boolean if a field has been set.
 
 ### GetStartDate
 

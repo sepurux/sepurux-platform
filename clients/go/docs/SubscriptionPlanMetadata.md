@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **Name** | **string** |  | 
 **MonthlyPrice** | **int32** |  | 
 **MonthlyCredits** | **int32** |  | 
+**CheckoutEnabled** | Pointer to **bool** |  | [optional] [default to false]
 **Features** | **map[string]interface{}** |  | 
 **CreatedAt** | **time.Time** |  | 
 
@@ -109,6 +110,31 @@ and a boolean to check if the value has been set.
 
 SetMonthlyCredits sets MonthlyCredits field to given value.
 
+
+### GetCheckoutEnabled
+
+`func (o *SubscriptionPlanMetadata) GetCheckoutEnabled() bool`
+
+GetCheckoutEnabled returns the CheckoutEnabled field if non-nil, zero value otherwise.
+
+### GetCheckoutEnabledOk
+
+`func (o *SubscriptionPlanMetadata) GetCheckoutEnabledOk() (*bool, bool)`
+
+GetCheckoutEnabledOk returns a tuple with the CheckoutEnabled field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCheckoutEnabled
+
+`func (o *SubscriptionPlanMetadata) SetCheckoutEnabled(v bool)`
+
+SetCheckoutEnabled sets CheckoutEnabled field to given value.
+
+### HasCheckoutEnabled
+
+`func (o *SubscriptionPlanMetadata) HasCheckoutEnabled() bool`
+
+HasCheckoutEnabled returns a boolean if a field has been set.
 
 ### GetFeatures
 

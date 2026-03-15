@@ -453,7 +453,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserSubscriptionMetadata'
+                $ref: '#/components/schemas/BillingRedirectSessionResponse'
           description: Successful Response
         "422":
           content:
@@ -487,7 +487,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreditWalletMetadata'
+                $ref: '#/components/schemas/BillingRedirectSessionResponse'
           description: Successful Response
         "422":
           content:
@@ -496,6 +496,34 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Post Billing Topup
+      tags:
+      - billing
+  /v1/billing/portal:
+    post:
+      operationId: post_billing_portal_v1_billing_portal_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingRedirectSessionResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Billing Portal
       tags:
       - billing
   /v1/campaigns:
@@ -2863,6 +2891,33 @@ components:
       - role_name
       - tenant_id
       title: AuthSessionResponse
+    BillingRedirectSessionResponse:
+      example:
+        provider: provider
+        session_id: session_id
+        flow: checkout
+        url: url
+      properties:
+        provider:
+          title: Provider
+          type: string
+        flow:
+          enum:
+          - checkout
+          - portal
+          title: Flow
+          type: string
+        url:
+          title: Url
+          type: string
+        session_id:
+          nullable: true
+          type: string
+      required:
+      - flow
+      - provider
+      - url
+      title: BillingRedirectSessionResponse
     BillingSubscribeRequest:
       example:
         plan_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -4829,6 +4884,7 @@ components:
         monthly_credits: 6
         name: name
         created_at: 2000-01-23T04:56:07.000+00:00
+        checkout_enabled: false
         plan_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
       properties:
         plan_id:
@@ -4844,6 +4900,10 @@ components:
         monthly_credits:
           title: Monthly Credits
           type: integer
+        checkout_enabled:
+          default: false
+          title: Checkout Enabled
+          type: boolean
         features:
           additionalProperties: {}
           title: Features
@@ -5234,6 +5294,8 @@ components:
       example:
         subscription_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         monthly_price: 0
+        billing_provider: billing_provider
+        portal_available: false
         renewal_date: 2000-01-23T04:56:07.000+00:00
         monthly_credits: 6
         queue_priority: normal
@@ -5269,6 +5331,13 @@ components:
         status:
           title: Status
           type: string
+        billing_provider:
+          nullable: true
+          type: string
+        portal_available:
+          default: false
+          title: Portal Available
+          type: boolean
         start_date:
           format: date-time
           title: Start Date

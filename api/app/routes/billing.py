@@ -11,6 +11,7 @@ from app.auth import (
 )
 from app.db import get_db
 from app.schemas import (
+    BillingRedirectSessionResponse,
     BillingSubscribeRequest,
     BillingTopupRequest,
     CreditWalletMetadata,
@@ -23,11 +24,14 @@ from app.services.billing_service import (
     list_subscription_plans,
     resolve_billable_user_id,
     serialize_subscription_plan,
-    serialize_user_subscription,
-    subscribe_user,
-    topup_credits,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
+from app.services.stripe_billing_service import (
+    create_billing_portal_redirect,
+    create_subscription_billing_redirect,
+    create_topup_billing_redirect,
+    process_stripe_webhook,
+)
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
@@ -112,42 +116,13 @@ def get_billing_credits(
     return CreditWalletMetadata(**wallet)
 
 
-@router.post("/subscribe", response_model=UserSubscriptionMetadata)
+@router.post("/subscribe", response_model=BillingRedirectSessionResponse)
 def post_billing_subscribe(
     payload: BillingSubscribeRequest,
     db: DbSession,
     project_scope: BillingManageScope,
     tenant_auth: TenantAuthDep,
-) -> UserSubscriptionMetadata:
-    user_id = resolve_billable_user_id(
-        db,
-        tenant_auth=tenant_auth,
-        project_id=project_scope.project_id,
-    )
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Billing user not found for this session",
-        )
-    try:
-        subscription, _, plan = subscribe_user(
-            db,
-            user_id=user_id,
-            plan_id=payload.plan_id,
-            tenant_id=project_scope.tenant_id,
-        )
-    except BillingSubjectNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    return UserSubscriptionMetadata(**serialize_user_subscription(subscription, plan=plan))
-
-
-@router.post("/topup", response_model=CreditWalletMetadata)
-def post_billing_topup(
-    payload: BillingTopupRequest,
-    db: DbSession,
-    project_scope: BillingManageScope,
-    tenant_auth: TenantAuthDep,
-) -> CreditWalletMetadata:
+) -> BillingRedirectSessionResponse:
     user_id = resolve_billable_user_id(
         db,
         tenant_auth=tenant_auth,
@@ -163,11 +138,81 @@ def post_billing_topup(
         tenant_auth=tenant_auth,
         project_scope=project_scope,
     )
-    wallet = topup_credits(db, user_id=user_id, credits=payload.credits)
-    _, wallet_payload, _, _ = _resolve_billable_user_or_404(
+    try:
+        redirect = create_subscription_billing_redirect(
+            db,
+            user_id=user_id,
+            project_id=project_scope.project_id,
+            tenant_id=project_scope.tenant_id,
+            plan_id=payload.plan_id,
+        )
+    except BillingSubjectNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return BillingRedirectSessionResponse(**redirect)
+
+
+@router.post("/topup", response_model=BillingRedirectSessionResponse)
+def post_billing_topup(
+    payload: BillingTopupRequest,
+    db: DbSession,
+    project_scope: BillingManageScope,
+    tenant_auth: TenantAuthDep,
+) -> BillingRedirectSessionResponse:
+    user_id = resolve_billable_user_id(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Billing user not found for this session",
+        )
+    _resolve_billable_user_or_404(
         db,
         tenant_auth=tenant_auth,
         project_scope=project_scope,
     )
-    _ = wallet
-    return CreditWalletMetadata(**wallet_payload)
+    redirect = create_topup_billing_redirect(
+        db,
+        user_id=user_id,
+        project_id=project_scope.project_id,
+        tenant_id=project_scope.tenant_id,
+        credits=payload.credits,
+    )
+    return BillingRedirectSessionResponse(**redirect)
+
+
+@router.post("/portal", response_model=BillingRedirectSessionResponse)
+def post_billing_portal(
+    db: DbSession,
+    project_scope: BillingManageScope,
+    tenant_auth: TenantAuthDep,
+) -> BillingRedirectSessionResponse:
+    user_id = resolve_billable_user_id(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Billing user not found for this session",
+        )
+    redirect = create_billing_portal_redirect(db, user_id=user_id)
+    return BillingRedirectSessionResponse(**redirect)
+
+
+@router.post("/webhook", include_in_schema=False)
+async def post_billing_webhook(
+    request: Request,
+    db: DbSession,
+) -> dict[str, str]:
+    payload = await request.body()
+    signature_header = request.headers.get("stripe-signature")
+    result = process_stripe_webhook(
+        db,
+        payload=payload,
+        signature_header=signature_header,
+    )
+    return {key: str(value) for key, value in result.items()}

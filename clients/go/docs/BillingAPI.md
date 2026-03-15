@@ -7,6 +7,7 @@ Method | HTTP request | Description
 [**GetBillingCreditsV1BillingCreditsGet**](BillingAPI.md#GetBillingCreditsV1BillingCreditsGet) | **Get** /v1/billing/credits | Get Billing Credits
 [**GetBillingPlansV1BillingPlansGet**](BillingAPI.md#GetBillingPlansV1BillingPlansGet) | **Get** /v1/billing/plans | Get Billing Plans
 [**GetBillingSubscriptionV1BillingSubscriptionGet**](BillingAPI.md#GetBillingSubscriptionV1BillingSubscriptionGet) | **Get** /v1/billing/subscription | Get Billing Subscription
+[**PostBillingPortalV1BillingPortalPost**](BillingAPI.md#PostBillingPortalV1BillingPortalPost) | **Post** /v1/billing/portal | Post Billing Portal
 [**PostBillingSubscribeV1BillingSubscribePost**](BillingAPI.md#PostBillingSubscribeV1BillingSubscribePost) | **Post** /v1/billing/subscribe | Post Billing Subscribe
 [**PostBillingTopupV1BillingTopupPost**](BillingAPI.md#PostBillingTopupV1BillingTopupPost) | **Post** /v1/billing/topup | Post Billing Topup
 
@@ -204,9 +205,73 @@ No authorization required
 [[Back to README]](../README.md)
 
 
+## PostBillingPortalV1BillingPortalPost
+
+> BillingRedirectSessionResponse PostBillingPortalV1BillingPortalPost(ctx).XProjectId(xProjectId).Execute()
+
+Post Billing Portal
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	xProjectId := "xProjectId_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.BillingAPI.PostBillingPortalV1BillingPortalPost(context.Background()).XProjectId(xProjectId).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `BillingAPI.PostBillingPortalV1BillingPortalPost``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `PostBillingPortalV1BillingPortalPost`: BillingRedirectSessionResponse
+	fmt.Fprintf(os.Stdout, "Response from `BillingAPI.PostBillingPortalV1BillingPortalPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiPostBillingPortalV1BillingPortalPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **xProjectId** | **string** |  | 
+
+### Return type
+
+[**BillingRedirectSessionResponse**](BillingRedirectSessionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## PostBillingSubscribeV1BillingSubscribePost
 
-> UserSubscriptionMetadata PostBillingSubscribeV1BillingSubscribePost(ctx).BillingSubscribeRequest(billingSubscribeRequest).XProjectId(xProjectId).Execute()
+> BillingRedirectSessionResponse PostBillingSubscribeV1BillingSubscribePost(ctx).BillingSubscribeRequest(billingSubscribeRequest).XProjectId(xProjectId).Execute()
 
 Post Billing Subscribe
 
@@ -233,7 +298,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error when calling `BillingAPI.PostBillingSubscribeV1BillingSubscribePost``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `PostBillingSubscribeV1BillingSubscribePost`: UserSubscriptionMetadata
+	// response from `PostBillingSubscribeV1BillingSubscribePost`: BillingRedirectSessionResponse
 	fmt.Fprintf(os.Stdout, "Response from `BillingAPI.PostBillingSubscribeV1BillingSubscribePost`: %v\n", resp)
 }
 ```
@@ -254,7 +319,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**UserSubscriptionMetadata**](UserSubscriptionMetadata.md)
+[**BillingRedirectSessionResponse**](BillingRedirectSessionResponse.md)
 
 ### Authorization
 
@@ -272,7 +337,7 @@ No authorization required
 
 ## PostBillingTopupV1BillingTopupPost
 
-> CreditWalletMetadata PostBillingTopupV1BillingTopupPost(ctx).BillingTopupRequest(billingTopupRequest).XProjectId(xProjectId).Execute()
+> BillingRedirectSessionResponse PostBillingTopupV1BillingTopupPost(ctx).BillingTopupRequest(billingTopupRequest).XProjectId(xProjectId).Execute()
 
 Post Billing Topup
 
@@ -299,7 +364,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error when calling `BillingAPI.PostBillingTopupV1BillingTopupPost``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `PostBillingTopupV1BillingTopupPost`: CreditWalletMetadata
+	// response from `PostBillingTopupV1BillingTopupPost`: BillingRedirectSessionResponse
 	fmt.Fprintf(os.Stdout, "Response from `BillingAPI.PostBillingTopupV1BillingTopupPost`: %v\n", resp)
 }
 ```
@@ -320,7 +385,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**CreditWalletMetadata**](CreditWalletMetadata.md)
+[**BillingRedirectSessionResponse**](BillingRedirectSessionResponse.md)
 
 ### Authorization
 
