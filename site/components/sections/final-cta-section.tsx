@@ -5,7 +5,7 @@ export function FinalCtaSection() {
   return (
     <section className="site-container mt-24 pb-8 sm:mt-28">
       <div className="relative overflow-hidden rounded-[32px] border border-neutral-900 bg-neutral-950 px-6 py-12 backdrop-blur-xl md:px-10 md:py-16">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(37,99,235,0.18),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(37,99,235,0.12),transparent_26%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.1),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.06),transparent_26%)]" />
         <p className="relative section-kicker">Start now</p>
         <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-white md:text-5xl">
           Start breaking your AI agents safely.
