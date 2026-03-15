@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
@@ -8,9 +8,15 @@ import { siteAssetVersion, siteConfig } from "@/lib/site";
 
 import "./globals.css";
 
+const bodyFont = Inter({
+  subsets: ["latin"],
+  variable: "--font-body",
+  weight: ["400", "500", "600", "700"],
+});
+
 const headingFont = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-heading",
+  variable: "--font-display",
   weight: ["400", "500", "600", "700"],
 });
 
@@ -66,7 +72,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${headingFont.variable} ${monoFont.variable} font-[family-name:var(--font-heading)]`}>
+      <body
+        className={`${bodyFont.variable} ${headingFont.variable} ${monoFont.variable} min-h-screen bg-background font-sans text-foreground`}
+      >
         <Navbar />
         <main>{children}</main>
         <Footer />

@@ -5,20 +5,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-[0_12px_32px_rgba(0,160,248,0.28)] hover:-translate-y-0.5 hover:brightness-105",
-        secondary: "bg-accent text-accent-foreground hover:bg-accent/85",
-        ghost: "hover:bg-accent/70 hover:text-accent-foreground",
-        outline: "border border-border bg-background/65 text-foreground hover:border-secondary/45 hover:bg-accent/60",
+          "bg-primary text-primary-foreground shadow-button hover:-translate-y-0.5 hover:bg-blue-500 hover:shadow-glow",
+        secondary: "bg-white text-black hover:bg-neutral-100",
+        ghost: "text-muted-foreground hover:bg-white/6 hover:text-foreground",
+        outline:
+          "border border-neutral-800 bg-black text-white hover:-translate-y-0.5 hover:border-neutral-700 hover:bg-neutral-950",
       },
       size: {
-        default: "h-10 px-4 py-2",
+        default: "h-11 px-5 py-2.5",
         sm: "h-8 px-3 text-xs",
-        lg: "h-11 px-5 text-sm",
+        lg: "h-12 px-6 text-sm",
       },
     },
     defaultVariants: {
