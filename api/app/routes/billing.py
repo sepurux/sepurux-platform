@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from app.auth import (
     ProjectScope,
@@ -46,7 +46,7 @@ def _resolve_billable_user_or_404(
     *,
     tenant_auth: TenantAuthContext,
     project_scope: ProjectScope,
-) -> tuple[object, object, object, object]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     billing_snapshot = get_billing_snapshot_for_context(
         db,
         tenant_auth=tenant_auth,
