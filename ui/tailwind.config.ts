@@ -1,3 +1,4 @@
+// ui/tailwind.config.ts
 import type { Config } from "tailwindcss";
 
 const config: Config = {
@@ -34,7 +35,11 @@ const config: Config = {
         info: "hsl(var(--info))",
         neutral: "hsl(var(--neutral))",
         warning: "hsl(var(--warning))",
-        danger: "hsl(var(--danger))"
+        danger: "hsl(var(--danger))",
+        teal: {
+          DEFAULT: "#00e5cc",
+          dim: "rgba(0,229,204,0.12)",
+        },
       },
       borderRadius: {
         lg: "10px",
@@ -43,7 +48,8 @@ const config: Config = {
       },
       boxShadow: {
         panel: "0 6px 24px rgba(0,0,0,0.35)",
-        insetSoft: "inset 0 1px 0 rgba(255,255,255,0.04)"
+        insetSoft: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        "teal-glow": "0 0 0 1px rgba(0,229,204,0.25), 0 0 20px rgba(0,229,204,0.15)",
       },
       backgroundImage: {
         "grid-faint": "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)"

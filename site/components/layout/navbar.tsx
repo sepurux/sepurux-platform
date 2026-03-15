@@ -1,3 +1,4 @@
+// site/components/layout/navbar.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -26,30 +27,59 @@ export function Navbar() {
     <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl">
       <div className="site-container flex h-16 items-center justify-between gap-4">
         <Link href="/" className="inline-flex items-center gap-3" aria-label="Sepurux home">
-
           <img
             src={siteConfig.logo}
             alt="Sepurux logo"
             width={1536}
             height={1024}
-            className="block h-24 w-auto"
+            className="block h-12 w-auto"
           />
-
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          {navItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              target={item.external ? "_blank" : undefined}
-              rel={item.external ? "noreferrer" : undefined}
-              className="text-sm font-medium text-white/68 transition-colors hover:text-white"
-            >
-              {item.label}
-            </a>
-          ))}
+          {navItems.map((item) => {
+            const isActive = !item.external && pathname === item.href;
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                target={item.external ? "_blank" : undefined}
+                rel={item.external ? "noreferrer" : undefined}
+                className="relative text-sm font-medium text-white/68 transition-colors hover:text-white"
+              >
+                {item.label}
+                {isActive && (
+                  <span
+                    className="absolute -bottom-0.5 left-0 h-px w-full rounded-full"
+                    style={{ background: "var(--accent-teal)" }}
+                  />
+                )}
+              </a>
+            );
+          })}
         </nav>
+
+        <div className="hidden items-center md:flex">
+          <a
+            href={buildAppAuthHref({ mode: "access", intent: "signup" })}
+            className="inline-flex h-9 items-center justify-center rounded-full border px-4 text-sm font-medium text-white transition-all duration-200"
+            style={{
+              borderColor: "rgba(0,229,204,0.35)",
+              background: "rgba(0,229,204,0.06)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow =
+                "0 0 0 1px rgba(0,229,204,0.5), 0 0 20px rgba(0,229,204,0.2)";
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,229,204,0.6)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = "none";
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,229,204,0.35)";
+            }}
+          >
+            Try Sepurux
+          </a>
+        </div>
 
         <button
           type="button"

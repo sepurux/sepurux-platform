@@ -1,3 +1,4 @@
+// ui/components/layout/sidebar.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -125,9 +126,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         .map((group) => ({
           ...group,
           children: group.children.filter((child) => {
-            if (!child.permission) {
-              return true;
-            }
+            if (!child.permission) return true;
             return authSession?.permissions[child.permission] ?? false;
           }),
         }))
@@ -154,22 +153,32 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
 
   return (
     <aside className="relative z-30 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border bg-sidebar/95 p-4 backdrop-blur xl:flex xl:flex-col">
+      {/* workspace header */}
       <div className="mb-4 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
-        <div className="grid h-10 w-10 place-items-center rounded-md border border-info/20 bg-info/10 text-info">
-          <Activity className="h-5 w-5" />
+        <div
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-md border"
+          style={{
+            borderColor: "rgba(0,229,204,0.2)",
+            background: "rgba(0,229,204,0.08)",
+          }}
+        >
+          <Activity className="h-5 w-5" style={{ color: "var(--accent-teal)" }} />
         </div>
-        <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Agent Sepurux</p>
-          <p className="text-sm font-semibold text-foreground">
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Sepurux</p>
+          <p className="truncate text-sm font-semibold text-foreground">
             {authSession?.project_name ?? "Control Plane"}
           </p>
-          <p className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-info">
+          <p
+            className="mt-0.5 truncate text-[11px] uppercase tracking-[0.12em]"
+            style={{ color: "var(--accent-teal)" }}
+          >
             {authSession?.plan_name ?? "Workspace"} plan
           </p>
         </div>
       </div>
 
-      <nav className="relative z-30 flex-1 space-y-1.5 pointer-events-auto">
+      <nav className="relative z-30 flex-1 space-y-0.5 overflow-y-auto pointer-events-auto">
         {dashboardItem ? (
           <Link
             href={dashboardItem.href}
@@ -201,7 +210,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
           const primaryChild = group.children[0];
 
           return (
-            <div key={group.section} className="space-y-1">
+            <div key={group.section} className="space-y-0.5">
               <div
                 className={cn(
                   "flex items-center rounded-md border-l-2 border-l-transparent border-transparent text-sm transition",
@@ -216,7 +225,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
                 >
                   <Icon
                     className={cn(
-                        "h-4 w-4 shrink-0",
+                      "h-4 w-4 shrink-0",
                       active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                     )}
                   />
@@ -249,7 +258,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
               </div>
 
               {expanded ? (
-                <div className="relative z-30 space-y-1 pl-6">
+                <div className="relative z-30 space-y-0.5 pl-6">
                   {group.children.map((child) => {
                     const childActive =
                       pathname === child.href || pathname.startsWith(child.href + "/");
@@ -297,11 +306,12 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         })}
       </nav>
 
-      <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+      {/* footer */}
+      <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
         <p className="mb-1 font-medium text-foreground">
           {(authSession?.plan_name ?? "Workspace") + " · " + (authSession?.role_name ?? "viewer")} access
         </p>
-        <p>Navigation is filtered by the workspace plan first, then by the current project role.</p>
+        <p>Navigation is filtered by workspace plan, then by project role.</p>
       </div>
     </aside>
   );
