@@ -1,3 +1,4 @@
+// ui/components/layout/top-bar.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -68,9 +69,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         const fallback = records[0]?.project_id ?? "";
         const next = records.some((project) => project.project_id == stored) ? (stored ?? "") : fallback;
         setSelectedProjectId(next);
-        if (next) {
-          setStoredProjectId(next);
-        }
+        if (next) setStoredProjectId(next);
       } catch (error) {
         if (cancelled) return;
         setProjectsError(error instanceof Error ? error.message : "Failed to load projects");
@@ -78,16 +77,11 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
     }
 
     void loadProjects();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [authSession?.project_id, authSession?.project_scoped]);
 
   function handleProjectChange(nextProjectId: string) {
-    if (authSession?.project_scoped) {
-      return;
-    }
+    if (authSession?.project_scoped) return;
     setSelectedProjectId(nextProjectId);
     setStoredProjectId(nextProjectId);
     window.location.reload();
@@ -164,26 +158,18 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
       api.listTraces({ limit: 100, offset: 0 }).catch(() => []),
     ]);
 
-    const runMatch = runs.find((run) => {
-      return (
-        run.run_id.toLowerCase().includes(keyword) ||
-        run.campaign_id.toLowerCase().includes(keyword) ||
-        run.status.toLowerCase().includes(keyword)
-      );
-    });
-    if (runMatch) {
-      return `/runs/${runMatch.run_id}`;
-    }
+    const runMatch = runs.find((run) =>
+      run.run_id.toLowerCase().includes(keyword) ||
+      run.campaign_id.toLowerCase().includes(keyword) ||
+      run.status.toLowerCase().includes(keyword)
+    );
+    if (runMatch) return `/runs/${runMatch.run_id}`;
 
-    const traceMatch = traces.find((trace) => {
-      return (
-        trace.trace_id.toLowerCase().includes(keyword) ||
-        trace.source.toLowerCase().includes(keyword)
-      );
-    });
-    if (traceMatch) {
-      return `/traces/${traceMatch.trace_id}`;
-    }
+    const traceMatch = traces.find((trace) =>
+      trace.trace_id.toLowerCase().includes(keyword) ||
+      trace.source.toLowerCase().includes(keyword)
+    );
+    if (traceMatch) return `/traces/${traceMatch.trace_id}`;
 
     return null;
   }
@@ -224,22 +210,33 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   return (
     <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* left: wordmark + tabs */}
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-3">
-            <div className="hidden h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/80 text-xs font-semibold text-blue-200 sm:flex">
-              CL
+            {/* teal logo mark */}
+            <div
+              className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold sm:flex"
+              style={{
+                borderColor: "rgba(0,229,204,0.25)",
+                background: "rgba(0,229,204,0.08)",
+                color: "var(--accent-teal)",
+              }}
+            >
+              S
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">
-                {authSession?.project_name ?? "Agent Sepurux"}
+                {authSession?.project_name ?? "Sepurux"}
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {authSession
-                  ? `${authSession.plan_name} plan · ${authSession.role_name} workspace access`
-                  : "Reliability dashboard for replay diagnostics"}
+                  ? `${authSession.plan_name} plan · ${authSession.role_name} access`
+                  : "Reliability dashboard for AI agents"}
               </p>
             </div>
           </div>
+
+          {/* nav tabs */}
           <div className="inline-flex w-fit items-center rounded-md border border-border/70 bg-muted/40 p-1">
             {visibleTabs.map((tab) => {
               const active = pathname === tab.href || (tab.href !== "/dashboard" && pathname.startsWith(tab.href + "/"));
@@ -249,8 +246,11 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                   href={tab.href}
                   className={cn(
                     "rounded px-3 py-1.5 text-xs font-medium transition",
-                    active ? "bg-card text-foreground shadow" : "text-muted-foreground hover:text-foreground",
+                    active
+                      ? "bg-card text-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
+                  style={active ? { color: "var(--accent-teal)" } : undefined}
                 >
                   {tab.label}
                 </Link>
@@ -259,7 +259,9 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
           </div>
         </div>
 
+        {/* right: credits, project selector, search, bell, user */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* credits */}
           {typeof creditBalance === "number" ? (
             <div
               className={cn(
@@ -269,10 +271,13 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                   : "border-border/70 bg-card/70 text-foreground"
               )}
             >
-              <Coins className={cn("h-4 w-4", authSession?.is_low_credit ? "text-amber-300" : "text-blue-200")} />
+              <Coins
+                className="h-4 w-4"
+                style={{ color: authSession?.is_low_credit ? undefined : "var(--accent-teal)" }}
+              />
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Credits Remaining
+                  Credits
                 </div>
                 <p className="mt-0.5 truncate text-sm">
                   {creditBalance.toLocaleString()} left
@@ -281,9 +286,11 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               </div>
             </div>
           ) : null}
+
+          {/* project selector */}
           {showProjectSelector ? (
             <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
-              <FolderKanban className="h-4 w-4 text-blue-200" />
+              <FolderKanban className="h-4 w-4" style={{ color: "var(--accent-teal)" }} />
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
                 <select
@@ -294,7 +301,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                 >
                   {!projects.length ? (
                     <option value="">
-                      {projectsError ? "Projects unavailable" : "Loading projects..."}
+                      {projectsError ? "Projects unavailable" : "Loading..."}
                     </option>
                   ) : null}
                   {projects.map((project) => (
@@ -307,7 +314,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
             </label>
           ) : (
             <div className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
-              <FolderKanban className="h-4 w-4 text-blue-200" />
+              <FolderKanban className="h-4 w-4" style={{ color: "var(--accent-teal)" }} />
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
                 <p className="mt-0.5 truncate text-sm text-foreground">
@@ -316,11 +323,16 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               </div>
             </div>
           )}
+
+          {/* search */}
           <form
             className="hidden min-w-[280px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex"
             onSubmit={handleSearchSubmit}
           >
-            {searching ? <Loader2 className="h-4 w-4 animate-spin text-blue-200" /> : <Search className="h-4 w-4 text-blue-200" />}
+            {searching
+              ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--accent-teal)" }} />
+              : <Search className="h-4 w-4 text-muted-foreground" />
+            }
             <input
               type="search"
               value={searchQuery}
@@ -328,21 +340,31 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                 setSearchQuery(event.target.value);
                 if (searchError) setSearchError(null);
               }}
-              className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+              className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground/60"
               placeholder="Search run:/trace:/attempt:/tool: or paste id"
               aria-label="Search runs, traces, and attempts"
             />
           </form>
-          <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/70 text-muted-foreground hover:text-foreground">
+
+          {/* bell */}
+          <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/70 text-muted-foreground transition-colors hover:text-foreground">
             <Bell className="h-4 w-4" />
           </button>
+
+          {/* user menu */}
           <details className="group relative">
-            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm hover:bg-accent/40">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-400/20 text-xs font-semibold text-blue-200">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm transition-colors hover:bg-accent/40">
+              <span
+                className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold"
+                style={{
+                  background: "rgba(0,229,204,0.15)",
+                  color: "var(--accent-teal)",
+                }}
+              >
                 {userInitials}
               </span>
               <span className="hidden text-foreground sm:inline">{userLabel}</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground group-open:rotate-180" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
             <div className="absolute right-0 mt-2 w-44 rounded-md border border-border/70 bg-card p-1 shadow-panel">
               <div className="px-3 py-2 text-left text-xs text-muted-foreground">
@@ -350,7 +372,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                 <p className="mt-0.5 uppercase tracking-[0.12em]">{authSession?.role_name ?? "viewer"}</p>
               </div>
               <button
-                className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent/50"
+                className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
                 onClick={handleSignOut}
               >
                 Sign out
@@ -359,6 +381,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
           </details>
         </div>
       </div>
+
       {searchError ? (
         <p className="mt-2 text-xs text-rose-300 lg:text-right">{searchError}</p>
       ) : null}

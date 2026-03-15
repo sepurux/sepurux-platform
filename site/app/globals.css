@@ -1,3 +1,4 @@
+/* site/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -25,6 +26,8 @@
   --neutral: 215 20% 65%;
   --warning: 0 0% 58%;
   --danger: 0 0% 64%;
+  --accent-teal: #00e5cc;
+  --accent-teal-dim: rgba(0, 229, 204, 0.12);
 }
 
 * {
@@ -46,7 +49,7 @@ body {
   position: relative;
   isolation: isolate;
   background-image:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.05), transparent 16%),
+    radial-gradient(circle at 18% 12%, rgba(0, 229, 204, 0.04), transparent 20%),
     radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.03), transparent 16%),
     linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(3, 5, 10, 1) 100%);
 }
@@ -56,9 +59,19 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.07) 1px, transparent 0);
+  background-size: 28px 28px;
+  z-index: -1;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   background:
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.015), transparent 20%),
-    radial-gradient(circle at 78% 76%, rgba(255, 255, 255, 0.015), transparent 20%);
+    radial-gradient(circle at 18% 14%, rgba(0, 229, 204, 0.025), transparent 24%),
+    radial-gradient(circle at 78% 76%, rgba(255, 255, 255, 0.012), transparent 20%);
   z-index: -1;
 }
 
@@ -123,6 +136,15 @@ body::before {
     background: rgba(255, 255, 255, 0.72);
     animation: caret-blink 1s steps(1, end) infinite;
   }
+
+  .teal-glow-btn {
+    transition: box-shadow 0.25s ease, transform 0.15s ease;
+  }
+
+  .teal-glow-btn:hover {
+    box-shadow: 0 0 0 1px rgba(0, 229, 204, 0.5), 0 0 24px rgba(0, 229, 204, 0.3), 0 0 60px rgba(0, 229, 204, 0.12);
+    transform: translateY(-1px);
+  }
 }
 
 @keyframes typing-reveal {
@@ -145,6 +167,21 @@ body::before {
   }
 }
 
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .terminal-type-command {
     width: auto;
@@ -152,6 +189,10 @@ body::before {
   }
 
   .terminal-caret {
+    animation: none;
+  }
+
+  .pulse-dot {
     animation: none;
   }
 }

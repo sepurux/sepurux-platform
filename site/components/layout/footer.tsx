@@ -1,18 +1,46 @@
+// site/components/layout/footer.tsx
 import Link from "next/link";
+// eslint-disable-next-line @typescript-eslint/no-deprecated
+import { Github, Linkedin, MessageCircle, Twitter } from "lucide-react";
+
+import { siteConfig } from "@/lib/site";
+
+const socialLinks = [
+  { href: siteConfig.linkedinUrl, label: "LinkedIn", Icon: Linkedin },
+  { href: siteConfig.githubUrl, label: "GitHub", Icon: Github },
+  { href: siteConfig.twitterUrl, label: "X / Twitter", Icon: Twitter },
+  { href: siteConfig.discordUrl, label: "Discord", Icon: MessageCircle },
+];
 
 export function Footer() {
   return (
     <footer className="bg-black">
       <div className="site-container border-t border-white/10 py-12">
-        <div className="flex flex-col gap-6 text-sm text-neutral-500 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-display text-base font-semibold text-white">Sepurux</p>
             <p className="mt-2 max-w-md text-sm text-neutral-500">
               Chaos engineering, replay, and policy-aware reliability testing for AI agents.
             </p>
+
+            {/* social links */}
+            <div className="mt-5 flex items-center gap-3">
+              {socialLinks.map(({ href, label, Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-neutral-500 transition-colors hover:border-white/20 hover:text-white"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </a>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-5 text-sm">
+          <div className="flex flex-wrap items-center gap-5 text-sm text-neutral-500">
             <Link href="/pricing" className="transition-colors hover:text-white">
               Pricing
             </Link>

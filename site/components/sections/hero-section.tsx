@@ -1,3 +1,4 @@
+// site/components/sections/hero-section.tsx
 "use client";
 
 import { motion } from "framer-motion";
@@ -32,6 +33,17 @@ export function HeroSection() {
       {/* overall darkening */}
       <div className="pointer-events-none absolute inset-0 bg-black/30" />
 
+      {/* teal gradient orb behind headline */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{
+          width: "900px",
+          height: "600px",
+          background: "radial-gradient(ellipse at center, rgba(0,229,204,0.10) 0%, transparent 65%)",
+          filter: "blur(40px)",
+        }}
+      />
+
       <div className="site-container relative flex h-full items-center justify-center">
         <div className="max-w-5xl text-center">
           <motion.div
@@ -40,13 +52,27 @@ export function HeroSection() {
             variants={{ show: { transition: { staggerChildren: 0.11 } } }}
             className="relative z-10"
           >
-            <motion.p
+            {/* Terminal-style animated badge */}
+            <motion.div
               variants={fadeUp}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="mb-6 text-[11px] font-medium uppercase tracking-[0.22em] text-white/50"
+              className="mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
+              style={{
+                borderColor: "rgba(0,229,204,0.25)",
+                background: "rgba(0,229,204,0.06)",
+              }}
             >
-              Chaos Engineering for AI
-            </motion.p>
+              <span
+                className="pulse-dot h-1.5 w-1.5 rounded-full"
+                style={{ background: "var(--accent-teal)" }}
+              />
+              <span
+                className="font-mono text-[11px] font-medium tracking-wide"
+                style={{ color: "var(--accent-teal)" }}
+              >
+                Live in pilot with 12 teams
+              </span>
+            </motion.div>
 
             <motion.h1
               variants={fadeUp}
@@ -61,7 +87,7 @@ export function HeroSection() {
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="mx-auto mt-7 max-w-xl text-lg leading-8 text-white/60"
             >
-              Break your AI workflows before production does.
+              The chaos engineering layer for AI agents. Break things in staging so production never does.
             </motion.p>
 
             <motion.div
@@ -69,12 +95,17 @@ export function HeroSection() {
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="mt-10 flex flex-wrap items-center justify-center gap-3"
             >
-              <Button asChild size="lg">
-                <a href={buildAppAuthHref({ mode: "access", intent: "signup" })}>
-                  Try Sepurux
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </Button>
+              <a
+                href={buildAppAuthHref({ mode: "access", intent: "signup" })}
+                className="teal-glow-btn inline-flex h-11 items-center justify-center gap-2 rounded-full border px-6 text-sm font-semibold text-white"
+                style={{
+                  borderColor: "rgba(0,229,204,0.4)",
+                  background: "rgba(0,229,204,0.1)",
+                }}
+              >
+                Try Sepurux
+                <ArrowRight className="h-4 w-4" />
+              </a>
               <Button asChild size="lg" variant="ghost">
                 <a href={buildAppAuthHref({ mode: "demo" })} className="text-white/80 hover:text-white">
                   <PlayCircle className="h-4 w-4" />
