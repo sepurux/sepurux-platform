@@ -65,6 +65,7 @@ def apply_template_and_enqueue(
     project_id: UUID,
     run_id: UUID,
     template_id: UUID,
+    queue_priority: str = "normal",
     actor: str | None = None,
 ) -> Run:
     source_run = db.scalar(
@@ -113,7 +114,7 @@ def apply_template_and_enqueue(
     db.add(new_run)
     db.commit()
 
-    enqueue_execute_run(new_run)
+    enqueue_execute_run(new_run, queue_priority=queue_priority)
     return new_run
 
 

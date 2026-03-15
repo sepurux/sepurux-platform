@@ -15,6 +15,13 @@ Name | Type | Description | Notes
 **Email** | Pointer to **NullableString** |  | [optional] 
 **Name** | Pointer to **NullableString** |  | [optional] 
 **IsDemo** | Pointer to **bool** |  | [optional] [default to false]
+**BillingPlanName** | Pointer to **NullableString** |  | [optional] 
+**CreditsBalance** | Pointer to **NullableInt32** |  | [optional] 
+**MonthlyCredits** | Pointer to **NullableInt32** |  | [optional] 
+**TopupCredits** | Pointer to **NullableInt32** |  | [optional] 
+**QueuePriority** | Pointer to **NullableString** |  | [optional] 
+**LowCreditThreshold** | Pointer to **NullableInt32** |  | [optional] 
+**IsLowCredit** | Pointer to **bool** |  | [optional] [default to false]
 **Permissions** | [**AuthPermissionSet**](AuthPermissionSet.md) |  | 
 **ApiKey** | **string** |  | 
 
@@ -316,6 +323,241 @@ SetIsDemo sets IsDemo field to given value.
 `func (o *AuthSessionResponse) HasIsDemo() bool`
 
 HasIsDemo returns a boolean if a field has been set.
+
+### GetBillingPlanName
+
+`func (o *AuthSessionResponse) GetBillingPlanName() string`
+
+GetBillingPlanName returns the BillingPlanName field if non-nil, zero value otherwise.
+
+### GetBillingPlanNameOk
+
+`func (o *AuthSessionResponse) GetBillingPlanNameOk() (*string, bool)`
+
+GetBillingPlanNameOk returns a tuple with the BillingPlanName field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetBillingPlanName
+
+`func (o *AuthSessionResponse) SetBillingPlanName(v string)`
+
+SetBillingPlanName sets BillingPlanName field to given value.
+
+### HasBillingPlanName
+
+`func (o *AuthSessionResponse) HasBillingPlanName() bool`
+
+HasBillingPlanName returns a boolean if a field has been set.
+
+### SetBillingPlanNameNil
+
+`func (o *AuthSessionResponse) SetBillingPlanNameNil(b bool)`
+
+ SetBillingPlanNameNil sets the value for BillingPlanName to be an explicit nil
+
+### UnsetBillingPlanName
+`func (o *AuthSessionResponse) UnsetBillingPlanName()`
+
+UnsetBillingPlanName ensures that no value is present for BillingPlanName, not even an explicit nil
+### GetCreditsBalance
+
+`func (o *AuthSessionResponse) GetCreditsBalance() int32`
+
+GetCreditsBalance returns the CreditsBalance field if non-nil, zero value otherwise.
+
+### GetCreditsBalanceOk
+
+`func (o *AuthSessionResponse) GetCreditsBalanceOk() (*int32, bool)`
+
+GetCreditsBalanceOk returns a tuple with the CreditsBalance field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCreditsBalance
+
+`func (o *AuthSessionResponse) SetCreditsBalance(v int32)`
+
+SetCreditsBalance sets CreditsBalance field to given value.
+
+### HasCreditsBalance
+
+`func (o *AuthSessionResponse) HasCreditsBalance() bool`
+
+HasCreditsBalance returns a boolean if a field has been set.
+
+### SetCreditsBalanceNil
+
+`func (o *AuthSessionResponse) SetCreditsBalanceNil(b bool)`
+
+ SetCreditsBalanceNil sets the value for CreditsBalance to be an explicit nil
+
+### UnsetCreditsBalance
+`func (o *AuthSessionResponse) UnsetCreditsBalance()`
+
+UnsetCreditsBalance ensures that no value is present for CreditsBalance, not even an explicit nil
+### GetMonthlyCredits
+
+`func (o *AuthSessionResponse) GetMonthlyCredits() int32`
+
+GetMonthlyCredits returns the MonthlyCredits field if non-nil, zero value otherwise.
+
+### GetMonthlyCreditsOk
+
+`func (o *AuthSessionResponse) GetMonthlyCreditsOk() (*int32, bool)`
+
+GetMonthlyCreditsOk returns a tuple with the MonthlyCredits field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMonthlyCredits
+
+`func (o *AuthSessionResponse) SetMonthlyCredits(v int32)`
+
+SetMonthlyCredits sets MonthlyCredits field to given value.
+
+### HasMonthlyCredits
+
+`func (o *AuthSessionResponse) HasMonthlyCredits() bool`
+
+HasMonthlyCredits returns a boolean if a field has been set.
+
+### SetMonthlyCreditsNil
+
+`func (o *AuthSessionResponse) SetMonthlyCreditsNil(b bool)`
+
+ SetMonthlyCreditsNil sets the value for MonthlyCredits to be an explicit nil
+
+### UnsetMonthlyCredits
+`func (o *AuthSessionResponse) UnsetMonthlyCredits()`
+
+UnsetMonthlyCredits ensures that no value is present for MonthlyCredits, not even an explicit nil
+### GetTopupCredits
+
+`func (o *AuthSessionResponse) GetTopupCredits() int32`
+
+GetTopupCredits returns the TopupCredits field if non-nil, zero value otherwise.
+
+### GetTopupCreditsOk
+
+`func (o *AuthSessionResponse) GetTopupCreditsOk() (*int32, bool)`
+
+GetTopupCreditsOk returns a tuple with the TopupCredits field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTopupCredits
+
+`func (o *AuthSessionResponse) SetTopupCredits(v int32)`
+
+SetTopupCredits sets TopupCredits field to given value.
+
+### HasTopupCredits
+
+`func (o *AuthSessionResponse) HasTopupCredits() bool`
+
+HasTopupCredits returns a boolean if a field has been set.
+
+### SetTopupCreditsNil
+
+`func (o *AuthSessionResponse) SetTopupCreditsNil(b bool)`
+
+ SetTopupCreditsNil sets the value for TopupCredits to be an explicit nil
+
+### UnsetTopupCredits
+`func (o *AuthSessionResponse) UnsetTopupCredits()`
+
+UnsetTopupCredits ensures that no value is present for TopupCredits, not even an explicit nil
+### GetQueuePriority
+
+`func (o *AuthSessionResponse) GetQueuePriority() string`
+
+GetQueuePriority returns the QueuePriority field if non-nil, zero value otherwise.
+
+### GetQueuePriorityOk
+
+`func (o *AuthSessionResponse) GetQueuePriorityOk() (*string, bool)`
+
+GetQueuePriorityOk returns a tuple with the QueuePriority field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetQueuePriority
+
+`func (o *AuthSessionResponse) SetQueuePriority(v string)`
+
+SetQueuePriority sets QueuePriority field to given value.
+
+### HasQueuePriority
+
+`func (o *AuthSessionResponse) HasQueuePriority() bool`
+
+HasQueuePriority returns a boolean if a field has been set.
+
+### SetQueuePriorityNil
+
+`func (o *AuthSessionResponse) SetQueuePriorityNil(b bool)`
+
+ SetQueuePriorityNil sets the value for QueuePriority to be an explicit nil
+
+### UnsetQueuePriority
+`func (o *AuthSessionResponse) UnsetQueuePriority()`
+
+UnsetQueuePriority ensures that no value is present for QueuePriority, not even an explicit nil
+### GetLowCreditThreshold
+
+`func (o *AuthSessionResponse) GetLowCreditThreshold() int32`
+
+GetLowCreditThreshold returns the LowCreditThreshold field if non-nil, zero value otherwise.
+
+### GetLowCreditThresholdOk
+
+`func (o *AuthSessionResponse) GetLowCreditThresholdOk() (*int32, bool)`
+
+GetLowCreditThresholdOk returns a tuple with the LowCreditThreshold field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetLowCreditThreshold
+
+`func (o *AuthSessionResponse) SetLowCreditThreshold(v int32)`
+
+SetLowCreditThreshold sets LowCreditThreshold field to given value.
+
+### HasLowCreditThreshold
+
+`func (o *AuthSessionResponse) HasLowCreditThreshold() bool`
+
+HasLowCreditThreshold returns a boolean if a field has been set.
+
+### SetLowCreditThresholdNil
+
+`func (o *AuthSessionResponse) SetLowCreditThresholdNil(b bool)`
+
+ SetLowCreditThresholdNil sets the value for LowCreditThreshold to be an explicit nil
+
+### UnsetLowCreditThreshold
+`func (o *AuthSessionResponse) UnsetLowCreditThreshold()`
+
+UnsetLowCreditThreshold ensures that no value is present for LowCreditThreshold, not even an explicit nil
+### GetIsLowCredit
+
+`func (o *AuthSessionResponse) GetIsLowCredit() bool`
+
+GetIsLowCredit returns the IsLowCredit field if non-nil, zero value otherwise.
+
+### GetIsLowCreditOk
+
+`func (o *AuthSessionResponse) GetIsLowCreditOk() (*bool, bool)`
+
+GetIsLowCreditOk returns a tuple with the IsLowCredit field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetIsLowCredit
+
+`func (o *AuthSessionResponse) SetIsLowCredit(v bool)`
+
+SetIsLowCredit sets IsLowCredit field to given value.
+
+### HasIsLowCredit
+
+`func (o *AuthSessionResponse) HasIsLowCredit() bool`
+
+HasIsLowCredit returns a boolean if a field has been set.
 
 ### GetPermissions
 

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -15,22 +14,20 @@ export default function CompanyPage() {
   return (
     <div className="site-container py-16 md:py-24">
       <header className="max-w-3xl">
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">Company</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Company</p>
+        <h1 className="page-hero-title mt-3 text-white">
           We help teams ship AI agents with fewer surprises.
         </h1>
-        <p className="mt-5 text-lg text-muted-foreground">
+        <p className="mt-5 text-lg text-neutral-400">
           Sepurux is focused on reliability infrastructure for tool-using AI systems. We build replay,
           chaos, and governance workflows for platform engineers.
         </p>
       </header>
 
-      <section className="mt-12 grid gap-4 md:grid-cols-2">
-        <Card id="about">
-          <CardHeader>
-            <CardTitle>About</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
+      <section className="mt-12 grid gap-5 md:grid-cols-2">
+        <div id="about" className="rounded-[28px] border border-white/8 bg-white/[0.03] p-7 md:p-8">
+          <h2 className="text-lg font-semibold text-white">About</h2>
+          <div className="mt-4 space-y-3 text-sm leading-7 text-neutral-400">
             <p>
               Our team has shipped infrastructure in observability, CI/CD, and platform security. Sepurux
               brings those practices to AI agent reliability.
@@ -39,23 +36,23 @@ export default function CompanyPage() {
               We believe agents should be tested with the same rigor as distributed systems before they
               touch production workflows.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card id="contact">
-          <CardHeader>
-            <CardTitle>Contact</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
+        <div id="contact" className="rounded-[28px] border border-white/8 bg-white/[0.03] p-7 md:p-8">
+          <h2 className="text-lg font-semibold text-white">Contact</h2>
+          <div className="mt-4 space-y-3 text-sm leading-7 text-neutral-400">
             <p>Email: hello@sepurux.com</p>
             <p>Security: security@sepurux.com</p>
             <p>Partnerships: partners@sepurux.com</p>
             <p>
-              Read legal details in <Link href="/legal/privacy" className="text-primary hover:underline">Privacy</Link>{" "}
-              and <Link href="/legal/terms" className="text-primary hover:underline">Terms</Link>.
+              Read legal details in{" "}
+              <Link href="/legal/privacy" className="text-white underline-offset-4 hover:underline">Privacy</Link>{" "}
+              and{" "}
+              <Link href="/legal/terms" className="text-white underline-offset-4 hover:underline">Terms</Link>.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
     </div>
   );

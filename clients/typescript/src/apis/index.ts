@@ -5,6 +5,7 @@ export * from './ApiKeysApi';
 export * from './AttemptsApi';
 export * from './AuditEventsApi';
 export * from './AuthApi';
+export * from './BillingApi';
 export * from './CampaignsApi';
 export * from './CiApi';
 export * from './CounterfactualsApi';

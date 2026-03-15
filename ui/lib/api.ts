@@ -345,6 +345,7 @@ export type AuthPermissionSet = {
   can_manage_security_config: boolean;
   can_manage_workspace: boolean;
   can_manage_api_keys: boolean;
+  can_manage_billing: boolean;
 };
 
 export type AuthSessionMetadata = {
@@ -359,11 +360,59 @@ export type AuthSessionMetadata = {
   email: string | null;
   name: string | null;
   is_demo: boolean;
+  billing_plan_name: string | null;
+  credits_balance: number | null;
+  monthly_credits: number | null;
+  topup_credits: number | null;
+  queue_priority: "normal" | "priority" | null;
+  low_credit_threshold: number | null;
+  is_low_credit: boolean;
   permissions: AuthPermissionSet;
 };
 
 export type AuthSessionResponse = AuthSessionMetadata & {
   api_key: string;
+};
+
+export type SubscriptionPlanMetadata = {
+  plan_id: string;
+  name: string;
+  monthly_price: number;
+  monthly_credits: number;
+  features: Record<string, unknown>;
+  created_at: string;
+};
+
+export type UserSubscriptionMetadata = {
+  subscription_id: string;
+  plan_id: string;
+  plan_name: string | null;
+  monthly_price: number | null;
+  monthly_credits: number | null;
+  queue_priority: "normal" | "priority";
+  status: string;
+  start_date: string;
+  renewal_date: string;
+};
+
+export type CreditWalletMetadata = {
+  wallet_id: string;
+  balance: number;
+  monthly_credits: number;
+  topup_credits: number;
+  queue_priority: "normal" | "priority";
+  low_credit_threshold: number;
+  is_low_credit: boolean;
+  updated_at: string;
+};
+
+export type CreditTransactionMetadata = {
+  transaction_id: string;
+  user_id: string;
+  amount: number;
+  type: "usage" | "monthly_grant" | "topup_purchase";
+  reason: string;
+  created_at: string;
 };
 
 export type ToolRegistryMetadata = {
@@ -644,6 +693,13 @@ export const api = {
     ),
   getAuthSession: () =>
     requestJson<AuthSessionMetadata>("/v1/auth/session"),
+  listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
+  getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
+  getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
+  subscribeToPlan: (payload: { plan_id: string }) =>
+    postJson<UserSubscriptionMetadata, typeof payload>("/v1/billing/subscribe", payload),
+  topupCredits: (payload: { credits: number }) =>
+    postJson<CreditWalletMetadata, typeof payload>("/v1/billing/topup", payload),
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),

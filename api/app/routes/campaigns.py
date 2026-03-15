@@ -15,6 +15,11 @@ from app.schemas import (
     CampaignRunPackResponse,
 )
 from app.services.audit_service import actor_from_request
+from app.services.billing_service import (
+    InsufficientCreditsError,
+    get_queue_priority_for_context,
+    maybe_consume_credits_for_campaign_run,
+)
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.campaign_service import list_campaigns as list_campaign_records
@@ -229,12 +234,31 @@ def post_campaign_run_pack(
             pack_name=mutation_pack.name,
             mutation_count=mutation_count,
         )
+    else:
+        try:
+            maybe_consume_credits_for_campaign_run(
+                db,
+                tenant_auth=tenant_auth,
+                project_id=project_scope.project_id,
+                campaign=campaign,
+            )
+        except InsufficientCreditsError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
+            ) from exc
+
+    queue_priority = get_queue_priority_for_context(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
 
     run = create_run_pack_and_enqueue(
         db,
         project_id=project_scope.project_id,
         campaign=campaign,
         mutation_pack=mutation_pack,
+        queue_priority=queue_priority,
         actor=actor_from_request(request),
     )
     return CampaignRunPackResponse(

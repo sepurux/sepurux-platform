@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.auth import ProjectScope, TenantAuthContext, require_project_scope, require_role
 from app.db import get_db
-from app.models import PolicyEvent, ReplayAttempt, SecurityEvent
+from app.models import PolicyEvent, ReplayAttempt, SecurityEvent, Trace
 from app.schemas import (
     ApplyTemplateRunResponse,
     PolicyEventListItem,
@@ -16,8 +16,16 @@ from app.schemas import (
 )
 from app.services.attempt_service import list_attempts_for_run
 from app.services.audit_service import actor_from_request
+from app.services.billing_service import (
+    InsufficientCreditsError,
+    get_queue_priority_for_context,
+    maybe_consume_credits_for_campaign_run,
+    maybe_consume_credits_for_trace_replay,
+)
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.demo_service import enforce_demo_run_limits
+from app.services.mutation_pack_service import get_mutation_pack
+from app.services.policy_service import get_policy_pack
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_run_and_enqueue,
@@ -36,8 +44,10 @@ from app.services.template_service import (
 from app.services.template_service import (
     TemplateNotFoundError,
     apply_template_and_enqueue,
+    get_template,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/runs", tags=["runs"])
@@ -114,19 +124,67 @@ def post_run(
     tenant_auth: DeveloperAuth,
     request: Request,
 ) -> RunMetadata:
-    if tenant_auth.is_demo:
-        campaign = get_campaign_record(
+    trace = db.scalar(
+        select(Trace).where(
+            Trace.trace_id == payload.trace_id,
+            Trace.project_id == project_scope.project_id,
+        )
+    )
+    if trace is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trace not found")
+
+    campaign = get_campaign_record(
+        db,
+        project_id=project_scope.project_id,
+        campaign_id=payload.campaign_id,
+    )
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    if payload.mutation_pack_id is not None and (
+        get_mutation_pack(
             db,
             project_id=project_scope.project_id,
-            campaign_id=payload.campaign_id,
+            mutation_pack_id=payload.mutation_pack_id,
         )
-        if campaign is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+        is None
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found")
+
+    if payload.policy_pack_id is not None and (
+        get_policy_pack(
+            db,
+            project_id=project_scope.project_id,
+            policy_pack_id=payload.policy_pack_id,
+        )
+        is None
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy pack not found")
+
+    if tenant_auth.is_demo:
         enforce_demo_run_limits(
             db,
             project_id=project_scope.project_id,
             campaign=campaign,
         )
+    else:
+        try:
+            maybe_consume_credits_for_campaign_run(
+                db,
+                tenant_auth=tenant_auth,
+                project_id=project_scope.project_id,
+                campaign=campaign,
+            )
+        except InsufficientCreditsError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
+            ) from exc
+
+    queue_priority = get_queue_priority_for_context(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
 
     try:
         run = create_run_and_enqueue(
@@ -136,6 +194,7 @@ def post_run(
             campaign_id=payload.campaign_id,
             mutation_pack_id=payload.mutation_pack_id,
             policy_pack_id=payload.policy_pack_id,
+            queue_priority=queue_priority,
             actor=actor_from_request(request),
         )
     except RelatedRecordNotFoundError as exc:
@@ -236,14 +295,42 @@ def post_apply_template(
     template_id: UUID,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
     request: Request,
 ) -> ApplyTemplateRunResponse:
+    source_run = get_run_record(db, project_id=project_scope.project_id, run_id=run_id)
+    if source_run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+    template = get_template(db, project_id=project_scope.project_id, template_id=template_id)
+    if template is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    _ = template
+
+    if not tenant_auth.is_demo:
+        try:
+            maybe_consume_credits_for_trace_replay(
+                db,
+                tenant_auth=tenant_auth,
+                project_id=project_scope.project_id,
+            )
+        except InsufficientCreditsError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
+            ) from exc
+
+    queue_priority = get_queue_priority_for_context(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
+
     try:
         new_run = apply_template_and_enqueue(
             db,
             project_id=project_scope.project_id,
-            run_id=run_id,
+            run_id=source_run.run_id,
             template_id=template_id,
+            queue_priority=queue_priority,
             actor=actor_from_request(request),
         )
     except TemplateRunNotFoundError as exc:

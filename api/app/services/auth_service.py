@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 from app.auth import ROLE_RANKS, TenantAuthContext
 from app.models import Project, ProjectMembership, Role, Tenant, User
 from app.services.api_key_service import create_api_key_for_tenant
+from app.services.billing_service import get_billing_snapshot_for_context
 from app.services.mutation_pack_service import ensure_system_mutation_packs
 from app.services.pricing_service import (
     DEFAULT_PRICING_TIER,
@@ -206,6 +207,15 @@ def session_metadata(
         display_name = user.name or _default_display_name(user.email)
         email = user.email
 
+    billing_snapshot = get_billing_snapshot_for_context(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project.project_id,
+        pricing_tier=pricing_tier,
+    )
+    wallet = billing_snapshot["wallet"] if isinstance(billing_snapshot, dict) else None
+    subscription = billing_snapshot["subscription"] if isinstance(billing_snapshot, dict) else None
+
     return {
         "tenant_id": tenant_auth.tenant_id,
         "project_id": project.project_id,
@@ -218,6 +228,17 @@ def session_metadata(
         "email": email,
         "name": display_name,
         "is_demo": tenant_auth.is_demo,
+        "billing_plan_name": (
+            subscription.get("plan_name") if isinstance(subscription, dict) else None
+        ),
+        "credits_balance": wallet.get("balance") if isinstance(wallet, dict) else None,
+        "monthly_credits": wallet.get("monthly_credits") if isinstance(wallet, dict) else None,
+        "topup_credits": wallet.get("topup_credits") if isinstance(wallet, dict) else None,
+        "queue_priority": wallet.get("queue_priority") if isinstance(wallet, dict) else None,
+        "low_credit_threshold": (
+            wallet.get("low_credit_threshold") if isinstance(wallet, dict) else None
+        ),
+        "is_low_credit": bool(wallet.get("is_low_credit")) if isinstance(wallet, dict) else False,
         "permissions": build_auth_permissions(tenant_auth.role_name, pricing_tier).model_dump(),
     }
 

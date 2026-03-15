@@ -9,6 +9,7 @@ import { buildAppAuthHref, siteConfig } from "@/lib/site";
 
 const navItems = [
   { href: "/product", label: "Product" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
   { href: buildAppAuthHref({ mode: "access", intent: "login" }), label: "Login", external: true },
 ];
@@ -22,7 +23,7 @@ export function Navbar() {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-900 bg-black/90 backdrop-blur">
+    <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl">
       <div className="site-container flex h-16 items-center justify-between gap-4">
         <Link href="/" className="inline-flex items-center gap-3" aria-label="Sepurux home">
 

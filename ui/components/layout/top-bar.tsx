@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, FolderKanban, Loader2, Search } from "lucide-react";
+import { Bell, ChevronDown, Coins, FolderKanban, Loader2, Search } from "lucide-react";
 
 import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/dashboard", label: "Dashboard", section: "dashboard" },
+  { href: "/billing", label: "Billing", section: "billing" },
   { href: "/traces", label: "Traces", section: "traces" },
   { href: "/campaigns", label: "Campaigns", section: "campaigns" },
   { href: "/runs", label: "Runs", section: "runs" },
@@ -217,6 +218,8 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const userInitials = initialsForSession(authSession);
   const userLabel = authSession?.name || authSession?.email || "Workspace User";
   const showProjectSelector = !authSession?.project_scoped;
+  const creditBalance = authSession?.credits_balance;
+  const lowCreditThreshold = authSession?.low_credit_threshold ?? 50;
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur">
@@ -257,6 +260,27 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {typeof creditBalance === "number" ? (
+            <div
+              className={cn(
+                "hidden min-w-[180px] items-center gap-2 rounded-md border px-3 py-2 text-sm lg:flex",
+                authSession?.is_low_credit
+                  ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                  : "border-border/70 bg-card/70 text-foreground"
+              )}
+            >
+              <Coins className={cn("h-4 w-4", authSession?.is_low_credit ? "text-amber-300" : "text-blue-200")} />
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Credits Remaining
+                </div>
+                <p className="mt-0.5 truncate text-sm">
+                  {creditBalance.toLocaleString()} left
+                  {authSession?.is_low_credit ? ` · under ${lowCreditThreshold}` : ""}
+                </p>
+              </div>
+            </div>
+          ) : null}
           {showProjectSelector ? (
             <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
               <FolderKanban className="h-4 w-4 text-blue-200" />

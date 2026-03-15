@@ -344,6 +344,160 @@ paths:
       summary: Get Attempt Timeline
       tags:
       - attempts
+  /v1/billing/plans:
+    get:
+      operationId: get_billing_plans_v1_billing_plans_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/SubscriptionPlanMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Billing Plans
+      tags:
+      - billing
+  /v1/billing/subscription:
+    get:
+      operationId: get_billing_subscription_v1_billing_subscription_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSubscriptionMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Billing Subscription
+      tags:
+      - billing
+  /v1/billing/credits:
+    get:
+      operationId: get_billing_credits_v1_billing_credits_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditWalletMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Billing Credits
+      tags:
+      - billing
+  /v1/billing/subscribe:
+    post:
+      operationId: post_billing_subscribe_v1_billing_subscribe_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingSubscribeRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSubscriptionMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Billing Subscribe
+      tags:
+      - billing
+  /v1/billing/topup:
+    post:
+      operationId: post_billing_topup_v1_billing_topup_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingTopupRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditWalletMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Billing Topup
+      tags:
+      - billing
   /v1/campaigns:
     get:
       operationId: get_campaigns_v1_campaigns_get
@@ -2422,6 +2576,7 @@ components:
         can_manage_security_config: false
         can_run_campaigns: false
         can_manage_workspace: false
+        can_manage_billing: false
         can_manage_mutation_packs: false
         can_manage_api_keys: false
         can_create_campaigns: false
@@ -2466,19 +2621,30 @@ components:
           default: false
           title: Can Manage Api Keys
           type: boolean
+        can_manage_billing:
+          default: false
+          title: Can Manage Billing
+          type: boolean
       title: AuthPermissionSet
     AuthSessionMetadata:
       example:
         tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        credits_balance: 0
+        is_low_credit: false
+        project_name: project_name
+        is_demo: false
+        plan_name: plan_name
         role_name: admin
         project_scoped: true
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        monthly_credits: 6
         permissions:
           can_manage_policy_packs: false
           can_manage_security_config: false
           can_run_campaigns: false
           can_manage_workspace: false
+          can_manage_billing: false
           can_manage_mutation_packs: false
           can_manage_api_keys: false
           can_create_campaigns: false
@@ -2488,10 +2654,11 @@ components:
           can_upload_traces: false
         pricing_tier: team
         name: name
-        project_name: project_name
-        is_demo: false
-        plan_name: plan_name
+        queue_priority: normal
         email: email
+        billing_plan_name: billing_plan_name
+        low_credit_threshold: 5
+        topup_credits: 1
       properties:
         tenant_id:
           format: uuid
@@ -2539,6 +2706,31 @@ components:
         is_demo:
           default: false
           title: Is Demo
+          type: boolean
+        billing_plan_name:
+          nullable: true
+          type: string
+        credits_balance:
+          nullable: true
+          type: integer
+        monthly_credits:
+          nullable: true
+          type: integer
+        topup_credits:
+          nullable: true
+          type: integer
+        queue_priority:
+          enum:
+          - normal
+          - priority
+          nullable: true
+          type: string
+        low_credit_threshold:
+          nullable: true
+          type: integer
+        is_low_credit:
+          default: false
+          title: Is Low Credit
           type: boolean
         permissions:
           $ref: '#/components/schemas/AuthPermissionSet'
@@ -2553,6 +2745,8 @@ components:
     AuthSessionResponse:
       example:
         tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        credits_balance: 0
+        is_low_credit: false
         project_name: project_name
         is_demo: false
         plan_name: plan_name
@@ -2561,11 +2755,13 @@ components:
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         api_key: api_key
+        monthly_credits: 6
         permissions:
           can_manage_policy_packs: false
           can_manage_security_config: false
           can_run_campaigns: false
           can_manage_workspace: false
+          can_manage_billing: false
           can_manage_mutation_packs: false
           can_manage_api_keys: false
           can_create_campaigns: false
@@ -2575,7 +2771,11 @@ components:
           can_upload_traces: false
         pricing_tier: team
         name: name
+        queue_priority: normal
         email: email
+        billing_plan_name: billing_plan_name
+        low_credit_threshold: 5
+        topup_credits: 1
       properties:
         tenant_id:
           format: uuid
@@ -2623,6 +2823,31 @@ components:
         is_demo:
           default: false
           title: Is Demo
+          type: boolean
+        billing_plan_name:
+          nullable: true
+          type: string
+        credits_balance:
+          nullable: true
+          type: integer
+        monthly_credits:
+          nullable: true
+          type: integer
+        topup_credits:
+          nullable: true
+          type: integer
+        queue_priority:
+          enum:
+          - normal
+          - priority
+          nullable: true
+          type: string
+        low_credit_threshold:
+          nullable: true
+          type: integer
+        is_low_credit:
+          default: false
+          title: Is Low Credit
           type: boolean
         permissions:
           $ref: '#/components/schemas/AuthPermissionSet'
@@ -2638,6 +2863,27 @@ components:
       - role_name
       - tenant_id
       title: AuthSessionResponse
+    BillingSubscribeRequest:
+      example:
+        plan_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        plan_id:
+          format: uuid
+          title: Plan Id
+          type: string
+      required:
+      - plan_id
+      title: BillingSubscribeRequest
+    BillingTopupRequest:
+      example:
+        credits: 0
+      properties:
+        credits:
+          title: Credits
+          type: integer
+      required:
+      - credits
+      title: BillingTopupRequest
     CIRunCreateRequest:
       example:
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -3066,6 +3312,56 @@ components:
       - result
       - strategy
       title: CounterfactualMetadata
+    CreditWalletMetadata:
+      example:
+        wallet_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        balance: 0
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        monthly_credits: 6
+        queue_priority: normal
+        is_low_credit: false
+        low_credit_threshold: 5
+        topup_credits: 1
+      properties:
+        wallet_id:
+          format: uuid
+          title: Wallet Id
+          type: string
+        balance:
+          title: Balance
+          type: integer
+        monthly_credits:
+          title: Monthly Credits
+          type: integer
+        topup_credits:
+          title: Topup Credits
+          type: integer
+        queue_priority:
+          default: normal
+          enum:
+          - normal
+          - priority
+          title: Queue Priority
+          type: string
+        low_credit_threshold:
+          default: 50
+          title: Low Credit Threshold
+          type: integer
+        is_low_credit:
+          default: false
+          title: Is Low Credit
+          type: boolean
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+      required:
+      - balance
+      - monthly_credits
+      - topup_credits
+      - updated_at
+      - wallet_id
+      title: CreditWalletMetadata
     DemoInfoResponse:
       example:
         demo_api_key: demo_api_key
@@ -4525,6 +4821,44 @@ components:
       - email
       - password
       title: SignupRequest
+    SubscriptionPlanMetadata:
+      example:
+        monthly_price: 0
+        features:
+          key: ""
+        monthly_credits: 6
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        plan_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        plan_id:
+          format: uuid
+          title: Plan Id
+          type: string
+        name:
+          title: Name
+          type: string
+        monthly_price:
+          title: Monthly Price
+          type: integer
+        monthly_credits:
+          title: Monthly Credits
+          type: integer
+        features:
+          additionalProperties: {}
+          title: Features
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - features
+      - monthly_credits
+      - monthly_price
+      - name
+      - plan_id
+      title: SubscriptionPlanMetadata
     ToolCount:
       example:
         count: 5
@@ -4896,6 +5230,60 @@ components:
       - step_type
       - trace_id
       title: TraceTimelineStep
+    UserSubscriptionMetadata:
+      example:
+        subscription_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        monthly_price: 0
+        renewal_date: 2000-01-23T04:56:07.000+00:00
+        monthly_credits: 6
+        queue_priority: normal
+        plan_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        plan_name: plan_name
+        status: status
+        start_date: 2000-01-23T04:56:07.000+00:00
+      properties:
+        subscription_id:
+          format: uuid
+          title: Subscription Id
+          type: string
+        plan_id:
+          format: uuid
+          title: Plan Id
+          type: string
+        plan_name:
+          nullable: true
+          type: string
+        monthly_price:
+          nullable: true
+          type: integer
+        monthly_credits:
+          nullable: true
+          type: integer
+        queue_priority:
+          default: normal
+          enum:
+          - normal
+          - priority
+          title: Queue Priority
+          type: string
+        status:
+          title: Status
+          type: string
+        start_date:
+          format: date-time
+          title: Start Date
+          type: string
+        renewal_date:
+          format: date-time
+          title: Renewal Date
+          type: string
+      required:
+      - plan_id
+      - renewal_date
+      - start_date
+      - status
+      - subscription_id
+      title: UserSubscriptionMetadata
     ValidationError:
       example:
         msg: msg

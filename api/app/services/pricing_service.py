@@ -10,6 +10,7 @@ DEFAULT_PRICING_TIER: PricingTier = "team"
 
 ALL_SECTIONS = [
     "dashboard",
+    "billing",
     "traces",
     "campaigns",
     "runs",
@@ -26,6 +27,7 @@ ROLE_SECTION_ALLOWLIST: dict[str, list[str]] = {
     "admin": ALL_SECTIONS,
     "developer": [
         "dashboard",
+        "billing",
         "traces",
         "campaigns",
         "runs",
@@ -35,12 +37,13 @@ ROLE_SECTION_ALLOWLIST: dict[str, list[str]] = {
         "security",
         "settings",
     ],
-    "viewer": ["dashboard", "reports", "settings"],
+    "viewer": ["dashboard", "billing", "reports", "settings"],
 }
 
 PLAN_SECTION_ALLOWLIST: dict[PricingTier, list[str]] = {
     "starter": [
         "dashboard",
+        "billing",
         "traces",
         "campaigns",
         "runs",
@@ -50,6 +53,7 @@ PLAN_SECTION_ALLOWLIST: dict[PricingTier, list[str]] = {
     ],
     "team": [
         "dashboard",
+        "billing",
         "traces",
         "campaigns",
         "runs",
@@ -103,6 +107,7 @@ def build_auth_permissions(role_name: str, pricing_tier: str | None) -> AuthPerm
     can_manage_security_config = normalized_role == "admin" and "security" in visible_section_set
     can_manage_workspace = normalized_role == "admin"
     can_manage_api_keys = normalized_role == "admin"
+    can_manage_billing = normalized_role == "admin" and "billing" in visible_section_set
 
     # Keep action controls role-scoped for now, but never advertise sections the plan excludes.
     if not role_sections.intersection(plan_sections):
@@ -118,4 +123,5 @@ def build_auth_permissions(role_name: str, pricing_tier: str | None) -> AuthPerm
         can_manage_security_config=can_manage_security_config,
         can_manage_workspace=can_manage_workspace,
         can_manage_api_keys=can_manage_api_keys,
+        can_manage_billing=can_manage_billing,
     )
