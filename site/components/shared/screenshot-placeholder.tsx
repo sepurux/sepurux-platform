@@ -52,7 +52,7 @@ export function ScreenshotPlaceholder({
               <span className="h-2 w-2 rounded-full bg-success/80" />
               <span>{terminalLabel ?? "run-inspector.sh"}</span>
             </div>
-            <div className="flex items-center text-secondary">
+            <div className="flex items-center text-white/70">
               <span className="mr-2 text-success">$</span>
               <span
                 className={cn(
@@ -73,7 +73,7 @@ export function ScreenshotPlaceholder({
           </div>
         ) : (
           <div className="grid gap-3">
-            <div className="h-3 w-2/3 rounded-full bg-secondary/40" />
+            <div className="h-3 w-2/3 rounded-full bg-white/24" />
             <div className="h-3 w-5/6 rounded-full bg-white/10" />
             <div className="h-20 rounded-2xl border border-white/8 bg-black/30" />
             <div className="grid grid-cols-3 gap-2">
