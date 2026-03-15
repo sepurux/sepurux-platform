@@ -12,6 +12,7 @@ from app.routes.attempts import router as attempts_router
 from app.routes.audit_events import router as audit_events_router
 from app.routes.auth import public_router as public_auth_router
 from app.routes.auth import router as auth_router
+from app.routes.billing import router as billing_router
 from app.routes.campaigns import router as campaigns_router
 from app.routes.ci import router as ci_router
 from app.routes.counterfactuals import router as counterfactuals_router
@@ -97,6 +98,7 @@ app.include_router(analytics_router)
 app.include_router(audit_events_router)
 app.include_router(auth_router)
 app.include_router(attempts_router)
+app.include_router(billing_router)
 app.include_router(campaigns_router)
 app.include_router(ci_router)
 app.include_router(counterfactuals_router)

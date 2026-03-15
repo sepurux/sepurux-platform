@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **CanManageSecurityConfig** | Pointer to **bool** |  | [optional] [default to false]
 **CanManageWorkspace** | Pointer to **bool** |  | [optional] [default to false]
 **CanManageApiKeys** | Pointer to **bool** |  | [optional] [default to false]
+**CanManageBilling** | Pointer to **bool** |  | [optional] [default to false]
 
 ## Methods
 
@@ -257,6 +258,31 @@ SetCanManageApiKeys sets CanManageApiKeys field to given value.
 `func (o *AuthPermissionSet) HasCanManageApiKeys() bool`
 
 HasCanManageApiKeys returns a boolean if a field has been set.
+
+### GetCanManageBilling
+
+`func (o *AuthPermissionSet) GetCanManageBilling() bool`
+
+GetCanManageBilling returns the CanManageBilling field if non-nil, zero value otherwise.
+
+### GetCanManageBillingOk
+
+`func (o *AuthPermissionSet) GetCanManageBillingOk() (*bool, bool)`
+
+GetCanManageBillingOk returns a tuple with the CanManageBilling field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCanManageBilling
+
+`func (o *AuthPermissionSet) SetCanManageBilling(v bool)`
+
+SetCanManageBilling sets CanManageBilling field to given value.
+
+### HasCanManageBilling
+
+`func (o *AuthPermissionSet) HasCanManageBilling() bool`
+
+HasCanManageBilling returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -7,6 +7,7 @@ src/apis/ApiKeysApi.ts
 src/apis/AttemptsApi.ts
 src/apis/AuditEventsApi.ts
 src/apis/AuthApi.ts
+src/apis/BillingApi.ts
 src/apis/CampaignsApi.ts
 src/apis/CiApi.ts
 src/apis/CounterfactualsApi.ts
@@ -30,6 +31,8 @@ src/models/AuditEventListItem.ts
 src/models/AuthPermissionSet.ts
 src/models/AuthSessionMetadata.ts
 src/models/AuthSessionResponse.ts
+src/models/BillingSubscribeRequest.ts
+src/models/BillingTopupRequest.ts
 src/models/CIRunCreateRequest.ts
 src/models/CIRunCreateResponse.ts
 src/models/CIRunStatusResponse.ts
@@ -43,6 +46,7 @@ src/models/CampaignRunPackRequest.ts
 src/models/CampaignRunPackResponse.ts
 src/models/CounterfactualListItem.ts
 src/models/CounterfactualMetadata.ts
+src/models/CreditWalletMetadata.ts
 src/models/DemoInfoResponse.ts
 src/models/DemoLimits.ts
 src/models/DemoSessionResponse.ts
@@ -86,6 +90,7 @@ src/models/RunStatsResponse.ts
 src/models/SecurityEventListItem.ts
 src/models/SignupRequest.ts
 src/models/Status.ts
+src/models/SubscriptionPlanMetadata.ts
 src/models/ToolCount.ts
 src/models/ToolCountPct.ts
 src/models/ToolFragilityItem.ts
@@ -98,6 +103,7 @@ src/models/ToolRegistryZoneUpdateRequest.ts
 src/models/ToolUsageStatsItem.ts
 src/models/TraceMetadata.ts
 src/models/TraceTimelineStep.ts
+src/models/UserSubscriptionMetadata.ts
 src/models/ValidationError.ts
 src/models/ValidationErrorLocInner.ts
 src/models/WebhookCreateRequest.ts

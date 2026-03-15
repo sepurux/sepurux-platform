@@ -3,18 +3,17 @@ import { buildAppAuthHref } from "@/lib/site";
 
 export function FinalCtaSection() {
   return (
-    <section className="site-container mt-24 pb-8 sm:mt-28">
-      <div className="relative overflow-hidden rounded-[32px] border border-neutral-900 bg-neutral-950 px-6 py-12 backdrop-blur-xl md:px-10 md:py-16">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.1),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.06),transparent_26%)]" />
-        <p className="relative section-kicker">Start now</p>
-        <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-white md:text-5xl">
+    <section className="relative overflow-hidden bg-black py-28 sm:py-36">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(255,255,255,0.07),transparent)]" />
+      <div className="site-container text-center">
+        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Start now</p>
+        <h2 className="mx-auto mt-5 max-w-3xl font-display text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1.02] tracking-[-0.04em] text-white">
           Start breaking your AI agents safely.
         </h2>
-        <p className="relative mt-5 max-w-2xl text-base leading-8 text-neutral-500">
-          Push changes faster with deterministic replays, mutation stress tests, and policy-aware CI
-          checks.
+        <p className="mx-auto mt-6 max-w-xl text-base leading-8 text-neutral-400">
+          Push changes faster with deterministic replays, mutation stress tests, and policy-aware CI checks.
         </p>
-        <div className="relative mt-8 flex flex-wrap gap-3">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg">
             <a href={buildAppAuthHref({ mode: "access", intent: "signup" })}>Get Started</a>
           </Button>

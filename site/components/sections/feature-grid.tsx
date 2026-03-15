@@ -29,16 +29,16 @@ const features = [
 
 export function FeatureGrid() {
   return (
-    <section className="mt-24 bg-[#f7f7f8] py-20 sm:mt-28 sm:py-24">
+    <section className="bg-white py-24 sm:py-32">
       <div className="site-container">
-        <div className="mx-auto mb-10 max-w-3xl text-center">
-          <p className="section-kicker text-slate-500">Features</p>
-          <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-slate-950 md:text-5xl">
+        <div className="mx-auto mb-14 max-w-3xl text-center">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">Features</p>
+          <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-slate-950">
             Product surfaces, not icon marketing.
           </h2>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3 lg:gap-12">
+        <div className="grid gap-5 lg:grid-cols-3">
           {features.map((feature, index) => {
             const Icon = feature.icon;
 
@@ -47,18 +47,15 @@ export function FeatureGrid() {
                 key={feature.title}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                whileHover={{ y: -6, scale: 1.01 }}
-                transition={{ duration: 0.35, ease: "easeOut", delay: index * 0.05 }}
-                className="group rounded-[26px] border border-slate-200 bg-black p-6 transition-colors hover:border-blue-500/45"
+                viewport={{ once: true, amount: 0.2 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.4, ease: "easeOut", delay: index * 0.06 }}
+                className="group overflow-hidden rounded-[28px] bg-neutral-950"
               >
-                <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-                  <Icon className="h-5 w-5 text-blue-500" />
-                </div>
-                <div className="overflow-hidden rounded-xl border border-neutral-900 bg-neutral-950">
+                <div className="overflow-hidden">
                   {feature.mediaType === "video" ? (
                     <video
-                      className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                      className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                       autoPlay
                       muted
                       loop
@@ -71,12 +68,18 @@ export function FeatureGrid() {
                     <img
                       src={feature.src}
                       alt={feature.title}
-                      className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                      className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                     />
                   )}
                 </div>
-                <h3 className="mt-6 font-display text-2xl font-semibold text-white">{feature.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-neutral-400">{feature.description}</p>
+
+                <div className="p-7">
+                  <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/6">
+                    <Icon className="h-4 w-4 text-white/70" />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold text-white">{feature.title}</h3>
+                  <p className="mt-2.5 text-sm leading-7 text-neutral-400">{feature.description}</p>
+                </div>
               </motion.div>
             );
           })}
