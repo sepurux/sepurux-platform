@@ -28,6 +28,7 @@ type AuthPermissionSet struct {
 	CanManageSecurityConfig *bool `json:"can_manage_security_config,omitempty"`
 	CanManageWorkspace *bool `json:"can_manage_workspace,omitempty"`
 	CanManageApiKeys *bool `json:"can_manage_api_keys,omitempty"`
+	CanManageBilling *bool `json:"can_manage_billing,omitempty"`
 }
 
 // NewAuthPermissionSet instantiates a new AuthPermissionSet object
@@ -52,6 +53,8 @@ func NewAuthPermissionSet() *AuthPermissionSet {
 	this.CanManageWorkspace = &canManageWorkspace
 	var canManageApiKeys bool = false
 	this.CanManageApiKeys = &canManageApiKeys
+	var canManageBilling bool = false
+	this.CanManageBilling = &canManageBilling
 	return &this
 }
 
@@ -76,6 +79,8 @@ func NewAuthPermissionSetWithDefaults() *AuthPermissionSet {
 	this.CanManageWorkspace = &canManageWorkspace
 	var canManageApiKeys bool = false
 	this.CanManageApiKeys = &canManageApiKeys
+	var canManageBilling bool = false
+	this.CanManageBilling = &canManageBilling
 	return &this
 }
 
@@ -367,6 +372,38 @@ func (o *AuthPermissionSet) SetCanManageApiKeys(v bool) {
 	o.CanManageApiKeys = &v
 }
 
+// GetCanManageBilling returns the CanManageBilling field value if set, zero value otherwise.
+func (o *AuthPermissionSet) GetCanManageBilling() bool {
+	if o == nil || IsNil(o.CanManageBilling) {
+		var ret bool
+		return ret
+	}
+	return *o.CanManageBilling
+}
+
+// GetCanManageBillingOk returns a tuple with the CanManageBilling field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AuthPermissionSet) GetCanManageBillingOk() (*bool, bool) {
+	if o == nil || IsNil(o.CanManageBilling) {
+		return nil, false
+	}
+	return o.CanManageBilling, true
+}
+
+// HasCanManageBilling returns a boolean if a field has been set.
+func (o *AuthPermissionSet) HasCanManageBilling() bool {
+	if o != nil && !IsNil(o.CanManageBilling) {
+		return true
+	}
+
+	return false
+}
+
+// SetCanManageBilling gets a reference to the given bool and assigns it to the CanManageBilling field.
+func (o *AuthPermissionSet) SetCanManageBilling(v bool) {
+	o.CanManageBilling = &v
+}
+
 func (o AuthPermissionSet) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -403,6 +440,9 @@ func (o AuthPermissionSet) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.CanManageApiKeys) {
 		toSerialize["can_manage_api_keys"] = o.CanManageApiKeys
+	}
+	if !IsNil(o.CanManageBilling) {
+		toSerialize["can_manage_billing"] = o.CanManageBilling
 	}
 	return toSerialize, nil
 }

@@ -82,9 +82,7 @@ class UserSubscription(Base):
 
     user_subscription_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.user_id"), nullable=False, unique=True)
-    plan_id: Mapped[UUID] = mapped_column(
-        ForeignKey("subscription_plans.plan_id"), nullable=False
-    )
+    plan_id: Mapped[UUID] = mapped_column(ForeignKey("subscription_plans.plan_id"), nullable=False)
     status: Mapped[str] = mapped_column(
         Text,
         nullable=False,

@@ -116,10 +116,7 @@ def utcnow() -> datetime:
 
 
 def ensure_default_subscription_plans(db: Session) -> list[SubscriptionPlan]:
-    existing = {
-        str(plan.plan_id): plan
-        for plan in db.scalars(select(SubscriptionPlan)).all()
-    }
+    existing = {str(plan.plan_id): plan for plan in db.scalars(select(SubscriptionPlan)).all()}
     changed = False
     for seed in DEFAULT_PLAN_SEEDS:
         record = existing.get(str(seed.plan_id))
@@ -462,9 +459,7 @@ def grant_due_monthly_credits(
     credits_granted = 0
 
     subscriptions = list(
-        db.scalars(
-            select(UserSubscription).where(UserSubscription.status == "active")
-        )
+        db.scalars(select(UserSubscription).where(UserSubscription.status == "active"))
     )
     plan_map = {plan.plan_id: plan for plan in list_subscription_plans(db)}
 
@@ -495,7 +490,9 @@ def grant_due_monthly_credits(
         cycles = 0
         while subscription.renewal_date <= effective_now:
             cycles += 1
-            subscription.renewal_date = subscription.renewal_date + timedelta(days=BILLING_CYCLE_DAYS)
+            subscription.renewal_date = subscription.renewal_date + timedelta(
+                days=BILLING_CYCLE_DAYS
+            )
 
         if cycles <= 0:
             continue
@@ -678,9 +675,7 @@ def serialize_user_subscription(
             resolved_plan.monthly_price if isinstance(resolved_plan, SubscriptionPlan) else None
         ),
         "monthly_credits": (
-            resolved_plan.monthly_credits
-            if isinstance(resolved_plan, SubscriptionPlan)
-            else None
+            resolved_plan.monthly_credits if isinstance(resolved_plan, SubscriptionPlan) else None
         ),
         "queue_priority": queue_priority,
         "status": subscription.status,

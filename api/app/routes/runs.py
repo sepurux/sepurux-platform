@@ -176,7 +176,9 @@ def post_run(
                 campaign=campaign,
             )
         except InsufficientCreditsError as exc:
-            raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
+            ) from exc
 
     queue_priority = get_queue_priority_for_context(
         db,
@@ -312,7 +314,9 @@ def post_apply_template(
                 project_id=project_scope.project_id,
             )
         except InsufficientCreditsError as exc:
-            raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
+            ) from exc
 
     queue_priority = get_queue_priority_for_context(
         db,

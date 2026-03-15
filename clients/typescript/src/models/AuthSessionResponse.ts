@@ -94,6 +94,48 @@ export interface AuthSessionResponse {
     is_demo?: boolean;
     /**
      * 
+     * @type {string}
+     * @memberof AuthSessionResponse
+     */
+    billing_plan_name?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof AuthSessionResponse
+     */
+    credits_balance?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof AuthSessionResponse
+     */
+    monthly_credits?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof AuthSessionResponse
+     */
+    topup_credits?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof AuthSessionResponse
+     */
+    queue_priority?: AuthSessionResponseQueuePriorityEnum | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof AuthSessionResponse
+     */
+    low_credit_threshold?: number | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AuthSessionResponse
+     */
+    is_low_credit?: boolean;
+    /**
+     * 
      * @type {AuthPermissionSet}
      * @memberof AuthSessionResponse
      */
@@ -126,6 +168,15 @@ export const AuthSessionResponseRoleNameEnum = {
     viewer: 'viewer'
 } as const;
 export type AuthSessionResponseRoleNameEnum = typeof AuthSessionResponseRoleNameEnum[keyof typeof AuthSessionResponseRoleNameEnum];
+
+/**
+ * @export
+ */
+export const AuthSessionResponseQueuePriorityEnum = {
+    normal: 'normal',
+    priority: 'priority'
+} as const;
+export type AuthSessionResponseQueuePriorityEnum = typeof AuthSessionResponseQueuePriorityEnum[keyof typeof AuthSessionResponseQueuePriorityEnum];
 
 
 /**
@@ -163,6 +214,13 @@ export function AuthSessionResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'email': json['email'] == null ? undefined : json['email'],
         'name': json['name'] == null ? undefined : json['name'],
         'is_demo': json['is_demo'] == null ? undefined : json['is_demo'],
+        'billing_plan_name': json['billing_plan_name'] == null ? undefined : json['billing_plan_name'],
+        'credits_balance': json['credits_balance'] == null ? undefined : json['credits_balance'],
+        'monthly_credits': json['monthly_credits'] == null ? undefined : json['monthly_credits'],
+        'topup_credits': json['topup_credits'] == null ? undefined : json['topup_credits'],
+        'queue_priority': json['queue_priority'] == null ? undefined : json['queue_priority'],
+        'low_credit_threshold': json['low_credit_threshold'] == null ? undefined : json['low_credit_threshold'],
+        'is_low_credit': json['is_low_credit'] == null ? undefined : json['is_low_credit'],
         'permissions': AuthPermissionSetFromJSON(json['permissions']),
         'api_key': json['api_key'],
     };
@@ -185,6 +243,13 @@ export function AuthSessionResponseToJSON(value?: AuthSessionResponse | null): a
         'email': value['email'],
         'name': value['name'],
         'is_demo': value['is_demo'],
+        'billing_plan_name': value['billing_plan_name'],
+        'credits_balance': value['credits_balance'],
+        'monthly_credits': value['monthly_credits'],
+        'topup_credits': value['topup_credits'],
+        'queue_priority': value['queue_priority'],
+        'low_credit_threshold': value['low_credit_threshold'],
+        'is_low_credit': value['is_low_credit'],
         'permissions': AuthPermissionSetToJSON(value['permissions']),
         'api_key': value['api_key'],
     };

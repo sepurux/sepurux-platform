@@ -146,7 +146,9 @@ def _create_run_record(
 
 def enqueue_execute_run(run: Run, *, queue_priority: str = "normal") -> None:
     # Use a fully-qualified function path so RQ workers can import it reliably.
-    queue = get_run_queue() if queue_priority == "normal" else get_run_queue(priority=queue_priority)
+    queue = (
+        get_run_queue() if queue_priority == "normal" else get_run_queue(priority=queue_priority)
+    )
     queue.enqueue("worker.execute_run", str(run.run_id))
 
 

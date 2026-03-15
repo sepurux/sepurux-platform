@@ -60,7 +60,11 @@ def _resolve_billable_user_or_404(
     subscription = billing_snapshot.get("subscription")
     wallet = billing_snapshot.get("wallet")
     plan = billing_snapshot.get("plan")
-    if not isinstance(subscription, dict) or not isinstance(wallet, dict) or not isinstance(plan, dict):
+    if (
+        not isinstance(subscription, dict)
+        or not isinstance(wallet, dict)
+        or not isinstance(plan, dict)
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Billing wallet not found for this session",
@@ -134,9 +138,7 @@ def post_billing_subscribe(
         )
     except BillingSubjectNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    return UserSubscriptionMetadata(
-        **serialize_user_subscription(subscription, plan=plan)
-    )
+    return UserSubscriptionMetadata(**serialize_user_subscription(subscription, plan=plan))
 
 
 @router.post("/topup", response_model=CreditWalletMetadata)

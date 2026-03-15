@@ -32,6 +32,13 @@ type AuthSessionResponse struct {
 	Email NullableString `json:"email,omitempty"`
 	Name NullableString `json:"name,omitempty"`
 	IsDemo *bool `json:"is_demo,omitempty"`
+	BillingPlanName NullableString `json:"billing_plan_name,omitempty"`
+	CreditsBalance NullableInt32 `json:"credits_balance,omitempty"`
+	MonthlyCredits NullableInt32 `json:"monthly_credits,omitempty"`
+	TopupCredits NullableInt32 `json:"topup_credits,omitempty"`
+	QueuePriority NullableString `json:"queue_priority,omitempty"`
+	LowCreditThreshold NullableInt32 `json:"low_credit_threshold,omitempty"`
+	IsLowCredit *bool `json:"is_low_credit,omitempty"`
 	Permissions AuthPermissionSet `json:"permissions"`
 	ApiKey string `json:"api_key"`
 }
@@ -55,6 +62,8 @@ func NewAuthSessionResponse(tenantId string, projectId string, projectName strin
 	this.RoleName = roleName
 	var isDemo bool = false
 	this.IsDemo = &isDemo
+	var isLowCredit bool = false
+	this.IsLowCredit = &isLowCredit
 	this.Permissions = permissions
 	this.ApiKey = apiKey
 	return &this
@@ -71,6 +80,8 @@ func NewAuthSessionResponseWithDefaults() *AuthSessionResponse {
 	this.PricingTier = &pricingTier
 	var isDemo bool = false
 	this.IsDemo = &isDemo
+	var isLowCredit bool = false
+	this.IsLowCredit = &isLowCredit
 	return &this
 }
 
@@ -416,6 +427,290 @@ func (o *AuthSessionResponse) SetIsDemo(v bool) {
 	o.IsDemo = &v
 }
 
+// GetBillingPlanName returns the BillingPlanName field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *AuthSessionResponse) GetBillingPlanName() string {
+	if o == nil || IsNil(o.BillingPlanName.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.BillingPlanName.Get()
+}
+
+// GetBillingPlanNameOk returns a tuple with the BillingPlanName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *AuthSessionResponse) GetBillingPlanNameOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.BillingPlanName.Get(), o.BillingPlanName.IsSet()
+}
+
+// HasBillingPlanName returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasBillingPlanName() bool {
+	if o != nil && o.BillingPlanName.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetBillingPlanName gets a reference to the given NullableString and assigns it to the BillingPlanName field.
+func (o *AuthSessionResponse) SetBillingPlanName(v string) {
+	o.BillingPlanName.Set(&v)
+}
+// SetBillingPlanNameNil sets the value for BillingPlanName to be an explicit nil
+func (o *AuthSessionResponse) SetBillingPlanNameNil() {
+	o.BillingPlanName.Set(nil)
+}
+
+// UnsetBillingPlanName ensures that no value is present for BillingPlanName, not even an explicit nil
+func (o *AuthSessionResponse) UnsetBillingPlanName() {
+	o.BillingPlanName.Unset()
+}
+
+// GetCreditsBalance returns the CreditsBalance field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *AuthSessionResponse) GetCreditsBalance() int32 {
+	if o == nil || IsNil(o.CreditsBalance.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.CreditsBalance.Get()
+}
+
+// GetCreditsBalanceOk returns a tuple with the CreditsBalance field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *AuthSessionResponse) GetCreditsBalanceOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.CreditsBalance.Get(), o.CreditsBalance.IsSet()
+}
+
+// HasCreditsBalance returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasCreditsBalance() bool {
+	if o != nil && o.CreditsBalance.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetCreditsBalance gets a reference to the given NullableInt32 and assigns it to the CreditsBalance field.
+func (o *AuthSessionResponse) SetCreditsBalance(v int32) {
+	o.CreditsBalance.Set(&v)
+}
+// SetCreditsBalanceNil sets the value for CreditsBalance to be an explicit nil
+func (o *AuthSessionResponse) SetCreditsBalanceNil() {
+	o.CreditsBalance.Set(nil)
+}
+
+// UnsetCreditsBalance ensures that no value is present for CreditsBalance, not even an explicit nil
+func (o *AuthSessionResponse) UnsetCreditsBalance() {
+	o.CreditsBalance.Unset()
+}
+
+// GetMonthlyCredits returns the MonthlyCredits field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *AuthSessionResponse) GetMonthlyCredits() int32 {
+	if o == nil || IsNil(o.MonthlyCredits.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.MonthlyCredits.Get()
+}
+
+// GetMonthlyCreditsOk returns a tuple with the MonthlyCredits field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *AuthSessionResponse) GetMonthlyCreditsOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.MonthlyCredits.Get(), o.MonthlyCredits.IsSet()
+}
+
+// HasMonthlyCredits returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasMonthlyCredits() bool {
+	if o != nil && o.MonthlyCredits.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetMonthlyCredits gets a reference to the given NullableInt32 and assigns it to the MonthlyCredits field.
+func (o *AuthSessionResponse) SetMonthlyCredits(v int32) {
+	o.MonthlyCredits.Set(&v)
+}
+// SetMonthlyCreditsNil sets the value for MonthlyCredits to be an explicit nil
+func (o *AuthSessionResponse) SetMonthlyCreditsNil() {
+	o.MonthlyCredits.Set(nil)
+}
+
+// UnsetMonthlyCredits ensures that no value is present for MonthlyCredits, not even an explicit nil
+func (o *AuthSessionResponse) UnsetMonthlyCredits() {
+	o.MonthlyCredits.Unset()
+}
+
+// GetTopupCredits returns the TopupCredits field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *AuthSessionResponse) GetTopupCredits() int32 {
+	if o == nil || IsNil(o.TopupCredits.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.TopupCredits.Get()
+}
+
+// GetTopupCreditsOk returns a tuple with the TopupCredits field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *AuthSessionResponse) GetTopupCreditsOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.TopupCredits.Get(), o.TopupCredits.IsSet()
+}
+
+// HasTopupCredits returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasTopupCredits() bool {
+	if o != nil && o.TopupCredits.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetTopupCredits gets a reference to the given NullableInt32 and assigns it to the TopupCredits field.
+func (o *AuthSessionResponse) SetTopupCredits(v int32) {
+	o.TopupCredits.Set(&v)
+}
+// SetTopupCreditsNil sets the value for TopupCredits to be an explicit nil
+func (o *AuthSessionResponse) SetTopupCreditsNil() {
+	o.TopupCredits.Set(nil)
+}
+
+// UnsetTopupCredits ensures that no value is present for TopupCredits, not even an explicit nil
+func (o *AuthSessionResponse) UnsetTopupCredits() {
+	o.TopupCredits.Unset()
+}
+
+// GetQueuePriority returns the QueuePriority field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *AuthSessionResponse) GetQueuePriority() string {
+	if o == nil || IsNil(o.QueuePriority.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.QueuePriority.Get()
+}
+
+// GetQueuePriorityOk returns a tuple with the QueuePriority field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *AuthSessionResponse) GetQueuePriorityOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.QueuePriority.Get(), o.QueuePriority.IsSet()
+}
+
+// HasQueuePriority returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasQueuePriority() bool {
+	if o != nil && o.QueuePriority.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetQueuePriority gets a reference to the given NullableString and assigns it to the QueuePriority field.
+func (o *AuthSessionResponse) SetQueuePriority(v string) {
+	o.QueuePriority.Set(&v)
+}
+// SetQueuePriorityNil sets the value for QueuePriority to be an explicit nil
+func (o *AuthSessionResponse) SetQueuePriorityNil() {
+	o.QueuePriority.Set(nil)
+}
+
+// UnsetQueuePriority ensures that no value is present for QueuePriority, not even an explicit nil
+func (o *AuthSessionResponse) UnsetQueuePriority() {
+	o.QueuePriority.Unset()
+}
+
+// GetLowCreditThreshold returns the LowCreditThreshold field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *AuthSessionResponse) GetLowCreditThreshold() int32 {
+	if o == nil || IsNil(o.LowCreditThreshold.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.LowCreditThreshold.Get()
+}
+
+// GetLowCreditThresholdOk returns a tuple with the LowCreditThreshold field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *AuthSessionResponse) GetLowCreditThresholdOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.LowCreditThreshold.Get(), o.LowCreditThreshold.IsSet()
+}
+
+// HasLowCreditThreshold returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasLowCreditThreshold() bool {
+	if o != nil && o.LowCreditThreshold.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetLowCreditThreshold gets a reference to the given NullableInt32 and assigns it to the LowCreditThreshold field.
+func (o *AuthSessionResponse) SetLowCreditThreshold(v int32) {
+	o.LowCreditThreshold.Set(&v)
+}
+// SetLowCreditThresholdNil sets the value for LowCreditThreshold to be an explicit nil
+func (o *AuthSessionResponse) SetLowCreditThresholdNil() {
+	o.LowCreditThreshold.Set(nil)
+}
+
+// UnsetLowCreditThreshold ensures that no value is present for LowCreditThreshold, not even an explicit nil
+func (o *AuthSessionResponse) UnsetLowCreditThreshold() {
+	o.LowCreditThreshold.Unset()
+}
+
+// GetIsLowCredit returns the IsLowCredit field value if set, zero value otherwise.
+func (o *AuthSessionResponse) GetIsLowCredit() bool {
+	if o == nil || IsNil(o.IsLowCredit) {
+		var ret bool
+		return ret
+	}
+	return *o.IsLowCredit
+}
+
+// GetIsLowCreditOk returns a tuple with the IsLowCredit field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AuthSessionResponse) GetIsLowCreditOk() (*bool, bool) {
+	if o == nil || IsNil(o.IsLowCredit) {
+		return nil, false
+	}
+	return o.IsLowCredit, true
+}
+
+// HasIsLowCredit returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasIsLowCredit() bool {
+	if o != nil && !IsNil(o.IsLowCredit) {
+		return true
+	}
+
+	return false
+}
+
+// SetIsLowCredit gets a reference to the given bool and assigns it to the IsLowCredit field.
+func (o *AuthSessionResponse) SetIsLowCredit(v bool) {
+	o.IsLowCredit = &v
+}
+
 // GetPermissions returns the Permissions field value
 func (o *AuthSessionResponse) GetPermissions() AuthPermissionSet {
 	if o == nil {
@@ -496,6 +791,27 @@ func (o AuthSessionResponse) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.IsDemo) {
 		toSerialize["is_demo"] = o.IsDemo
+	}
+	if o.BillingPlanName.IsSet() {
+		toSerialize["billing_plan_name"] = o.BillingPlanName.Get()
+	}
+	if o.CreditsBalance.IsSet() {
+		toSerialize["credits_balance"] = o.CreditsBalance.Get()
+	}
+	if o.MonthlyCredits.IsSet() {
+		toSerialize["monthly_credits"] = o.MonthlyCredits.Get()
+	}
+	if o.TopupCredits.IsSet() {
+		toSerialize["topup_credits"] = o.TopupCredits.Get()
+	}
+	if o.QueuePriority.IsSet() {
+		toSerialize["queue_priority"] = o.QueuePriority.Get()
+	}
+	if o.LowCreditThreshold.IsSet() {
+		toSerialize["low_credit_threshold"] = o.LowCreditThreshold.Get()
+	}
+	if !IsNil(o.IsLowCredit) {
+		toSerialize["is_low_credit"] = o.IsLowCredit
 	}
 	toSerialize["permissions"] = o.Permissions
 	toSerialize["api_key"] = o.ApiKey

@@ -21,13 +21,9 @@ def monthly_credit_grant() -> dict[str, int]:
 
     with get_session() as db:
         subscriptions = list(
-            db.scalars(
-                select(UserSubscription).where(UserSubscription.status == "active")
-            )
+            db.scalars(select(UserSubscription).where(UserSubscription.status == "active"))
         )
-        plans = {
-            plan.plan_id: plan for plan in db.scalars(select(SubscriptionPlan)).all()
-        }
+        plans = {plan.plan_id: plan for plan in db.scalars(select(SubscriptionPlan)).all()}
 
         for subscription in subscriptions:
             if subscription.renewal_date > effective_now:
@@ -37,7 +33,9 @@ def monthly_credit_grant() -> dict[str, int]:
             if plan is None:
                 continue
 
-            wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == subscription.user_id))
+            wallet = db.scalar(
+                select(CreditWallet).where(CreditWallet.user_id == subscription.user_id)
+            )
             if wallet is None:
                 wallet = CreditWallet(
                     wallet_id=uuid4(),
@@ -52,7 +50,9 @@ def monthly_credit_grant() -> dict[str, int]:
             cycles = 0
             while subscription.renewal_date <= effective_now:
                 cycles += 1
-                subscription.renewal_date = subscription.renewal_date + timedelta(days=BILLING_CYCLE_DAYS)
+                subscription.renewal_date = subscription.renewal_date + timedelta(
+                    days=BILLING_CYCLE_DAYS
+                )
 
             if cycles <= 0:
                 continue

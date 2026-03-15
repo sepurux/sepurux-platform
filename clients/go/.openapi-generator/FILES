@@ -7,6 +7,7 @@ api_api_keys.go
 api_attempts.go
 api_audit_events.go
 api_auth.go
+api_billing.go
 api_campaigns.go
 api_ci.go
 api_counterfactuals.go
@@ -35,6 +36,9 @@ docs/AuthAPI.md
 docs/AuthPermissionSet.md
 docs/AuthSessionMetadata.md
 docs/AuthSessionResponse.md
+docs/BillingAPI.md
+docs/BillingSubscribeRequest.md
+docs/BillingTopupRequest.md
 docs/CIRunCreateRequest.md
 docs/CIRunCreateResponse.md
 docs/CIRunStatusResponse.md
@@ -51,6 +55,7 @@ docs/CiAPI.md
 docs/CounterfactualListItem.md
 docs/CounterfactualMetadata.md
 docs/CounterfactualsAPI.md
+docs/CreditWalletMetadata.md
 docs/DemoAPI.md
 docs/DemoInfoResponse.md
 docs/DemoLimits.md
@@ -100,6 +105,7 @@ docs/RunsAPI.md
 docs/SecurityEventListItem.md
 docs/SignupRequest.md
 docs/Status.md
+docs/SubscriptionPlanMetadata.md
 docs/TemplatesAPI.md
 docs/ToolCount.md
 docs/ToolCountPct.md
@@ -115,6 +121,7 @@ docs/ToolsAPI.md
 docs/TraceMetadata.md
 docs/TraceTimelineStep.md
 docs/TracesAPI.md
+docs/UserSubscriptionMetadata.md
 docs/ValidationError.md
 docs/ValidationErrorLocInner.md
 docs/WebhookCreateRequest.md
@@ -134,6 +141,8 @@ model_audit_event_list_item.go
 model_auth_permission_set.go
 model_auth_session_metadata.go
 model_auth_session_response.go
+model_billing_subscribe_request.go
+model_billing_topup_request.go
 model_campaign_create_request.go
 model_campaign_failure_breakdown_item.go
 model_campaign_failure_record.go
@@ -147,6 +156,7 @@ model_ci_run_status_response.go
 model_ci_run_thresholds.go
 model_counterfactual_list_item.go
 model_counterfactual_metadata.go
+model_credit_wallet_metadata.go
 model_demo_info_response.go
 model_demo_limits.go
 model_demo_session_response.go
@@ -190,6 +200,7 @@ model_run_stats_response.go
 model_security_event_list_item.go
 model_signup_request.go
 model_status.go
+model_subscription_plan_metadata.go
 model_tool_count.go
 model_tool_count_pct.go
 model_tool_fragility_item.go
@@ -202,6 +213,7 @@ model_tool_registry_zone_update_request.go
 model_tool_usage_stats_item.go
 model_trace_metadata.go
 model_trace_timeline_step.go
+model_user_subscription_metadata.go
 model_validation_error.go
 model_validation_error_loc_inner.go
 model_webhook_create_request.go
@@ -210,4 +222,5 @@ model_webhook_metadata.go
 model_webhook_rotate_secret_response.go
 model_webhook_update_request.go
 response.go
+test/api_billing_test.go
 utils.go

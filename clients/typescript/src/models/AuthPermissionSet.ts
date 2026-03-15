@@ -73,6 +73,12 @@ export interface AuthPermissionSet {
      * @memberof AuthPermissionSet
      */
     can_manage_api_keys?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AuthPermissionSet
+     */
+    can_manage_billing?: boolean;
 }
 
 /**
@@ -101,6 +107,7 @@ export function AuthPermissionSetFromJSONTyped(json: any, ignoreDiscriminator: b
         'can_manage_security_config': json['can_manage_security_config'] == null ? undefined : json['can_manage_security_config'],
         'can_manage_workspace': json['can_manage_workspace'] == null ? undefined : json['can_manage_workspace'],
         'can_manage_api_keys': json['can_manage_api_keys'] == null ? undefined : json['can_manage_api_keys'],
+        'can_manage_billing': json['can_manage_billing'] == null ? undefined : json['can_manage_billing'],
     };
 }
 
@@ -119,6 +126,7 @@ export function AuthPermissionSetToJSON(value?: AuthPermissionSet | null): any {
         'can_manage_security_config': value['can_manage_security_config'],
         'can_manage_workspace': value['can_manage_workspace'],
         'can_manage_api_keys': value['can_manage_api_keys'],
+        'can_manage_billing': value['can_manage_billing'],
     };
 }
 
