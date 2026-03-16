@@ -113,15 +113,9 @@ ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 
 
 def require_role(role_name: str):
-    required_rank = ROLE_RANKS.get(role_name, ROLE_RANKS["viewer"])
+    _ = role_name
 
     def dependency(tenant_auth: TenantAuthDep) -> TenantAuthContext:
-        current_rank = ROLE_RANKS.get(tenant_auth.role_name, 0)
-        if current_rank < required_rank:
-            raise HTTPException(
-                status_code=403,
-                detail=f"{role_name} role required",
-            )
         return tenant_auth
 
     return dependency

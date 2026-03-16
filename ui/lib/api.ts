@@ -353,9 +353,9 @@ export type AuthSessionMetadata = {
   project_id: string;
   project_name: string;
   project_scoped: boolean;
-  pricing_tier: "starter" | "team" | "enterprise";
+  pricing_tier: string;
   plan_name: string;
-  role_name: "admin" | "developer" | "viewer";
+  role_name: string;
   user_id: string | null;
   email: string | null;
   name: string | null;
@@ -373,6 +373,8 @@ export type AuthSessionMetadata = {
 export type AuthSessionResponse = AuthSessionMetadata & {
   api_key: string;
 };
+
+export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
   plan_id: string;
@@ -698,6 +700,15 @@ export const api = {
   login: (payload: { email: string; password: string }, options?: { baseUrl?: string }) =>
     postJson<AuthSessionResponse, typeof payload>(
       "/auth/login",
+      payload,
+      { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
+    ),
+  exchangeOAuthSession: (
+    payload: { token: string },
+    options?: { baseUrl?: string }
+  ) =>
+    postJson<AuthSessionResponse, typeof payload>(
+      "/auth/oauth/exchange",
       payload,
       { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
     ),

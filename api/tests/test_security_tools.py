@@ -204,7 +204,7 @@ def test_run_security_events_endpoint_and_stats_counts(
     assert stats_payload["injection_sanitizations"] == 1
 
 
-def test_security_tool_registry_write_requires_admin_role() -> None:
+def test_security_tool_registry_write_is_available_to_all_authenticated_users() -> None:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -242,10 +242,10 @@ def test_security_tool_registry_write_requires_admin_role() -> None:
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
-    assert response.status_code == 403
+    assert response.status_code == 201
 
 
-def test_security_section_respects_pricing_tier() -> None:
+def test_security_section_is_available_on_all_workspace_tiers() -> None:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -280,4 +280,4 @@ def test_security_section_respects_pricing_tier() -> None:
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
-    assert response.status_code == 403
+    assert response.status_code == 200

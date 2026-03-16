@@ -240,7 +240,7 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
     assert delete_response.json() == {"detail": "System mutation packs cannot be deleted"}
 
 
-def test_viewer_cannot_create_mutation_pack() -> None:
+def test_viewer_can_create_mutation_pack() -> None:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -282,7 +282,7 @@ def test_viewer_cannot_create_mutation_pack() -> None:
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
-    assert response.status_code == 403
+    assert response.status_code == 201
 
 
 def test_weak_custom_pack_returns_warning_and_include_system_filter_works(

@@ -11,38 +11,33 @@ import {
   Loader2,
   LogIn,
   MonitorPlay,
-  Sparkles,
   UserPlus,
   CheckCircle2,
   ArrowRight,
+  Github,
 } from "lucide-react";
 
-import { api, type AuthSessionResponse, type DemoInfoResponse } from "@/lib/api";
+import {
+  api,
+  type AuthSessionResponse,
+  type DemoInfoResponse,
+  type SocialOAuthProvider,
+} from "@/lib/api";
 import { clearStoredAuthSession, setStoredAuthSession } from "@/lib/auth-session";
 import {
-  getPricingTierDefinition,
-  isPricingTier,
-  pricingTierDefinitions,
-  type PricingTier,
-} from "@/lib/pricing";
-import {
-  clearStoredApiBaseUrl,
-  clearStoredApiKey,
-  clearStoredProjectId,
   setStoredApiBaseUrl,
   setStoredApiKey,
   setStoredProjectId,
 } from "@/lib/tenant-settings";
-
 const DEFAULT_API_BASE_URL =
   process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api/backend";
 const DEFAULT_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sepurux.com";
 const DEMO_PREVIEW_FLAG_KEY = "sepurux.demoPreview";
 const DEMO_CAMPAIGN_STORAGE_KEY = "sepurux.demoCampaign";
+const OAUTH_API_BASE_URL_KEY = "sepurux.oauthApiBaseUrl";
 
 type AccessMode = "demo" | "access";
 type AccessIntent = "signup" | "login";
-const DEFAULT_SIGNUP_PLAN: PricingTier = "team";
 
 const TEAL = "#00e5cc";
 const TEAL_DIM = "rgba(0,229,204,0.12)";
@@ -53,6 +48,15 @@ const leftPanelFeatures = [
   "Inject schema drift, timeouts, and poisoning",
   "Gate merges on reliability score thresholds",
   "Policy checks before irreversible tool calls",
+];
+
+const socialProviders: Array<{
+  provider: SocialOAuthProvider;
+  label: string;
+}> = [
+  { provider: "google", label: "Continue with Google" },
+  { provider: "microsoft", label: "Continue with Microsoft" },
+  { provider: "github", label: "Continue with GitHub" },
 ];
 
 function normalizeNextPath(rawPath: string | null) {
@@ -83,6 +87,18 @@ function resolveBaseForBrowser(inputBaseUrl: string) {
     return candidate;
   }
   return candidate;
+}
+
+function resolveOauthBrowserBase(inputBaseUrl: string) {
+  const resolvedBase = resolveBaseForBrowser(inputBaseUrl);
+  if (/^https?:\/\//.test(resolvedBase)) {
+    return resolvedBase.endsWith("/") ? resolvedBase.slice(0, -1) : resolvedBase;
+  }
+  if (typeof window === "undefined") {
+    return resolvedBase;
+  }
+  const normalizedPath = resolvedBase.startsWith("/") ? resolvedBase : `/${resolvedBase}`;
+  return `${window.location.origin}${normalizedPath}`;
 }
 
 // ── Shared field style ──────────────────────────────────────────────────────
@@ -143,6 +159,70 @@ function TealButton({
   );
 }
 
+function SocialButton({
+  label,
+  provider,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  provider: SocialOAuthProvider;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="relative inline-flex w-full items-center justify-center rounded-2xl border border-border/70 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 transition hover:border-[rgba(0,229,204,0.35)] hover:shadow-[0_0_0_1px_rgba(0,229,204,0.18)] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <span className="absolute left-4 flex h-6 w-6 items-center justify-center">
+        <ProviderIcon provider={provider} />
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function ProviderIcon({ provider }: { provider: SocialOAuthProvider }) {
+  if (provider === "google") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+        <path
+          fill="#EA4335"
+          d="M12 10.2v3.9h5.4c-.2 1.3-1.5 3.9-5.4 3.9-3.2 0-5.9-2.7-5.9-6s2.7-6 5.9-6c1.9 0 3.2.8 3.9 1.5l2.7-2.6C16.9 3.3 14.7 2.4 12 2.4A9.6 9.6 0 0 0 2.4 12c0 5.3 4.3 9.6 9.6 9.6 5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.5z"
+        />
+        <path
+          fill="#4285F4"
+          d="M21.1 12.4c0-.6-.1-1.1-.2-1.5H12v3.9h5.4c-.3 1.4-1.1 2.5-2.3 3.3l3.5 2.7c2-1.8 3.2-4.6 3.2-8.4z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M6.2 14.3a5.8 5.8 0 0 1 0-4L3.1 7.9a9.6 9.6 0 0 0 0 8.2z"
+        />
+        <path
+          fill="#34A853"
+          d="M12 21.6c2.7 0 4.9-.9 6.5-2.4L15 16.5c-.9.6-2 .9-3 .9-2.5 0-4.7-1.7-5.5-4l-3.1 2.4a9.6 9.6 0 0 0 8.6 5.8z"
+        />
+      </svg>
+    );
+  }
+
+  if (provider === "microsoft") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+        <rect x="3" y="3" width="8" height="8" fill="#F25022" />
+        <rect x="13" y="3" width="8" height="8" fill="#7FBA00" />
+        <rect x="3" y="13" width="8" height="8" fill="#00A4EF" />
+        <rect x="13" y="13" width="8" height="8" fill="#FFB900" />
+      </svg>
+    );
+  }
+
+  return <Github className="h-6 w-6 text-slate-900" aria-hidden="true" />;
+}
+
 export function AccessPortal() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -153,31 +233,84 @@ export function AccessPortal() {
   const [intent, setIntent] = useState<AccessIntent>(
     searchParams.get("intent") === "login" ? "login" : "signup"
   );
-  const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE_URL);
-  const [apiKey, setApiKey] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_API_BASE_URL;
+    }
+    try {
+      return window.localStorage.getItem(OAUTH_API_BASE_URL_KEY) || DEFAULT_API_BASE_URL;
+    } catch {
+      return DEFAULT_API_BASE_URL;
+    }
+  });
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupProjectName, setSignupProjectName] = useState("");
-  const [signupPlan, setSignupPlan] = useState<PricingTier>(DEFAULT_SIGNUP_PLAN);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [demoInfo, setDemoInfo] = useState<DemoInfoResponse | null>(null);
   const [loadingDemo, setLoadingDemo] = useState(false);
   const [submittingAccess, setSubmittingAccess] = useState(false);
-  const [connecting, setConnecting] = useState(false);
+  const [oauthPending, setOauthPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const nextPath = useMemo(() => normalizeNextPath(searchParams.get("next")), [searchParams]);
-  const selectedPlanDefinition = useMemo(() => getPricingTierDefinition(signupPlan), [signupPlan]);
+  const oauthExchangeToken = searchParams.get("exchange");
+  const oauthError = searchParams.get("oauth_error");
 
   useEffect(() => {
     setMode(searchParams.get("mode") === "access" ? "access" : "demo");
     setIntent(searchParams.get("intent") === "login" ? "login" : "signup");
-    const nextPlan = searchParams.get("plan");
-    setSignupPlan(isPricingTier(nextPlan) ? nextPlan : DEFAULT_SIGNUP_PLAN);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!oauthError) {
+      return;
+    }
+    setMode("access");
+    setIntent("login");
+    setErrorMessage(oauthError);
+  }, [oauthError]);
+
+  useEffect(() => {
+    const exchangeToken = oauthExchangeToken as string | null;
+    if (!exchangeToken) {
+      return;
+    }
+
+    let cancelled = false;
+    async function finishOAuthLogin() {
+      setOauthPending(true);
+      setErrorMessage(null);
+      try {
+        const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
+        const session = await api.exchangeOAuthSession(
+          { token: exchangeToken as string },
+          { baseUrl: resolvedBase }
+        );
+        if (cancelled) {
+          return;
+        }
+        await persistSession(session, resolvedBase);
+        router.replace(nextPath);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setErrorMessage(error instanceof Error ? error.message : "Unable to finish sign-in");
+      } finally {
+        if (!cancelled) {
+          setOauthPending(false);
+        }
+      }
+    }
+
+    void finishOAuthLogin();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl, oauthExchangeToken, nextPath, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,6 +341,7 @@ export function AccessPortal() {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(DEMO_PREVIEW_FLAG_KEY);
       window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
+      window.localStorage.removeItem(OAUTH_API_BASE_URL_KEY);
     }
   }
 
@@ -241,12 +375,12 @@ export function AccessPortal() {
     }
   }
 
-  function updateQuery(nextMode: AccessMode, nextIntent: AccessIntent, nextPlan?: PricingTier) {
+  function updateQuery(nextMode: AccessMode, nextIntent: AccessIntent) {
     if (typeof window === "undefined") return;
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("mode", nextMode);
     nextUrl.searchParams.set("intent", nextIntent);
-    if (nextPlan) nextUrl.searchParams.set("plan", nextPlan);
+    nextUrl.searchParams.delete("plan");
     window.history.replaceState({}, "", nextUrl.toString());
   }
 
@@ -254,19 +388,13 @@ export function AccessPortal() {
     const nextIntent = nextMode === "access" ? intent : "signup";
     setMode(nextMode);
     setErrorMessage(null);
-    updateQuery(nextMode, nextIntent, signupPlan);
+    updateQuery(nextMode, nextIntent);
   }
 
   function handleIntentSwitch(nextIntent: AccessIntent) {
     setIntent(nextIntent);
     setErrorMessage(null);
-    updateQuery("access", nextIntent, signupPlan);
-  }
-
-  function handlePlanSwitch(nextPlan: PricingTier) {
-    setSignupPlan(nextPlan);
-    setErrorMessage(null);
-    updateQuery("access", intent, nextPlan);
+    updateQuery("access", nextIntent);
   }
 
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
@@ -282,7 +410,6 @@ export function AccessPortal() {
           password: signupPassword,
           name: signupName.trim() || undefined,
           project_name: signupProjectName.trim() || undefined,
-          pricing_tier: signupPlan,
         },
         { baseUrl: resolvedBase }
       );
@@ -315,51 +442,15 @@ export function AccessPortal() {
     }
   }
 
-  async function handleManualConnect(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (connecting) return;
-    const trimmedApiKey = apiKey.trim();
-    if (!trimmedApiKey) {
-      setErrorMessage("API key is required");
-      return;
-    }
-    setConnecting(true);
-    setErrorMessage(null);
-    try {
-      const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
-      setStoredApiBaseUrl(resolvedBase);
-      setStoredApiKey(trimmedApiKey);
-      if (projectId.trim()) {
-        setStoredProjectId(projectId.trim());
-      } else {
-        clearStoredProjectId();
-      }
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(DEMO_PREVIEW_FLAG_KEY);
-        window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
-      }
-      await refreshSessionFromStoredCredentials();
-      router.replace(nextPath);
-    } catch (error) {
-      clearStoredAuthSession();
-      setErrorMessage(error instanceof Error ? error.message : "Unable to connect");
-    } finally {
-      setConnecting(false);
-    }
-  }
-
-  function resetStoredCredentials() {
-    clearStoredApiBaseUrl();
-    clearStoredApiKey();
-    clearStoredProjectId();
-    clearStoredAuthSession();
+  function handleSocialLogin(provider: SocialOAuthProvider) {
+    const oauthBase = resolveOauthBrowserBase(apiBaseUrl);
+    const normalizedBase = resolveBaseForBrowser(apiBaseUrl);
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(DEMO_PREVIEW_FLAG_KEY);
-      window.localStorage.removeItem(DEMO_CAMPAIGN_STORAGE_KEY);
+      window.localStorage.setItem(OAUTH_API_BASE_URL_KEY, normalizedBase);
+      const startUrl = new URL(`${oauthBase}/auth/oauth/${provider}/start`);
+      startUrl.searchParams.set("next", nextPath);
+      window.location.assign(startUrl.toString());
     }
-    setApiKey("");
-    setProjectId("");
-    setErrorMessage(null);
   }
 
   return (
@@ -442,11 +533,17 @@ export function AccessPortal() {
                 </div>
               ))}
             </div>
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/55">
+              <span className="font-medium text-white">Full product access</span>
+              {" — "}
+              Credits are only consumed when you run campaigns, replays, and mutation-heavy
+              workflows.
+            </div>
           </div>
         </div>
 
         {/* ── Right form panel ── */}
-        <div className="flex flex-col gap-6 p-8">
+        <div className="flex flex-col gap-5 p-6 sm:p-8">
           {/* back link */}
           <div className="flex items-center justify-between">
             <Link
@@ -526,7 +623,29 @@ export function AccessPortal() {
           ) : (
             /* ── ACCESS MODE ── */
             <div className="space-y-4">
-              {/* intent tabs */}
+              <div className="space-y-2">
+                {socialProviders.map(({ provider, label }) => (
+                  <SocialButton
+                    key={provider}
+                    label={label}
+                    provider={provider}
+                    disabled={submittingAccess || oauthPending}
+                    onClick={() => handleSocialLogin(provider)}
+                  />
+                ))}
+              </div>
+
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/60" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-card px-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Or continue with email
+                  </span>
+                </div>
+              </div>
+
               <div className="flex items-center gap-1 w-fit rounded-xl border border-border/60 bg-muted/30 p-1">
                 <Tab active={intent === "signup"} onClick={() => handleIntentSwitch("signup")}>
                   <span className="flex items-center gap-1.5"><UserPlus className="h-3 w-3" /> Sign up</span>
@@ -536,7 +655,6 @@ export function AccessPortal() {
                 </Tab>
               </div>
 
-              {/* API Base URL — collapsed by default */}
               <details className="text-sm">
                 <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
                   API Base URL (advanced)
@@ -551,86 +669,62 @@ export function AccessPortal() {
                 </div>
               </details>
 
+              <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground lg:hidden">
+                <span className="font-medium text-foreground">Full product access</span>
+                {" — "}
+                Credits are only consumed when you run campaigns, replays, and mutation-heavy
+                workflows.
+              </div>
+
               {/* ── SIGN UP FORM ── */}
               {intent === "signup" ? (
-                <form className="space-y-3" onSubmit={handleSignup}>
-                  {/* plan selector */}
-                  <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Workspace plan</p>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {pricingTierDefinitions.map((plan) => {
-                        const active = plan.tier === signupPlan;
-                        return (
-                          <button
-                            key={plan.tier}
-                            type="button"
-                            onClick={() => handlePlanSwitch(plan.tier)}
-                            className="rounded-xl border p-3 text-left text-xs transition-all"
-                            style={
-                              active
-                                ? {
-                                    borderColor: TEAL_BORDER,
-                                    background: TEAL_DIM,
-                                    boxShadow: `0 0 0 1px ${TEAL_BORDER}`,
-                                  }
-                                : {
-                                    borderColor: "hsl(var(--border))",
-                                    background: "hsl(var(--muted)/0.3)",
-                                  }
-                            }
-                          >
-                            <p className="font-semibold text-foreground">{plan.name}</p>
-                            <p className="mt-0.5 text-muted-foreground">{plan.summary}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
+                <form className="space-y-4" onSubmit={handleSignup}>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block space-y-1">
+                      <span className="text-xs text-muted-foreground">Name</span>
+                      <input
+                        className={fieldClass}
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        placeholder="Ada Lovelace"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-xs text-muted-foreground">Project name</span>
+                      <input
+                        className={fieldClass}
+                        value={signupProjectName}
+                        onChange={(e) => setSignupProjectName(e.target.value)}
+                        placeholder="Fraud Agent Sandbox"
+                      />
+                    </label>
+                    <label className="block space-y-1 sm:col-span-2">
+                      <span className="text-xs text-muted-foreground">Work email</span>
+                      <input
+                        type="email"
+                        className={fieldClass}
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        placeholder="you@company.com"
+                        required
+                      />
+                    </label>
+                    <label className="block space-y-1 sm:col-span-2">
+                      <span className="text-xs text-muted-foreground">Password</span>
+                      <input
+                        type="password"
+                        className={fieldClass}
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        placeholder="Minimum 8 characters"
+                        minLength={8}
+                        required
+                      />
+                    </label>
                   </div>
 
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">Name</span>
-                    <input
-                      className={fieldClass}
-                      value={signupName}
-                      onChange={(e) => setSignupName(e.target.value)}
-                      placeholder="Ada Lovelace"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">Work email</span>
-                    <input
-                      type="email"
-                      className={fieldClass}
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      placeholder="you@company.com"
-                      required
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">Password</span>
-                    <input
-                      type="password"
-                      className={fieldClass}
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      placeholder="Minimum 8 characters"
-                      minLength={8}
-                      required
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">Project name</span>
-                    <input
-                      className={fieldClass}
-                      value={signupProjectName}
-                      onChange={(e) => setSignupProjectName(e.target.value)}
-                      placeholder="Fraud Agent Sandbox"
-                    />
-                  </label>
-
-                  <TealButton type="submit" disabled={submittingAccess}>
-                    {submittingAccess ? (
+                  <TealButton type="submit" disabled={submittingAccess || oauthPending}>
+                    {submittingAccess || oauthPending ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Creating workspace...</>
                     ) : (
                       <><UserPlus className="h-4 w-4" /> Create account<ArrowRight className="h-3.5 w-3.5" /></>
@@ -639,33 +733,35 @@ export function AccessPortal() {
                 </form>
               ) : (
                 /* ── LOG IN FORM ── */
-                <form className="space-y-3" onSubmit={handleLogin}>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">Email</span>
-                    <input
-                      type="email"
-                      className={fieldClass}
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="you@company.com"
-                      required
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">Password</span>
-                    <input
-                      type="password"
-                      className={fieldClass}
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="Your password"
-                      minLength={8}
-                      required
-                    />
-                  </label>
+                <form className="space-y-4" onSubmit={handleLogin}>
+                  <div className="grid gap-3">
+                    <label className="block space-y-1">
+                      <span className="text-xs text-muted-foreground">Email</span>
+                      <input
+                        type="email"
+                        className={fieldClass}
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        placeholder="you@company.com"
+                        required
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-xs text-muted-foreground">Password</span>
+                      <input
+                        type="password"
+                        className={fieldClass}
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="Your password"
+                        minLength={8}
+                        required
+                      />
+                    </label>
+                  </div>
 
-                  <TealButton type="submit" disabled={submittingAccess}>
-                    {submittingAccess ? (
+                  <TealButton type="submit" disabled={submittingAccess || oauthPending}>
+                    {submittingAccess || oauthPending ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
                     ) : (
                       <><LogIn className="h-4 w-4" /> Log in to dashboard</>
@@ -674,65 +770,24 @@ export function AccessPortal() {
                 </form>
               )}
 
-              {/* API key fallback */}
-              <details className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm">
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
-                  Use an existing API key instead
-                </summary>
-                <form className="mt-4 space-y-3" onSubmit={handleManualConnect}>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">API Key</span>
-                    <input
-                      className={fieldClass}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="cl_..."
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-muted-foreground">Project ID (optional)</span>
-                    <input
-                      className={fieldClass}
-                      value={projectId}
-                      onChange={(e) => setProjectId(e.target.value)}
-                      placeholder="UUID"
-                    />
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    <TealButton type="submit" disabled={connecting}>
-                      {connecting ? (
-                        <><Loader2 className="h-4 w-4 animate-spin" /> Connecting...</>
-                      ) : (
-                        <><KeyRound className="h-4 w-4" /> Continue with API key</>
-                      )}
-                    </TealButton>
-                    <button
-                      type="button"
-                      onClick={resetStoredCredentials}
-                      className="rounded-xl border border-border/60 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </form>
-              </details>
+              <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+                Social sign-in creates or links your Sepurux workspace automatically. Email login keeps the same session model and billing identity.
+              </div>
             </div>
           )}
 
           {/* error */}
+          {oauthPending ? (
+            <div className="rounded-xl border px-4 py-3 text-sm" style={{ borderColor: TEAL_BORDER, background: TEAL_DIM, color: TEAL }}>
+              Completing sign-in with your identity provider...
+            </div>
+          ) : null}
+
           {errorMessage ? (
             <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
               {errorMessage}
             </div>
           ) : null}
-
-          {/* plan preview footer (access mode only) */}
-          {mode === "access" && (
-            <div className="mt-auto rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{selectedPlanDefinition.name}</span>
-              {" — "}{selectedPlanDefinition.menuHighlights.join(", ")}
-            </div>
-          )}
         </div>
       </div>
     </div>

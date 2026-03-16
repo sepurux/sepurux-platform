@@ -418,9 +418,9 @@ class AuthSessionMetadata(BaseModel):
     project_id: UUID
     project_name: str
     project_scoped: bool = True
-    pricing_tier: Literal["starter", "team", "enterprise"] = "team"
+    pricing_tier: str = "credits"
     plan_name: str
-    role_name: Literal["admin", "developer", "viewer"]
+    role_name: str
     user_id: UUID | None = None
     email: str | None = None
     name: str | None = None
@@ -446,6 +446,10 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str = Field(min_length=8, max_length=256)
+
+
+class OAuthSessionExchangeRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
 
 
 class AuthSessionResponse(AuthSessionMetadata):

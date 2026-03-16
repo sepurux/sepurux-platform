@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { api, type CreditWalletMetadata, type SubscriptionPlanMetadata, type UserSubscriptionMetadata } from "@/lib/api";
-import { useAuthSession } from "@/lib/use-auth-session";
 import { formatRelativeDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,15 +20,12 @@ type BillingState =
     };
 
 export function BillingView() {
-  const authSession = useAuthSession();
   const [state, setState] = useState<BillingState>({ status: "loading" });
   const [topupCredits, setTopupCredits] = useState(1000);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
   const [topupBusy, setTopupBusy] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const canManageBilling = authSession?.permissions.can_manage_billing ?? false;
 
   async function loadBilling() {
     setActionError(null);
@@ -217,7 +213,7 @@ export function BillingView() {
                 <Badge variant={state.wallet.is_low_credit ? "warning" : "default"}>
                   {state.wallet.queue_priority} queue
                 </Badge>
-                {canManageBilling && state.subscription.portal_available ? (
+                {state.subscription.portal_available ? (
                   <Button variant="outline" onClick={() => void handleOpenPortal()} disabled={portalBusy}>
                     {portalBusy ? "Opening..." : "Manage billing"}
                   </Button>
@@ -262,12 +258,6 @@ export function BillingView() {
                         <p>
                           Queue: <span className="font-medium capitalize text-foreground">{queuePriority}</span>
                         </p>
-                        <p>
-                          Workspace tier:{" "}
-                          <span className="font-medium capitalize text-foreground">
-                            {String(plan.features?.workspace_tier ?? "team")}
-                          </span>
-                        </p>
                       </div>
                       <ul className="space-y-2 text-sm text-muted-foreground">
                         {highlights.map((item) => (
@@ -277,7 +267,7 @@ export function BillingView() {
                       <Button
                         className="w-full"
                         variant={isCurrent ? "outline" : "default"}
-                        disabled={!canManageBilling || isCurrent || busyPlanId === plan.plan_id || !isCheckoutEnabled}
+                        disabled={isCurrent || busyPlanId === plan.plan_id || !isCheckoutEnabled}
                         onClick={() => void handleSubscribe(plan.plan_id)}
                       >
                         {busyPlanId === plan.plan_id ? "Redirecting..." : planActionLabel}
@@ -301,28 +291,22 @@ export function BillingView() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!canManageBilling ? (
-                  <p className="text-sm text-muted-foreground">
-                    Billing changes follow the membership bundle. This workspace role can view credits but cannot purchase or upgrade.
-                  </p>
-                ) : (
-                  <form className="space-y-4" onSubmit={handleTopup}>
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Credits</span>
-                      <input
-                        type="number"
-                        min={100}
-                        step={100}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={topupCredits}
-                        onChange={(event) => setTopupCredits(Number(event.target.value))}
-                      />
-                    </label>
-                    <Button className="w-full" type="submit" disabled={topupBusy}>
-                      {topupBusy ? "Processing..." : "Purchase Credits"}
-                    </Button>
-                  </form>
-                )}
+                <form className="space-y-4" onSubmit={handleTopup}>
+                  <label className="block space-y-1 text-sm">
+                    <span className="text-muted-foreground">Credits</span>
+                    <input
+                      type="number"
+                      min={100}
+                      step={100}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                      value={topupCredits}
+                      onChange={(event) => setTopupCredits(Number(event.target.value))}
+                    />
+                  </label>
+                  <Button className="w-full" type="submit" disabled={topupBusy}>
+                    {topupBusy ? "Processing..." : "Purchase Credits"}
+                  </Button>
+                </form>
 
                 <div className="rounded-md border border-border/70 bg-background/70 p-3 text-sm text-muted-foreground">
                   Operation costs:
