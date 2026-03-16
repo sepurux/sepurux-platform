@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 
@@ -138,6 +139,264 @@ func (a *AuthAPIService) GetAuthSessionV1AuthSessionGetExecute(r ApiGetAuthSessi
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest struct {
+	ctx context.Context
+	ApiService *AuthAPIService
+	provider string
+	state *string
+	code *string
+	error_ *string
+}
+
+func (r ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest) State(state string) ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest {
+	r.state = &state
+	return r
+}
+
+func (r ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest) Code(code string) ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest {
+	r.code = &code
+	return r
+}
+
+func (r ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest) Error_(error_ string) ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest {
+	r.error_ = &error_
+	return r
+}
+
+func (r ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest) Execute() (interface{}, *http.Response, error) {
+	return r.ApiService.GetOauthCallbackAuthOauthProviderCallbackGetExecute(r)
+}
+
+/*
+GetOauthCallbackAuthOauthProviderCallbackGet Get Oauth Callback
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param provider
+ @return ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest
+*/
+func (a *AuthAPIService) GetOauthCallbackAuthOauthProviderCallbackGet(ctx context.Context, provider string) ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest {
+	return ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest{
+		ApiService: a,
+		ctx: ctx,
+		provider: provider,
+	}
+}
+
+// Execute executes the request
+//  @return interface{}
+func (a *AuthAPIService) GetOauthCallbackAuthOauthProviderCallbackGetExecute(r ApiGetOauthCallbackAuthOauthProviderCallbackGetRequest) (interface{}, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  interface{}
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AuthAPIService.GetOauthCallbackAuthOauthProviderCallbackGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/auth/oauth/{provider}/callback"
+	localVarPath = strings.Replace(localVarPath, "{"+"provider"+"}", url.PathEscape(parameterValueToString(r.provider, "provider")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.state != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "state", r.state, "form", "")
+	}
+	if r.code != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "code", r.code, "form", "")
+	}
+	if r.error_ != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "error", r.error_, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiGetOauthStartAuthOauthProviderStartGetRequest struct {
+	ctx context.Context
+	ApiService *AuthAPIService
+	provider string
+	next *string
+}
+
+func (r ApiGetOauthStartAuthOauthProviderStartGetRequest) Next(next string) ApiGetOauthStartAuthOauthProviderStartGetRequest {
+	r.next = &next
+	return r
+}
+
+func (r ApiGetOauthStartAuthOauthProviderStartGetRequest) Execute() (interface{}, *http.Response, error) {
+	return r.ApiService.GetOauthStartAuthOauthProviderStartGetExecute(r)
+}
+
+/*
+GetOauthStartAuthOauthProviderStartGet Get Oauth Start
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param provider
+ @return ApiGetOauthStartAuthOauthProviderStartGetRequest
+*/
+func (a *AuthAPIService) GetOauthStartAuthOauthProviderStartGet(ctx context.Context, provider string) ApiGetOauthStartAuthOauthProviderStartGetRequest {
+	return ApiGetOauthStartAuthOauthProviderStartGetRequest{
+		ApiService: a,
+		ctx: ctx,
+		provider: provider,
+	}
+}
+
+// Execute executes the request
+//  @return interface{}
+func (a *AuthAPIService) GetOauthStartAuthOauthProviderStartGetExecute(r ApiGetOauthStartAuthOauthProviderStartGetRequest) (interface{}, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  interface{}
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AuthAPIService.GetOauthStartAuthOauthProviderStartGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/auth/oauth/{provider}/start"
+	localVarPath = strings.Replace(localVarPath, "{"+"provider"+"}", url.PathEscape(parameterValueToString(r.provider, "provider")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.next != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "next", r.next, "form", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiPostLoginAuthLoginPostRequest struct {
 	ctx context.Context
 	ApiService *AuthAPIService
@@ -209,6 +468,124 @@ func (a *AuthAPIService) PostLoginAuthLoginPostExecute(r ApiPostLoginAuthLoginPo
 	}
 	// body params
 	localVarPostBody = r.loginRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiPostOauthExchangeAuthOauthExchangePostRequest struct {
+	ctx context.Context
+	ApiService *AuthAPIService
+	oAuthSessionExchangeRequest *OAuthSessionExchangeRequest
+}
+
+func (r ApiPostOauthExchangeAuthOauthExchangePostRequest) OAuthSessionExchangeRequest(oAuthSessionExchangeRequest OAuthSessionExchangeRequest) ApiPostOauthExchangeAuthOauthExchangePostRequest {
+	r.oAuthSessionExchangeRequest = &oAuthSessionExchangeRequest
+	return r
+}
+
+func (r ApiPostOauthExchangeAuthOauthExchangePostRequest) Execute() (*AuthSessionResponse, *http.Response, error) {
+	return r.ApiService.PostOauthExchangeAuthOauthExchangePostExecute(r)
+}
+
+/*
+PostOauthExchangeAuthOauthExchangePost Post Oauth Exchange
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiPostOauthExchangeAuthOauthExchangePostRequest
+*/
+func (a *AuthAPIService) PostOauthExchangeAuthOauthExchangePost(ctx context.Context) ApiPostOauthExchangeAuthOauthExchangePostRequest {
+	return ApiPostOauthExchangeAuthOauthExchangePostRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return AuthSessionResponse
+func (a *AuthAPIService) PostOauthExchangeAuthOauthExchangePostExecute(r ApiPostOauthExchangeAuthOauthExchangePostRequest) (*AuthSessionResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *AuthSessionResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AuthAPIService.PostOauthExchangeAuthOauthExchangePost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/auth/oauth/exchange"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.oAuthSessionExchangeRequest == nil {
+		return localVarReturnValue, nil, reportError("oAuthSessionExchangeRequest is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.oAuthSessionExchangeRequest
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
 		return localVarReturnValue, nil, err

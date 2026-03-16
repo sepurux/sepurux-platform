@@ -19,6 +19,7 @@ import type {
   AuthSessionResponse,
   HTTPValidationError,
   LoginRequest,
+  OAuthSessionExchangeRequest,
   SignupRequest,
 } from '../models/index';
 import {
@@ -30,6 +31,8 @@ import {
     HTTPValidationErrorToJSON,
     LoginRequestFromJSON,
     LoginRequestToJSON,
+    OAuthSessionExchangeRequestFromJSON,
+    OAuthSessionExchangeRequestToJSON,
     SignupRequestFromJSON,
     SignupRequestToJSON,
 } from '../models/index';
@@ -38,8 +41,24 @@ export interface GetAuthSessionV1AuthSessionGetRequest {
     xProjectId?: string | null;
 }
 
+export interface GetOauthCallbackAuthOauthProviderCallbackGetRequest {
+    provider: string;
+    state?: string | null;
+    code?: string | null;
+    error?: string | null;
+}
+
+export interface GetOauthStartAuthOauthProviderStartGetRequest {
+    provider: string;
+    next?: string | null;
+}
+
 export interface PostLoginAuthLoginPostRequest {
     loginRequest: LoginRequest;
+}
+
+export interface PostOauthExchangeAuthOauthExchangePostRequest {
+    oAuthSessionExchangeRequest: OAuthSessionExchangeRequest;
 }
 
 export interface PostSignupAuthSignupPostRequest {
@@ -82,6 +101,96 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get Oauth Callback
+     */
+    async getOauthCallbackAuthOauthProviderCallbackGetRaw(requestParameters: GetOauthCallbackAuthOauthProviderCallbackGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        if (requestParameters['provider'] == null) {
+            throw new runtime.RequiredError(
+                'provider',
+                'Required parameter "provider" was null or undefined when calling getOauthCallbackAuthOauthProviderCallbackGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['state'] != null) {
+            queryParameters['state'] = requestParameters['state'];
+        }
+
+        if (requestParameters['code'] != null) {
+            queryParameters['code'] = requestParameters['code'];
+        }
+
+        if (requestParameters['error'] != null) {
+            queryParameters['error'] = requestParameters['error'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/auth/oauth/{provider}/callback`.replace(`{${"provider"}}`, encodeURIComponent(String(requestParameters['provider']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Get Oauth Callback
+     */
+    async getOauthCallbackAuthOauthProviderCallbackGet(requestParameters: GetOauthCallbackAuthOauthProviderCallbackGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.getOauthCallbackAuthOauthProviderCallbackGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get Oauth Start
+     */
+    async getOauthStartAuthOauthProviderStartGetRaw(requestParameters: GetOauthStartAuthOauthProviderStartGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        if (requestParameters['provider'] == null) {
+            throw new runtime.RequiredError(
+                'provider',
+                'Required parameter "provider" was null or undefined when calling getOauthStartAuthOauthProviderStartGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['next'] != null) {
+            queryParameters['next'] = requestParameters['next'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/auth/oauth/{provider}/start`.replace(`{${"provider"}}`, encodeURIComponent(String(requestParameters['provider']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Get Oauth Start
+     */
+    async getOauthStartAuthOauthProviderStartGet(requestParameters: GetOauthStartAuthOauthProviderStartGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.getOauthStartAuthOauthProviderStartGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Post Login
      */
     async postLoginAuthLoginPostRaw(requestParameters: PostLoginAuthLoginPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthSessionResponse>> {
@@ -114,6 +223,42 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async postLoginAuthLoginPost(requestParameters: PostLoginAuthLoginPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthSessionResponse> {
         const response = await this.postLoginAuthLoginPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Post Oauth Exchange
+     */
+    async postOauthExchangeAuthOauthExchangePostRaw(requestParameters: PostOauthExchangeAuthOauthExchangePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthSessionResponse>> {
+        if (requestParameters['oAuthSessionExchangeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'oAuthSessionExchangeRequest',
+                'Required parameter "oAuthSessionExchangeRequest" was null or undefined when calling postOauthExchangeAuthOauthExchangePost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/auth/oauth/exchange`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: OAuthSessionExchangeRequestToJSON(requestParameters['oAuthSessionExchangeRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AuthSessionResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Post Oauth Exchange
+     */
+    async postOauthExchangeAuthOauthExchangePost(requestParameters: PostOauthExchangeAuthOauthExchangePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthSessionResponse> {
+        const response = await this.postOauthExchangeAuthOauthExchangePostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

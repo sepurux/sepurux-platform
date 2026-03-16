@@ -56,7 +56,7 @@ func NewAuthSessionResponse(tenantId string, projectId string, projectName strin
 	this.ProjectName = projectName
 	var projectScoped bool = true
 	this.ProjectScoped = &projectScoped
-	var pricingTier string = "team"
+	var pricingTier string = "credits"
 	this.PricingTier = &pricingTier
 	this.PlanName = planName
 	this.RoleName = roleName
@@ -76,7 +76,7 @@ func NewAuthSessionResponseWithDefaults() *AuthSessionResponse {
 	this := AuthSessionResponse{}
 	var projectScoped bool = true
 	this.ProjectScoped = &projectScoped
-	var pricingTier string = "team"
+	var pricingTier string = "credits"
 	this.PricingTier = &pricingTier
 	var isDemo bool = false
 	this.IsDemo = &isDemo

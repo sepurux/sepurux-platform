@@ -55,7 +55,7 @@ export interface AuthSessionResponse {
      * @type {string}
      * @memberof AuthSessionResponse
      */
-    pricing_tier?: AuthSessionResponsePricingTierEnum;
+    pricing_tier?: string;
     /**
      * 
      * @type {string}
@@ -67,7 +67,7 @@ export interface AuthSessionResponse {
      * @type {string}
      * @memberof AuthSessionResponse
      */
-    role_name: AuthSessionResponseRoleNameEnum;
+    role_name: string;
     /**
      * 
      * @type {string}
@@ -148,26 +148,6 @@ export interface AuthSessionResponse {
     api_key: string;
 }
 
-
-/**
- * @export
- */
-export const AuthSessionResponsePricingTierEnum = {
-    starter: 'starter',
-    team: 'team',
-    enterprise: 'enterprise'
-} as const;
-export type AuthSessionResponsePricingTierEnum = typeof AuthSessionResponsePricingTierEnum[keyof typeof AuthSessionResponsePricingTierEnum];
-
-/**
- * @export
- */
-export const AuthSessionResponseRoleNameEnum = {
-    admin: 'admin',
-    developer: 'developer',
-    viewer: 'viewer'
-} as const;
-export type AuthSessionResponseRoleNameEnum = typeof AuthSessionResponseRoleNameEnum[keyof typeof AuthSessionResponseRoleNameEnum];
 
 /**
  * @export
