@@ -3,7 +3,9 @@ from __future__ import annotations
 from app.mutation_packs.base import Mutation, RegisteredMutation
 
 PACK_NAME = "core-reliability"
-PACK_DESCRIPTION = "Foundational reliability pack: schema breaks, JSON corruption, and tool timeouts."
+PACK_DESCRIPTION = (
+    "Foundational reliability pack: schema breaks, JSON corruption, and tool timeouts."
+)
 PACK_SUGGESTED_ATTEMPTS = 20
 PACK_MAX_MUTATIONS_PER_ATTEMPT = 2
 PACK_CREDIT_COST = 20
