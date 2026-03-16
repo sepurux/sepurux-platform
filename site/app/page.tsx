@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/sections/hero-section";
 import { SocialProofSection } from "@/components/sections/social-proof-section";
 import { DashboardPreviewSection } from "@/components/sections/dashboard-preview-section";
 import { FeatureGrid } from "@/components/sections/feature-grid";
+import { IntegrationSection } from "@/components/sections/integration-section";
 import { HowItWorksSection } from "@/components/sections/how-it-works-section";
 import { ScreenshotGallerySection } from "@/components/sections/screenshot-gallery-section";
 import { FinalCtaSection } from "@/components/sections/final-cta-section";
@@ -24,6 +25,7 @@ export default function HomePage() {
       <SocialProofSection />
       <DashboardPreviewSection />
       <FeatureGrid />
+      <IntegrationSection />
       <HowItWorksSection />
       <ScreenshotGallerySection />
       <FinalCtaSection />
