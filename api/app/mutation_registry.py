@@ -13,6 +13,11 @@ PACK_MODULES = (
     "app.mutation_packs.core.latency",
     "app.mutation_packs.prompt.injection",
     "app.mutation_packs.tool.schema_break",
+    # Named registry packs (credit-cost aware)
+    "app.mutation_packs.registry.core_reliability",
+    "app.mutation_packs.registry.prompt_security",
+    "app.mutation_packs.registry.tool_chaos",
+    "app.mutation_packs.registry.latency_chaos",
 )
 
 
@@ -60,10 +65,12 @@ def get_registered_pack_definition(pack_name: str) -> dict[str, Any] | None:
     max_mutations = getattr(module, "PACK_MAX_MUTATIONS_PER_ATTEMPT", 1)
     suggested_attempts = getattr(module, "PACK_SUGGESTED_ATTEMPTS", 20)
     description = getattr(module, "PACK_DESCRIPTION", "")
+    credit_cost = getattr(module, "PACK_CREDIT_COST", 20)
 
     return {
         "name": normalized,
         "description": str(description or ""),
+        "credit_cost": int(credit_cost),
         "config": {
             "version": "0.1",
             "suggested_attempts": int(suggested_attempts),

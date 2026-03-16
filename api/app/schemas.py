@@ -558,6 +558,7 @@ class MutationPackCreateRequest(BaseModel):
     name: str
     description: str | None = None
     config: Any
+    credit_cost: int = 20
 
 
 class MutationPackMetadata(BaseModel):
@@ -568,6 +569,7 @@ class MutationPackMetadata(BaseModel):
     config: Any
     is_system: bool = False
     coverage_score: int = 0
+    credit_cost: int = 20
     created_at: datetime
 
 
