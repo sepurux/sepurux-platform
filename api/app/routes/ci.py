@@ -5,8 +5,13 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.db import get_db
+from app.models import Campaign
 from app.schemas import CIRunCreateRequest, CIRunCreateResponse, CIRunStatusResponse
 from app.services.audit_service import create_audit_event
+from app.services.billing_service import (
+    InsufficientCreditsError,
+    consume_credits_for_project_campaign,
+)
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_ci_run_and_enqueue,
@@ -14,6 +19,7 @@ from app.services.run_service import (
     get_run_unscoped,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/ci", tags=["ci"])
@@ -25,6 +31,23 @@ CIDecision = Literal["pass", "fail", "pending"]
 
 @router.post("/runs", status_code=status.HTTP_201_CREATED, response_model=CIRunCreateResponse)
 def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateResponse:
+    # Pre-fetch the campaign so we can compute the credit cost before creating the run.
+    # create_ci_run_and_enqueue will re-validate below; the double query is intentional
+    # so that a 402 is returned before any run record is written.
+    campaign = db.scalar(select(Campaign).where(Campaign.campaign_id == payload.campaign_id))
+    if campaign is not None:
+        try:
+            consume_credits_for_project_campaign(
+                db,
+                project_id=campaign.project_id,
+                campaign=campaign,
+            )
+        except InsufficientCreditsError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="insufficient_credits",
+            ) from exc
+
     try:
         thresholds_payload = (
             payload.thresholds.model_dump()

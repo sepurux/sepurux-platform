@@ -16,6 +16,9 @@ dependencies = [
   "httpx>=0.27,<1",
 ]
 
+[project.scripts]
+sepurux = "sepurux.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/felixkwasisarpong/Sepurux"
 
