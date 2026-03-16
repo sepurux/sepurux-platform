@@ -45,6 +45,7 @@ def _to_mutation_pack_metadata(record) -> MutationPackMetadata:
         config=record.config,
         is_system=record.is_system,
         coverage_score=record.coverage_score,
+        credit_cost=record.credit_cost,
         created_at=record.created_at,
     )
 
@@ -78,6 +79,7 @@ def post_mutation_pack(
         description=payload.description,
         config=payload.config,
         coverage_score=validation.coverage_score,
+        credit_cost=payload.credit_cost,
     )
     return MutationPackCreateResponse(
         **_to_mutation_pack_metadata(record).model_dump(),

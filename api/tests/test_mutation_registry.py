@@ -14,6 +14,10 @@ def test_load_mutation_packs_returns_expected_registry_keys() -> None:
         "core.latency",
         "prompt.injection",
         "tool.schema.break",
+        "core-reliability",
+        "prompt-security",
+        "tool-chaos",
+        "latency-chaos",
     }
     assert all(
         all(isinstance(mutation, Mutation) for mutation in mutations)

@@ -63,6 +63,12 @@ export interface MutationPackMetadata {
     coverage_score?: number;
     /**
      * 
+     * @type {number}
+     * @memberof MutationPackMetadata
+     */
+    credit_cost?: number;
+    /**
+     * 
      * @type {Date}
      * @memberof MutationPackMetadata
      */
@@ -98,6 +104,7 @@ export function MutationPackMetadataFromJSONTyped(json: any, ignoreDiscriminator
         'config': json['config'],
         'is_system': json['is_system'] == null ? undefined : json['is_system'],
         'coverage_score': json['coverage_score'] == null ? undefined : json['coverage_score'],
+        'credit_cost': json['credit_cost'] == null ? undefined : json['credit_cost'],
         'created_at': (new Date(json['created_at'])),
     };
 }
@@ -115,6 +122,7 @@ export function MutationPackMetadataToJSON(value?: MutationPackMetadata | null):
         'config': value['config'],
         'is_system': value['is_system'],
         'coverage_score': value['coverage_score'],
+        'credit_cost': value['credit_cost'],
         'created_at': ((value['created_at']).toISOString()),
     };
 }

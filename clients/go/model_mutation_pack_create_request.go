@@ -24,6 +24,7 @@ type MutationPackCreateRequest struct {
 	Name string `json:"name"`
 	Description NullableString `json:"description,omitempty"`
 	Config interface{} `json:"config"`
+	CreditCost *int32 `json:"credit_cost,omitempty"`
 }
 
 type _MutationPackCreateRequest MutationPackCreateRequest
@@ -36,6 +37,8 @@ func NewMutationPackCreateRequest(name string, config interface{}) *MutationPack
 	this := MutationPackCreateRequest{}
 	this.Name = name
 	this.Config = config
+	var creditCost int32 = 20
+	this.CreditCost = &creditCost
 	return &this
 }
 
@@ -44,6 +47,8 @@ func NewMutationPackCreateRequest(name string, config interface{}) *MutationPack
 // but it doesn't guarantee that properties required by API are set
 func NewMutationPackCreateRequestWithDefaults() *MutationPackCreateRequest {
 	this := MutationPackCreateRequest{}
+	var creditCost int32 = 20
+	this.CreditCost = &creditCost
 	return &this
 }
 
@@ -139,6 +144,38 @@ func (o *MutationPackCreateRequest) SetConfig(v interface{}) {
 	o.Config = v
 }
 
+// GetCreditCost returns the CreditCost field value if set, zero value otherwise.
+func (o *MutationPackCreateRequest) GetCreditCost() int32 {
+	if o == nil || IsNil(o.CreditCost) {
+		var ret int32
+		return ret
+	}
+	return *o.CreditCost
+}
+
+// GetCreditCostOk returns a tuple with the CreditCost field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MutationPackCreateRequest) GetCreditCostOk() (*int32, bool) {
+	if o == nil || IsNil(o.CreditCost) {
+		return nil, false
+	}
+	return o.CreditCost, true
+}
+
+// HasCreditCost returns a boolean if a field has been set.
+func (o *MutationPackCreateRequest) HasCreditCost() bool {
+	if o != nil && !IsNil(o.CreditCost) {
+		return true
+	}
+
+	return false
+}
+
+// SetCreditCost gets a reference to the given int32 and assigns it to the CreditCost field.
+func (o *MutationPackCreateRequest) SetCreditCost(v int32) {
+	o.CreditCost = &v
+}
+
 func (o MutationPackCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -155,6 +192,9 @@ func (o MutationPackCreateRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if o.Config != nil {
 		toSerialize["config"] = o.Config
+	}
+	if !IsNil(o.CreditCost) {
+		toSerialize["credit_cost"] = o.CreditCost
 	}
 	return toSerialize, nil
 }

@@ -63,6 +63,12 @@ export interface MutationPackCreateResponse {
     coverage_score?: number;
     /**
      * 
+     * @type {number}
+     * @memberof MutationPackCreateResponse
+     */
+    credit_cost?: number;
+    /**
+     * 
      * @type {Date}
      * @memberof MutationPackCreateResponse
      */
@@ -110,6 +116,7 @@ export function MutationPackCreateResponseFromJSONTyped(json: any, ignoreDiscrim
         'config': json['config'],
         'is_system': json['is_system'] == null ? undefined : json['is_system'],
         'coverage_score': json['coverage_score'] == null ? undefined : json['coverage_score'],
+        'credit_cost': json['credit_cost'] == null ? undefined : json['credit_cost'],
         'created_at': (new Date(json['created_at'])),
         'warning': json['warning'] == null ? undefined : json['warning'],
         'validation_issues': json['validation_issues'] == null ? undefined : json['validation_issues'],
@@ -129,6 +136,7 @@ export function MutationPackCreateResponseToJSON(value?: MutationPackCreateRespo
         'config': value['config'],
         'is_system': value['is_system'],
         'coverage_score': value['coverage_score'],
+        'credit_cost': value['credit_cost'],
         'created_at': ((value['created_at']).toISOString()),
         'warning': value['warning'],
         'validation_issues': value['validation_issues'],
