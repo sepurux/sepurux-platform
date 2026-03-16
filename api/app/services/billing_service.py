@@ -756,6 +756,33 @@ def maybe_consume_credits_for_campaign_run(
     )
 
 
+def consume_credits_for_project_campaign(
+    db: Session,
+    *,
+    project_id: UUID,
+    campaign: Any,
+) -> CreditWallet | None:
+    """Consume credits for a campaign run triggered without a TenantAuthContext (e.g. CI gate).
+
+    Resolves the billable user from the project's owner_id.  Returns None if the
+    project has no owner (demo or unowned project) so the run proceeds free of charge.
+    Raises InsufficientCreditsError when the owner exists but lacks credits.
+    """
+    project = db.scalar(select(Project).where(Project.project_id == project_id))
+    if not isinstance(project, Project) or project.owner_id is None:
+        return None
+    pricing_tier = _pricing_tier_for_project(db, project_id=project_id)
+    attempt_count = _attempt_count_from_eval_set(getattr(campaign, "eval_set", None))
+    cost, reason = operation_cost_for_campaign(attempt_count=attempt_count)
+    return consume_credits(
+        db,
+        user_id=project.owner_id,
+        amount=cost,
+        reason=reason,
+        pricing_tier=pricing_tier,
+    )
+
+
 def maybe_consume_credits_for_trace_replay(
     db: Session,
     *,
