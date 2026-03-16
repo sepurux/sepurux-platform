@@ -5,7 +5,10 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**GetAuthSessionV1AuthSessionGet**](AuthAPI.md#GetAuthSessionV1AuthSessionGet) | **Get** /v1/auth/session | Get Auth Session
+[**GetOauthCallbackAuthOauthProviderCallbackGet**](AuthAPI.md#GetOauthCallbackAuthOauthProviderCallbackGet) | **Get** /auth/oauth/{provider}/callback | Get Oauth Callback
+[**GetOauthStartAuthOauthProviderStartGet**](AuthAPI.md#GetOauthStartAuthOauthProviderStartGet) | **Get** /auth/oauth/{provider}/start | Get Oauth Start
 [**PostLoginAuthLoginPost**](AuthAPI.md#PostLoginAuthLoginPost) | **Post** /auth/login | Post Login
+[**PostOauthExchangeAuthOauthExchangePost**](AuthAPI.md#PostOauthExchangeAuthOauthExchangePost) | **Post** /auth/oauth/exchange | Post Oauth Exchange
 [**PostSignupAuthSignupPost**](AuthAPI.md#PostSignupAuthSignupPost) | **Post** /auth/signup | Post Signup
 
 
@@ -74,6 +77,150 @@ No authorization required
 [[Back to README]](../README.md)
 
 
+## GetOauthCallbackAuthOauthProviderCallbackGet
+
+> interface{} GetOauthCallbackAuthOauthProviderCallbackGet(ctx, provider).State(state).Code(code).Error_(error_).Execute()
+
+Get Oauth Callback
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	provider := "provider_example" // string | 
+	state := "state_example" // string |  (optional)
+	code := "code_example" // string |  (optional)
+	error_ := "error__example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.AuthAPI.GetOauthCallbackAuthOauthProviderCallbackGet(context.Background(), provider).State(state).Code(code).Error_(error_).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `AuthAPI.GetOauthCallbackAuthOauthProviderCallbackGet``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `GetOauthCallbackAuthOauthProviderCallbackGet`: interface{}
+	fmt.Fprintf(os.Stdout, "Response from `AuthAPI.GetOauthCallbackAuthOauthProviderCallbackGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**provider** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiGetOauthCallbackAuthOauthProviderCallbackGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **state** | **string** |  | 
+ **code** | **string** |  | 
+ **error_** | **string** |  | 
+
+### Return type
+
+**interface{}**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## GetOauthStartAuthOauthProviderStartGet
+
+> interface{} GetOauthStartAuthOauthProviderStartGet(ctx, provider).Next(next).Execute()
+
+Get Oauth Start
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	provider := "provider_example" // string | 
+	next := "next_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.AuthAPI.GetOauthStartAuthOauthProviderStartGet(context.Background(), provider).Next(next).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `AuthAPI.GetOauthStartAuthOauthProviderStartGet``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `GetOauthStartAuthOauthProviderStartGet`: interface{}
+	fmt.Fprintf(os.Stdout, "Response from `AuthAPI.GetOauthStartAuthOauthProviderStartGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**provider** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiGetOauthStartAuthOauthProviderStartGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **next** | **string** |  | 
+
+### Return type
+
+**interface{}**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## PostLoginAuthLoginPost
 
 > AuthSessionResponse PostLoginAuthLoginPost(ctx).LoginRequest(loginRequest).Execute()
@@ -119,6 +266,70 @@ Other parameters are passed through a pointer to a apiPostLoginAuthLoginPostRequ
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **loginRequest** | [**LoginRequest**](LoginRequest.md) |  | 
+
+### Return type
+
+[**AuthSessionResponse**](AuthSessionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## PostOauthExchangeAuthOauthExchangePost
+
+> AuthSessionResponse PostOauthExchangeAuthOauthExchangePost(ctx).OAuthSessionExchangeRequest(oAuthSessionExchangeRequest).Execute()
+
+Post Oauth Exchange
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	oAuthSessionExchangeRequest := *openapiclient.NewOAuthSessionExchangeRequest("Token_example") // OAuthSessionExchangeRequest | 
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.AuthAPI.PostOauthExchangeAuthOauthExchangePost(context.Background()).OAuthSessionExchangeRequest(oAuthSessionExchangeRequest).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `AuthAPI.PostOauthExchangeAuthOauthExchangePost``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `PostOauthExchangeAuthOauthExchangePost`: AuthSessionResponse
+	fmt.Fprintf(os.Stdout, "Response from `AuthAPI.PostOauthExchangeAuthOauthExchangePost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiPostOauthExchangeAuthOauthExchangePostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **oAuthSessionExchangeRequest** | [**OAuthSessionExchangeRequest**](OAuthSessionExchangeRequest.md) |  | 
 
 ### Return type
 

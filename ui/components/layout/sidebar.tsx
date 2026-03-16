@@ -173,7 +173,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
             className="mt-0.5 truncate text-[11px] uppercase tracking-[0.12em]"
             style={{ color: "var(--accent-teal)" }}
           >
-            {authSession?.plan_name ?? "Workspace"} plan
+            Credits-enabled workspace
           </p>
         </div>
       </div>
@@ -308,10 +308,8 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
 
       {/* footer */}
       <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
-        <p className="mb-1 font-medium text-foreground">
-          {(authSession?.plan_name ?? "Workspace") + " · " + (authSession?.role_name ?? "viewer")} access
-        </p>
-        <p>Navigation is filtered by workspace plan, then by project role.</p>
+        <p className="mb-1 font-medium text-foreground">All product surfaces are unlocked.</p>
+        <p>Credits are only consumed when you execute runs, replays, and other billable workflows.</p>
       </div>
     </aside>
   );

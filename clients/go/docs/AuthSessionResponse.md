@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **ProjectId** | **string** |  | 
 **ProjectName** | **string** |  | 
 **ProjectScoped** | Pointer to **bool** |  | [optional] [default to true]
-**PricingTier** | Pointer to **string** |  | [optional] [default to "team"]
+**PricingTier** | Pointer to **string** |  | [optional] [default to "credits"]
 **PlanName** | **string** |  | 
 **RoleName** | **string** |  | 
 **UserId** | Pointer to **NullableString** |  | [optional] 

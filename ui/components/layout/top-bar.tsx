@@ -230,7 +230,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {authSession
-                  ? `${authSession.plan_name} plan · ${authSession.role_name} access`
+                  ? `${authSession.billing_plan_name ?? "Credits-enabled"} · ${authSession.queue_priority ?? "normal"} queue`
                   : "Reliability dashboard for AI agents"}
               </p>
             </div>
@@ -369,7 +369,11 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
             <div className="absolute right-0 mt-2 w-44 rounded-md border border-border/70 bg-card p-1 shadow-panel">
               <div className="px-3 py-2 text-left text-xs text-muted-foreground">
                 <p className="font-medium text-foreground">{userLabel}</p>
-                <p className="mt-0.5 uppercase tracking-[0.12em]">{authSession?.role_name ?? "viewer"}</p>
+                <p className="mt-0.5 uppercase tracking-[0.12em]">
+                  {typeof creditBalance === "number"
+                    ? `${creditBalance.toLocaleString()} credits`
+                    : authSession?.billing_plan_name ?? "workspace"}
+                </p>
               </div>
               <button
                 className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"

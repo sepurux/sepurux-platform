@@ -83,6 +83,7 @@ docs/MutationSummaryItem.md
 docs/MutationSummaryResponse.md
 docs/MutationSummaryTopReason.md
 docs/MutationSummaryTopTool.md
+docs/OAuthSessionExchangeRequest.md
 docs/PolicyEventListItem.md
 docs/PolicyPackCreateRequest.md
 docs/PolicyPackMetadata.md
@@ -182,6 +183,7 @@ model_mutation_summary_item.go
 model_mutation_summary_response.go
 model_mutation_summary_top_reason.go
 model_mutation_summary_top_tool.go
+model_o_auth_session_exchange_request.go
 model_policy_event_list_item.go
 model_policy_pack_create_request.go
 model_policy_pack_metadata.go
