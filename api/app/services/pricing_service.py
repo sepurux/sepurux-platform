@@ -6,7 +6,7 @@ from app.schemas import AuthPermissionSet
 
 PricingTier = Literal["starter", "team", "enterprise"]
 
-DEFAULT_PRICING_TIER: PricingTier = "team"
+DEFAULT_PRICING_TIER: PricingTier = "starter"
 
 ALL_SECTIONS = [
     "dashboard",
@@ -22,50 +22,6 @@ ALL_SECTIONS = [
     "webhooks",
     "settings",
 ]
-
-ROLE_SECTION_ALLOWLIST: dict[str, list[str]] = {
-    "admin": ALL_SECTIONS,
-    "developer": [
-        "dashboard",
-        "billing",
-        "traces",
-        "campaigns",
-        "runs",
-        "reports",
-        "mutation-packs",
-        "policies",
-        "security",
-        "settings",
-    ],
-    "viewer": ["dashboard", "billing", "reports", "settings"],
-}
-
-PLAN_SECTION_ALLOWLIST: dict[PricingTier, list[str]] = {
-    "starter": [
-        "dashboard",
-        "billing",
-        "traces",
-        "campaigns",
-        "runs",
-        "reports",
-        "mutation-packs",
-        "settings",
-    ],
-    "team": [
-        "dashboard",
-        "billing",
-        "traces",
-        "campaigns",
-        "runs",
-        "reports",
-        "mutation-packs",
-        "policies",
-        "security",
-        "webhooks",
-        "settings",
-    ],
-    "enterprise": ALL_SECTIONS,
-}
 
 PLAN_LABELS: dict[PricingTier, str] = {
     "starter": "Starter",
@@ -87,41 +43,17 @@ def plan_label(value: str | None) -> str:
 
 
 def build_auth_permissions(role_name: str, pricing_tier: str | None) -> AuthPermissionSet:
-    normalized_role = role_name if role_name in ROLE_SECTION_ALLOWLIST else "viewer"
-    normalized_tier = normalize_pricing_tier(pricing_tier)
-
-    role_sections = set(ROLE_SECTION_ALLOWLIST[normalized_role])
-    plan_sections = set(PLAN_SECTION_ALLOWLIST[normalized_tier])
-    visible_sections = [
-        section for section in ROLE_SECTION_ALLOWLIST[normalized_role] if section in plan_sections
-    ]
-    visible_section_set = set(visible_sections)
-
-    can_upload_traces = normalized_role in {"admin", "developer"}
-    can_create_campaigns = normalized_role in {"admin", "developer"}
-    can_run_campaigns = normalized_role in {"admin", "developer"}
-    can_manage_mutation_packs = (
-        normalized_role in {"admin", "developer"} and "mutation-packs" in visible_section_set
-    )
-    can_manage_policy_packs = normalized_role == "admin" and "policies" in visible_section_set
-    can_manage_security_config = normalized_role == "admin" and "security" in visible_section_set
-    can_manage_workspace = normalized_role == "admin"
-    can_manage_api_keys = normalized_role == "admin"
-    can_manage_billing = normalized_role == "admin" and "billing" in visible_section_set
-
-    # Keep action controls role-scoped for now, but never advertise sections the plan excludes.
-    if not role_sections.intersection(plan_sections):
-        visible_sections = ["dashboard"]
-
+    del role_name
+    del pricing_tier
     return AuthPermissionSet(
-        visible_sections=visible_sections,
-        can_upload_traces=can_upload_traces,
-        can_create_campaigns=can_create_campaigns,
-        can_run_campaigns=can_run_campaigns,
-        can_manage_mutation_packs=can_manage_mutation_packs,
-        can_manage_policy_packs=can_manage_policy_packs,
-        can_manage_security_config=can_manage_security_config,
-        can_manage_workspace=can_manage_workspace,
-        can_manage_api_keys=can_manage_api_keys,
-        can_manage_billing=can_manage_billing,
+        visible_sections=list(ALL_SECTIONS),
+        can_upload_traces=True,
+        can_create_campaigns=True,
+        can_run_campaigns=True,
+        can_manage_mutation_packs=True,
+        can_manage_policy_packs=True,
+        can_manage_security_config=True,
+        can_manage_workspace=True,
+        can_manage_api_keys=True,
+        can_manage_billing=True,
     )

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from urllib.parse import parse_qs, urlparse
 from uuid import UUID, uuid4
 
 import pytest
 from app.auth import hash_api_key
 from app.db import get_db
 from app.main import app
-from app.models import ApiKey, Base, Project, ProjectMembership, Role, Tenant, User
+from app.models import ApiKey, Base, Project, ProjectMembership, Role, Tenant, User, UserIdentity
 from app.services.auth_service import hash_password
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
@@ -68,9 +69,9 @@ def test_signup_bootstraps_workspace_and_session(
     assert payload["email"] == "alice@example.com"
     assert payload["name"] == "Alice Example"
     assert payload["project_name"] == "Alice Sandbox"
-    assert payload["pricing_tier"] == "enterprise"
+    assert payload["pricing_tier"] == "credits"
     assert payload["plan_name"] == "Enterprise"
-    assert payload["role_name"] == "admin"
+    assert payload["role_name"] == "member"
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert payload["permissions"]["can_manage_billing"] is True
     assert "audit" in payload["permissions"]["visible_sections"]
@@ -110,12 +111,12 @@ def test_signup_bootstraps_workspace_and_session(
     assert session_response.status_code == 200
     session_payload = session_response.json()
     assert session_payload["email"] == "alice@example.com"
-    assert session_payload["pricing_tier"] == "enterprise"
-    assert session_payload["role_name"] == "admin"
+    assert session_payload["pricing_tier"] == "credits"
+    assert session_payload["role_name"] == "member"
     assert session_payload["permissions"]["can_manage_workspace"] is True
 
 
-def test_signup_with_starter_plan_hides_team_and_enterprise_sections(
+def test_signup_with_starter_plan_still_gets_full_access(
     auth_test_context: tuple[TestClient, sessionmaker[Session]],
 ) -> None:
     client, _session_factory = auth_test_context
@@ -131,12 +132,14 @@ def test_signup_with_starter_plan_hides_team_and_enterprise_sections(
     assert response.status_code == 201
     payload = response.json()
 
-    assert payload["pricing_tier"] == "starter"
-    assert payload["plan_name"] == "Starter"
+    assert payload["pricing_tier"] == "credits"
+    assert payload["plan_name"] == "Free"
     assert "billing" in payload["permissions"]["visible_sections"]
     assert "mutation-packs" in payload["permissions"]["visible_sections"]
-    assert "policies" not in payload["permissions"]["visible_sections"]
-    assert "audit" not in payload["permissions"]["visible_sections"]
+    assert "policies" in payload["permissions"]["visible_sections"]
+    assert "audit" in payload["permissions"]["visible_sections"]
+    assert payload["permissions"]["can_manage_policy_packs"] is True
+    assert payload["permissions"]["can_manage_security_config"] is True
 
 
 def test_login_returns_project_scoped_session_for_existing_user(
@@ -174,20 +177,20 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert response.status_code == 200
     payload = response.json()
     assert payload["project_id"] == str(project_id)
-    assert payload["pricing_tier"] == "team"
+    assert payload["pricing_tier"] == "credits"
     assert payload["plan_name"] == "Team"
-    assert payload["role_name"] == "developer"
+    assert payload["role_name"] == "member"
     assert payload["permissions"]["can_run_campaigns"] is True
     assert payload["permissions"]["can_manage_mutation_packs"] is True
-    assert payload["permissions"]["can_manage_policy_packs"] is False
-    assert payload["permissions"]["can_manage_security_config"] is False
-    assert payload["permissions"]["can_manage_api_keys"] is False
-    assert payload["permissions"]["can_manage_billing"] is False
+    assert payload["permissions"]["can_manage_policy_packs"] is True
+    assert payload["permissions"]["can_manage_security_config"] is True
+    assert payload["permissions"]["can_manage_api_keys"] is True
+    assert payload["permissions"]["can_manage_billing"] is True
     assert "campaigns" in payload["permissions"]["visible_sections"]
-    assert "audit" not in payload["permissions"]["visible_sections"]
+    assert "audit" in payload["permissions"]["visible_sections"]
 
 
-def test_viewer_login_gets_read_only_dashboard_sections(
+def test_viewer_login_still_gets_full_workspace_access(
     auth_test_context: tuple[TestClient, sessionmaker[Session]],
 ) -> None:
     client, session_factory = auth_test_context
@@ -221,12 +224,192 @@ def test_viewer_login_gets_read_only_dashboard_sections(
     )
     assert response.status_code == 200
     payload = response.json()
-    assert payload["pricing_tier"] == "starter"
-    assert payload["role_name"] == "viewer"
-    assert payload["permissions"]["visible_sections"] == ["dashboard", "billing", "reports", "settings"]
-    assert payload["permissions"]["can_upload_traces"] is False
-    assert payload["permissions"]["can_create_campaigns"] is False
-    assert payload["permissions"]["can_manage_mutation_packs"] is False
-    assert payload["permissions"]["can_manage_policy_packs"] is False
-    assert payload["permissions"]["can_manage_security_config"] is False
-    assert payload["permissions"]["can_manage_billing"] is False
+    assert payload["pricing_tier"] == "credits"
+    assert payload["role_name"] == "member"
+    assert "audit" in payload["permissions"]["visible_sections"]
+    assert payload["permissions"]["can_upload_traces"] is True
+    assert payload["permissions"]["can_create_campaigns"] is True
+    assert payload["permissions"]["can_manage_mutation_packs"] is True
+    assert payload["permissions"]["can_manage_policy_packs"] is True
+    assert payload["permissions"]["can_manage_security_config"] is True
+    assert payload["permissions"]["can_manage_billing"] is True
+
+
+class _MockHttpResponse:
+    def __init__(self, status_code: int, payload):
+        self.status_code = status_code
+        self._payload = payload
+
+    def json(self):
+        return self._payload
+
+
+def test_github_oauth_bootstraps_workspace_and_exchanges_session(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = auth_test_context
+
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "github-client")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "github-secret")
+    monkeypatch.setenv("SEPURUX_UI_BASE_URL", "http://localhost:3000")
+
+    def fake_post(url: str, data=None, headers=None, timeout=None):
+        assert "github.com/login/oauth/access_token" in url
+        assert data["client_id"] == "github-client"
+        return _MockHttpResponse(200, {"access_token": "gh-access-token"})
+
+    def fake_get(url: str, headers=None, timeout=None):
+        if url.endswith("/user"):
+            return _MockHttpResponse(200, {"id": 4242, "name": "Octo Dev"})
+        if url.endswith("/user/emails"):
+            return _MockHttpResponse(
+                200,
+                [
+                    {
+                        "email": "octo@example.com",
+                        "primary": True,
+                        "verified": True,
+                    }
+                ],
+            )
+        raise AssertionError(f"Unexpected OAuth GET URL: {url}")
+
+    monkeypatch.setattr("app.services.oauth_service.httpx.post", fake_post)
+    monkeypatch.setattr("app.services.oauth_service.httpx.get", fake_get)
+
+    start_response = client.get(
+        "/auth/oauth/github/start",
+        params={"next": "/dashboard"},
+        follow_redirects=False,
+    )
+    assert start_response.status_code == 302
+    start_location = start_response.headers["location"]
+    assert start_location.startswith("https://github.com/login/oauth/authorize?")
+    state = parse_qs(urlparse(start_location).query)["state"][0]
+
+    callback_response = client.get(
+        "/auth/oauth/github/callback",
+        params={"state": state, "code": "oauth-code"},
+        follow_redirects=False,
+    )
+    assert callback_response.status_code == 303
+    callback_location = callback_response.headers["location"]
+    assert callback_location.startswith("http://localhost:3000/auth?")
+    exchange_token = parse_qs(urlparse(callback_location).query)["exchange"][0]
+
+    exchange_response = client.post(
+        "/auth/oauth/exchange",
+        json={"token": exchange_token},
+    )
+    assert exchange_response.status_code == 200
+    payload = exchange_response.json()
+    assert payload["email"] == "octo@example.com"
+    assert payload["name"] == "Octo Dev"
+    assert payload["role_name"] == "member"
+    assert payload["pricing_tier"] == "credits"
+    assert payload["api_key"].startswith("cl_")
+
+    with session_factory() as db:
+        user = db.scalar(select(User).where(User.email == "octo@example.com"))
+        assert isinstance(user, User)
+        identity = db.scalar(
+            select(UserIdentity).where(
+                UserIdentity.provider == "github",
+                UserIdentity.provider_user_id == "4242",
+            )
+        )
+        assert isinstance(identity, UserIdentity)
+        assert identity.user_id == user.user_id
+
+
+def test_google_oauth_links_existing_user_by_verified_email(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = auth_test_context
+    tenant_id = uuid4()
+    user_id = uuid4()
+    project_id = uuid4()
+    role_id = uuid4()
+
+    with session_factory() as db:
+        db.add(Tenant(tenant_id=tenant_id, name="Existing Tenant", pricing_tier="team"))
+        db.add(Role(role_id=role_id, name="admin"))
+        db.add(
+            User(
+                user_id=user_id,
+                email="founder@example.com",
+                name="Founding User",
+                password_hash=hash_password("super-secret-123"),
+            )
+        )
+        db.add(
+            Project(
+                project_id=project_id,
+                tenant_id=tenant_id,
+                owner_id=user_id,
+                name="Existing Project",
+            )
+        )
+        db.add(ProjectMembership(user_id=user_id, project_id=project_id, role_id=role_id))
+        db.commit()
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "google-client")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "google-secret")
+    monkeypatch.setenv("SEPURUX_UI_BASE_URL", "http://localhost:3000")
+
+    def fake_post(url: str, data=None, headers=None, timeout=None):
+        assert "oauth2.googleapis.com/token" in url
+        return _MockHttpResponse(200, {"access_token": "google-access-token"})
+
+    def fake_get(url: str, headers=None, timeout=None):
+        assert url == "https://openidconnect.googleapis.com/v1/userinfo"
+        return _MockHttpResponse(
+            200,
+            {
+                "sub": "google-user-123",
+                "email": "founder@example.com",
+                "email_verified": True,
+                "name": "Founding User",
+            },
+        )
+
+    monkeypatch.setattr("app.services.oauth_service.httpx.post", fake_post)
+    monkeypatch.setattr("app.services.oauth_service.httpx.get", fake_get)
+
+    start_response = client.get(
+        "/auth/oauth/google/start",
+        params={"next": "/campaigns"},
+        follow_redirects=False,
+    )
+    assert start_response.status_code == 302
+    state = parse_qs(urlparse(start_response.headers["location"]).query)["state"][0]
+
+    callback_response = client.get(
+        "/auth/oauth/google/callback",
+        params={"state": state, "code": "oauth-code"},
+        follow_redirects=False,
+    )
+    exchange_token = parse_qs(urlparse(callback_response.headers["location"]).query)["exchange"][0]
+
+    exchange_response = client.post(
+        "/auth/oauth/exchange",
+        json={"token": exchange_token},
+    )
+    assert exchange_response.status_code == 200
+    payload = exchange_response.json()
+    assert payload["email"] == "founder@example.com"
+    assert payload["project_id"] == str(project_id)
+
+    with session_factory() as db:
+        users = list(db.scalars(select(User).where(User.email == "founder@example.com")))
+        assert len(users) == 1
+        identity = db.scalar(
+            select(UserIdentity).where(
+                UserIdentity.provider == "google",
+                UserIdentity.provider_user_id == "google-user-123",
+            )
+        )
+        assert isinstance(identity, UserIdentity)
+        assert identity.user_id == user_id

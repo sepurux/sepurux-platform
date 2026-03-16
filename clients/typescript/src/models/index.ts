@@ -48,6 +48,7 @@ export * from './MutationSummaryItem';
 export * from './MutationSummaryResponse';
 export * from './MutationSummaryTopReason';
 export * from './MutationSummaryTopTool';
+export * from './OAuthSessionExchangeRequest';
 export * from './PolicyEventListItem';
 export * from './PolicyPackCreateRequest';
 export * from './PolicyPackMetadata';

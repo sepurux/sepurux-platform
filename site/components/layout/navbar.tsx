@@ -30,7 +30,7 @@ export function Navbar() {
           <img
             src={siteConfig.logo}
             alt="Sepurux logo"
-            width={1536}
+            width={768}
             height={1024}
             className="block h-12 w-auto"
           />

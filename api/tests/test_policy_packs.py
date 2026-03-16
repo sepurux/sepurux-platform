@@ -583,7 +583,7 @@ def test_policy_pack_rollback_sets_active_to_prior_version(
     assert [item.version_number for item in db_versions] == [1, 2]
 
 
-def test_policy_pack_create_requires_admin_role() -> None:
+def test_policy_pack_create_is_available_to_all_authenticated_users() -> None:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -625,10 +625,10 @@ def test_policy_pack_create_requires_admin_role() -> None:
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
-    assert response.status_code == 403
+    assert response.status_code == 201
 
 
-def test_policy_pack_section_respects_pricing_tier() -> None:
+def test_policy_pack_section_is_available_on_all_workspace_tiers() -> None:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -663,4 +663,4 @@ def test_policy_pack_section_respects_pricing_tier() -> None:
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
-    assert response.status_code == 403
+    assert response.status_code == 200

@@ -15,7 +15,6 @@ from app.services.pricing_service import (
     DEFAULT_PRICING_TIER,
     build_auth_permissions,
     normalize_pricing_tier,
-    plan_label,
 )
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -103,45 +102,21 @@ def signup_user(
         )
 
     display_name = _normalize_name(name) or _default_display_name(normalized_email)
-    workspace_name = f"{display_name} Workspace"
-    resolved_project_name = (project_name or "").strip() or f"{display_name} Project"
-
-    resolved_pricing_tier = normalize_pricing_tier(pricing_tier or DEFAULT_PRICING_TIER)
-    tenant = Tenant(tenant_id=uuid4(), name=workspace_name, pricing_tier=resolved_pricing_tier)
     user = User(
         user_id=uuid4(),
         email=normalized_email,
         name=display_name,
         password_hash=hash_password(password),
     )
-    project = Project(
-        project_id=uuid4(),
-        tenant_id=tenant.tenant_id,
-        owner_id=user.user_id,
-        name=resolved_project_name,
-    )
-    admin_role = _get_or_create_role(db, "admin")
-    membership = ProjectMembership(
-        user_id=user.user_id,
-        project_id=project.project_id,
-        role_id=admin_role.role_id,
-    )
-
-    # Flush parent rows first so PostgreSQL sees the tenant/user before
-    # dependent project and membership inserts in the same signup flow.
-    db.add_all([tenant, user])
+    db.add(user)
     db.flush()
-    db.add_all([project, membership])
-    db.commit()
-    ensure_system_mutation_packs(db, project_id=project.project_id)
-
-    return _issue_session(
+    bootstrap_workspace_for_user(
         db,
         user=user,
-        project=project,
-        role_name="admin",
-        is_demo=False,
+        project_name=project_name,
+        pricing_tier=pricing_tier,
     )
+    return issue_session_for_user(db, user=user, is_demo=False)
 
 
 def login_user(db: Session, *, email: str, password: str) -> dict[str, object]:
@@ -153,33 +128,7 @@ def login_user(db: Session, *, email: str, password: str) -> dict[str, object]:
             detail="Invalid email or password",
         )
 
-    membership = db.scalar(
-        select(ProjectMembership)
-        .where(ProjectMembership.user_id == user.user_id)
-        .order_by(ProjectMembership.created_at.asc(), ProjectMembership.project_id.asc())
-    )
-    if not isinstance(membership, ProjectMembership):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This account is not assigned to any project",
-        )
-
-    project = db.scalar(select(Project).where(Project.project_id == membership.project_id))
-    if not isinstance(project, Project):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Assigned project not found",
-        )
-
-    role = db.scalar(select(Role).where(Role.role_id == membership.role_id))
-    role_name = role.name if isinstance(role, Role) and role.name in ROLE_RANKS else "viewer"
-    return _issue_session(
-        db,
-        user=user,
-        project=project,
-        role_name=role_name,
-        is_demo=False,
-    )
+    return issue_session_for_user(db, user=user, is_demo=False)
 
 
 def session_metadata(
@@ -220,21 +169,22 @@ def session_metadata(
     wallet = billing_snapshot["wallet"] if isinstance(billing_snapshot, dict) else None
     subscription = billing_snapshot["subscription"] if isinstance(billing_snapshot, dict) else None
 
+    billing_plan_name = subscription.get("plan_name") if isinstance(subscription, dict) else None
+    resolved_plan_name = billing_plan_name or "Credits"
+
     return {
         "tenant_id": tenant_auth.tenant_id,
         "project_id": project.project_id,
         "project_name": project.name,
         "project_scoped": tenant_auth.project_id is not None,
-        "pricing_tier": pricing_tier,
-        "plan_name": plan_label(pricing_tier),
-        "role_name": _normalize_role_name(tenant_auth.role_name),
+        "pricing_tier": "credits",
+        "plan_name": resolved_plan_name,
+        "role_name": "member",
         "user_id": tenant_auth.user_id,
         "email": email,
         "name": display_name,
         "is_demo": tenant_auth.is_demo,
-        "billing_plan_name": (
-            subscription.get("plan_name") if isinstance(subscription, dict) else None
-        ),
+        "billing_plan_name": billing_plan_name,
         "credits_balance": wallet.get("balance") if isinstance(wallet, dict) else None,
         "monthly_credits": wallet.get("monthly_credits") if isinstance(wallet, dict) else None,
         "topup_credits": wallet.get("topup_credits") if isinstance(wallet, dict) else None,
@@ -281,6 +231,84 @@ def _issue_session(
     )
     payload["api_key"] = plaintext
     return payload
+
+
+def issue_session_for_user(
+    db: Session,
+    *,
+    user: User,
+    is_demo: bool,
+) -> dict[str, object]:
+    project, role_name = get_primary_project_for_user(db, user=user)
+    return _issue_session(
+        db,
+        user=user,
+        project=project,
+        role_name=role_name,
+        is_demo=is_demo,
+    )
+
+
+def get_primary_project_for_user(
+    db: Session,
+    *,
+    user: User,
+) -> tuple[Project, str]:
+    membership = db.scalar(
+        select(ProjectMembership)
+        .where(ProjectMembership.user_id == user.user_id)
+        .order_by(ProjectMembership.created_at.asc(), ProjectMembership.project_id.asc())
+    )
+    if not isinstance(membership, ProjectMembership):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is not assigned to any project",
+        )
+
+    project = db.scalar(select(Project).where(Project.project_id == membership.project_id))
+    if not isinstance(project, Project):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assigned project not found",
+        )
+
+    role = db.scalar(select(Role).where(Role.role_id == membership.role_id))
+    role_name = role.name if isinstance(role, Role) and role.name in ROLE_RANKS else "viewer"
+    return project, role_name
+
+
+def bootstrap_workspace_for_user(
+    db: Session,
+    *,
+    user: User,
+    project_name: str | None,
+    pricing_tier: str | None,
+) -> Project:
+    display_name = _normalize_name(user.name) or _default_display_name(user.email)
+    workspace_name = f"{display_name} Workspace"
+    resolved_project_name = (project_name or "").strip() or f"{display_name} Project"
+    resolved_pricing_tier = normalize_pricing_tier(pricing_tier or DEFAULT_PRICING_TIER)
+
+    tenant = Tenant(tenant_id=uuid4(), name=workspace_name, pricing_tier=resolved_pricing_tier)
+    project = Project(
+        project_id=uuid4(),
+        tenant_id=tenant.tenant_id,
+        owner_id=user.user_id,
+        name=resolved_project_name,
+    )
+    admin_role = _get_or_create_role(db, "admin")
+    membership = ProjectMembership(
+        user_id=user.user_id,
+        project_id=project.project_id,
+        role_id=admin_role.role_id,
+    )
+
+    db.add(tenant)
+    db.flush()
+    db.add_all([project, membership])
+    db.commit()
+    ensure_system_mutation_packs(db, project_id=project.project_id)
+    return project
 
 
 def _get_or_create_role(db: Session, name: Literal["admin", "developer", "viewer"]) -> Role:
