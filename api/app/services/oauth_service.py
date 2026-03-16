@@ -179,8 +179,12 @@ def build_oauth_return_url(
 
 def _normalize_provider(value: str) -> OAuthProvider:
     lowered = value.strip().lower()
-    if lowered in {"github", "google", "microsoft"}:
-        return lowered
+    if lowered == "github":
+        return "github"
+    if lowered == "google":
+        return "google"
+    if lowered == "microsoft":
+        return "microsoft"
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unsupported OAuth provider")
 
 
