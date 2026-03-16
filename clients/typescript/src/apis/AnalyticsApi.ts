@@ -17,6 +17,7 @@ import * as runtime from '../runtime';
 import type {
   HTTPValidationError,
   MutationSummaryResponse,
+  ProjectReliabilitySummaryResponse,
   RunStatsResponse,
   ToolFragilityResponse,
 } from '../models/index';
@@ -25,6 +26,8 @@ import {
     HTTPValidationErrorToJSON,
     MutationSummaryResponseFromJSON,
     MutationSummaryResponseToJSON,
+    ProjectReliabilitySummaryResponseFromJSON,
+    ProjectReliabilitySummaryResponseToJSON,
     RunStatsResponseFromJSON,
     RunStatsResponseToJSON,
     ToolFragilityResponseFromJSON,
@@ -34,6 +37,10 @@ import {
 export interface GetMutationsSummaryEndpointV1MutationsSummaryGetRequest {
     windowDays?: number;
     limit?: number;
+    xProjectId?: string | null;
+}
+
+export interface GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGetRequest {
     xProjectId?: string | null;
 }
 
@@ -88,6 +95,36 @@ export class AnalyticsApi extends runtime.BaseAPI {
      */
     async getMutationsSummaryEndpointV1MutationsSummaryGet(requestParameters: GetMutationsSummaryEndpointV1MutationsSummaryGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MutationSummaryResponse> {
         const response = await this.getMutationsSummaryEndpointV1MutationsSummaryGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get Project Reliability Summary Endpoint
+     */
+    async getProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGetRaw(requestParameters: GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectReliabilitySummaryResponse>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/analytics/reliability`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectReliabilitySummaryResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Project Reliability Summary Endpoint
+     */
+    async getProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet(requestParameters: GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectReliabilitySummaryResponse> {
+        const response = await this.getProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

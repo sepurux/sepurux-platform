@@ -181,6 +181,34 @@ paths:
       summary: Get Mutations Summary Endpoint
       tags:
       - analytics
+  /v1/analytics/reliability:
+    get:
+      operationId: get_project_reliability_summary_endpoint_v1_analytics_reliability_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectReliabilitySummaryResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Project Reliability Summary Endpoint
+      tags:
+      - analytics
   /v1/audit-events:
     get:
       operationId: get_audit_events_v1_audit_events_get
@@ -3170,7 +3198,7 @@ components:
       title: CampaignCreateRequest
     CampaignFailureBreakdownItem:
       example:
-        count: 1
+        count: 5
         type: type
       properties:
         type:
@@ -3292,9 +3320,9 @@ components:
         reliability_score: 0.8008281904610115
         status: healthy
         failure_breakdown:
-        - count: 1
+        - count: 5
           type: type
-        - count: 1
+        - count: 5
           type: type
       properties:
         reliability_score:
@@ -4401,6 +4429,44 @@ components:
       - project_id
       - tenant_id
       title: ProjectMetadata
+    ProjectReliabilitySummaryResponse:
+      example:
+        campaigns_run: 6
+        reliability_score: 0.8008281904610115
+        credits_used: 1
+        status: healthy
+        failure_breakdown:
+        - count: 5
+          type: type
+        - count: 5
+          type: type
+      properties:
+        reliability_score:
+          title: Reliability Score
+          type: number
+        status:
+          enum:
+          - healthy
+          - warning
+          - critical
+          title: Status
+          type: string
+        campaigns_run:
+          title: Campaigns Run
+          type: integer
+        credits_used:
+          title: Credits Used
+          type: integer
+        failure_breakdown:
+          items:
+            $ref: '#/components/schemas/CampaignFailureBreakdownItem'
+          type: array
+      required:
+      - campaigns_run
+      - credits_used
+      - reliability_score
+      - status
+      title: ProjectReliabilitySummaryResponse
     ReasonCountPct:
       example:
         pct: 7.386281948385884

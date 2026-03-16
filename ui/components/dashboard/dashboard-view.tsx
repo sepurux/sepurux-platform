@@ -29,6 +29,7 @@ import { api, type ReplayAttemptListItem, type RunMetadata, type RunStats, type 
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CounterfactualInspector } from "@/components/dashboard/counterfactual-inspector";
+import { ReliabilityDashboard } from "@/components/dashboard/reliability-dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,6 +180,7 @@ function DashboardPanels({ data }: { data: DashboardData }) {
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="taxonomy">Taxonomy</TabsTrigger>
         <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+        <TabsTrigger value="reliability">Reliability</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -244,6 +246,10 @@ function DashboardPanels({ data }: { data: DashboardData }) {
 
       <TabsContent value="diagnostics" className="space-y-6">
         <CounterfactualInspector runs={dashboardRuns} failedAttemptsByRunId={data.failedAttemptsByRunId} />
+      </TabsContent>
+
+      <TabsContent value="reliability" className="space-y-6">
+        <ReliabilityDashboard />
       </TabsContent>
     </Tabs>
   );

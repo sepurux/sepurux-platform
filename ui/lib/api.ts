@@ -88,6 +88,14 @@ export type CampaignReliability = {
   failure_breakdown: Array<{ type: string; count: number }>;
 };
 
+export type ProjectReliabilitySummary = {
+  reliability_score: number;
+  status: "healthy" | "warning" | "critical";
+  campaigns_run: number;
+  credits_used: number;
+  failure_breakdown: Array<{ type: string; count: number }>;
+};
+
 export type ReplayAttemptListItem = {
   attempt_id: string;
   mutation_id: string;
@@ -757,6 +765,8 @@ export const api = {
     requestJson<CampaignReliability>(`/v1/campaigns/${campaignId}/reliability`, {
       run_id: options?.run_id,
     }),
+  getProjectReliability: () =>
+    requestJson<ProjectReliabilitySummary>("/v1/analytics/reliability"),
   createCampaign: (payload: {
     name: string;
     mutation_set: unknown;
