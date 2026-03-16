@@ -3,15 +3,22 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, TenantAuthContext, get_tenant_auth, require_project_scope
 from app.db import get_db
-from app.schemas import MutationSummaryResponse, RunStatsResponse, ToolFragilityResponse
+from app.schemas import (
+    MutationSummaryResponse,
+    ProjectReliabilitySummaryResponse,
+    RunStatsResponse,
+    ToolFragilityResponse,
+)
 from app.services.analytics_service import (
     RunNotFoundError,
     get_mutation_summary,
+    get_project_reliability_summary,
     get_run_stats,
     get_tool_fragility,
 )
+from app.services.billing_service import resolve_billable_user_id
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -19,6 +26,7 @@ router = APIRouter(prefix="/v1", tags=["analytics"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+TenantAuthDep = Annotated[TenantAuthContext, Depends(get_tenant_auth)]
 
 
 @router.get("/runs/{run_id}/stats", response_model=RunStatsResponse)
@@ -65,3 +73,22 @@ def get_mutations_summary_endpoint(
             limit=limit,
         )
     )
+
+
+@router.get("/analytics/reliability", response_model=ProjectReliabilitySummaryResponse)
+def get_project_reliability_summary_endpoint(
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    tenant_auth: TenantAuthDep,
+) -> ProjectReliabilitySummaryResponse:
+    billable_user_id = resolve_billable_user_id(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
+    summary = get_project_reliability_summary(
+        db,
+        project_id=project_scope.project_id,
+        billable_user_id=billable_user_id,
+    )
+    return ProjectReliabilitySummaryResponse(**summary)

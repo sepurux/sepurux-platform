@@ -57,6 +57,7 @@ export * from './PolicyPackUpdateRequest';
 export * from './PolicyPackVersionMetadata';
 export * from './ProjectCreateRequest';
 export * from './ProjectMetadata';
+export * from './ProjectReliabilitySummaryResponse';
 export * from './ReasonCountPct';
 export * from './ReplayAttemptDetail';
 export * from './ReplayAttemptListItem';

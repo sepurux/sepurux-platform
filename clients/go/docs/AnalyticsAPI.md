@@ -5,6 +5,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**GetMutationsSummaryEndpointV1MutationsSummaryGet**](AnalyticsAPI.md#GetMutationsSummaryEndpointV1MutationsSummaryGet) | **Get** /v1/mutations/summary | Get Mutations Summary Endpoint
+[**GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet**](AnalyticsAPI.md#GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet) | **Get** /v1/analytics/reliability | Get Project Reliability Summary Endpoint
 [**GetRunStatsEndpointV1RunsRunIdStatsGet**](AnalyticsAPI.md#GetRunStatsEndpointV1RunsRunIdStatsGet) | **Get** /v1/runs/{run_id}/stats | Get Run Stats Endpoint
 [**GetToolsFragilityEndpointV1ToolsFragilityGet**](AnalyticsAPI.md#GetToolsFragilityEndpointV1ToolsFragilityGet) | **Get** /v1/tools/fragility | Get Tools Fragility Endpoint
 
@@ -63,6 +64,70 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**MutationSummaryResponse**](MutationSummaryResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet
+
+> ProjectReliabilitySummaryResponse GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet(ctx).XProjectId(xProjectId).Execute()
+
+Get Project Reliability Summary Endpoint
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	xProjectId := "xProjectId_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.AnalyticsAPI.GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet(context.Background()).XProjectId(xProjectId).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `AnalyticsAPI.GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet`: ProjectReliabilitySummaryResponse
+	fmt.Fprintf(os.Stdout, "Response from `AnalyticsAPI.GetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiGetProjectReliabilitySummaryEndpointV1AnalyticsReliabilityGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **xProjectId** | **string** |  | 
+
+### Return type
+
+[**ProjectReliabilitySummaryResponse**](ProjectReliabilitySummaryResponse.md)
 
 ### Authorization
 

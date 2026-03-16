@@ -80,6 +80,7 @@ src/models/PolicyPackUpdateRequest.ts
 src/models/PolicyPackVersionMetadata.ts
 src/models/ProjectCreateRequest.ts
 src/models/ProjectMetadata.ts
+src/models/ProjectReliabilitySummaryResponse.ts
 src/models/ReasonCountPct.ts
 src/models/ReplayAttemptDetail.ts
 src/models/ReplayAttemptListItem.ts
