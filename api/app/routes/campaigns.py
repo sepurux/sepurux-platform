@@ -17,8 +17,8 @@ from app.schemas import (
 from app.services.audit_service import actor_from_request
 from app.services.billing_service import (
     InsufficientCreditsError,
+    consume_credits_for_pack_run,
     get_queue_priority_for_context,
-    maybe_consume_credits_for_campaign_run,
 )
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
@@ -236,11 +236,11 @@ def post_campaign_run_pack(
         )
     else:
         try:
-            maybe_consume_credits_for_campaign_run(
+            consume_credits_for_pack_run(
                 db,
                 tenant_auth=tenant_auth,
                 project_id=project_scope.project_id,
-                campaign=campaign,
+                mutation_pack=mutation_pack,
             )
         except InsufficientCreditsError as exc:
             raise HTTPException(

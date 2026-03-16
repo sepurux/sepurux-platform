@@ -29,6 +29,7 @@ type MutationPackMetadata struct {
 	Config interface{} `json:"config"`
 	IsSystem *bool `json:"is_system,omitempty"`
 	CoverageScore *int32 `json:"coverage_score,omitempty"`
+	CreditCost *int32 `json:"credit_cost,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -48,6 +49,8 @@ func NewMutationPackMetadata(mutationPackId string, projectId string, name strin
 	this.IsSystem = &isSystem
 	var coverageScore int32 = 0
 	this.CoverageScore = &coverageScore
+	var creditCost int32 = 20
+	this.CreditCost = &creditCost
 	this.CreatedAt = createdAt
 	return &this
 }
@@ -61,6 +64,8 @@ func NewMutationPackMetadataWithDefaults() *MutationPackMetadata {
 	this.IsSystem = &isSystem
 	var coverageScore int32 = 0
 	this.CoverageScore = &coverageScore
+	var creditCost int32 = 20
+	this.CreditCost = &creditCost
 	return &this
 }
 
@@ -268,6 +273,38 @@ func (o *MutationPackMetadata) SetCoverageScore(v int32) {
 	o.CoverageScore = &v
 }
 
+// GetCreditCost returns the CreditCost field value if set, zero value otherwise.
+func (o *MutationPackMetadata) GetCreditCost() int32 {
+	if o == nil || IsNil(o.CreditCost) {
+		var ret int32
+		return ret
+	}
+	return *o.CreditCost
+}
+
+// GetCreditCostOk returns a tuple with the CreditCost field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *MutationPackMetadata) GetCreditCostOk() (*int32, bool) {
+	if o == nil || IsNil(o.CreditCost) {
+		return nil, false
+	}
+	return o.CreditCost, true
+}
+
+// HasCreditCost returns a boolean if a field has been set.
+func (o *MutationPackMetadata) HasCreditCost() bool {
+	if o != nil && !IsNil(o.CreditCost) {
+		return true
+	}
+
+	return false
+}
+
+// SetCreditCost gets a reference to the given int32 and assigns it to the CreditCost field.
+func (o *MutationPackMetadata) SetCreditCost(v int32) {
+	o.CreditCost = &v
+}
+
 // GetCreatedAt returns the CreatedAt field value
 func (o *MutationPackMetadata) GetCreatedAt() time.Time {
 	if o == nil {
@@ -316,6 +353,9 @@ func (o MutationPackMetadata) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.CoverageScore) {
 		toSerialize["coverage_score"] = o.CoverageScore
+	}
+	if !IsNil(o.CreditCost) {
+		toSerialize["credit_cost"] = o.CreditCost
 	}
 	toSerialize["created_at"] = o.CreatedAt
 	return toSerialize, nil

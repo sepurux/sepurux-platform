@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **Config** | **interface{}** |  | 
 **IsSystem** | Pointer to **bool** |  | [optional] [default to false]
 **CoverageScore** | Pointer to **int32** |  | [optional] [default to 0]
+**CreditCost** | Pointer to **int32** |  | [optional] [default to 20]
 **CreatedAt** | **time.Time** |  | 
 
 ## Methods
@@ -206,6 +207,31 @@ SetCoverageScore sets CoverageScore field to given value.
 `func (o *MutationPackMetadata) HasCoverageScore() bool`
 
 HasCoverageScore returns a boolean if a field has been set.
+
+### GetCreditCost
+
+`func (o *MutationPackMetadata) GetCreditCost() int32`
+
+GetCreditCost returns the CreditCost field if non-nil, zero value otherwise.
+
+### GetCreditCostOk
+
+`func (o *MutationPackMetadata) GetCreditCostOk() (*int32, bool)`
+
+GetCreditCostOk returns a tuple with the CreditCost field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCreditCost
+
+`func (o *MutationPackMetadata) SetCreditCost(v int32)`
+
+SetCreditCost sets CreditCost field to given value.
+
+### HasCreditCost
+
+`func (o *MutationPackMetadata) HasCreditCost() bool`
+
+HasCreditCost returns a boolean if a field has been set.
 
 ### GetCreatedAt
 

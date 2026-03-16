@@ -756,6 +756,31 @@ def maybe_consume_credits_for_campaign_run(
     )
 
 
+def consume_credits_for_pack_run(
+    db: Session,
+    *,
+    tenant_auth: TenantAuthContext,
+    project_id: UUID,
+    mutation_pack: Any,
+) -> CreditWallet | None:
+    billable_user_id = resolve_billable_user_id(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_id,
+    )
+    if billable_user_id is None:
+        return None
+    pricing_tier = _pricing_tier_for_project(db, project_id=project_id)
+    credit_cost = int(getattr(mutation_pack, "credit_cost", 20))
+    return consume_credits(
+        db,
+        user_id=billable_user_id,
+        amount=credit_cost,
+        reason=f"pack_run:{mutation_pack.name}",
+        pricing_tier=pricing_tier,
+    )
+
+
 def consume_credits_for_project_campaign(
     db: Session,
     *,

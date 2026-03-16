@@ -37,6 +37,12 @@ export interface MutationPackCreateRequest {
      * @memberof MutationPackCreateRequest
      */
     config: any | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof MutationPackCreateRequest
+     */
+    credit_cost?: number;
 }
 
 /**
@@ -61,6 +67,7 @@ export function MutationPackCreateRequestFromJSONTyped(json: any, ignoreDiscrimi
         'name': json['name'],
         'description': json['description'] == null ? undefined : json['description'],
         'config': json['config'],
+        'credit_cost': json['credit_cost'] == null ? undefined : json['credit_cost'],
     };
 }
 
@@ -73,6 +80,7 @@ export function MutationPackCreateRequestToJSON(value?: MutationPackCreateReques
         'name': value['name'],
         'description': value['description'],
         'config': value['config'],
+        'credit_cost': value['credit_cost'],
     };
 }
 
