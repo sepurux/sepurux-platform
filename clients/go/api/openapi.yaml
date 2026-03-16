@@ -2391,6 +2391,117 @@ paths:
       summary: Post Login
       tags:
       - auth
+  /auth/oauth/{provider}/start:
+    get:
+      operationId: get_oauth_start_auth_oauth__provider__start_get
+      parameters:
+      - explode: false
+        in: path
+        name: provider
+        required: true
+        schema:
+          title: Provider
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: next
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Oauth Start
+      tags:
+      - auth
+  /auth/oauth/{provider}/callback:
+    get:
+      operationId: get_oauth_callback_auth_oauth__provider__callback_get
+      parameters:
+      - explode: false
+        in: path
+        name: provider
+        required: true
+        schema:
+          title: Provider
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: state
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: code
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: error
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Oauth Callback
+      tags:
+      - auth
+  /auth/oauth/exchange:
+    post:
+      operationId: post_oauth_exchange_auth_oauth_exchange_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthSessionExchangeRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Oauth Exchange
+      tags:
+      - auth
   /healthz:
     get:
       operationId: healthz_healthz_get
@@ -2662,7 +2773,7 @@ components:
         project_name: project_name
         is_demo: false
         plan_name: plan_name
-        role_name: admin
+        role_name: role_name
         project_scoped: true
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -2680,7 +2791,7 @@ components:
           - visible_sections
           - visible_sections
           can_upload_traces: false
-        pricing_tier: team
+        pricing_tier: credits
         name: name
         queue_priority: normal
         email: email
@@ -2704,21 +2815,13 @@ components:
           title: Project Scoped
           type: boolean
         pricing_tier:
-          default: team
-          enum:
-          - starter
-          - team
-          - enterprise
+          default: credits
           title: Pricing Tier
           type: string
         plan_name:
           title: Plan Name
           type: string
         role_name:
-          enum:
-          - admin
-          - developer
-          - viewer
           title: Role Name
           type: string
         user_id:
@@ -2778,7 +2881,7 @@ components:
         project_name: project_name
         is_demo: false
         plan_name: plan_name
-        role_name: admin
+        role_name: role_name
         project_scoped: true
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -2797,7 +2900,7 @@ components:
           - visible_sections
           - visible_sections
           can_upload_traces: false
-        pricing_tier: team
+        pricing_tier: credits
         name: name
         queue_priority: normal
         email: email
@@ -2821,21 +2924,13 @@ components:
           title: Project Scoped
           type: boolean
         pricing_tier:
-          default: team
-          enum:
-          - starter
-          - team
-          - enterprise
+          default: credits
           title: Pricing Tier
           type: string
         plan_name:
           title: Plan Name
           type: string
         role_name:
-          enum:
-          - admin
-          - developer
-          - viewer
           title: Role Name
           type: string
         user_id:
@@ -4038,6 +4133,18 @@ components:
       - count
       - tool
       title: MutationSummaryTopTool
+    OAuthSessionExchangeRequest:
+      example:
+        token: token
+      properties:
+        token:
+          maxLength: 512
+          minLength: 1
+          title: Token
+          type: string
+      required:
+      - token
+      title: OAuthSessionExchangeRequest
     PolicyEventListItem:
       example:
         policy_event_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91

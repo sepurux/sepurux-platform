@@ -71,6 +71,7 @@ src/models/MutationSummaryItem.ts
 src/models/MutationSummaryResponse.ts
 src/models/MutationSummaryTopReason.ts
 src/models/MutationSummaryTopTool.ts
+src/models/OAuthSessionExchangeRequest.ts
 src/models/PolicyEventListItem.ts
 src/models/PolicyPackCreateRequest.ts
 src/models/PolicyPackMetadata.ts

@@ -55,7 +55,7 @@ export interface AuthSessionMetadata {
      * @type {string}
      * @memberof AuthSessionMetadata
      */
-    pricing_tier?: AuthSessionMetadataPricingTierEnum;
+    pricing_tier?: string;
     /**
      * 
      * @type {string}
@@ -67,7 +67,7 @@ export interface AuthSessionMetadata {
      * @type {string}
      * @memberof AuthSessionMetadata
      */
-    role_name: AuthSessionMetadataRoleNameEnum;
+    role_name: string;
     /**
      * 
      * @type {string}
@@ -142,26 +142,6 @@ export interface AuthSessionMetadata {
     permissions: AuthPermissionSet;
 }
 
-
-/**
- * @export
- */
-export const AuthSessionMetadataPricingTierEnum = {
-    starter: 'starter',
-    team: 'team',
-    enterprise: 'enterprise'
-} as const;
-export type AuthSessionMetadataPricingTierEnum = typeof AuthSessionMetadataPricingTierEnum[keyof typeof AuthSessionMetadataPricingTierEnum];
-
-/**
- * @export
- */
-export const AuthSessionMetadataRoleNameEnum = {
-    admin: 'admin',
-    developer: 'developer',
-    viewer: 'viewer'
-} as const;
-export type AuthSessionMetadataRoleNameEnum = typeof AuthSessionMetadataRoleNameEnum[keyof typeof AuthSessionMetadataRoleNameEnum];
 
 /**
  * @export
