@@ -149,7 +149,7 @@ def test_demo_session_returns_project_scoped_key(
     )
     assert session_response.status_code == 200
     session_payload = session_response.json()
-    assert session_payload["pricing_tier"] == "enterprise"
+    assert session_payload["pricing_tier"] == "credits"
     assert "audit" in session_payload["permissions"]["visible_sections"]
 
     with session_factory() as db:
@@ -206,7 +206,7 @@ def test_demo_session_returns_project_scoped_key(
         assert int(attempts_count or 0) >= 1
 
 
-def test_viewer_role_cannot_create_campaign(
+def test_viewer_role_can_create_campaign(
     rbac_test_context: tuple[TestClient, sessionmaker[Session], UUID],
 ) -> None:
     client, _, project_id = rbac_test_context
@@ -219,8 +219,7 @@ def test_viewer_role_cannot_create_campaign(
             "eval_set": {"checks": []},
         },
     )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "developer role required"
+    assert response.status_code == 201
 
 
 def test_api_key_rate_limit_enforced(

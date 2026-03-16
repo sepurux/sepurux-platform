@@ -78,12 +78,7 @@ export function TimelineViewer({
             No timeline events available.
           </div>
         ) : (
-          <div
-            className={cn(
-              "min-w-0 space-y-3",
-              compact ? "max-h-[360px] overflow-auto pr-1" : "max-h-[640px] overflow-auto pr-1"
-            )}
-          >
+          <div className="min-w-0 space-y-3">
             {events.map((event) => {
               const Icon = eventIcon(event.type);
               const preview = toJsonPreview(event.error ?? event.result ?? event.args);

@@ -55,17 +55,27 @@ async function proxy(request: NextRequest, { params }: RouteContext) {
             : {})
         },
         body: requestBody,
-        cache: "no-store"
+        cache: "no-store",
+        redirect: "manual"
       });
+
+      const location = upstream.headers.get("location");
+      if (location && upstream.status >= 300 && upstream.status < 400) {
+        return NextResponse.redirect(location, upstream.status);
+      }
 
       const contentType = upstream.headers.get("content-type") ?? "application/json";
       const bodyText = await upstream.text();
+      const responseHeaders: Record<string, string> = {
+        "content-type": contentType
+      };
+      if (location) {
+        responseHeaders.location = location;
+      }
 
       return new NextResponse(bodyText, {
         status: upstream.status,
-        headers: {
-          "content-type": contentType
-        }
+        headers: responseHeaders
       });
     } catch (error) {
       lastError = error;
