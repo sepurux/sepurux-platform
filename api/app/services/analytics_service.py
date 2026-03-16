@@ -554,9 +554,9 @@ def get_project_reliability_summary(
     project_id: UUID,
     billable_user_id: UUID | None = None,
 ) -> dict[str, Any]:
-    campaigns_run = db.scalar(
-        select(func.count(Run.run_id)).where(Run.project_id == project_id)
-    ) or 0
+    campaigns_run = (
+        db.scalar(select(func.count(Run.run_id)).where(Run.project_id == project_id)) or 0
+    )
 
     severity_counts: Counter[str] = Counter()
     failure_breakdown: Counter[str] = Counter()
