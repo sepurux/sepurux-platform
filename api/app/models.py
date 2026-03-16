@@ -56,7 +56,9 @@ class User(Base):
 class UserIdentity(Base):
     __tablename__ = "user_identities"
     __table_args__ = (
-        UniqueConstraint("provider", "provider_user_id", name="uq_user_identities_provider_subject"),
+        UniqueConstraint(
+            "provider", "provider_user_id", name="uq_user_identities_provider_subject"
+        ),
     )
 
     identity_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)

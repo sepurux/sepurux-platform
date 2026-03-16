@@ -102,9 +102,7 @@ def post_oauth_exchange(
     payload: OAuthSessionExchangeRequest,
     db: DbSession,
 ) -> AuthSessionResponse:
-    return AuthSessionResponse.model_validate(
-        exchange_oauth_session(db, token=payload.token)
-    )
+    return AuthSessionResponse.model_validate(exchange_oauth_session(db, token=payload.token))
 
 
 @router.get("/session", response_model=AuthSessionMetadata)

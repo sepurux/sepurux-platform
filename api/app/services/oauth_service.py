@@ -126,17 +126,25 @@ def complete_oauth_login(
 
 def exchange_oauth_session(db: Session, *, token: str) -> dict[str, Any]:
     if not token.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OAuth exchange token is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="OAuth exchange token is required"
+        )
 
     exchange = db.scalar(
         select(AuthSessionExchange).where(AuthSessionExchange.exchange_token == token.strip())
     )
     if not isinstance(exchange, AuthSessionExchange):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OAuth exchange token not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="OAuth exchange token not found"
+        )
     if exchange.consumed_at is not None:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="OAuth exchange token has already been used")
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail="OAuth exchange token has already been used"
+        )
     if _is_expired(exchange.expires_at):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="OAuth exchange token has expired")
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail="OAuth exchange token has expired"
+        )
 
     exchange.consumed_at = datetime.now(UTC)
     db.add(exchange)
@@ -144,7 +152,10 @@ def exchange_oauth_session(db: Session, *, token: str) -> dict[str, Any]:
 
     payload = exchange.session_payload
     if not isinstance(payload, dict):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stored OAuth session payload is invalid")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Stored OAuth session payload is invalid",
+        )
     return payload
 
 
@@ -197,7 +208,10 @@ def _provider_config(provider: OAuthProvider) -> OAuthProviderConfig:
             scopes=("openid", "email", "profile"),
         )
 
-    tenant_id = os.getenv("MICROSOFT_TENANT_ID", MICROSOFT_DEFAULT_TENANT).strip() or MICROSOFT_DEFAULT_TENANT
+    tenant_id = (
+        os.getenv("MICROSOFT_TENANT_ID", MICROSOFT_DEFAULT_TENANT).strip()
+        or MICROSOFT_DEFAULT_TENANT
+    )
     client_id = _required_env("MICROSOFT_CLIENT_ID")
     client_secret = _required_env("MICROSOFT_CLIENT_SECRET")
     return OAuthProviderConfig(
@@ -245,9 +259,7 @@ def _consume_oauth_state(
     if not token:
         raise OAuthFlowError("Missing OAuth state")
 
-    state = db.scalar(
-        select(OAuthLoginState).where(OAuthLoginState.state_token == token)
-    )
+    state = db.scalar(select(OAuthLoginState).where(OAuthLoginState.state_token == token))
     if not isinstance(state, OAuthLoginState) or state.provider != provider:
         raise OAuthFlowError("OAuth state was not found")
     if state.consumed_at is not None:
@@ -304,7 +316,9 @@ def _exchange_code_for_token(
         raise OAuthFlowError("Identity provider returned an invalid token response") from exc
 
     if response.status_code >= 400:
-        raise OAuthFlowError(_provider_error_message(payload, "Identity provider rejected the login"))
+        raise OAuthFlowError(
+            _provider_error_message(payload, "Identity provider rejected the login")
+        )
 
     if not isinstance(payload, dict) or not isinstance(payload.get("access_token"), str):
         raise OAuthFlowError("Identity provider did not return an access token")
@@ -489,7 +503,8 @@ def _resolve_user_for_identity(db: Session, *, identity: OAuthIdentity) -> User:
     user = User(
         user_id=uuid4(),
         email=identity.email,
-        name=(identity.name or _default_display_name(identity.email)).strip() or _default_display_name(identity.email),
+        name=(identity.name or _default_display_name(identity.email)).strip()
+        or _default_display_name(identity.email),
         password_hash=None,
     )
     db.add(user)
