@@ -93,6 +93,7 @@ docs/PolicyPackVersionMetadata.md
 docs/PolicyPacksAPI.md
 docs/ProjectCreateRequest.md
 docs/ProjectMetadata.md
+docs/ProjectReliabilitySummaryResponse.md
 docs/ProjectsAPI.md
 docs/ReasonCountPct.md
 docs/ReplayAttemptDetail.md
@@ -192,6 +193,7 @@ model_policy_pack_update_request.go
 model_policy_pack_version_metadata.go
 model_project_create_request.go
 model_project_metadata.go
+model_project_reliability_summary_response.go
 model_reason_count_pct.go
 model_replay_attempt_detail.go
 model_replay_attempt_list_item.go

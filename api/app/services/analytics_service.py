@@ -6,8 +6,8 @@ from typing import Any
 from uuid import UUID
 
 from app.models import (
-    CreditTransaction,
     Counterfactual,
+    CreditTransaction,
     Failure,
     PolicyEvent,
     ReplayAttempt,
