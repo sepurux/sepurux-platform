@@ -113,6 +113,14 @@ class CampaignReliabilityResponse(BaseModel):
     failure_breakdown: list[CampaignFailureBreakdownItem] = Field(default_factory=list)
 
 
+class ProjectReliabilitySummaryResponse(BaseModel):
+    reliability_score: float
+    status: Literal["healthy", "warning", "critical"]
+    campaigns_run: int
+    credits_used: int
+    failure_breakdown: list[CampaignFailureBreakdownItem] = Field(default_factory=list)
+
+
 class ReplayAttemptListItem(BaseModel):
     attempt_id: UUID
     mutation_id: str

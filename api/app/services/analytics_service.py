@@ -5,9 +5,17 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from app.models import Counterfactual, PolicyEvent, ReplayAttempt, Run, SecurityEvent
+from app.models import (
+    CreditTransaction,
+    Counterfactual,
+    Failure,
+    PolicyEvent,
+    ReplayAttempt,
+    Run,
+    SecurityEvent,
+)
 from app.services.insights_service import build_run_insights
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 LETHAL_MUTATIONS_MIN_ATTEMPTS_HIT = 5
@@ -538,3 +546,56 @@ def _summary_int(summary: dict[str, Any], *, keys: tuple[str, ...]) -> int:
         if isinstance(value, float):
             return max(0, int(value))
     return 0
+
+
+def get_project_reliability_summary(
+    db: Session,
+    *,
+    project_id: UUID,
+    billable_user_id: UUID | None = None,
+) -> dict[str, Any]:
+    campaigns_run = db.scalar(
+        select(func.count(Run.run_id)).where(Run.project_id == project_id)
+    ) or 0
+
+    severity_counts: Counter[str] = Counter()
+    failure_breakdown: Counter[str] = Counter()
+    for failure in db.scalars(select(Failure).where(Failure.project_id == project_id)):
+        severity_counts[failure.severity] += 1
+        failure_breakdown[failure.failure_type] += 1
+
+    score = 100.0 - severity_counts.get("critical", 0) * 10
+    score -= severity_counts.get("high", 0) * 5
+    score -= severity_counts.get("medium", 0) * 2
+    score = max(0.0, score)
+
+    status = "healthy"
+    if score < 70:
+        status = "critical"
+    elif score < 90:
+        status = "warning"
+
+    credits_used = 0
+    if billable_user_id is not None:
+        since = datetime.now(UTC) - timedelta(days=30)
+        raw = db.scalar(
+            select(func.sum(-CreditTransaction.amount)).where(
+                CreditTransaction.user_id == billable_user_id,
+                CreditTransaction.type == "usage",
+                CreditTransaction.created_at >= since,
+            )
+        )
+        credits_used = int(raw) if raw is not None else 0
+
+    breakdown_items = [
+        {"type": t, "count": c}
+        for t, c in sorted(failure_breakdown.items(), key=lambda x: (-x[1], x[0]))
+    ]
+
+    return {
+        "reliability_score": score,
+        "status": status,
+        "campaigns_run": campaigns_run,
+        "credits_used": credits_used,
+        "failure_breakdown": breakdown_items,
+    }
