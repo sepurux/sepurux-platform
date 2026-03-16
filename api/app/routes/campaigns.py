@@ -19,7 +19,6 @@ from app.services.billing_service import (
     InsufficientCreditsError,
     consume_credits_for_pack_run,
     get_queue_priority_for_context,
-    maybe_consume_credits_for_campaign_run,
 )
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record

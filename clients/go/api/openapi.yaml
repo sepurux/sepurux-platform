@@ -3912,6 +3912,7 @@ components:
       title: MutationPackCoverageResponse
     MutationPackCreateRequest:
       example:
+        credit_cost: 0
         name: name
         description: description
         config: ""
@@ -3923,6 +3924,10 @@ components:
           nullable: true
           type: string
         config: {}
+        credit_cost:
+          default: 20
+          title: Credit Cost
+          type: integer
       required:
       - config
       - name
@@ -3932,6 +3937,7 @@ components:
         is_system: false
         mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        credit_cost: 6
         name: name
         description: description
         coverage_score: 0
@@ -3965,6 +3971,10 @@ components:
           default: 0
           title: Coverage Score
           type: integer
+        credit_cost:
+          default: 20
+          title: Credit Cost
+          type: integer
         created_at:
           format: date-time
           title: Created At
@@ -3988,6 +3998,7 @@ components:
         is_system: false
         mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        credit_cost: 6
         name: name
         description: description
         coverage_score: 0
@@ -4016,6 +4027,10 @@ components:
         coverage_score:
           default: 0
           title: Coverage Score
+          type: integer
+        credit_cost:
+          default: 20
+          title: Credit Cost
           type: integer
         created_at:
           format: date-time
