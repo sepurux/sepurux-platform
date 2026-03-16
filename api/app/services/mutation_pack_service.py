@@ -30,6 +30,7 @@ def create_mutation_pack(
     config: object,
     is_system: bool = False,
     coverage_score: int | None = None,
+    credit_cost: int = 20,
 ) -> MutationPack:
     score = coverage_score_for_config(config) if coverage_score is None else coverage_score
     record = MutationPack(
@@ -40,6 +41,7 @@ def create_mutation_pack(
         config=config,
         is_system=is_system,
         coverage_score=score,
+        credit_cost=credit_cost,
     )
     db.add(record)
     db.commit()
@@ -66,6 +68,8 @@ def ensure_system_mutation_packs(db: Session, *, project_id: UUID) -> list[Mutat
         config = definition["config"]
         if not isinstance(config, dict):
             continue
+        credit_cost_raw = definition.get("credit_cost")
+        credit_cost = int(credit_cost_raw) if isinstance(credit_cost_raw, int) else 20
         record = MutationPack(
             mutation_pack_id=uuid4(),
             project_id=project_id,
@@ -74,6 +78,7 @@ def ensure_system_mutation_packs(db: Session, *, project_id: UUID) -> list[Mutat
             config=config,
             is_system=True,
             coverage_score=coverage_score_for_config(config),
+            credit_cost=credit_cost,
         )
         db.add(record)
         created.append(record)
@@ -171,6 +176,9 @@ def ensure_registered_mutation_pack(
     if not isinstance(config, dict):
         return None
 
+    credit_cost_raw = definition.get("credit_cost")
+    credit_cost = int(credit_cost_raw) if isinstance(credit_cost_raw, int) else 20
+
     return create_mutation_pack(
         db,
         project_id=project_id,
@@ -179,6 +187,7 @@ def ensure_registered_mutation_pack(
         config=config,
         is_system=True,
         coverage_score=coverage_score_for_config(config),
+        credit_cost=credit_cost,
     )
 
 
