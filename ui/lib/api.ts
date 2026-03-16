@@ -465,6 +465,18 @@ export type AttemptTimeline = {
   } | null;
 };
 
+export type ScheduledCampaignMetadata = {
+  scheduled_campaign_id: string;
+  project_id: string;
+  campaign_id: string;
+  mutation_pack_id: string;
+  cron_schedule: string;
+  enabled: boolean;
+  last_run_at: string | null;
+  last_run_status: string | null;
+  created_at: string;
+};
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -692,6 +704,32 @@ async function patchJson<TResponse, TBody>(
   return payload as TResponse;
 }
 
+async function deleteRequest(
+  path: string,
+  options?: { requireProjectHeader?: boolean; includeAuth?: boolean; baseUrl?: string }
+): Promise<void> {
+  const response = await fetch(buildUrl(path, undefined, { baseUrl: options?.baseUrl }), {
+    method: "DELETE",
+    headers: await buildHeaders(options),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    let payload: unknown = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = text;
+    }
+    throw new ApiError(
+      messageFromErrorPayload(payload, `Request failed: ${response.status}`),
+      response.status,
+      payload
+    );
+  }
+}
+
 export const api = {
   signup: (payload: {
     email: string;
@@ -888,4 +926,27 @@ export const api = {
       { requireProjectHeader: false }
     ),
   healthz: () => requestJson<{ status: string }>("/healthz", undefined, { requireProjectHeader: false }),
+  listScheduledCampaigns: (options?: { limit?: number; offset?: number }) =>
+    requestJson<ScheduledCampaignMetadata[]>("/v1/scheduled-campaigns", {
+      limit: options?.limit ?? 50,
+      offset: options?.offset ?? 0,
+    }),
+  getScheduledCampaign: (scheduledCampaignId: string) =>
+    requestJson<ScheduledCampaignMetadata>(`/v1/scheduled-campaigns/${scheduledCampaignId}`),
+  createScheduledCampaign: (payload: {
+    campaign_id: string;
+    mutation_pack_id: string;
+    cron_schedule: string;
+    enabled?: boolean;
+  }) => postJson<ScheduledCampaignMetadata, typeof payload>("/v1/scheduled-campaigns", payload),
+  updateScheduledCampaign: (
+    scheduledCampaignId: string,
+    payload: { enabled?: boolean; cron_schedule?: string }
+  ) =>
+    patchJson<ScheduledCampaignMetadata, typeof payload>(
+      `/v1/scheduled-campaigns/${scheduledCampaignId}`,
+      payload
+    ),
+  deleteScheduledCampaign: (scheduledCampaignId: string) =>
+    deleteRequest(`/v1/scheduled-campaigns/${scheduledCampaignId}`),
 };

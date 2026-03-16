@@ -15,6 +15,7 @@ export * from './MutationPacksApi';
 export * from './PolicyPacksApi';
 export * from './ProjectsApi';
 export * from './RunsApi';
+export * from './ScheduledCampaignsApi';
 export * from './TemplatesApi';
 export * from './ToolsApi';
 export * from './TracesApi';

@@ -79,6 +79,8 @@ type APIClient struct {
 
 	RunsAPI *RunsAPIService
 
+	ScheduledCampaignsAPI *ScheduledCampaignsAPIService
+
 	TemplatesAPI *TemplatesAPIService
 
 	ToolsAPI *ToolsAPIService
@@ -119,6 +121,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.PolicyPacksAPI = (*PolicyPacksAPIService)(&c.common)
 	c.ProjectsAPI = (*ProjectsAPIService)(&c.common)
 	c.RunsAPI = (*RunsAPIService)(&c.common)
+	c.ScheduledCampaignsAPI = (*ScheduledCampaignsAPIService)(&c.common)
 	c.TemplatesAPI = (*TemplatesAPIService)(&c.common)
 	c.ToolsAPI = (*ToolsAPIService)(&c.common)
 	c.TracesAPI = (*TracesAPIService)(&c.common)

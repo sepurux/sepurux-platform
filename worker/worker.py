@@ -19,15 +19,19 @@ from models import (
     AuditEvent,
     Campaign,
     Counterfactual,
+    CreditTransaction,
+    CreditWallet,
     Failure,
     HardeningTemplate,
     MutationPack,
     PolicyEvent,
     PolicyPack,
     PolicyPackVersion,
+    Project,
     ReplayAttempt,
     Run,
     RunTemplateLink,
+    ScheduledCampaign,
     SecurityEvent,
     ToolRegistry,
     Trace,
@@ -1366,6 +1370,179 @@ def execute_run(run_id: str) -> None:
         db.commit()
 
     logger.info("Completed run %s", run_id)
+
+
+def execute_scheduled_campaign(scheduled_campaign_id: str) -> None:
+    """Credit-checked execution of a scheduled campaign run pack."""
+    sc_uuid = UUID(scheduled_campaign_id)
+    logger.info("Executing scheduled campaign %s", scheduled_campaign_id)
+
+    with get_session() as db:
+        sc = db.get(ScheduledCampaign, sc_uuid)
+        if sc is None or not sc.enabled:
+            logger.warning("Scheduled campaign %s not found or disabled", scheduled_campaign_id)
+            return
+
+        campaign = db.get(Campaign, sc.campaign_id)
+        mutation_pack = db.get(MutationPack, sc.mutation_pack_id)
+        if campaign is None or mutation_pack is None:
+            logger.error(
+                "Missing campaign or mutation_pack for scheduled campaign %s",
+                scheduled_campaign_id,
+            )
+            return
+
+        project = db.get(Project, sc.project_id)
+        if project is None or project.owner_id is None:
+            logger.error("Project or owner not found for scheduled campaign %s", scheduled_campaign_id)
+            return
+
+        wallet = db.scalar(
+            select(CreditWallet).where(CreditWallet.user_id == project.owner_id).with_for_update()
+        )
+        credit_cost = int(getattr(mutation_pack, "credit_cost", 20))
+
+        if wallet is None or wallet.balance < credit_cost:
+            logger.info(
+                "Skipping scheduled campaign %s — insufficient credits (balance=%s, cost=%s)",
+                scheduled_campaign_id,
+                wallet.balance if wallet else 0,
+                credit_cost,
+            )
+            sc.last_run_status = "skipped_insufficient_credits"
+            audit = AuditEvent(
+                audit_event_id=uuid4(),
+                project_id=sc.project_id,
+                event_type="campaign_skipped_insufficient_credits",
+                actor="scheduler",
+                event_metadata={
+                    "scheduled_campaign_id": scheduled_campaign_id,
+                    "campaign_id": str(sc.campaign_id),
+                    "mutation_pack": mutation_pack.name,
+                    "balance": wallet.balance if wallet else 0,
+                    "credit_cost": credit_cost,
+                },
+            )
+            db.add(sc)
+            db.add(audit)
+            db.commit()
+            return
+
+        # Deduct credits
+        wallet.balance -= credit_cost
+        db.add(
+            CreditTransaction(
+                credit_transaction_id=uuid4(),
+                user_id=project.owner_id,
+                amount=-credit_cost,
+                type="usage",
+                reason=f"scheduled_pack_run:{mutation_pack.name}",
+            )
+        )
+
+        # Build synthetic trace payload (mirrors run_service._build_synthetic_campaign_trace_payload)
+        task_name = campaign.name.strip() or "campaign.run_pack"
+        trace_payload: dict[str, Any] = {
+            "trace_version": "0.1",
+            "source": "campaign.run_pack",
+            "task": {
+                "name": task_name,
+                "input": {
+                    "campaign_id": str(campaign.campaign_id),
+                    "campaign_name": campaign.name,
+                    "mutation_pack": mutation_pack.name,
+                },
+            },
+            "events": [
+                {
+                    "index": 0,
+                    "type": "tool_call",
+                    "tool": "campaign.load",
+                    "args": {"campaign_id": str(campaign.campaign_id), "mutation_pack": mutation_pack.name},
+                },
+                {
+                    "index": 1,
+                    "type": "tool_result",
+                    "tool": "campaign.load",
+                    "result": {"ok": True, "campaign_name": campaign.name, "mutation_pack": mutation_pack.name},
+                },
+            ],
+        }
+
+        trace_id = uuid4()
+        s3_key = f"traces/{sc.project_id}/{trace_id}.json"
+        settings = get_settings()
+        put_json_object(trace_payload, key=s3_key, settings=settings)
+
+        trace = Trace(
+            trace_id=trace_id,
+            project_id=sc.project_id,
+            source="campaign.run_pack",
+            trace_version="0.1",
+            validation_status="valid",
+            s3_key=s3_key,
+        )
+        db.add(trace)
+        db.flush()
+
+        run_id = uuid4()
+        run = Run(
+            run_id=run_id,
+            project_id=sc.project_id,
+            trace_id=trace_id,
+            campaign_id=sc.campaign_id,
+            mutation_pack_id=sc.mutation_pack_id,
+            status="queued",
+        )
+        db.add(run)
+
+        sc.last_run_at = datetime.now(UTC)
+        sc.last_run_status = "success"
+        db.add(sc)
+        db.commit()
+
+    # Enqueue the actual run execution (outside the DB transaction)
+    settings = get_settings()
+    connection = redis.from_url(settings.redis_url)
+    queue = Queue("sepurux", connection=connection)
+    queue.enqueue("worker.execute_run", str(run_id))
+    logger.info("Scheduled campaign %s enqueued run %s", scheduled_campaign_id, run_id)
+
+
+def dispatch_scheduled_campaigns() -> None:
+    """Check all enabled scheduled campaigns and enqueue any that are due. Run every minute."""
+    try:
+        from croniter import croniter  # type: ignore[import-untyped]
+    except ImportError:
+        logger.error("croniter not installed; scheduled campaigns cannot be dispatched")
+        return
+
+    now = datetime.now(UTC)
+    settings = get_settings()
+    connection = redis.from_url(settings.redis_url)
+    queue = Queue("sepurux", connection=connection)
+
+    with get_session() as db:
+        scheduled = list(
+            db.scalars(select(ScheduledCampaign).where(ScheduledCampaign.enabled.is_(True)))
+        )
+
+    for sc in scheduled:
+        try:
+            ref_time = sc.last_run_at or sc.created_at
+            cron = croniter(sc.cron_schedule, ref_time)
+            next_due = cron.get_next(datetime)
+            if next_due <= now:
+                with get_session() as db:
+                    record = db.get(ScheduledCampaign, sc.scheduled_campaign_id)
+                    if record is None or not record.enabled:
+                        continue
+                    record.last_run_at = now
+                    db.commit()
+                queue.enqueue("worker.execute_scheduled_campaign", str(sc.scheduled_campaign_id))
+                logger.info("Dispatched scheduled campaign %s", sc.scheduled_campaign_id)
+        except Exception:
+            logger.exception("Error dispatching scheduled campaign %s", sc.scheduled_campaign_id)
 
 
 def main() -> None:

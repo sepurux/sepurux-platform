@@ -17,6 +17,7 @@ api_mutation_packs.go
 api_policy_packs.go
 api_projects.go
 api_runs.go
+api_scheduled_campaigns.go
 api_templates.go
 api_tools.go
 api_traces.go
@@ -105,6 +106,10 @@ docs/RunInsightEvidence.md
 docs/RunMetadata.md
 docs/RunStatsResponse.md
 docs/RunsAPI.md
+docs/ScheduledCampaignCreateRequest.md
+docs/ScheduledCampaignMetadata.md
+docs/ScheduledCampaignUpdateRequest.md
+docs/ScheduledCampaignsAPI.md
 docs/SecurityEventListItem.md
 docs/SignupRequest.md
 docs/Status.md
@@ -203,6 +208,9 @@ model_run_insight.go
 model_run_insight_evidence.go
 model_run_metadata.go
 model_run_stats_response.go
+model_scheduled_campaign_create_request.go
+model_scheduled_campaign_metadata.go
+model_scheduled_campaign_update_request.go
 model_security_event_list_item.go
 model_signup_request.go
 model_status.go
@@ -228,4 +236,5 @@ model_webhook_metadata.go
 model_webhook_rotate_secret_response.go
 model_webhook_update_request.go
 response.go
+test/api_scheduled_campaigns_test.go
 utils.go
