@@ -209,6 +209,18 @@ export function SettingsView() {
               </label>
             ) : null}
 
+            {projectId ? (
+              <div className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Project ID</span>
+                <input
+                  readOnly
+                  className="w-full rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground"
+                  value={projectId}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+              </div>
+            ) : null}
+
             {saveMessage ? (
               <div className="rounded-md border border-blue-500/30 bg-blue-500/10 p-2 text-sm text-blue-100">
                 {saveMessage}
