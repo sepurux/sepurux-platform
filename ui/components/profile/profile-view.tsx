@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
-import { ArrowUpRight, Coins, CreditCard, User } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowUpRight, CheckCircle2, Coins, CreditCard, User } from "lucide-react";
 
 import {
   api,
@@ -38,6 +39,9 @@ function initialsFor(session: AuthSessionMetadata) {
 }
 
 export function ProfileView() {
+  const searchParams = useSearchParams();
+  const checkoutStatus = searchParams.get("checkout");
+
   const [state, setState] = useState<BillingState>({ status: "loading" });
   const [topupCredits, setTopupCredits] = useState(1000);
   const [topupBusy, setTopupBusy] = useState(false);
@@ -45,24 +49,31 @@ export function ProfileView() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [session, subscription, wallet] = await Promise.all([
-          api.getAuthSession(),
-          api.getBillingSubscription(),
-          api.getBillingCredits(),
-        ]);
-        setState({ status: "ready", session, subscription, wallet });
-      } catch (error) {
-        setState({
-          status: "error",
-          message: error instanceof Error ? error.message : "Failed to load profile",
-        });
-      }
+  const load = useCallback(async () => {
+    try {
+      const [session, subscription, wallet] = await Promise.all([
+        api.getAuthSession(),
+        api.getBillingSubscription(),
+        api.getBillingCredits(),
+      ]);
+      setState({ status: "ready", session, subscription, wallet });
+    } catch (error) {
+      setState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Failed to load profile",
+      });
     }
-    void load();
   }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  // After a successful checkout, Stripe fires the webhook async.
+  // Poll once after 4s to pick up the updated balance.
+  useEffect(() => {
+    if (checkoutStatus !== "success") return;
+    const t = setTimeout(() => void load(), 4000);
+    return () => clearTimeout(t);
+  }, [checkoutStatus, load]);
 
   async function handleTopup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -121,6 +132,17 @@ export function ProfileView() {
           Account details and billing for your workspace.
         </p>
       </div>
+
+      {checkoutStatus === "success" ? (
+        <p className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Payment successful — your balance will update in a moment.
+        </p>
+      ) : checkoutStatus === "cancelled" ? (
+        <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          Checkout was cancelled. No charge was made.
+        </p>
+      ) : null}
 
       {actionError ? (
         <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">

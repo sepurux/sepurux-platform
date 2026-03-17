@@ -42,11 +42,11 @@ def _billing_base_url() -> str:
 
 
 def _checkout_success_url() -> str:
-    return f"{_billing_base_url()}/billing?checkout=success&session_id={{CHECKOUT_SESSION_ID}}"
+    return f"{_billing_base_url()}/profile?checkout=success&session_id={{CHECKOUT_SESSION_ID}}"
 
 
 def _checkout_cancel_url() -> str:
-    return f"{_billing_base_url()}/billing?checkout=cancelled"
+    return f"{_billing_base_url()}/profile?checkout=cancelled"
 
 
 def _billing_return_url() -> str:
