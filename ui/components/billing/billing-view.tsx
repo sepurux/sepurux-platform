@@ -314,6 +314,7 @@ export function BillingView() {
                     <li>• Trace replay: 5 credits</li>
                     <li>• Mutation campaign: 20 credits</li>
                     <li>• Large campaign: 50 credits</li>
+                    <li>• Scheduled pack run: pack credit cost</li>
                   </ul>
                 </div>
               </CardContent>
