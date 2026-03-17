@@ -21,6 +21,7 @@ from app.routes.mutation_packs import router as mutation_packs_router
 from app.routes.policy_packs import router as policy_packs_router
 from app.routes.projects import router as projects_router
 from app.routes.runs import router as runs_router
+from app.routes.scheduled_campaigns import router as scheduled_campaigns_router
 from app.routes.templates import router as templates_router
 from app.routes.tools import router as tools_router
 from app.routes.traces import router as traces_router
@@ -108,6 +109,7 @@ app.include_router(mutation_packs_router)
 app.include_router(policy_packs_router)
 app.include_router(projects_router)
 app.include_router(runs_router)
+app.include_router(scheduled_campaigns_router)
 app.include_router(templates_router)
 app.include_router(tools_router)
 app.include_router(traces_router)

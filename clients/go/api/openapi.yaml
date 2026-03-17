@@ -1790,6 +1790,201 @@ paths:
       summary: Post Apply Template
       tags:
       - runs
+  /v1/scheduled-campaigns:
+    get:
+      operationId: get_scheduled_campaigns_v1_scheduled_campaigns_get
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ScheduledCampaignMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Scheduled Campaigns
+      tags:
+      - scheduled-campaigns
+    post:
+      operationId: post_scheduled_campaign_v1_scheduled_campaigns_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduledCampaignCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledCampaignMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Scheduled Campaign
+      tags:
+      - scheduled-campaigns
+  /v1/scheduled-campaigns/{scheduled_campaign_id}:
+    delete:
+      operationId: delete_scheduled_campaign_by_id_v1_scheduled_campaigns__scheduled_campaign_id__delete
+      parameters:
+      - explode: false
+        in: path
+        name: scheduled_campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Scheduled Campaign Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Scheduled Campaign By Id
+      tags:
+      - scheduled-campaigns
+    get:
+      operationId: get_scheduled_campaign_by_id_v1_scheduled_campaigns__scheduled_campaign_id__get
+      parameters:
+      - explode: false
+        in: path
+        name: scheduled_campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Scheduled Campaign Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledCampaignMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Scheduled Campaign By Id
+      tags:
+      - scheduled-campaigns
+    patch:
+      operationId: patch_scheduled_campaign_v1_scheduled_campaigns__scheduled_campaign_id__patch
+      parameters:
+      - explode: false
+        in: path
+        name: scheduled_campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Scheduled Campaign Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduledCampaignUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledCampaignMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Patch Scheduled Campaign
+      tags:
+      - scheduled-campaigns
   /v1/templates:
     get:
       operationId: get_templates_v1_templates_get
@@ -4966,6 +5161,99 @@ components:
       - tools_usage
       - top_failure_reasons
       title: RunStatsResponse
+    ScheduledCampaignCreateRequest:
+      example:
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        cron_schedule: cron_schedule
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        enabled: true
+      properties:
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        mutation_pack_id:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        cron_schedule:
+          title: Cron Schedule
+          type: string
+        enabled:
+          default: true
+          title: Enabled
+          type: boolean
+      required:
+      - campaign_id
+      - cron_schedule
+      - mutation_pack_id
+      title: ScheduledCampaignCreateRequest
+    ScheduledCampaignMetadata:
+      example:
+        last_run_at: 2000-01-23T04:56:07.000+00:00
+        last_run_status: last_run_status
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        cron_schedule: cron_schedule
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created_at: 2000-01-23T04:56:07.000+00:00
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        enabled: true
+        scheduled_campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        scheduled_campaign_id:
+          format: uuid
+          title: Scheduled Campaign Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        mutation_pack_id:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        cron_schedule:
+          title: Cron Schedule
+          type: string
+        enabled:
+          title: Enabled
+          type: boolean
+        last_run_at:
+          format: date-time
+          nullable: true
+          type: string
+        last_run_status:
+          nullable: true
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - campaign_id
+      - created_at
+      - cron_schedule
+      - enabled
+      - mutation_pack_id
+      - project_id
+      - scheduled_campaign_id
+      title: ScheduledCampaignMetadata
+    ScheduledCampaignUpdateRequest:
+      example:
+        cron_schedule: cron_schedule
+        enabled: true
+      properties:
+        enabled:
+          nullable: true
+          type: boolean
+        cron_schedule:
+          nullable: true
+          type: string
+      title: ScheduledCampaignUpdateRequest
     SecurityEventListItem:
       example:
         run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91

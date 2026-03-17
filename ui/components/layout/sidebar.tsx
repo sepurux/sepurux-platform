@@ -62,6 +62,7 @@ const groupedItems: NavGroup[] = [
     children: [
       { href: "/campaigns", label: "View Campaigns" },
       { href: "/campaigns/new", label: "Create Campaign", permission: "can_create_campaigns" },
+      { href: "/scheduled-campaigns", label: "Scheduled Campaigns" },
     ],
   },
   {
