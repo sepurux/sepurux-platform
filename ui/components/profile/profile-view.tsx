@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import Link from "next/link";
 import { ArrowUpRight, Coins, CreditCard, User } from "lucide-react";
 
 import {
@@ -226,9 +225,6 @@ export function ProfileView() {
                 {!portalBusy && <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />}
               </Button>
             ) : null}
-            <Button variant="ghost" asChild>
-              <Link href="/billing">Full billing details</Link>
-            </Button>
           </div>
         </CardContent>
       </Card>
