@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, Coins, FolderKanban, Loader2, Search } from "lucide-react";
+import { Bell, ChevronDown, Coins, Loader2, Search } from "lucide-react";
 
 import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
@@ -205,7 +205,6 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   );
   const userInitials = initialsForSession(authSession);
   const userLabel = authSession?.name || authSession?.email || "Workspace User";
-  const showProjectSelector = !authSession?.project_scoped;
   const creditBalance = authSession?.credits_balance;
   const lowCreditThreshold = authSession?.low_credit_threshold ?? 50;
 
@@ -293,42 +292,6 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
             </div>
           ) : null}
 
-          {/* project selector */}
-          {showProjectSelector ? (
-            <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
-              <FolderKanban className="h-4 w-4" style={{ color: "var(--accent-teal)" }} />
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
-                <select
-                  className="mt-0.5 w-full truncate bg-transparent text-sm text-foreground outline-none"
-                  value={selectedProjectId}
-                  onChange={(event) => handleProjectChange(event.target.value)}
-                  disabled={!projects.length}
-                >
-                  {!projects.length ? (
-                    <option value="">
-                      {projectsError ? "Projects unavailable" : "Loading..."}
-                    </option>
-                  ) : null}
-                  {projects.map((project) => (
-                    <option key={project.project_id} value={project.project_id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </label>
-          ) : (
-            <div className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
-              <FolderKanban className="h-4 w-4" style={{ color: "var(--accent-teal)" }} />
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
-                <p className="mt-0.5 truncate text-sm text-foreground">
-                  {authSession?.project_name ?? "Scoped workspace"}
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* search */}
           <form
