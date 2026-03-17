@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { api, type MutationPackMetadata } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import { Copy, Check } from "lucide-react";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,25 @@ type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; records: MutationPackMetadata[] };
+
+function CopyIdButton({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  function handleCopy() {
+    void navigator.clipboard.writeText(id).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      className="ml-1 inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+      title="Copy full ID"
+    >
+      {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+    </button>
+  );
+}
 
 export function MutationPacksView() {
   const authSession = useAuthSession();
@@ -150,7 +170,10 @@ export function MutationPacksView() {
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
-                          {shortId(record.mutation_pack_id, 14)}
+                          <span className="flex items-center gap-0.5">
+                            {shortId(record.mutation_pack_id, 14)}
+                            <CopyIdButton id={record.mutation_pack_id} />
+                          </span>
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
                           {formatRelativeDate(record.created_at)}
