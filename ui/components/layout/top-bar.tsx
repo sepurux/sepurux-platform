@@ -398,7 +398,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
       {creditsModalOpen ? (
         <GetCreditsModal
-          currentPlanId={authSession?.billing_plan_name ?? null}
+          currentPlanName={authSession?.billing_plan_name ?? null}
           onClose={() => setCreditsModalOpen(false)}
         />
       ) : null}
