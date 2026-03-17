@@ -1480,8 +1480,7 @@ def execute_scheduled_campaign(scheduled_campaign_id: str) -> None:
 
         trace_id = uuid4()
         s3_key = f"traces/{sc.project_id}/{trace_id}.json"
-        settings = get_settings()
-        put_json_object(trace_payload, key=s3_key, settings=settings)
+        put_json_object(s3_key, trace_payload)
 
         trace = Trace(
             trace_id=trace_id,
