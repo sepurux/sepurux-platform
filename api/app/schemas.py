@@ -121,6 +121,30 @@ class ProjectReliabilitySummaryResponse(BaseModel):
     failure_breakdown: list[CampaignFailureBreakdownItem] = Field(default_factory=list)
 
 
+class ScheduledCampaignCreateRequest(BaseModel):
+    campaign_id: UUID
+    mutation_pack_id: UUID
+    cron_schedule: str
+    enabled: bool = True
+
+
+class ScheduledCampaignUpdateRequest(BaseModel):
+    enabled: bool | None = None
+    cron_schedule: str | None = None
+
+
+class ScheduledCampaignMetadata(BaseModel):
+    scheduled_campaign_id: UUID
+    project_id: UUID
+    campaign_id: UUID
+    mutation_pack_id: UUID
+    cron_schedule: str
+    enabled: bool
+    last_run_at: datetime | None = None
+    last_run_status: str | None = None
+    created_at: datetime
+
+
 class ReplayAttemptListItem(BaseModel):
     attempt_id: UUID
     mutation_id: str

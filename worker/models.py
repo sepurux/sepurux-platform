@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, Text, Uuid, false, func, text
+from sqlalchemy import JSON, Boolean, DateTime, Integer, Text, Uuid, false, func, text, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -221,6 +221,9 @@ class MutationPack(Base):
     coverage_score: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default=text("0")
     )
+    credit_cost: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=20, server_default=text("20")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -362,6 +365,36 @@ class SecurityEvent(Base):
     risk_score: Mapped[float] = mapped_column(nullable=False)
     action: Mapped[str] = mapped_column(Text, nullable=False)
     matches: Mapped[Any | None] = mapped_column(JSONB_COMPAT, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    project_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    tenant_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    owner_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class ScheduledCampaign(Base):
+    __tablename__ = "scheduled_campaigns"
+
+    scheduled_campaign_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    campaign_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    mutation_pack_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    cron_schedule: Mapped[str] = mapped_column(Text, nullable=False)
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=true()
+    )
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_run_status: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

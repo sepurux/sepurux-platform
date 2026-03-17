@@ -17,6 +17,7 @@ src/apis/MutationPacksApi.ts
 src/apis/PolicyPacksApi.ts
 src/apis/ProjectsApi.ts
 src/apis/RunsApi.ts
+src/apis/ScheduledCampaignsApi.ts
 src/apis/TemplatesApi.ts
 src/apis/ToolsApi.ts
 src/apis/TracesApi.ts
@@ -90,6 +91,9 @@ src/models/RunInsight.ts
 src/models/RunInsightEvidence.ts
 src/models/RunMetadata.ts
 src/models/RunStatsResponse.ts
+src/models/ScheduledCampaignCreateRequest.ts
+src/models/ScheduledCampaignMetadata.ts
+src/models/ScheduledCampaignUpdateRequest.ts
 src/models/SecurityEventListItem.ts
 src/models/SignupRequest.ts
 src/models/Status.ts
