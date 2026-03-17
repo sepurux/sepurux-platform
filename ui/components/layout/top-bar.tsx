@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -401,12 +402,15 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         <p className="mt-2 text-xs text-rose-300 lg:text-right">{searchError}</p>
       ) : null}
 
-      {creditsModalOpen ? (
-        <GetCreditsModal
-          currentPlanName={authSession?.billing_plan_name ?? null}
-          onClose={() => setCreditsModalOpen(false)}
-        />
-      ) : null}
+      {creditsModalOpen
+        ? createPortal(
+            <GetCreditsModal
+              currentPlanName={authSession?.billing_plan_name ?? null}
+              onClose={() => setCreditsModalOpen(false)}
+            />,
+            document.body
+          )
+        : null}
     </header>
   );
 }

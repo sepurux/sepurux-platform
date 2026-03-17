@@ -93,7 +93,7 @@ export function ProfileView() {
 
   if (state.status === "loading") {
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-52 w-full" />
@@ -104,11 +104,9 @@ export function ProfileView() {
 
   if (state.status === "error") {
     return (
-      <div className="mx-auto max-w-3xl">
-        <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-          {state.message}
-        </p>
-      </div>
+      <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        {state.message}
+      </p>
     );
   }
 
@@ -116,7 +114,7 @@ export function ProfileView() {
   const initials = initialsFor(session);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">
