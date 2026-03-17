@@ -9,7 +9,11 @@ from uuid import UUID, uuid4
 from app.auth import ROLE_RANKS, TenantAuthContext
 from app.models import Project, ProjectMembership, Role, Tenant, User
 from app.services.api_key_service import create_api_key_for_tenant
-from app.services.billing_service import get_billing_snapshot_for_context
+from app.services.billing_service import (
+    ensure_user_billing,
+    get_billing_snapshot_for_context,
+    grant_signup_credits,
+)
 from app.services.mutation_pack_service import ensure_system_mutation_packs
 from app.services.pricing_service import (
     DEFAULT_PRICING_TIER,
@@ -116,6 +120,8 @@ def signup_user(
         project_name=project_name,
         pricing_tier=pricing_tier,
     )
+    ensure_user_billing(db, user_id=user.user_id, pricing_tier=pricing_tier)
+    grant_signup_credits(db, user_id=user.user_id)
     return issue_session_for_user(db, user=user, is_demo=False)
 
 

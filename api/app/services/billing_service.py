@@ -42,6 +42,8 @@ LARGE_CAMPAIGN_CREDIT_COST = 50
 LARGE_CAMPAIGN_ATTEMPT_THRESHOLD = 50
 BILLING_CYCLE_DAYS = 30
 
+SIGNUP_CREDITS = int(os.getenv("SIGNUP_CREDITS", "100"))
+
 
 @dataclass(frozen=True)
 class PlanSeed:
@@ -271,6 +273,25 @@ def _create_credit_transaction(
     )
     db.add(record)
     return record
+
+
+def grant_signup_credits(db: Session, *, user_id: UUID) -> None:
+    if SIGNUP_CREDITS <= 0:
+        return
+    wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == user_id))
+    if wallet is None:
+        return
+    wallet.topup_credits += SIGNUP_CREDITS
+    wallet.balance += SIGNUP_CREDITS
+    db.add(wallet)
+    _create_credit_transaction(
+        db,
+        user_id=user_id,
+        amount=SIGNUP_CREDITS,
+        transaction_type=TRANSACTION_TOPUP_PURCHASE,
+        reason="signup bonus",
+    )
+    db.commit()
 
 
 def has_processed_billing_webhook_event(db: Session, *, event_id: str) -> bool:

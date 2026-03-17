@@ -19,6 +19,7 @@ from app.services.auth_service import (
     issue_session_for_user,
     normalize_email,
 )
+from app.services.billing_service import ensure_user_billing, grant_signup_credits
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
@@ -519,6 +520,8 @@ def _resolve_user_for_identity(db: Session, *, identity: OAuthIdentity) -> User:
         project_name=None,
         pricing_tier=DEFAULT_PRICING_TIER,
     )
+    ensure_user_billing(db, user_id=user.user_id, pricing_tier=DEFAULT_PRICING_TIER)
+    grant_signup_credits(db, user_id=user.user_id)
     _attach_identity(db, user=user, identity=identity)
     return user
 
