@@ -9,6 +9,7 @@ import { Bell, ChevronDown, Coins, FolderKanban, Loader2, Search } from "lucide-
 
 import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
+import { GetCreditsModal } from "@/components/billing/get-credits-modal";
 import {
   clearStoredApiBaseUrl,
   clearStoredApiKey,
@@ -46,6 +47,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const [searchQuery, setSearchQuery] = useState("");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [creditsModalOpen, setCreditsModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -261,29 +263,33 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
         {/* right: credits, project selector, search, bell, user */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* credits */}
+          {/* credits pill + get credits button */}
           {typeof creditBalance === "number" ? (
-            <div
-              className={cn(
-                "hidden min-w-[180px] items-center gap-2 rounded-md border px-3 py-2 text-sm lg:flex",
-                authSession?.is_low_credit
-                  ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
-                  : "border-border/70 bg-card/70 text-foreground"
-              )}
-            >
-              <Coins
-                className="h-4 w-4"
-                style={{ color: authSession?.is_low_credit ? undefined : "var(--accent-teal)" }}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Credits
-                </div>
-                <p className="mt-0.5 truncate text-sm">
-                  {creditBalance.toLocaleString()} left
-                  {authSession?.is_low_credit ? ` · under ${lowCreditThreshold}` : ""}
-                </p>
-              </div>
+            <div className="hidden items-center gap-2 lg:flex">
+              <button
+                onClick={() => setCreditsModalOpen(true)}
+                className={cn(
+                  "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent/40",
+                  authSession?.is_low_credit
+                    ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                    : "border-border/70 bg-card/70 text-foreground"
+                )}
+              >
+                <Coins
+                  className="h-4 w-4"
+                  style={{ color: authSession?.is_low_credit ? undefined : "var(--accent-teal)" }}
+                />
+                <span className="font-medium">
+                  {creditBalance.toLocaleString()} credits
+                </span>
+              </button>
+              <button
+                onClick={() => setCreditsModalOpen(true)}
+                className="rounded-md px-3 py-2 text-sm font-semibold text-white transition-colors"
+                style={{ background: "var(--accent-teal)", color: "#000" }}
+              >
+                Get credits
+              </button>
             </div>
           ) : null}
 
@@ -388,6 +394,13 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
       {searchError ? (
         <p className="mt-2 text-xs text-rose-300 lg:text-right">{searchError}</p>
+      ) : null}
+
+      {creditsModalOpen ? (
+        <GetCreditsModal
+          currentPlanId={authSession?.billing_plan_name ?? null}
+          onClose={() => setCreditsModalOpen(false)}
+        />
       ) : null}
     </header>
   );

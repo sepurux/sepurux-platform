@@ -18,6 +18,7 @@ const operationCosts = [
   { label: "Trace replay", credits: "5 credits" },
   { label: "Mutation campaign", credits: "20 credits" },
   { label: "Large campaign", credits: "50 credits" },
+  { label: "Scheduled pack run", credits: "pack credit cost" },
 ];
 
 const valuePoints = [
