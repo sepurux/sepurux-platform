@@ -9,7 +9,6 @@ import {
   Bell,
   Bug,
   ChevronDown,
-  Coins,
   FileSearch,
   FlaskConical,
   Home,
@@ -45,7 +44,6 @@ type NavGroup = {
 
 const primaryItems: NavLinkItem[] = [
   { href: "/dashboard", label: "Dashboard", section: "dashboard", icon: Home },
-  { href: "/billing", label: "Billing", section: "billing", icon: Coins },
   { href: "/traces", label: "Traces", section: "traces", icon: FileSearch },
   { href: "/runs", label: "Runs", section: "runs", icon: PlayCircle },
   { href: "/reports", label: "Reports", section: "reports", icon: ScrollText },
