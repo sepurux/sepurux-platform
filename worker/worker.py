@@ -1394,7 +1394,9 @@ def execute_scheduled_campaign(scheduled_campaign_id: str) -> None:
 
         project = db.get(Project, sc.project_id)
         if project is None or project.owner_id is None:
-            logger.error("Project or owner not found for scheduled campaign %s", scheduled_campaign_id)
+            logger.error(
+                "Project or owner not found for scheduled campaign %s", scheduled_campaign_id
+            )
             return
 
         wallet = db.scalar(
@@ -1458,13 +1460,20 @@ def execute_scheduled_campaign(scheduled_campaign_id: str) -> None:
                     "index": 0,
                     "type": "tool_call",
                     "tool": "campaign.load",
-                    "args": {"campaign_id": str(campaign.campaign_id), "mutation_pack": mutation_pack.name},
+                    "args": {
+                        "campaign_id": str(campaign.campaign_id),
+                        "mutation_pack": mutation_pack.name,
+                    },
                 },
                 {
                     "index": 1,
                     "type": "tool_result",
                     "tool": "campaign.load",
-                    "result": {"ok": True, "campaign_name": campaign.name, "mutation_pack": mutation_pack.name},
+                    "result": {
+                        "ok": True,
+                        "campaign_name": campaign.name,
+                        "mutation_pack": mutation_pack.name,
+                    },
                 },
             ],
         }

@@ -50,17 +50,21 @@ def post_scheduled_campaign(
     project_scope: ProjectScopeDep,
     tenant_auth: DeveloperAuth,
 ) -> ScheduledCampaignMetadata:
-    if resolve_campaign_for_project(
-        db, project_id=project_scope.project_id, campaign_id=payload.campaign_id
-    ) is None:
+    if (
+        resolve_campaign_for_project(
+            db, project_id=project_scope.project_id, campaign_id=payload.campaign_id
+        )
+        is None
+    ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
-    if resolve_mutation_pack_for_project(
-        db, project_id=project_scope.project_id, mutation_pack_id=payload.mutation_pack_id
-    ) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found"
+    if (
+        resolve_mutation_pack_for_project(
+            db, project_id=project_scope.project_id, mutation_pack_id=payload.mutation_pack_id
         )
+        is None
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found")
 
     record = create_scheduled_campaign(
         db,
