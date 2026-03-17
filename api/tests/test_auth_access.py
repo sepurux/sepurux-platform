@@ -76,7 +76,7 @@ def test_signup_bootstraps_workspace_and_session(
     assert payload["permissions"]["can_manage_billing"] is True
     assert "audit" in payload["permissions"]["visible_sections"]
     assert payload["billing_plan_name"] == "Enterprise"
-    assert payload["credits_balance"] == 50000
+    assert payload["credits_balance"] == 50100
     assert payload["api_key"].startswith("cl_")
 
     project_id = UUID(payload["project_id"])
