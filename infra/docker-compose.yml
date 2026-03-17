@@ -89,6 +89,25 @@ services:
       - minio
       - opa
 
+  scheduler:
+    build:
+      context: ../worker
+    command: python scheduler.py
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://crashlab:crashlab@postgres:5432/crashlab}
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123456
+      S3_BUCKET: ${S3_BUCKET:-sepurux}
+      S3_REGION: us-east-1
+      OPA_URL: http://opa:8181
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - opa
+
   ui:
     build:
       context: ../ui
