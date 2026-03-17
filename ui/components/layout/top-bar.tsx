@@ -381,6 +381,12 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                     : authSession?.billing_plan_name ?? "workspace"}
                 </p>
               </div>
+              <Link
+                href="/profile"
+                className="block w-full rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+              >
+                Profile
+              </Link>
               <button
                 className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
                 onClick={handleSignOut}
