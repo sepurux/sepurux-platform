@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, Coins, FolderKanban, Loader2, Search } from "lucide-react";
+import { Bell, ChevronDown, Coins, CreditCard, FolderKanban, LogOut, Plus, User } from "lucide-react";
 
 import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
@@ -44,9 +44,6 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const [projects, setProjects] = useState<ProjectMetadata[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [projectsError, setProjectsError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [searching, setSearching] = useState(false);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -97,108 +94,6 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
     router.push("/auth?mode=access&intent=login");
   }
 
-  async function lookupRun(runId: string) {
-    try {
-      await api.getRun(runId);
-      return `/runs/${runId}`;
-    } catch {
-      return null;
-    }
-  }
-
-  async function lookupTrace(traceId: string) {
-    try {
-      await api.getTrace(traceId);
-      return `/traces/${traceId}`;
-    } catch {
-      return null;
-    }
-  }
-
-  async function lookupAttempt(attemptId: string) {
-    try {
-      await api.getAttempt(attemptId);
-      return `/attempts/${attemptId}`;
-    } catch {
-      return null;
-    }
-  }
-
-  async function resolveSearchTarget(query: string) {
-    const normalized = query.trim();
-    const toolPrefixed = normalized.match(/^tool\s*:\s*(.+)$/i);
-    if (toolPrefixed) {
-      const toolName = toolPrefixed[1].trim();
-      return toolName ? `/security?tool=${encodeURIComponent(toolName)}` : null;
-    }
-
-    const prefixed = normalized.match(/^(run|trace|attempt)\s*:\s*(.+)$/i);
-    if (prefixed) {
-      const target = prefixed[1].toLowerCase();
-      const id = prefixed[2].trim();
-      if (!id) return null;
-      if (target === "run") return lookupRun(id);
-      if (target === "trace") return lookupTrace(id);
-      return lookupAttempt(id);
-    }
-
-    const looksLikeUuid =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized);
-
-    if (looksLikeUuid) {
-      const [runPath, attemptPath, tracePath] = await Promise.all([
-        lookupRun(normalized),
-        lookupAttempt(normalized),
-        lookupTrace(normalized),
-      ]);
-      return runPath ?? attemptPath ?? tracePath;
-    }
-
-    const keyword = normalized.toLowerCase();
-    const [runs, traces] = await Promise.all([
-      api.listRuns(100).catch(() => []),
-      api.listTraces({ limit: 100, offset: 0 }).catch(() => []),
-    ]);
-
-    const runMatch = runs.find((run) =>
-      run.run_id.toLowerCase().includes(keyword) ||
-      run.campaign_id.toLowerCase().includes(keyword) ||
-      run.status.toLowerCase().includes(keyword)
-    );
-    if (runMatch) return `/runs/${runMatch.run_id}`;
-
-    const traceMatch = traces.find((trace) =>
-      trace.trace_id.toLowerCase().includes(keyword) ||
-      trace.source.toLowerCase().includes(keyword)
-    );
-    if (traceMatch) return `/traces/${traceMatch.trace_id}`;
-
-    return null;
-  }
-
-  async function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const query = searchQuery.trim();
-    if (!query || searching) return;
-
-    setSearching(true);
-    setSearchError(null);
-    try {
-      const path = await resolveSearchTarget(query);
-      if (path) {
-        router.push(path);
-        setSearchQuery("");
-        setSearchError(null);
-        return;
-      }
-      setSearchError("No match found. Try run:/trace:/attempt:/tool: prefixes or paste an id.");
-    } catch (error) {
-      setSearchError(error instanceof Error ? error.message : "Search failed");
-    } finally {
-      setSearching(false);
-    }
-  }
-
   const visibleSections = new Set(authSession?.permissions.visible_sections ?? []);
   const visibleTabs = tabs.filter(
     (tab) => visibleSections.size === 0 || visibleSections.has(tab.section)
@@ -206,8 +101,8 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const userInitials = initialsForSession(authSession);
   const userLabel = authSession?.name || authSession?.email || "Workspace User";
   const showProjectSelector = !authSession?.project_scoped;
+  const canManageWorkspace = authSession?.permissions.can_manage_workspace ?? false;
   const creditBalance = authSession?.credits_balance;
-  const lowCreditThreshold = authSession?.low_credit_threshold ?? 50;
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur">
@@ -215,7 +110,6 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         {/* left: wordmark + tabs */}
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-3">
-            {/* teal logo mark */}
             <div
               className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold sm:flex"
               style={{
@@ -261,86 +155,61 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
           </div>
         </div>
 
-        {/* right: credits, project selector, search, bell, user */}
+        {/* right */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* credits pill + get credits button */}
+          {/* credits pill */}
           {typeof creditBalance === "number" ? (
-            <div className="hidden items-center gap-2 lg:flex">
-              <button
-                onClick={() => setCreditsModalOpen(true)}
-                className={cn(
-                  "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent/40",
-                  authSession?.is_low_credit
-                    ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
-                    : "border-border/70 bg-card/70 text-foreground"
-                )}
-              >
-                <Coins
-                  className="h-4 w-4"
-                  style={{ color: authSession?.is_low_credit ? undefined : "var(--accent-teal)" }}
-                />
-                <span className="font-medium">
-                  {creditBalance.toLocaleString()} credits
-                </span>
-              </button>
-              <button
-                onClick={() => setCreditsModalOpen(true)}
-                className="rounded-md px-3 py-2 text-sm font-semibold text-white transition-colors"
-                style={{ background: "var(--accent-teal)", color: "#000" }}
-              >
-                Get credits
-              </button>
-            </div>
+            <button
+              onClick={() => setCreditsModalOpen(true)}
+              className={cn(
+                "hidden items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent/40 lg:flex",
+                authSession?.is_low_credit
+                  ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                  : "border-border/70 bg-card/70 text-foreground"
+              )}
+            >
+              <Coins
+                className="h-4 w-4"
+                style={{ color: authSession?.is_low_credit ? undefined : "var(--accent-teal)" }}
+              />
+              <span className="font-medium">{creditBalance.toLocaleString()} credits</span>
+            </button>
           ) : null}
 
           {/* project selector — only for multi-project users */}
           {showProjectSelector ? (
-            <label className="hidden min-w-[220px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
-              <FolderKanban className="h-4 w-4" style={{ color: "var(--accent-teal)" }} />
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Project</div>
-                <select
-                  className="mt-0.5 w-full truncate bg-transparent text-sm text-foreground outline-none"
-                  value={selectedProjectId}
-                  onChange={(event) => handleProjectChange(event.target.value)}
-                  disabled={!projects.length}
-                >
-                  {!projects.length ? (
-                    <option value="">
-                      {projectsError ? "Projects unavailable" : "Loading..."}
-                    </option>
-                  ) : null}
-                  {projects.map((project) => (
-                    <option key={project.project_id} value={project.project_id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <label className="hidden min-w-[180px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex">
+              <FolderKanban className="h-4 w-4 shrink-0" style={{ color: "var(--accent-teal)" }} />
+              <select
+                className="w-full truncate bg-transparent text-sm text-foreground outline-none"
+                value={selectedProjectId}
+                onChange={(event) => handleProjectChange(event.target.value)}
+                disabled={!projects.length}
+              >
+                {!projects.length ? (
+                  <option value="">
+                    {projectsError ? "Unavailable" : "Loading..."}
+                  </option>
+                ) : null}
+                {projects.map((project) => (
+                  <option key={project.project_id} value={project.project_id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
             </label>
           ) : null}
 
-          {/* search */}
-          <form
-            className="hidden min-w-[280px] items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm lg:flex"
-            onSubmit={handleSearchSubmit}
-          >
-            {searching
-              ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--accent-teal)" }} />
-              : <Search className="h-4 w-4 text-muted-foreground" />
-            }
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
-                if (searchError) setSearchError(null);
-              }}
-              className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground/60"
-              placeholder="Search run:/trace:/attempt:/tool: or paste id"
-              aria-label="Search runs, traces, and attempts"
-            />
-          </form>
+          {/* new project */}
+          {canManageWorkspace ? (
+            <Link
+              href="/profile#projects"
+              className="hidden items-center gap-1.5 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/40 lg:flex"
+            >
+              <Plus className="h-4 w-4" />
+              New Project
+            </Link>
+          ) : null}
 
           {/* bell */}
           <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/70 text-muted-foreground transition-colors hover:text-foreground">
@@ -361,35 +230,75 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
-            <div className="absolute right-0 mt-2 w-44 rounded-md border border-border/70 bg-card p-1 shadow-panel">
-              <div className="px-3 py-2 text-left text-xs text-muted-foreground">
-                <p className="font-medium text-foreground">{userLabel}</p>
-                <p className="mt-0.5 uppercase tracking-[0.12em]">
-                  {typeof creditBalance === "number"
-                    ? `${creditBalance.toLocaleString()} credits`
-                    : authSession?.billing_plan_name ?? "workspace"}
-                </p>
+            <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-border/70 bg-card shadow-panel">
+              {/* user info */}
+              <div className="flex items-center gap-3 px-4 py-4">
+                <span
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold"
+                  style={{ background: "rgba(0,229,204,0.15)", color: "var(--accent-teal)" }}
+                >
+                  {userInitials}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{userLabel}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {authSession?.project_name ?? "Workspace"} · {authSession?.billing_plan_name ?? "Free"}
+                  </p>
+                </div>
               </div>
-              <Link
-                href="/profile"
-                className="block w-full rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-              >
-                Profile
-              </Link>
-              <button
-                className="w-full rounded px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-                onClick={handleSignOut}
-              >
-                Sign out
-              </button>
+
+              <div className="border-t border-border/50" />
+
+              {/* nav items */}
+              <div className="space-y-0.5 p-1.5">
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50"
+                >
+                  <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Profile</p>
+                    <p className="text-xs text-muted-foreground">Account details</p>
+                  </div>
+                </Link>
+                <Link
+                  href="/profile#billing"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50"
+                >
+                  <CreditCard className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Billing</p>
+                    <p className="text-xs text-muted-foreground">Plans &amp; credits</p>
+                  </div>
+                </Link>
+                <Link
+                  href="/profile#projects"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50"
+                >
+                  <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Projects</p>
+                    <p className="text-xs text-muted-foreground">Manage workspaces</p>
+                  </div>
+                </Link>
+              </div>
+
+              <div className="border-t border-border/50" />
+
+              {/* sign out */}
+              <div className="p-1.5">
+                <button
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Sign out</span>
+                </button>
+              </div>
             </div>
           </details>
         </div>
       </div>
-
-      {searchError ? (
-        <p className="mt-2 text-xs text-rose-300 lg:text-right">{searchError}</p>
-      ) : null}
 
       {creditsModalOpen
         ? createPortal(

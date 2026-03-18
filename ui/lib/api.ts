@@ -203,6 +203,21 @@ export type ProjectMetadata = {
   created_at: string;
 };
 
+export type MemberMetadata = {
+  user_id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  api_key: string | null;
+  created_at: string;
+};
+
+export type MemberInviteRequest = {
+  email: string;
+  name?: string;
+  role: "developer" | "viewer";
+};
+
 export type PolicyPackMetadata = {
   policy_pack_id: string;
   project_id: string;
@@ -771,6 +786,9 @@ export const api = {
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),
+  listMembers: () => requestJson<MemberMetadata[]>("/v1/members"),
+  inviteMember: (payload: MemberInviteRequest) => postJson<MemberMetadata, MemberInviteRequest>("/v1/members", payload),
+  removeMember: (userId: string) => deleteRequest(`/v1/members/${userId}`),
   listTraces: (options?: { limit?: number; offset?: number }) =>
     requestJson<TraceMetadata[]>("/v1/traces", {
       limit: options?.limit ?? 50,
