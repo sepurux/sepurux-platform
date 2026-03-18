@@ -13,6 +13,7 @@ api_ci.go
 api_counterfactuals.go
 api_demo.go
 api_health.go
+api_members.go
 api_mutation_packs.go
 api_policy_packs.go
 api_projects.go
@@ -74,6 +75,9 @@ docs/LethalMutationInsight.md
 docs/LethalMutationTopReason.md
 docs/LethalMutationTopTool.md
 docs/LoginRequest.md
+docs/MemberInviteRequest.md
+docs/MemberMetadata.md
+docs/MembersAPI.md
 docs/MutationCountPct.md
 docs/MutationPackCoverageResponse.md
 docs/MutationPackCreateRequest.md
@@ -180,6 +184,8 @@ model_lethal_mutation_insight.go
 model_lethal_mutation_top_reason.go
 model_lethal_mutation_top_tool.go
 model_login_request.go
+model_member_invite_request.go
+model_member_metadata.go
 model_mutation_count_pct.go
 model_mutation_pack_coverage_response.go
 model_mutation_pack_create_request.go
@@ -236,4 +242,5 @@ model_webhook_metadata.go
 model_webhook_rotate_secret_response.go
 model_webhook_update_request.go
 response.go
+test/api_members_test.go
 utils.go

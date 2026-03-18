@@ -3,9 +3,16 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from app.auth import ProjectScope, TenantAuthContext, generate_api_key, hash_api_key, require_project_scope, require_role
+from app.auth import (
+    ProjectScope,
+    TenantAuthContext,
+    generate_api_key,
+    hash_api_key,
+    require_project_scope,
+    require_role,
+)
 from app.db import get_db
-from app.models import ApiKey, ProjectMembership, Role, User
+from app.models import ApiKey, ProjectMembership, User
 from app.schemas import MemberInviteRequest, MemberMetadata
 from app.services.auth_service import ROLE_IDS, _get_or_create_role
 from fastapi import APIRouter, Depends, HTTPException, Response, status

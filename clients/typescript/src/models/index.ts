@@ -39,6 +39,8 @@ export * from './LethalMutationInsight';
 export * from './LethalMutationTopReason';
 export * from './LethalMutationTopTool';
 export * from './LoginRequest';
+export * from './MemberInviteRequest';
+export * from './MemberMetadata';
 export * from './MutationCountPct';
 export * from './MutationPackCoverageResponse';
 export * from './MutationPackCreateRequest';
