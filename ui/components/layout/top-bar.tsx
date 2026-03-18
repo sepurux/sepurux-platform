@@ -359,7 +359,6 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               >
                 {userInitials}
               </span>
-              <span className="hidden text-foreground sm:inline">{userLabel}</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
             <div className="absolute right-0 mt-2 w-44 rounded-md border border-border/70 bg-card p-1 shadow-panel">
