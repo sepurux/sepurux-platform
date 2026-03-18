@@ -348,8 +348,8 @@ export function ProfileView() {
         </CardContent>
       </Card>
 
-      {/* Projects — only shown for non-project-scoped users */}
-      {!session.project_scoped ? (
+      {/* Projects — only shown to users who can manage workspace */}
+      {session.permissions.can_manage_workspace ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
