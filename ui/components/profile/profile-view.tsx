@@ -3,12 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { useSearchParams } from "next/navigation";
-import { ArrowUpRight, CheckCircle2, Coins, CreditCard, User } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Coins, CreditCard, FolderKanban, Plus, User } from "lucide-react";
 
 import {
   api,
   type AuthSessionMetadata,
   type CreditWalletMetadata,
+  type ProjectMetadata,
   type UserSubscriptionMetadata,
 } from "@/lib/api";
 import { formatRelativeDate } from "@/lib/format";
@@ -49,14 +50,21 @@ export function ProfileView() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
 
+  const [projects, setProjects] = useState<ProjectMetadata[]>([]);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
-      const [session, subscription, wallet] = await Promise.all([
+      const [session, subscription, wallet, projectList] = await Promise.all([
         api.getAuthSession(),
         api.getBillingSubscription(),
         api.getBillingCredits(),
+        api.listProjects().catch(() => []),
       ]);
       setState({ status: "ready", session, subscription, wallet });
+      setProjects(projectList);
     } catch (error) {
       setState({
         status: "error",
@@ -86,6 +94,23 @@ export function ProfileView() {
       setActionError(error instanceof Error ? error.message : "Failed to start top-up");
     } finally {
       setTopupBusy(false);
+    }
+  }
+
+  async function handleCreateProject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = newProjectName.trim();
+    if (!name || createBusy) return;
+    setCreateBusy(true);
+    setCreateError(null);
+    try {
+      const created = await api.createProject(name);
+      setProjects((prev) => [...prev, created]);
+      setNewProjectName("");
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Failed to create project");
+    } finally {
+      setCreateBusy(false);
     }
   }
 
@@ -322,6 +347,54 @@ export function ProfileView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Projects — only shown for non-project-scoped users */}
+      {!session.project_scoped ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderKanban className="h-4 w-4" style={{ color: "var(--accent-teal)" }} />
+              Projects
+            </CardTitle>
+            <CardDescription>
+              Manage projects in your workspace.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {projects.length > 0 ? (
+              <ul className="divide-y divide-border/50 rounded-md border border-border/50">
+                {projects.map((project) => (
+                  <li key={project.project_id} className="flex items-center justify-between px-4 py-3 text-sm">
+                    <span className="font-medium text-foreground">{project.name}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{project.project_id.slice(0, 8)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <form className="flex items-end gap-3" onSubmit={handleCreateProject}>
+              <label className="flex-1 space-y-1 text-sm">
+                <span className="text-muted-foreground">New project name</span>
+                <input
+                  type="text"
+                  placeholder="e.g. production"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground/50"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                />
+              </label>
+              <Button type="submit" disabled={createBusy || !newProjectName.trim()}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                {createBusy ? "Creating..." : "Create"}
+              </Button>
+            </form>
+
+            {createError ? (
+              <p className="text-sm text-rose-300">{createError}</p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {creditsModalOpen ? (
         <GetCreditsModal
