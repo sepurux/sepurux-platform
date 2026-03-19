@@ -18,6 +18,7 @@ import type {
   BillingRedirectSessionResponse,
   BillingSubscribeRequest,
   BillingTopupRequest,
+  CreditTransactionMetadata,
   CreditWalletMetadata,
   HTTPValidationError,
   SubscriptionPlanMetadata,
@@ -30,6 +31,8 @@ import {
     BillingSubscribeRequestToJSON,
     BillingTopupRequestFromJSON,
     BillingTopupRequestToJSON,
+    CreditTransactionMetadataFromJSON,
+    CreditTransactionMetadataToJSON,
     CreditWalletMetadataFromJSON,
     CreditWalletMetadataToJSON,
     HTTPValidationErrorFromJSON,
@@ -49,6 +52,11 @@ export interface GetBillingPlansV1BillingPlansGetRequest {
 }
 
 export interface GetBillingSubscriptionV1BillingSubscriptionGetRequest {
+    xProjectId?: string | null;
+}
+
+export interface GetBillingTransactionsV1BillingTransactionsGetRequest {
+    limit?: number;
     xProjectId?: string | null;
 }
 
@@ -158,6 +166,40 @@ export class BillingApi extends runtime.BaseAPI {
      */
     async getBillingSubscriptionV1BillingSubscriptionGet(requestParameters: GetBillingSubscriptionV1BillingSubscriptionGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserSubscriptionMetadata> {
         const response = await this.getBillingSubscriptionV1BillingSubscriptionGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get Billing Transactions
+     */
+    async getBillingTransactionsV1BillingTransactionsGetRaw(requestParameters: GetBillingTransactionsV1BillingTransactionsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<CreditTransactionMetadata>>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/billing/transactions`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(CreditTransactionMetadataFromJSON));
+    }
+
+    /**
+     * Get Billing Transactions
+     */
+    async getBillingTransactionsV1BillingTransactionsGet(requestParameters: GetBillingTransactionsV1BillingTransactionsGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<CreditTransactionMetadata>> {
+        const response = await this.getBillingTransactionsV1BillingTransactionsGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

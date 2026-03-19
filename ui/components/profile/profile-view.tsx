@@ -8,6 +8,7 @@ import { ArrowUpRight, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import {
   api,
   type AuthSessionMetadata,
+  type CreditTransactionMetadata,
   type CreditWalletMetadata,
   type MemberMetadata,
   type ProjectMetadata,
@@ -30,6 +31,7 @@ type PageState =
       session: AuthSessionMetadata;
       subscription: UserSubscriptionMetadata;
       wallet: CreditWalletMetadata;
+      transactions: CreditTransactionMetadata[];
     };
 
 function initialsFor(session: AuthSessionMetadata) {
@@ -40,6 +42,85 @@ function initialsFor(session: AuthSessionMetadata) {
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+type CreditUsageRow = {
+  date: string;
+  email: string;
+  tool: string;
+  cost: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  direction: "Debit" | "Credit";
+  source: string;
+};
+
+function formatBillingDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
+}
+
+function formatInvoiceDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatUsd(amount: number) {
+  return `US${new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(amount)}`;
+}
+
+function creditSourceLabel(transaction: CreditTransactionMetadata) {
+  if (transaction.type === "topup_purchase") return "Purchased credits";
+  if (transaction.type === "monthly_grant") return "Monthly credits";
+  return "Workspace usage";
+}
+
+function toolLabel(transaction: CreditTransactionMetadata) {
+  const reason = transaction.reason?.trim();
+  if (!reason) return "System usage";
+  if (reason.startsWith("pack_run:")) {
+    return reason.slice("pack_run:".length);
+  }
+  return reason;
+}
+
+function buildCreditUsageRows(
+  transactions: CreditTransactionMetadata[],
+  currentBalance: number,
+  email: string
+): CreditUsageRow[] {
+  let runningAfter = currentBalance;
+  const rows: CreditUsageRow[] = [];
+
+  for (const transaction of transactions) {
+    const balanceBefore = runningAfter - transaction.amount;
+    rows.push({
+      date: transaction.created_at,
+      email,
+      tool: toolLabel(transaction),
+      cost: transaction.amount,
+      balanceBefore,
+      balanceAfter: runningAfter,
+      direction: transaction.amount < 0 ? "Debit" : "Credit",
+      source: creditSourceLabel(transaction),
+    });
+    runningAfter = balanceBefore;
+  }
+  return rows;
 }
 
 export function ProfileView() {
@@ -84,14 +165,15 @@ export function ProfileView() {
 
   const load = useCallback(async () => {
     try {
-      const [session, subscription, wallet, projectList, memberList] = await Promise.all([
+      const [session, subscription, wallet, transactions, projectList, memberList] = await Promise.all([
         api.getAuthSession(),
         api.getBillingSubscription(),
         api.getBillingCredits(),
+        api.listCreditTransactions({ limit: 200 }).catch(() => []),
         api.listProjects().catch(() => []),
         api.listMembers().catch(() => []),
       ]);
-      setState({ status: "ready", session, subscription, wallet });
+      setState({ status: "ready", session, subscription, wallet, transactions });
       setProjects(projectList);
       setMembers(memberList);
     } catch (error) {
@@ -214,9 +296,28 @@ export function ProfileView() {
     );
   }
 
-  const { session, subscription, wallet } = state;
+  const { session, subscription, wallet, transactions } = state;
   const initials = initialsFor(session);
   const canManageWorkspace = session.permissions.can_manage_workspace;
+  const billingEmail = session.email ?? "workspace@sepurux.local";
+
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recentTransactions = transactions.filter((transaction) => {
+    const createdAt = new Date(transaction.created_at).getTime();
+    return Number.isFinite(createdAt) && createdAt >= thirtyDaysAgo;
+  });
+  const usageRows = buildCreditUsageRows(recentTransactions, wallet.balance, billingEmail);
+  const invoiceRows = transactions
+    .filter((transaction) => transaction.type === "topup_purchase")
+    .slice(0, 6)
+    .map((transaction) => ({
+      date: transaction.created_at,
+      status: "Paid",
+      amountUsd: transaction.amount * 0.1,
+    }));
+  const canInviteMembers = new Set(["team", "enterprise"]).has(
+    (subscription.plan_name ?? "").trim().toLowerCase()
+  );
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "settings", label: "Settings" },
@@ -310,95 +411,218 @@ export function ProfileView() {
 
       {/* ── Billing tab ── */}
       {activeTab === "billing" ? (
-        <div className="mt-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">Workspace plan details</h2>
+        <div className="mt-6 space-y-8">
+          <section>
+            <h2 className="mb-4 text-base font-semibold text-foreground">Workspace plan details</h2>
 
-          <div className="divide-y divide-border/50 rounded-lg border border-border/50">
-            {/* Subscription row */}
-            <BillingRow
-              label="Subscription"
-              content={
-                <div>
-                  <p className="font-medium text-foreground">{subscription.plan_name ?? "Free"}</p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    Renews {formatRelativeDate(subscription.renewal_date)}
-                    {subscription.monthly_price != null ? ` · $${subscription.monthly_price}/mo` : ""}
-                  </p>
-                </div>
-              }
-              actions={
-                <>
-                  {subscription.portal_available ? (
-                    <Button variant="outline" size="sm" onClick={() => void handleOpenPortal()} disabled={portalBusy}>
-                      {portalBusy ? "Opening..." : "Manage billing"}
-                      {!portalBusy && <ArrowUpRight className="ml-1 h-3.5 w-3.5" />}
-                    </Button>
-                  ) : null}
-                  <Button size="sm" onClick={() => setCreditsModalOpen(true)}>
-                    Update plan
-                  </Button>
-                </>
-              }
-            />
-
-            {/* Credits row */}
-            <BillingRow
-              label="Credits"
-              content={
-                <div className="space-y-2">
+            <div className="divide-y divide-border/50 rounded-lg border border-border/50">
+              <BillingRow
+                label="Subscription"
+                content={
                   <div>
-                    <p className="font-medium text-foreground">
-                      {wallet.balance.toLocaleString()} workspace credits
-                    </p>
-                    <p className="text-sm text-muted-foreground">Credits are consumed per campaign run.</p>
-                  </div>
-                  {wallet.is_low_credit ? (
-                    <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-100">
-                      Low balance — runs will stop when credits reach zero.
-                    </p>
-                  ) : null}
-                  <div className="pt-1 space-y-1 text-sm text-muted-foreground">
-                    <p>
-                      <span className="font-semibold text-foreground">{wallet.monthly_credits.toLocaleString()}</span>{" "}
-                      monthly plan credits
-                    </p>
-                    <p>
-                      <span className="font-semibold text-foreground">{wallet.topup_credits.toLocaleString()}</span>{" "}
-                      purchased credits · do not expire
+                    <p className="font-medium text-foreground">{subscription.plan_name ?? "Free"}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      Renews {formatRelativeDate(subscription.renewal_date)}
+                      {subscription.monthly_price != null ? ` · $${subscription.monthly_price}/mo` : ""}
                     </p>
                   </div>
-                </div>
-              }
-              actions={
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setCreditsModalOpen(true)}>
-                    Get credits
-                  </Button>
-                </>
-              }
-            />
+                }
+                actions={
+                  <>
+                    {subscription.portal_available ? (
+                      <Button variant="outline" size="sm" onClick={() => void handleOpenPortal()} disabled={portalBusy}>
+                        {portalBusy ? "Opening..." : "Manage billing"}
+                        {!portalBusy && <ArrowUpRight className="ml-1 h-3.5 w-3.5" />}
+                      </Button>
+                    ) : null}
+                    <Button size="sm" onClick={() => setCreditsModalOpen(true)}>
+                      Update plan
+                    </Button>
+                  </>
+                }
+              />
 
-            {/* Top-up row */}
-            <BillingRow
-              label="Buy credits"
-              content={
-                <form className="flex items-center gap-2" onSubmit={handleTopup}>
-                  <input
-                    type="number"
-                    min={100}
-                    step={100}
-                    className="w-28 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
-                    value={topupCredits}
-                    onChange={(e) => setTopupCredits(Number(e.target.value))}
-                  />
-                  <Button type="submit" size="sm" disabled={topupBusy}>
-                    {topupBusy ? "Processing..." : "Purchase"}
-                  </Button>
-                </form>
-              }
-              actions={null}
-            />
-          </div>
+              <BillingRow
+                label="Credits"
+                content={
+                  <div className="space-y-2">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {wallet.balance.toLocaleString()} workspace credits
+                      </p>
+                      <p className="text-sm text-muted-foreground">Credits are consumed per campaign run.</p>
+                    </div>
+                    {wallet.is_low_credit ? (
+                      <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-100">
+                        Low balance — runs will stop when credits reach zero.
+                      </p>
+                    ) : null}
+                    <div className="pt-1 space-y-1 text-sm text-muted-foreground">
+                      <p>
+                        <span className="font-semibold text-foreground">{wallet.monthly_credits.toLocaleString()}</span>{" "}
+                        monthly plan credits
+                      </p>
+                      <p>
+                        <span className="font-semibold text-foreground">{wallet.topup_credits.toLocaleString()}</span>{" "}
+                        purchased credits · do not expire
+                      </p>
+                    </div>
+                  </div>
+                }
+                actions={
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => setCreditsModalOpen(true)}>
+                      Get credits
+                    </Button>
+                  </>
+                }
+              />
+
+              <BillingRow
+                label="Buy credits"
+                content={
+                  <form className="flex items-center gap-2" onSubmit={handleTopup}>
+                    <input
+                      type="number"
+                      min={100}
+                      step={100}
+                      className="w-28 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                      value={topupCredits}
+                      onChange={(e) => setTopupCredits(Number(e.target.value))}
+                    />
+                    <Button type="submit" size="sm" disabled={topupBusy}>
+                      {topupBusy ? "Processing..." : "Purchase"}
+                    </Button>
+                  </form>
+                }
+                actions={null}
+              />
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-border/50 pt-6">
+            <h2 className="text-2xl font-semibold text-foreground">Invoices</h2>
+            <div className="overflow-x-auto rounded-lg border border-border/50">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-muted/25 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">Date</th>
+                    <th className="px-5 py-3 font-medium">Status</th>
+                    <th className="px-5 py-3 font-medium">Amount</th>
+                    <th className="px-5 py-3 font-medium text-right">Invoice</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoiceRows.length ? (
+                    invoiceRows.map((invoice, index) => (
+                      <tr
+                        key={`${invoice.date}-${index}`}
+                        className={cn(
+                          "border-t border-border/40",
+                          index % 2 === 0 ? "bg-card/60" : "bg-background"
+                        )}
+                      >
+                        <td className="px-5 py-4 text-foreground">{formatInvoiceDate(invoice.date)}</td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium uppercase text-muted-foreground">
+                            {invoice.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-foreground">{formatUsd(invoice.amountUsd)}</td>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                            onClick={() => void handleOpenPortal()}
+                            disabled={!subscription.portal_available || portalBusy}
+                          >
+                            {portalBusy ? "Opening..." : "View | Download"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-t border-border/40 bg-card/60">
+                      <td className="px-5 py-4 text-foreground">{formatInvoiceDate(subscription.renewal_date)}</td>
+                      <td className="px-5 py-4">
+                        <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium uppercase text-muted-foreground">
+                          Paid
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-foreground">
+                        {formatUsd(subscription.monthly_price ?? 0)}
+                      </td>
+                      <td className="px-5 py-4 text-right text-muted-foreground">
+                        {subscription.portal_available ? "View | Download" : "Upgrade required"}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-xl font-semibold text-foreground">
+                Credit usage table <span className="text-muted-foreground">(last 30 days)</span>
+              </h3>
+              <Button type="button" onClick={() => setCreditsModalOpen(true)}>
+                Upgrade to download
+              </Button>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-border/50">
+              <table className="min-w-[1120px] text-left text-sm">
+                <thead className="bg-muted/25 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Date</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Tool</th>
+                    <th className="px-4 py-3 font-medium">Cost</th>
+                    <th className="px-4 py-3 font-medium">Balance Before</th>
+                    <th className="px-4 py-3 font-medium">Balance After</th>
+                    <th className="px-4 py-3 font-medium">Credit/Debit</th>
+                    <th className="px-4 py-3 font-medium">Credit Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usageRows.length ? (
+                    usageRows.map((row, index) => (
+                      <tr
+                        key={`${row.date}-${row.cost}-${index}`}
+                        className={cn(
+                          "border-t border-border/40",
+                          index % 2 === 0 ? "bg-card/60" : "bg-background"
+                        )}
+                      >
+                        <td className="whitespace-nowrap px-4 py-3 text-foreground">{formatBillingDate(row.date)}</td>
+                        <td className="px-4 py-3 text-foreground">{row.email}</td>
+                        <td className="px-4 py-3 text-foreground">{row.tool}</td>
+                        <td
+                          className={cn(
+                            "px-4 py-3 font-medium",
+                            row.cost < 0 ? "text-rose-300" : "text-emerald-300"
+                          )}
+                        >
+                          {row.cost}
+                        </td>
+                        <td className="px-4 py-3 text-foreground">{row.balanceBefore}</td>
+                        <td className="px-4 py-3 text-foreground">{row.balanceAfter}</td>
+                        <td className="px-4 py-3 text-foreground">{row.direction}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.source}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-t border-border/40 bg-card/60">
+                      <td className="px-4 py-4 text-muted-foreground" colSpan={8}>
+                        No credit activity in the last 30 days.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       ) : null}
 
@@ -408,7 +632,7 @@ export function ProfileView() {
           <h2 className="mb-4 text-base font-semibold text-foreground">Workspace Members</h2>
 
           {/* Starter plan upgrade gate */}
-          {session.pricing_tier === "starter" ? (
+          {!canInviteMembers ? (
             <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-6 py-5">
               <p className="font-medium text-amber-100">Team members require a Team or Enterprise plan</p>
               <p className="mt-1 text-sm text-amber-200/70">
