@@ -66,6 +66,20 @@ function normalizeNextPath(rawPath: string | null) {
   return rawPath;
 }
 
+function resolvePostAuthPath(
+  requestedPath: string,
+  session: { is_super_admin?: boolean | null }
+) {
+  const isSuperAdmin = Boolean(session.is_super_admin);
+  if (isSuperAdmin) {
+    return requestedPath.startsWith("/internal") ? requestedPath : "/internal/dashboard";
+  }
+  if (requestedPath.startsWith("/internal")) {
+    return "/dashboard";
+  }
+  return requestedPath;
+}
+
 function resolveBaseForBrowser(inputBaseUrl: string) {
   const candidate = inputBaseUrl.trim();
   if (!candidate) {
@@ -293,7 +307,7 @@ export function AccessPortal() {
           return;
         }
         await persistSession(session, resolvedBase);
-        router.replace(nextPath);
+        router.replace(resolvePostAuthPath(nextPath, session));
       } catch (error) {
         if (cancelled) {
           return;
@@ -367,7 +381,7 @@ export function AccessPortal() {
       }
       const authSession = await refreshSessionFromStoredCredentials();
       setStoredAuthSession({ ...authSession, is_demo: true });
-      router.replace(nextPath);
+      router.replace(resolvePostAuthPath(nextPath, authSession));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to start demo session");
     } finally {
@@ -414,7 +428,7 @@ export function AccessPortal() {
         { baseUrl: resolvedBase }
       );
       await persistSession(session, resolvedBase);
-      router.replace(nextPath);
+      router.replace(resolvePostAuthPath(nextPath, session));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to create account");
     } finally {
@@ -434,7 +448,7 @@ export function AccessPortal() {
         { baseUrl: resolvedBase }
       );
       await persistSession(session, resolvedBase);
-      router.replace(nextPath);
+      router.replace(resolvePostAuthPath(nextPath, session));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to log in");
     } finally {

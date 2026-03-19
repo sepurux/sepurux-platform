@@ -61,7 +61,7 @@ export function InternalQueuesView() {
     if (!jobs.length) {
       return (
         <tr>
-          <td colSpan={includeActions ? 6 : 5} className="px-4 py-5 text-center text-neutral-500">
+          <td colSpan={includeActions ? 6 : 5} className="px-4 py-5 text-center text-muted-foreground">
             No jobs
           </td>
         </tr>
@@ -69,12 +69,12 @@ export function InternalQueuesView() {
     }
 
     return jobs.map((job) => (
-      <tr key={job.job_id} className="border-t border-neutral-800 text-neutral-200">
-        <td className="px-4 py-3 text-xs text-neutral-400">{job.job_id}</td>
+      <tr key={job.job_id} className="border-t border-border/70 text-muted-foreground">
+        <td className="px-4 py-3 text-xs text-muted-foreground">{job.job_id}</td>
         <td className="px-4 py-3">{job.status}</td>
         <td className="px-4 py-3">{job.queue}</td>
         <td className="px-4 py-3">{job.description ?? "-"}</td>
-        <td className="px-4 py-3 text-xs text-neutral-400">
+        <td className="px-4 py-3 text-xs text-muted-foreground">
           {job.enqueued_at ? new Date(job.enqueued_at).toLocaleString() : "-"}
         </td>
         {includeActions ? (
@@ -86,7 +86,7 @@ export function InternalQueuesView() {
                 onClick={() => {
                   void runJobAction(job.job_id, "retry");
                 }}
-                className="rounded border border-neutral-700 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-60"
+                className="rounded border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
               >
                 Retry
               </button>
@@ -96,7 +96,7 @@ export function InternalQueuesView() {
                 onClick={() => {
                   void runJobAction(job.job_id, "cancel");
                 }}
-                className="rounded border border-neutral-700 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-60"
+                className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-200 hover:bg-red-950/30 disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -109,12 +109,12 @@ export function InternalQueuesView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-neutral-800 pb-4">
-        <h1 className="text-2xl font-semibold text-white">Queues</h1>
-        <p className="mt-1 text-sm text-neutral-400">Monitor running jobs, failed jobs, backlog, and worker health.</p>
+      <div className="border-b border-border/70 pb-4">
+        <h1 className="text-2xl font-semibold text-primary">Queues</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Monitor running jobs, failed jobs, backlog, and worker health.</p>
       </div>
 
-      {loading ? <p className="text-sm text-neutral-400">Loading queue state...</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">Loading queue state...</p> : null}
 
       {!loading && error ? (
         <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-4">
@@ -125,38 +125,38 @@ export function InternalQueuesView() {
       {!loading && !error && data ? (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Jobs Running</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{data.jobs_running}</p>
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Jobs Running</p>
+              <p className="mt-2 text-3xl font-semibold text-primary">{data.jobs_running}</p>
             </article>
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Jobs Failed</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{data.jobs_failed}</p>
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Jobs Failed</p>
+              <p className="mt-2 text-3xl font-semibold text-primary">{data.jobs_failed}</p>
             </article>
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Queue Backlog</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{data.queue_backlog}</p>
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Queue Backlog</p>
+              <p className="mt-2 text-3xl font-semibold text-primary">{data.queue_backlog}</p>
             </article>
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Worker Status</p>
-              <p className="mt-2 text-2xl font-semibold text-white capitalize">{data.worker_status}</p>
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Worker Status</p>
+              <p className="mt-2 text-2xl font-semibold text-primary capitalize">{data.worker_status}</p>
             </article>
           </div>
 
           {actionResult ? (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-3 text-sm text-neutral-300">
+            <div className="rounded-lg border border-border/70 bg-card/70 p-3 text-sm text-muted-foreground">
               {actionResult.action} {actionResult.job_id}: {actionResult.success ? "success" : "failed"}
               {actionResult.detail ? ` (${actionResult.detail})` : ""}
             </div>
           ) : null}
 
           <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
-              <p className="border-b border-neutral-800 px-4 py-3 text-xs uppercase tracking-[0.14em] text-neutral-400">
+            <div className="overflow-hidden rounded-lg border border-border/70 bg-card/70">
+              <p className="border-b border-border/70 px-4 py-3 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                 Running Jobs
               </p>
               <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="bg-black/50 text-xs uppercase tracking-[0.14em] text-neutral-500">
+                <thead className="bg-background/50 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                   <tr>
                     <th className="px-4 py-2">Job ID</th>
                     <th className="px-4 py-2">Status</th>
@@ -169,12 +169,12 @@ export function InternalQueuesView() {
               </table>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
-              <p className="border-b border-neutral-800 px-4 py-3 text-xs uppercase tracking-[0.14em] text-neutral-400">
+            <div className="overflow-hidden rounded-lg border border-border/70 bg-card/70">
+              <p className="border-b border-border/70 px-4 py-3 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                 Failed Jobs
               </p>
               <table className="w-full min-w-[980px] text-left text-sm">
-                <thead className="bg-black/50 text-xs uppercase tracking-[0.14em] text-neutral-500">
+                <thead className="bg-background/50 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                   <tr>
                     <th className="px-4 py-2">Job ID</th>
                     <th className="px-4 py-2">Status</th>

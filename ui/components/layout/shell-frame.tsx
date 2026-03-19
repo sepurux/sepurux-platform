@@ -98,6 +98,17 @@ export function ShellFrame({ children }: { children: ReactNode }) {
           if (cancelled) return;
           setStoredAuthSession(session);
           setAuthSession(session);
+          if (session.is_super_admin) {
+            if (!isInternalPage) {
+              setGateState("redirecting");
+              router.replace("/internal/dashboard");
+              return;
+            }
+          } else if (isInternalPage) {
+            setGateState("redirecting");
+            router.replace("/dashboard");
+            return;
+          }
           if (!isInternalPage) {
             const currentSection = sectionForPath(pathname);
             if (!session.permissions.visible_sections.includes(currentSection)) {
@@ -155,7 +166,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
   }
 
   if (isInternalPage) {
-    return <div className="min-h-screen bg-black text-white">{children}</div>;
+    return <div className="min-h-screen bg-background text-foreground">{children}</div>;
   }
 
   return (

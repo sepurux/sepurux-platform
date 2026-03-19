@@ -31,19 +31,19 @@ function CountTrendList({
   const max = Math.max(maxValue(points), 1);
 
   return (
-    <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
+    <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+      <h3 className="text-sm font-semibold text-primary">{title}</h3>
       <div className="mt-3 space-y-2">
         {points.map((point) => (
           <div key={`${title}-${point.date}`} className="grid grid-cols-[90px_1fr_48px] items-center gap-2">
-            <p className="text-xs text-neutral-400">{formatDayLabel(point.date)}</p>
-            <div className="h-2 overflow-hidden rounded bg-neutral-800">
+            <p className="text-xs text-muted-foreground">{formatDayLabel(point.date)}</p>
+            <div className="h-2 overflow-hidden rounded bg-muted/40">
               <div
-                className="h-full bg-white/80"
+                className="h-full bg-primary"
                 style={{ width: `${Math.max(4, Math.round((point.value / max) * 100))}%` }}
               />
             </div>
-            <p className="text-right text-xs text-neutral-300">{point.value}</p>
+            <p className="text-right text-xs text-muted-foreground">{point.value}</p>
           </div>
         ))}
       </div>
@@ -53,22 +53,22 @@ function CountTrendList({
 
 function ReliabilityTrendList({ points }: { points: InternalDateScoreMetric[] }) {
   return (
-    <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-      <h3 className="text-sm font-semibold text-white">Reliability Trends</h3>
+    <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+      <h3 className="text-sm font-semibold text-primary">Reliability Trends</h3>
       <div className="mt-3 space-y-2">
         {points.map((point) => (
           <div
             key={`reliability-${point.date}`}
             className="grid grid-cols-[90px_1fr_52px] items-center gap-2"
           >
-            <p className="text-xs text-neutral-400">{formatDayLabel(point.date)}</p>
-            <div className="h-2 overflow-hidden rounded bg-neutral-800">
+            <p className="text-xs text-muted-foreground">{formatDayLabel(point.date)}</p>
+            <div className="h-2 overflow-hidden rounded bg-muted/40">
               <div
-                className="h-full bg-emerald-300"
+                className="h-full bg-primary"
                 style={{ width: `${Math.max(4, Math.min(point.value, 100))}%` }}
               />
             </div>
-            <p className="text-right text-xs text-neutral-300">{point.value.toFixed(1)}%</p>
+            <p className="text-right text-xs text-muted-foreground">{point.value.toFixed(1)}%</p>
           </div>
         ))}
       </div>
@@ -125,17 +125,17 @@ export function InternalAnalyticsView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="flex flex-col gap-3 border-b border-neutral-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Analytics</h1>
-          <p className="mt-1 text-sm text-neutral-400">Internal usage and reliability analytics.</p>
+          <h1 className="text-2xl font-semibold text-primary">Analytics</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Internal usage and reliability analytics.</p>
         </div>
-        <label className="text-sm text-neutral-300">
+        <label className="text-sm text-muted-foreground">
           Window
           <select
             value={windowDays}
             onChange={(event) => setWindowDays(Number(event.target.value))}
-            className="ml-2 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-white"
+            className="ml-2 rounded-md border border-border/70 bg-card/70 px-2 py-1 text-sm text-foreground"
           >
             <option value={7}>7d</option>
             <option value={14}>14d</option>
@@ -144,7 +144,7 @@ export function InternalAnalyticsView() {
         </label>
       </div>
 
-      {loading ? <p className="text-sm text-neutral-400">Loading analytics...</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">Loading analytics...</p> : null}
 
       {!loading && error ? (
         <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-4">
@@ -155,26 +155,26 @@ export function InternalAnalyticsView() {
       {!loading && !error && data && timeSeries ? (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Active Users</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{data.active_users.toLocaleString()}</p>
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Active Users</p>
+              <p className="mt-2 text-3xl font-semibold text-primary">{data.active_users.toLocaleString()}</p>
             </article>
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Credits Used (30d)</p>
-              <p className="mt-2 text-3xl font-semibold text-white">
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Credits Used (30d)</p>
+              <p className="mt-2 text-3xl font-semibold text-primary">
                 {data.credits_used_last_30_days.toLocaleString()}
               </p>
             </article>
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Failure Trend</p>
-              <p className="mt-2 text-2xl font-semibold text-white capitalize">{data.failure_trend.direction}</p>
-              <p className="mt-1 text-sm text-neutral-400">
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Failure Trend</p>
+              <p className="mt-2 text-2xl font-semibold text-primary capitalize">{data.failure_trend.direction}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
                 24h: {data.failure_trend.failures_last_24h} | Prev: {data.failure_trend.failures_previous_24h}
               </p>
             </article>
-            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Latest Reliability</p>
-              <p className="mt-2 text-3xl font-semibold text-white">
+            <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Latest Reliability</p>
+              <p className="mt-2 text-3xl font-semibold text-primary">
                 {latestReliability !== null ? `${latestReliability.toFixed(1)}%` : "n/a"}
               </p>
             </article>
@@ -186,9 +186,9 @@ export function InternalAnalyticsView() {
             <ReliabilityTrendList points={timeSeries.reliability_trends} />
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+          <div className="overflow-hidden rounded-lg border border-border/70 bg-card/70">
             <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="bg-black/60 text-xs uppercase tracking-[0.14em] text-neutral-400">
+              <thead className="bg-background/60 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Project</th>
                   <th className="px-4 py-3">Runs (30d)</th>
@@ -198,15 +198,15 @@ export function InternalAnalyticsView() {
               <tbody>
                 {data.top_projects.length ? (
                   data.top_projects.map((project) => (
-                    <tr key={project.project_id} className="border-t border-neutral-800 text-neutral-200">
-                      <td className="px-4 py-3 text-white">{project.name}</td>
+                    <tr key={project.project_id} className="border-t border-border/70 text-muted-foreground">
+                      <td className="px-4 py-3 text-foreground">{project.name}</td>
                       <td className="px-4 py-3">{project.runs_count}</td>
                       <td className="px-4 py-3">{project.failures_count}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={3} className="px-4 py-6 text-center text-neutral-500">
+                    <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
                       No project analytics available.
                     </td>
                   </tr>

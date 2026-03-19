@@ -460,6 +460,7 @@ class AuthSessionMetadata(BaseModel):
     email: str | None = None
     name: str | None = None
     is_demo: bool = False
+    is_super_admin: bool = False
     billing_plan_name: str | None = None
     credits_balance: int | None = None
     monthly_credits: int | None = None
