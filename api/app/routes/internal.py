@@ -5,8 +5,9 @@ from typing import Annotated
 
 from app.auth import TenantAuthContext, require_super_admin
 from app.db import get_db
-from app.models import Campaign, CreditTransaction, Failure, Project, Run, User
+from app.models import AuditLog, Campaign, CreditTransaction, Failure, Project, Run, User
 from app.schemas import (
+    InternalAuditLogEntry,
     InternalDashboardOverview,
     InternalSearchCampaignResult,
     InternalSearchFailureResult,
@@ -15,6 +16,7 @@ from app.schemas import (
     InternalSearchUserResult,
     InternalSystemHealth,
 )
+from app.services.internal_audit_service import create_audit_log
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -71,10 +73,20 @@ def _system_health_snapshot() -> InternalSystemHealth:
         )
 
 
+def _actor_label(db: Session, tenant_auth: TenantAuthContext) -> str:
+    if tenant_auth.user_id is None:
+        return tenant_auth.api_key_name or str(tenant_auth.api_key_id)
+
+    user = db.scalar(select(User).where(User.user_id == tenant_auth.user_id))
+    if isinstance(user, User):
+        return user.email
+    return str(tenant_auth.user_id)
+
+
 @router.get("/dashboard", response_model=InternalDashboardOverview)
 def get_internal_dashboard_overview(
     db: DbSession,
-    _super_admin: SuperAdminDep,
+    super_admin: SuperAdminDep,
 ) -> InternalDashboardOverview:
     failures_since = datetime.now(UTC) - timedelta(hours=24)
 
@@ -101,7 +113,7 @@ def get_internal_dashboard_overview(
         )
     )
 
-    return InternalDashboardOverview(
+    payload = InternalDashboardOverview(
         total_users=total_users,
         active_projects=active_projects,
         running_campaigns=running_campaigns,
@@ -109,12 +121,21 @@ def get_internal_dashboard_overview(
         credits_used=abs(credits_used_raw),
         system_health=_system_health_snapshot(),
     )
+    create_audit_log(
+        db,
+        action="internal.dashboard.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.dashboard",
+        metadata={},
+    )
+    db.commit()
+    return payload
 
 
 @router.get("/search", response_model=InternalSearchResults)
 def search_internal(
     db: DbSession,
-    _super_admin: SuperAdminDep,
+    super_admin: SuperAdminDep,
     q: Annotated[str, Query(min_length=1)],
 ) -> InternalSearchResults:
     query = q.strip()
@@ -162,7 +183,7 @@ def search_internal(
         )
     )
 
-    return InternalSearchResults(
+    payload = InternalSearchResults(
         query=query,
         users=[
             InternalSearchUserResult(
@@ -206,3 +227,55 @@ def search_internal(
             for failure in failures
         ],
     )
+    create_audit_log(
+        db,
+        action="internal.search",
+        actor=_actor_label(db, super_admin),
+        entity="internal.search",
+        metadata={"query": query},
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/audit-logs", response_model=list[InternalAuditLogEntry])
+def list_internal_audit_logs(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    action: str | None = None,
+    actor: str | None = None,
+    entity: str | None = None,
+) -> list[InternalAuditLogEntry]:
+    stmt = select(AuditLog).order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+
+    if action:
+        stmt = stmt.where(AuditLog.action.ilike(f"%{action.strip()}%"))
+    if actor:
+        stmt = stmt.where(AuditLog.actor.ilike(f"%{actor.strip()}%"))
+    if entity:
+        stmt = stmt.where(AuditLog.entity.ilike(f"%{entity.strip()}%"))
+
+    records = list(db.scalars(stmt.offset(offset).limit(limit)))
+    payload = [
+        InternalAuditLogEntry(
+            id=record.id,
+            action=record.action,
+            actor=record.actor,
+            entity=record.entity,
+            metadata=record.audit_metadata if isinstance(record.audit_metadata, dict) else {},
+            created_at=record.created_at,
+        )
+        for record in records
+    ]
+
+    create_audit_log(
+        db,
+        action="internal.audit_logs.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.audit_logs",
+        metadata={"limit": limit, "offset": offset},
+    )
+    db.commit()
+    return payload
