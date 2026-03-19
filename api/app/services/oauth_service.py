@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import secrets
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from app.services.auth_service import (
     normalize_email,
 )
 from app.services.billing_service import ensure_user_billing, grant_signup_credits
+from app.services.user_notification_service import send_welcome_email
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
@@ -31,6 +33,8 @@ STATE_TTL = timedelta(minutes=10)
 EXCHANGE_TTL = timedelta(minutes=5)
 MICROSOFT_DEFAULT_TENANT = "common"
 OAUTH_TIMEOUT_SECONDS = 15.0
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -514,7 +518,7 @@ def _resolve_user_for_identity(db: Session, *, identity: OAuthIdentity) -> User:
     )
     db.add(user)
     db.flush()
-    bootstrap_workspace_for_user(
+    project = bootstrap_workspace_for_user(
         db,
         user=user,
         project_name=None,
@@ -523,6 +527,14 @@ def _resolve_user_for_identity(db: Session, *, identity: OAuthIdentity) -> User:
     ensure_user_billing(db, user_id=user.user_id, pricing_tier=DEFAULT_PRICING_TIER)
     grant_signup_credits(db, user_id=user.user_id)
     _attach_identity(db, user=user, identity=identity)
+    try:
+        send_welcome_email(
+            to_email=user.email,
+            recipient_name=user.name,
+            project_name=project.name,
+        )
+    except Exception:
+        logger.exception("Failed to send OAuth welcome email for %s", user.email)
     return user
 
 

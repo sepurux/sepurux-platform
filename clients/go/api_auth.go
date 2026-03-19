@@ -397,6 +397,124 @@ func (a *AuthAPIService) GetOauthStartAuthOauthProviderStartGetExecute(r ApiGetO
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiPostForgotPasswordAuthForgotPasswordPostRequest struct {
+	ctx context.Context
+	ApiService *AuthAPIService
+	forgotPasswordRequest *ForgotPasswordRequest
+}
+
+func (r ApiPostForgotPasswordAuthForgotPasswordPostRequest) ForgotPasswordRequest(forgotPasswordRequest ForgotPasswordRequest) ApiPostForgotPasswordAuthForgotPasswordPostRequest {
+	r.forgotPasswordRequest = &forgotPasswordRequest
+	return r
+}
+
+func (r ApiPostForgotPasswordAuthForgotPasswordPostRequest) Execute() (*OperationMessageResponse, *http.Response, error) {
+	return r.ApiService.PostForgotPasswordAuthForgotPasswordPostExecute(r)
+}
+
+/*
+PostForgotPasswordAuthForgotPasswordPost Post Forgot Password
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiPostForgotPasswordAuthForgotPasswordPostRequest
+*/
+func (a *AuthAPIService) PostForgotPasswordAuthForgotPasswordPost(ctx context.Context) ApiPostForgotPasswordAuthForgotPasswordPostRequest {
+	return ApiPostForgotPasswordAuthForgotPasswordPostRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return OperationMessageResponse
+func (a *AuthAPIService) PostForgotPasswordAuthForgotPasswordPostExecute(r ApiPostForgotPasswordAuthForgotPasswordPostRequest) (*OperationMessageResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *OperationMessageResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AuthAPIService.PostForgotPasswordAuthForgotPasswordPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/auth/forgot-password"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.forgotPasswordRequest == nil {
+		return localVarReturnValue, nil, reportError("forgotPasswordRequest is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.forgotPasswordRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiPostLoginAuthLoginPostRequest struct {
 	ctx context.Context
 	ApiService *AuthAPIService
@@ -586,6 +704,124 @@ func (a *AuthAPIService) PostOauthExchangeAuthOauthExchangePostExecute(r ApiPost
 	}
 	// body params
 	localVarPostBody = r.oAuthSessionExchangeRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiPostResetPasswordAuthResetPasswordPostRequest struct {
+	ctx context.Context
+	ApiService *AuthAPIService
+	resetPasswordRequest *ResetPasswordRequest
+}
+
+func (r ApiPostResetPasswordAuthResetPasswordPostRequest) ResetPasswordRequest(resetPasswordRequest ResetPasswordRequest) ApiPostResetPasswordAuthResetPasswordPostRequest {
+	r.resetPasswordRequest = &resetPasswordRequest
+	return r
+}
+
+func (r ApiPostResetPasswordAuthResetPasswordPostRequest) Execute() (*OperationMessageResponse, *http.Response, error) {
+	return r.ApiService.PostResetPasswordAuthResetPasswordPostExecute(r)
+}
+
+/*
+PostResetPasswordAuthResetPasswordPost Post Reset Password
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiPostResetPasswordAuthResetPasswordPostRequest
+*/
+func (a *AuthAPIService) PostResetPasswordAuthResetPasswordPost(ctx context.Context) ApiPostResetPasswordAuthResetPasswordPostRequest {
+	return ApiPostResetPasswordAuthResetPasswordPostRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return OperationMessageResponse
+func (a *AuthAPIService) PostResetPasswordAuthResetPasswordPostExecute(r ApiPostResetPasswordAuthResetPasswordPostRequest) (*OperationMessageResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *OperationMessageResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "AuthAPIService.PostResetPasswordAuthResetPasswordPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/auth/reset-password"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.resetPasswordRequest == nil {
+		return localVarReturnValue, nil, reportError("resetPasswordRequest is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.resetPasswordRequest
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
 		return localVarReturnValue, nil, err

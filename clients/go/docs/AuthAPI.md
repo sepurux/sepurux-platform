@@ -7,8 +7,10 @@ Method | HTTP request | Description
 [**GetAuthSessionV1AuthSessionGet**](AuthAPI.md#GetAuthSessionV1AuthSessionGet) | **Get** /v1/auth/session | Get Auth Session
 [**GetOauthCallbackAuthOauthProviderCallbackGet**](AuthAPI.md#GetOauthCallbackAuthOauthProviderCallbackGet) | **Get** /auth/oauth/{provider}/callback | Get Oauth Callback
 [**GetOauthStartAuthOauthProviderStartGet**](AuthAPI.md#GetOauthStartAuthOauthProviderStartGet) | **Get** /auth/oauth/{provider}/start | Get Oauth Start
+[**PostForgotPasswordAuthForgotPasswordPost**](AuthAPI.md#PostForgotPasswordAuthForgotPasswordPost) | **Post** /auth/forgot-password | Post Forgot Password
 [**PostLoginAuthLoginPost**](AuthAPI.md#PostLoginAuthLoginPost) | **Post** /auth/login | Post Login
 [**PostOauthExchangeAuthOauthExchangePost**](AuthAPI.md#PostOauthExchangeAuthOauthExchangePost) | **Post** /auth/oauth/exchange | Post Oauth Exchange
+[**PostResetPasswordAuthResetPasswordPost**](AuthAPI.md#PostResetPasswordAuthResetPasswordPost) | **Post** /auth/reset-password | Post Reset Password
 [**PostSignupAuthSignupPost**](AuthAPI.md#PostSignupAuthSignupPost) | **Post** /auth/signup | Post Signup
 
 
@@ -221,6 +223,70 @@ No authorization required
 [[Back to README]](../README.md)
 
 
+## PostForgotPasswordAuthForgotPasswordPost
+
+> OperationMessageResponse PostForgotPasswordAuthForgotPasswordPost(ctx).ForgotPasswordRequest(forgotPasswordRequest).Execute()
+
+Post Forgot Password
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	forgotPasswordRequest := *openapiclient.NewForgotPasswordRequest("Email_example") // ForgotPasswordRequest | 
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.AuthAPI.PostForgotPasswordAuthForgotPasswordPost(context.Background()).ForgotPasswordRequest(forgotPasswordRequest).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `AuthAPI.PostForgotPasswordAuthForgotPasswordPost``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `PostForgotPasswordAuthForgotPasswordPost`: OperationMessageResponse
+	fmt.Fprintf(os.Stdout, "Response from `AuthAPI.PostForgotPasswordAuthForgotPasswordPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiPostForgotPasswordAuthForgotPasswordPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **forgotPasswordRequest** | [**ForgotPasswordRequest**](ForgotPasswordRequest.md) |  | 
+
+### Return type
+
+[**OperationMessageResponse**](OperationMessageResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## PostLoginAuthLoginPost
 
 > AuthSessionResponse PostLoginAuthLoginPost(ctx).LoginRequest(loginRequest).Execute()
@@ -334,6 +400,70 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**AuthSessionResponse**](AuthSessionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## PostResetPasswordAuthResetPasswordPost
+
+> OperationMessageResponse PostResetPasswordAuthResetPasswordPost(ctx).ResetPasswordRequest(resetPasswordRequest).Execute()
+
+Post Reset Password
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	resetPasswordRequest := *openapiclient.NewResetPasswordRequest("Token_example", "Password_example") // ResetPasswordRequest | 
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.AuthAPI.PostResetPasswordAuthResetPasswordPost(context.Background()).ResetPasswordRequest(resetPasswordRequest).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `AuthAPI.PostResetPasswordAuthResetPasswordPost``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `PostResetPasswordAuthResetPasswordPost`: OperationMessageResponse
+	fmt.Fprintf(os.Stdout, "Response from `AuthAPI.PostResetPasswordAuthResetPasswordPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiPostResetPasswordAuthResetPasswordPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **resetPasswordRequest** | [**ResetPasswordRequest**](ResetPasswordRequest.md) |  | 
+
+### Return type
+
+[**OperationMessageResponse**](OperationMessageResponse.md)
 
 ### Authorization
 

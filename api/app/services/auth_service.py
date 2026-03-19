@@ -3,11 +3,15 @@ from __future__ import annotations
 import binascii
 import hashlib
 import hmac
+import logging
+import os
+import secrets
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from uuid import UUID, uuid4
 
 from app.auth import ROLE_RANKS, TenantAuthContext, is_super_admin
-from app.models import Project, ProjectMembership, Role, Tenant, User
+from app.models import PasswordResetToken, Project, ProjectMembership, Role, Tenant, User
 from app.services.api_key_service import create_api_key_for_tenant
 from app.services.billing_service import (
     ensure_user_billing,
@@ -19,6 +23,11 @@ from app.services.pricing_service import (
     DEFAULT_PRICING_TIER,
     build_auth_permissions,
     normalize_pricing_tier,
+)
+from app.services.user_notification_service import (
+    send_password_changed_email,
+    send_password_reset_email,
+    send_welcome_email,
 )
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -39,10 +48,27 @@ SESSION_KEY_NAME_PREFIX = "web-session:"
 PASSWORD_SCHEME = "pbkdf2_sha256"
 PASSWORD_ITERATIONS = 600_000
 PASSWORD_SALT_BYTES = 16
+PASSWORD_RESET_TOKEN_BYTES = 32
+PASSWORD_RESET_MIN_TTL_MINUTES = 5
+PASSWORD_RESET_DEFAULT_TTL_MINUTES = 30
+PASSWORD_RESET_REQUEST_MESSAGE = (
+    "If an account exists for that email, a password reset link has been sent."
+)
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_email(value: str) -> str:
     return value.strip().lower()
+
+
+def _password_reset_ttl_minutes() -> int:
+    raw = os.getenv("PASSWORD_RESET_TOKEN_TTL_MINUTES", str(PASSWORD_RESET_DEFAULT_TTL_MINUTES))
+    try:
+        parsed = int(raw)
+    except ValueError:
+        parsed = PASSWORD_RESET_DEFAULT_TTL_MINUTES
+    return max(parsed, PASSWORD_RESET_MIN_TTL_MINUTES)
 
 
 def hash_password(password: str) -> str:
@@ -124,7 +150,16 @@ def signup_user(
     )
     ensure_user_billing(db, user_id=user.user_id, pricing_tier=pricing_tier)
     grant_signup_credits(db, user_id=user.user_id)
-    return issue_session_for_user(db, user=user, is_demo=False)
+    session = issue_session_for_user(db, user=user, is_demo=False)
+    try:
+        send_welcome_email(
+            to_email=user.email,
+            recipient_name=user.name,
+            project_name=str(session.get("project_name") or "Sepurux Workspace"),
+        )
+    except Exception:
+        logger.exception("Failed to dispatch welcome email for %s", user.email)
+    return session
 
 
 def login_user(db: Session, *, email: str, password: str) -> dict[str, object]:
@@ -137,6 +172,117 @@ def login_user(db: Session, *, email: str, password: str) -> dict[str, object]:
         )
 
     return issue_session_for_user(db, user=user, is_demo=False)
+
+
+def request_password_reset(db: Session, *, email: str) -> str:
+    normalized_email = normalize_email(email)
+    if not normalized_email:
+        return PASSWORD_RESET_REQUEST_MESSAGE
+
+    user = db.scalar(select(User).where(User.email == normalized_email))
+    if not isinstance(user, User):
+        return PASSWORD_RESET_REQUEST_MESSAGE
+
+    now = datetime.now(UTC)
+    active_tokens = list(
+        db.scalars(
+            select(PasswordResetToken).where(
+                PasswordResetToken.user_id == user.user_id,
+                PasswordResetToken.consumed_at.is_(None),
+            )
+        )
+    )
+    for token in active_tokens:
+        token.consumed_at = now
+        db.add(token)
+
+    raw_token = secrets.token_urlsafe(PASSWORD_RESET_TOKEN_BYTES)
+    reset_record = PasswordResetToken(
+        token_id=uuid4(),
+        user_id=user.user_id,
+        token_hash=_hash_password_reset_token(raw_token),
+        expires_at=now + timedelta(minutes=_password_reset_ttl_minutes()),
+    )
+    db.add(reset_record)
+    db.commit()
+
+    try:
+        send_password_reset_email(
+            to_email=user.email,
+            recipient_name=user.name,
+            reset_token=raw_token,
+            expires_minutes=_password_reset_ttl_minutes(),
+        )
+    except Exception:
+        logger.exception("Failed to send password reset email for %s", user.email)
+
+    return PASSWORD_RESET_REQUEST_MESSAGE
+
+
+def reset_password_with_token(db: Session, *, token: str, new_password: str) -> str:
+    candidate = token.strip()
+    if not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is required",
+        )
+
+    now = datetime.now(UTC)
+    hashed = _hash_password_reset_token(candidate)
+    reset_record = db.scalar(
+        select(PasswordResetToken).where(PasswordResetToken.token_hash == hashed)
+    )
+    if not isinstance(reset_record, PasswordResetToken):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is invalid or expired",
+        )
+
+    expires_at = reset_record.expires_at
+    if isinstance(expires_at, datetime) and expires_at.tzinfo is None:
+        # SQLite can return naive values even when timezone=True is configured.
+        expires_at = expires_at.replace(tzinfo=UTC)
+        reset_record.expires_at = expires_at
+
+    if reset_record.consumed_at is not None or expires_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is invalid or expired",
+        )
+
+    user = db.scalar(select(User).where(User.user_id == reset_record.user_id))
+    if not isinstance(user, User):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is invalid or expired",
+        )
+
+    user.password_hash = hash_password(new_password)
+    reset_record.consumed_at = now
+    db.add(user)
+    db.add(reset_record)
+
+    other_tokens = list(
+        db.scalars(
+            select(PasswordResetToken).where(
+                PasswordResetToken.user_id == user.user_id,
+                PasswordResetToken.consumed_at.is_(None),
+                PasswordResetToken.token_id != reset_record.token_id,
+            )
+        )
+    )
+    for other in other_tokens:
+        other.consumed_at = now
+        db.add(other)
+
+    db.commit()
+
+    try:
+        send_password_changed_email(to_email=user.email, recipient_name=user.name)
+    except Exception:
+        logger.exception("Failed to send password changed email for %s", user.email)
+
+    return "Password has been reset successfully."
 
 
 def session_metadata(
@@ -331,6 +477,10 @@ def _get_or_create_role(
     db.add(role)
     db.flush()
     return role
+
+
+def _hash_password_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _normalize_name(value: str | None) -> str | None:

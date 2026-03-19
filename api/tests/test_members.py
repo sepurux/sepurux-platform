@@ -91,6 +91,44 @@ def test_invite_member_allows_team_plan(
     assert payload["api_key"].startswith("cl_")
 
 
+def test_invite_member_sends_email_notification(
+    members_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local = members_test_context
+    sent_payloads: list[dict[str, object]] = []
+
+    def fake_send_member_invite_email(**kwargs):
+        sent_payloads.append(kwargs)
+        return True
+
+    monkeypatch.setattr(
+        "app.routes.members.send_member_invite_email",
+        fake_send_member_invite_email,
+    )
+
+    with testing_session_local() as db:
+        _, project_id, _, _, api_key_plaintext = seed_project_membership_api_key(
+            db,
+            role_name="admin",
+            pricing_tier="team",
+        )
+
+    client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+    response = client.post(
+        "/v1/members",
+        json={"email": "notify-invite@example.com", "name": "Notify Invite", "role": "viewer"},
+    )
+
+    assert response.status_code == 201
+    assert len(sent_payloads) == 1
+    sent = sent_payloads[0]
+    assert sent["to_email"] == "notify-invite@example.com"
+    assert sent["role"] == "viewer"
+    assert sent["project_id"] == project_id
+    assert "api_key" not in sent
+
+
 def test_invite_member_allows_enterprise_plan(
     members_test_context: tuple[TestClient, sessionmaker[Session]],
 ) -> None:

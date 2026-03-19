@@ -7,11 +7,20 @@ from app.db import get_db
 from app.schemas import (
     AuthSessionMetadata,
     AuthSessionResponse,
+    ForgotPasswordRequest,
     LoginRequest,
     OAuthSessionExchangeRequest,
+    OperationMessageResponse,
+    ResetPasswordRequest,
     SignupRequest,
 )
-from app.services.auth_service import login_user, session_metadata, signup_user
+from app.services.auth_service import (
+    login_user,
+    request_password_reset,
+    reset_password_with_token,
+    session_metadata,
+    signup_user,
+)
 from app.services.oauth_service import (
     OAuthFlowError,
     build_oauth_return_url,
@@ -54,6 +63,33 @@ def post_login(payload: LoginRequest, db: DbSession) -> AuthSessionResponse:
             db,
             email=payload.email,
             password=payload.password,
+        )
+    )
+
+
+@public_router.post("/forgot-password", response_model=OperationMessageResponse)
+def post_forgot_password(
+    payload: ForgotPasswordRequest,
+    db: DbSession,
+) -> OperationMessageResponse:
+    return OperationMessageResponse(
+        message=request_password_reset(
+            db,
+            email=payload.email,
+        )
+    )
+
+
+@public_router.post("/reset-password", response_model=OperationMessageResponse)
+def post_reset_password(
+    payload: ResetPasswordRequest,
+    db: DbSession,
+) -> OperationMessageResponse:
+    return OperationMessageResponse(
+        message=reset_password_with_token(
+            db,
+            token=payload.token,
+            new_password=payload.password,
         )
     )
 

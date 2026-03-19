@@ -8,8 +8,18 @@ import pytest
 from app.auth import hash_api_key
 from app.db import get_db
 from app.main import app
-from app.models import ApiKey, Base, Project, ProjectMembership, Role, Tenant, User, UserIdentity
-from app.services.auth_service import hash_password
+from app.models import (
+    ApiKey,
+    Base,
+    PasswordResetToken,
+    Project,
+    ProjectMembership,
+    Role,
+    Tenant,
+    User,
+    UserIdentity,
+)
+from app.services.auth_service import hash_password, verify_password
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -459,3 +469,117 @@ def test_google_oauth_links_existing_user_by_verified_email(
         )
         assert isinstance(identity, UserIdentity)
         assert identity.user_id == user_id
+
+
+def test_forgot_password_creates_reset_token_without_leaking_account_existence(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = auth_test_context
+
+    captured: dict[str, str] = {}
+
+    def fake_send_password_reset_email(**kwargs):
+        captured["token"] = kwargs["reset_token"]
+        captured["email"] = kwargs["to_email"]
+        return True
+
+    monkeypatch.setattr(
+        "app.services.auth_service.send_password_reset_email",
+        fake_send_password_reset_email,
+    )
+
+    with session_factory() as db:
+        db.add(
+            User(
+                user_id=uuid4(),
+                email="resettable@example.com",
+                name="Reset Table",
+                password_hash=hash_password("old-pass-123"),
+            )
+        )
+        db.commit()
+
+    response_existing = client.post(
+        "/auth/forgot-password",
+        json={"email": "resettable@example.com"},
+    )
+    assert response_existing.status_code == 200
+    assert response_existing.json()["message"].startswith("If an account exists")
+    assert captured["email"] == "resettable@example.com"
+    assert len(captured["token"]) >= 20
+
+    response_unknown = client.post(
+        "/auth/forgot-password",
+        json={"email": "unknown@example.com"},
+    )
+    assert response_unknown.status_code == 200
+    assert response_unknown.json() == response_existing.json()
+
+    with session_factory() as db:
+        user = db.scalar(select(User).where(User.email == "resettable@example.com"))
+        assert isinstance(user, User)
+        tokens = list(
+            db.scalars(select(PasswordResetToken).where(PasswordResetToken.user_id == user.user_id))
+        )
+        assert len(tokens) == 1
+        assert tokens[0].consumed_at is None
+
+
+def test_reset_password_with_token_updates_credentials(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = auth_test_context
+
+    captured: dict[str, str] = {}
+
+    def fake_send_password_reset_email(**kwargs):
+        captured["token"] = kwargs["reset_token"]
+        return True
+
+    monkeypatch.setattr(
+        "app.services.auth_service.send_password_reset_email",
+        fake_send_password_reset_email,
+    )
+    monkeypatch.setattr(
+        "app.services.auth_service.send_password_changed_email",
+        lambda **_kwargs: True,
+    )
+
+    with session_factory() as db:
+        db.add(
+            User(
+                user_id=uuid4(),
+                email="recover@example.com",
+                name="Recover User",
+                password_hash=hash_password("old-pass-123"),
+            )
+        )
+        db.commit()
+
+    forgot_response = client.post(
+        "/auth/forgot-password",
+        json={"email": "recover@example.com"},
+    )
+    assert forgot_response.status_code == 200
+    reset_token = captured["token"]
+
+    reset_response = client.post(
+        "/auth/reset-password",
+        json={"token": reset_token, "password": "new-pass-456"},
+    )
+    assert reset_response.status_code == 200
+    assert reset_response.json()["message"] == "Password has been reset successfully."
+
+    with session_factory() as db:
+        user = db.scalar(select(User).where(User.email == "recover@example.com"))
+        assert isinstance(user, User)
+        assert verify_password("new-pass-456", user.password_hash)
+        assert not verify_password("old-pass-123", user.password_hash)
+
+    second_reset = client.post(
+        "/auth/reset-password",
+        json={"token": reset_token, "password": "another-pass-789"},
+    )
+    assert second_reset.status_code == 400

@@ -2751,6 +2751,56 @@ paths:
       summary: Post Login
       tags:
       - auth
+  /auth/forgot-password:
+    post:
+      operationId: post_forgot_password_auth_forgot_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationMessageResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Forgot Password
+      tags:
+      - auth
+  /auth/reset-password:
+    post:
+      operationId: post_reset_password_auth_reset_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationMessageResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Reset Password
+      tags:
+      - auth
   /auth/oauth/{provider}/start:
     get:
       operationId: get_oauth_start_auth_oauth__provider__start_get
@@ -4071,6 +4121,16 @@ components:
       - count
       - event_index
       title: EventIndexCount
+    ForgotPasswordRequest:
+      example:
+        email: email
+      properties:
+        email:
+          title: Email
+          type: string
+      required:
+      - email
+      title: ForgotPasswordRequest
     HTTPValidationError:
       example:
         detail:
@@ -4646,6 +4706,16 @@ components:
       required:
       - token
       title: OAuthSessionExchangeRequest
+    OperationMessageResponse:
+      example:
+        message: message
+      properties:
+        message:
+          title: Message
+          type: string
+      required:
+      - message
+      title: OperationMessageResponse
     PolicyEventListItem:
       example:
         policy_event_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -5053,6 +5123,25 @@ components:
       - mutation_id
       - result
       title: ReplayAttemptListItem
+    ResetPasswordRequest:
+      example:
+        password: password
+        token: token
+      properties:
+        token:
+          maxLength: 512
+          minLength: 1
+          title: Token
+          type: string
+        password:
+          maxLength: 256
+          minLength: 8
+          title: Password
+          type: string
+      required:
+      - password
+      - token
+      title: ResetPasswordRequest
     RunAttemptsSummary:
       example:
         total: 0
