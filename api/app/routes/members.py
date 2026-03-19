@@ -12,7 +12,7 @@ from app.auth import (
     require_role,
 )
 from app.db import get_db
-from app.models import ApiKey, ProjectMembership, User
+from app.models import ApiKey, ProjectMembership, Tenant, User
 from app.schemas import MemberInviteRequest, MemberMetadata
 from app.services.auth_service import ROLE_IDS, _get_or_create_role
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -50,9 +50,7 @@ def list_members(
     project_scope: ProjectScopeDep,
 ) -> list[MemberMetadata]:
     memberships = db.scalars(
-        select(ProjectMembership).where(
-            ProjectMembership.project_id == project_scope.project_id
-        )
+        select(ProjectMembership).where(ProjectMembership.project_id == project_scope.project_id)
     ).all()
 
     result = []
@@ -71,7 +69,6 @@ def invite_member(
     tenant_auth: AdminAuth,
 ) -> MemberMetadata:
     # Check plan allows team members (starter plan is solo only)
-    from app.models import Tenant
     tenant = db.get(Tenant, tenant_auth.tenant_id)
     if isinstance(tenant, Tenant) and tenant.pricing_tier == "starter":
         raise HTTPException(
