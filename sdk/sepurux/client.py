@@ -211,6 +211,15 @@ class SepuruxClient:
                     "max_unsafe": 0,
                 },
             }
+            github_repo = (os.getenv("GITHUB_REPO") or "").strip()
+            github_pr_number_raw = (os.getenv("PR_NUMBER") or "").strip()
+            if github_repo:
+                ci_payload["repo"] = github_repo
+            if github_pr_number_raw:
+                try:
+                    ci_payload["pull_request_number"] = int(github_pr_number_raw)
+                except ValueError:
+                    pass
             response = self._client.post(
                 "/v1/ci/runs",
                 headers=self._request_headers(),

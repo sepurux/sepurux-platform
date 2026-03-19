@@ -453,3 +453,40 @@ def test_record_trace_warns_and_preserves_return_value() -> None:
         "/v1/campaigns",
         "/v1/runs",
     ]
+
+
+def test_start_run_ci_fallback_includes_github_context_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/v1/runs":
+            return httpx.Response(404, json={"detail": "not found"})
+        if request.url.path == "/v1/ci/runs":
+            return httpx.Response(201, json={"run_id": "run-ci-123"})
+        return httpx.Response(404, json={"detail": "not found"})
+
+    monkeypatch.setenv("GITHUB_REPO", "sepurux/sepurux-platform")
+    monkeypatch.setenv("PR_NUMBER", "97")
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=httpx.MockTransport(handler),
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    run_id = client.start_run(trace_id="trace-123", campaign_id="campaign-123")
+
+    assert run_id == "run-ci-123"
+    assert [request.url.path for request in requests] == ["/v1/runs", "/v1/ci/runs"]
+    ci_payload = json.loads(requests[1].content.decode())
+    assert ci_payload["repo"] == "sepurux/sepurux-platform"
+    assert ci_payload["pull_request_number"] == 97

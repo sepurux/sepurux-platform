@@ -1,16 +1,24 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.db import get_db
-from app.models import Campaign
+from app.models import Campaign, Project
 from app.schemas import CIRunCreateRequest, CIRunCreateResponse, CIRunStatusResponse
 from app.services.audit_service import create_audit_event
 from app.services.billing_service import (
     InsufficientCreditsError,
     consume_credits_for_project_campaign,
+)
+from app.services.github_client import (
+    GitHubClientError,
+    format_pr_comment,
+    post_pr_comment,
+    resolve_github_access_token,
+    set_pr_status,
 )
 from app.services.run_service import (
     RelatedRecordNotFoundError,
@@ -27,6 +35,7 @@ router = APIRouter(prefix="/v1/ci", tags=["ci"])
 DbSession = Annotated[Session, Depends(get_db)]
 _TERMINAL_STATUSES = {"completed", "done", "failed"}
 CIDecision = Literal["pass", "fail", "pending"]
+logger = logging.getLogger(__name__)
 
 
 @router.post("/runs", status_code=status.HTTP_201_CREATED, response_model=CIRunCreateResponse)
@@ -49,16 +58,18 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
             ) from exc
 
     try:
+        github_context = _build_github_context(payload)
         thresholds_payload = (
-            payload.thresholds.model_dump()
+            payload.thresholds.model_dump(exclude_none=True)
             if hasattr(payload.thresholds, "model_dump")
-            else payload.thresholds.dict()
+            else payload.thresholds.dict(exclude_none=True)
         )
         run = create_ci_run_and_enqueue(
             db,
             trace_id=payload.trace_id,
             campaign_id=payload.campaign_id,
             thresholds=thresholds_payload,
+            github_context=github_context,
         )
     except RelatedRecordNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -102,6 +113,14 @@ def get_ci_run(run_id: UUID, request: Request, db: DbSession) -> CIRunStatusResp
                 "failures": int(metrics["failures"]),
                 "top_failing_tools": metrics["top_failing_tools"],
             },
+        )
+        _maybe_publish_github_report(
+            db=db,
+            run=run,
+            request=request,
+            decision=decision,
+            thresholds=thresholds,
+            metrics=metrics,
         )
 
     return CIRunStatusResponse(
@@ -165,3 +184,176 @@ def _public_ci_status(status: str) -> str:
     if (status or "").lower() == "completed":
         return "done"
     return status
+
+
+def _build_github_context(payload: CIRunCreateRequest) -> dict[str, Any] | None:
+    repo = (payload.repo or os.getenv("GITHUB_REPO") or "").strip()
+    pr_number = payload.pull_request_number or _env_pull_request_number()
+
+    if not repo and pr_number is None:
+        return None
+    if not repo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="repo is required when pull_request_number is provided.",
+        )
+    if pr_number is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="pull_request_number is required when repo is provided.",
+        )
+
+    return {
+        "repo": repo,
+        "pull_request_number": pr_number,
+    }
+
+
+def _env_pull_request_number() -> int | None:
+    raw = (os.getenv("PR_NUMBER") or "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PR_NUMBER must be an integer.",
+        ) from exc
+    if value < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PR_NUMBER must be greater than 0.",
+        )
+    return value
+
+
+def _maybe_publish_github_report(
+    *,
+    db: Session,
+    run: Any,
+    request: Request,
+    decision: CIDecision,
+    thresholds: dict[str, Any],
+    metrics: dict[str, Any],
+) -> None:
+    if decision not in {"pass", "fail"}:
+        return
+
+    summary = dict(run.summary) if isinstance(run.summary, dict) else {}
+    github_context = summary.get("github_context")
+    if not isinstance(github_context, dict):
+        return
+
+    repo = github_context.get("repo")
+    pr_number = github_context.get("pull_request_number")
+    if not isinstance(repo, str) or not repo.strip() or not isinstance(pr_number, int):
+        return
+
+    github_reporting = summary.get("github_reporting")
+    if (
+        isinstance(github_reporting, dict)
+        and github_reporting.get("comment_posted")
+        and github_reporting.get("status_set")
+    ):
+        return
+
+    score = _reliability_score(summary, metrics)
+    threshold = _reliability_threshold(thresholds)
+    dashboard_url = _build_dashboard_url(request, run.run_id)
+    token = _resolve_github_token(db, project_id=run.project_id, repo=repo)
+    if token is None:
+        logger.warning(
+            "Skipping GitHub PR reporting for run %s (missing GitHub token)",
+            run.run_id,
+        )
+        return
+
+    comment_posted = False
+    status_set = False
+    next_reporting: dict[str, Any] = (
+        github_reporting.copy() if isinstance(github_reporting, dict) else {}
+    )
+
+    try:
+        comment_payload = post_pr_comment(
+            repo,
+            pr_number,
+            format_pr_comment(
+                {
+                    "score": score,
+                    "threshold": threshold,
+                    "failures": metrics.get("top_failing_tools"),
+                    "dashboard_url": dashboard_url,
+                }
+            ),
+            access_token=token,
+        )
+        comment_posted = True
+        next_reporting["comment_url"] = comment_payload.get("html_url")
+    except GitHubClientError as exc:
+        logger.warning("Failed posting PR comment for run %s: %s", run.run_id, exc)
+
+    try:
+        status_payload = set_pr_status(
+            repo,
+            pr_number,
+            passed=score >= threshold,
+            description=f"Reliability {score:.1f}% (threshold {threshold:.1f}%)",
+            target_url=dashboard_url,
+            access_token=token,
+        )
+        status_set = True
+        next_reporting["status_url"] = status_payload.get("url")
+    except GitHubClientError as exc:
+        logger.warning("Failed setting PR status for run %s: %s", run.run_id, exc)
+
+    if not comment_posted and not status_set:
+        return
+
+    next_reporting["comment_posted"] = comment_posted or bool(next_reporting.get("comment_posted"))
+    next_reporting["status_set"] = status_set or bool(next_reporting.get("status_set"))
+    next_reporting["reliability_score"] = score
+    next_reporting["threshold"] = threshold
+    summary["github_reporting"] = next_reporting
+    run.summary = summary
+    db.add(run)
+    db.commit()
+
+
+def _resolve_github_token(db: Session, *, project_id: UUID, repo: str) -> str | None:
+    project = db.scalar(select(Project).where(Project.project_id == project_id))
+    owner_id = project.owner_id if isinstance(project, Project) else None
+    integration_token = resolve_github_access_token(
+        db,
+        user_id=owner_id,
+        repo=repo,
+    )
+    if isinstance(integration_token, str) and integration_token.strip():
+        return integration_token
+
+    env_token = (os.getenv("GITHUB_TOKEN") or "").strip()
+    if env_token:
+        return env_token
+    return None
+
+
+def _reliability_score(summary: dict[str, Any], metrics: dict[str, Any]) -> float:
+    value = summary.get("reliability_score")
+    if isinstance(value, int | float):
+        return float(value)
+    pass_rate = metrics.get("pass_rate")
+    if isinstance(pass_rate, int | float):
+        return float(pass_rate) * 100.0
+    return 0.0
+
+
+def _reliability_threshold(thresholds: dict[str, Any]) -> float:
+    explicit = thresholds.get("min_reliability_score")
+    if isinstance(explicit, int | float):
+        return float(explicit)
+
+    min_pass_rate = thresholds.get("min_pass_rate")
+    if isinstance(min_pass_rate, int | float):
+        return float(min_pass_rate) * 100.0
+    return 80.0

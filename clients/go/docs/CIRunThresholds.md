@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **MinPassRate** | **float32** |  | 
 **MaxUnsafe** | **int32** |  | 
 **MaxFailures** | Pointer to **NullableInt32** |  | [optional] 
+**MinReliabilityScore** | Pointer to **NullableFloat32** |  | [optional] 
 
 ## Methods
 
@@ -102,6 +103,41 @@ HasMaxFailures returns a boolean if a field has been set.
 `func (o *CIRunThresholds) UnsetMaxFailures()`
 
 UnsetMaxFailures ensures that no value is present for MaxFailures, not even an explicit nil
+### GetMinReliabilityScore
+
+`func (o *CIRunThresholds) GetMinReliabilityScore() float32`
+
+GetMinReliabilityScore returns the MinReliabilityScore field if non-nil, zero value otherwise.
+
+### GetMinReliabilityScoreOk
+
+`func (o *CIRunThresholds) GetMinReliabilityScoreOk() (*float32, bool)`
+
+GetMinReliabilityScoreOk returns a tuple with the MinReliabilityScore field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMinReliabilityScore
+
+`func (o *CIRunThresholds) SetMinReliabilityScore(v float32)`
+
+SetMinReliabilityScore sets MinReliabilityScore field to given value.
+
+### HasMinReliabilityScore
+
+`func (o *CIRunThresholds) HasMinReliabilityScore() bool`
+
+HasMinReliabilityScore returns a boolean if a field has been set.
+
+### SetMinReliabilityScoreNil
+
+`func (o *CIRunThresholds) SetMinReliabilityScoreNil(b bool)`
+
+ SetMinReliabilityScoreNil sets the value for MinReliabilityScore to be an explicit nil
+
+### UnsetMinReliabilityScore
+`func (o *CIRunThresholds) UnsetMinReliabilityScore()`
+
+UnsetMinReliabilityScore ensures that no value is present for MinReliabilityScore, not even an explicit nil
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

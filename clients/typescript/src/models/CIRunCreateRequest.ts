@@ -44,6 +44,18 @@ export interface CIRunCreateRequest {
      * @memberof CIRunCreateRequest
      */
     thresholds: CIRunThresholds;
+    /**
+     * 
+     * @type {string}
+     * @memberof CIRunCreateRequest
+     */
+    repo?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CIRunCreateRequest
+     */
+    pull_request_number?: number | null;
 }
 
 /**
@@ -69,6 +81,8 @@ export function CIRunCreateRequestFromJSONTyped(json: any, ignoreDiscriminator: 
         'trace_id': json['trace_id'],
         'campaign_id': json['campaign_id'],
         'thresholds': CIRunThresholdsFromJSON(json['thresholds']),
+        'repo': json['repo'] == null ? undefined : json['repo'],
+        'pull_request_number': json['pull_request_number'] == null ? undefined : json['pull_request_number'],
     };
 }
 
@@ -81,6 +95,8 @@ export function CIRunCreateRequestToJSON(value?: CIRunCreateRequest | null): any
         'trace_id': value['trace_id'],
         'campaign_id': value['campaign_id'],
         'thresholds': CIRunThresholdsToJSON(value['thresholds']),
+        'repo': value['repo'],
+        'pull_request_number': value['pull_request_number'],
     };
 }
 

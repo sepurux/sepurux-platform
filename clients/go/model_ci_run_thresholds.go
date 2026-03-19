@@ -24,6 +24,7 @@ type CIRunThresholds struct {
 	MinPassRate float32 `json:"min_pass_rate"`
 	MaxUnsafe int32 `json:"max_unsafe"`
 	MaxFailures NullableInt32 `json:"max_failures,omitempty"`
+	MinReliabilityScore NullableFloat32 `json:"min_reliability_score,omitempty"`
 }
 
 type _CIRunThresholds CIRunThresholds
@@ -137,6 +138,48 @@ func (o *CIRunThresholds) UnsetMaxFailures() {
 	o.MaxFailures.Unset()
 }
 
+// GetMinReliabilityScore returns the MinReliabilityScore field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *CIRunThresholds) GetMinReliabilityScore() float32 {
+	if o == nil || IsNil(o.MinReliabilityScore.Get()) {
+		var ret float32
+		return ret
+	}
+	return *o.MinReliabilityScore.Get()
+}
+
+// GetMinReliabilityScoreOk returns a tuple with the MinReliabilityScore field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *CIRunThresholds) GetMinReliabilityScoreOk() (*float32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.MinReliabilityScore.Get(), o.MinReliabilityScore.IsSet()
+}
+
+// HasMinReliabilityScore returns a boolean if a field has been set.
+func (o *CIRunThresholds) HasMinReliabilityScore() bool {
+	if o != nil && o.MinReliabilityScore.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetMinReliabilityScore gets a reference to the given NullableFloat32 and assigns it to the MinReliabilityScore field.
+func (o *CIRunThresholds) SetMinReliabilityScore(v float32) {
+	o.MinReliabilityScore.Set(&v)
+}
+// SetMinReliabilityScoreNil sets the value for MinReliabilityScore to be an explicit nil
+func (o *CIRunThresholds) SetMinReliabilityScoreNil() {
+	o.MinReliabilityScore.Set(nil)
+}
+
+// UnsetMinReliabilityScore ensures that no value is present for MinReliabilityScore, not even an explicit nil
+func (o *CIRunThresholds) UnsetMinReliabilityScore() {
+	o.MinReliabilityScore.Unset()
+}
+
 func (o CIRunThresholds) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -151,6 +194,9 @@ func (o CIRunThresholds) ToMap() (map[string]interface{}, error) {
 	toSerialize["max_unsafe"] = o.MaxUnsafe
 	if o.MaxFailures.IsSet() {
 		toSerialize["max_failures"] = o.MaxFailures.Get()
+	}
+	if o.MinReliabilityScore.IsSet() {
+		toSerialize["min_reliability_score"] = o.MinReliabilityScore.Get()
 	}
 	return toSerialize, nil
 }

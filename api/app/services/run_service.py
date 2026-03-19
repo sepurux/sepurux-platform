@@ -182,6 +182,7 @@ def create_ci_run_and_enqueue(
     trace_id: UUID,
     campaign_id: UUID,
     thresholds: dict[str, Any],
+    github_context: dict[str, Any] | None = None,
     actor: str | None = "ci",
 ) -> Run:
     trace = db.scalar(select(Trace).where(Trace.trace_id == trace_id))
@@ -195,6 +196,10 @@ def create_ci_run_and_enqueue(
     if trace.project_id != campaign.project_id:
         raise ValueError("Trace and campaign must belong to the same project")
 
+    summary: dict[str, Any] = {"ci_thresholds": thresholds}
+    if isinstance(github_context, dict):
+        summary["github_context"] = github_context
+
     run = _create_run_record(
         db,
         project_id=trace.project_id,
@@ -203,7 +208,7 @@ def create_ci_run_and_enqueue(
         mutation_pack_id=campaign.mutation_pack_id,
         policy_pack_id=None,
         effective_policy_pack_version_id=None,
-        summary={"ci_thresholds": thresholds},
+        summary=summary,
         actor=actor,
     )
     enqueue_execute_run(run, queue_priority="normal")

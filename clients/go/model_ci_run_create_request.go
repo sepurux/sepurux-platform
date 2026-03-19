@@ -24,6 +24,8 @@ type CIRunCreateRequest struct {
 	TraceId string `json:"trace_id"`
 	CampaignId string `json:"campaign_id"`
 	Thresholds CIRunThresholds `json:"thresholds"`
+	Repo NullableString `json:"repo,omitempty"`
+	PullRequestNumber NullableInt32 `json:"pull_request_number,omitempty"`
 }
 
 type _CIRunCreateRequest CIRunCreateRequest
@@ -120,6 +122,90 @@ func (o *CIRunCreateRequest) SetThresholds(v CIRunThresholds) {
 	o.Thresholds = v
 }
 
+// GetRepo returns the Repo field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *CIRunCreateRequest) GetRepo() string {
+	if o == nil || IsNil(o.Repo.Get()) {
+		var ret string
+		return ret
+	}
+	return *o.Repo.Get()
+}
+
+// GetRepoOk returns a tuple with the Repo field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *CIRunCreateRequest) GetRepoOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Repo.Get(), o.Repo.IsSet()
+}
+
+// HasRepo returns a boolean if a field has been set.
+func (o *CIRunCreateRequest) HasRepo() bool {
+	if o != nil && o.Repo.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetRepo gets a reference to the given NullableString and assigns it to the Repo field.
+func (o *CIRunCreateRequest) SetRepo(v string) {
+	o.Repo.Set(&v)
+}
+// SetRepoNil sets the value for Repo to be an explicit nil
+func (o *CIRunCreateRequest) SetRepoNil() {
+	o.Repo.Set(nil)
+}
+
+// UnsetRepo ensures that no value is present for Repo, not even an explicit nil
+func (o *CIRunCreateRequest) UnsetRepo() {
+	o.Repo.Unset()
+}
+
+// GetPullRequestNumber returns the PullRequestNumber field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *CIRunCreateRequest) GetPullRequestNumber() int32 {
+	if o == nil || IsNil(o.PullRequestNumber.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.PullRequestNumber.Get()
+}
+
+// GetPullRequestNumberOk returns a tuple with the PullRequestNumber field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *CIRunCreateRequest) GetPullRequestNumberOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.PullRequestNumber.Get(), o.PullRequestNumber.IsSet()
+}
+
+// HasPullRequestNumber returns a boolean if a field has been set.
+func (o *CIRunCreateRequest) HasPullRequestNumber() bool {
+	if o != nil && o.PullRequestNumber.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetPullRequestNumber gets a reference to the given NullableInt32 and assigns it to the PullRequestNumber field.
+func (o *CIRunCreateRequest) SetPullRequestNumber(v int32) {
+	o.PullRequestNumber.Set(&v)
+}
+// SetPullRequestNumberNil sets the value for PullRequestNumber to be an explicit nil
+func (o *CIRunCreateRequest) SetPullRequestNumberNil() {
+	o.PullRequestNumber.Set(nil)
+}
+
+// UnsetPullRequestNumber ensures that no value is present for PullRequestNumber, not even an explicit nil
+func (o *CIRunCreateRequest) UnsetPullRequestNumber() {
+	o.PullRequestNumber.Unset()
+}
+
 func (o CIRunCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -133,6 +219,12 @@ func (o CIRunCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize["trace_id"] = o.TraceId
 	toSerialize["campaign_id"] = o.CampaignId
 	toSerialize["thresholds"] = o.Thresholds
+	if o.Repo.IsSet() {
+		toSerialize["repo"] = o.Repo.Get()
+	}
+	if o.PullRequestNumber.IsSet() {
+		toSerialize["pull_request_number"] = o.PullRequestNumber.Get()
+	}
 	return toSerialize, nil
 }
 

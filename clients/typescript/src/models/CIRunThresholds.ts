@@ -37,6 +37,12 @@ export interface CIRunThresholds {
      * @memberof CIRunThresholds
      */
     max_failures?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CIRunThresholds
+     */
+    min_reliability_score?: number | null;
 }
 
 /**
@@ -61,6 +67,7 @@ export function CIRunThresholdsFromJSONTyped(json: any, ignoreDiscriminator: boo
         'min_pass_rate': json['min_pass_rate'],
         'max_unsafe': json['max_unsafe'],
         'max_failures': json['max_failures'] == null ? undefined : json['max_failures'],
+        'min_reliability_score': json['min_reliability_score'] == null ? undefined : json['min_reliability_score'],
     };
 }
 
@@ -73,6 +80,7 @@ export function CIRunThresholdsToJSON(value?: CIRunThresholds | null): any {
         'min_pass_rate': value['min_pass_rate'],
         'max_unsafe': value['max_unsafe'],
         'max_failures': value['max_failures'],
+        'min_reliability_score': value['min_reliability_score'],
     };
 }
 

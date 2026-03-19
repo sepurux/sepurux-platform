@@ -109,6 +109,21 @@ class AuthSessionExchange(Base):
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class GitHubIntegration(Base):
+    __tablename__ = "github_integrations"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    repo: Mapped[str] = mapped_column(Text, nullable=False)
+    installation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    access_token: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class SubscriptionPlan(Base):
     __tablename__ = "subscription_plans"
 

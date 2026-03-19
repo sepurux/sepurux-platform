@@ -3401,6 +3401,9 @@ components:
           max_failures: 0
           min_pass_rate: 0.08008281904610115
           max_unsafe: 0
+          min_reliability_score: 59.621339166831824
+        repo: repo
+        pull_request_number: 1
         campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
       properties:
         trace_id:
@@ -3413,6 +3416,13 @@ components:
           type: string
         thresholds:
           $ref: '#/components/schemas/CIRunThresholds'
+        repo:
+          nullable: true
+          type: string
+        pull_request_number:
+          minimum: 1.0
+          nullable: true
+          type: integer
       required:
       - campaign_id
       - thresholds
@@ -3489,6 +3499,7 @@ components:
         max_failures: 0
         min_pass_rate: 0.08008281904610115
         max_unsafe: 0
+        min_reliability_score: 59.621339166831824
       properties:
         min_pass_rate:
           maximum: 1.0
@@ -3503,6 +3514,11 @@ components:
           minimum: 0.0
           nullable: true
           type: integer
+        min_reliability_score:
+          maximum: 100.0
+          minimum: 0.0
+          nullable: true
+          type: number
       required:
       - max_unsafe
       - min_pass_rate
