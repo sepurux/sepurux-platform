@@ -795,6 +795,10 @@ export const api = {
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
+  listCreditTransactions: (options?: { limit?: number }) =>
+    requestJson<CreditTransactionMetadata[]>("/v1/billing/transactions", {
+      limit: clampLimit(options?.limit, 50),
+    }),
   subscribeToPlan: (payload: { plan_id: string }) =>
     postJson<BillingRedirectSessionResponse, typeof payload>("/v1/billing/subscribe", payload),
   topupCredits: (payload: { credits: number }) =>
