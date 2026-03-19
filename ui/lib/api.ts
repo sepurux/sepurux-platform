@@ -520,6 +520,23 @@ export type InternalAnalyticsOverview = {
   failure_trend: InternalFailureTrend;
 };
 
+export type InternalDateCountMetric = {
+  date: string;
+  value: number;
+};
+
+export type InternalDateScoreMetric = {
+  date: string;
+  value: number;
+};
+
+export type InternalTimeSeriesMetrics = {
+  window_days: number;
+  failures_over_time: InternalDateCountMetric[];
+  campaigns_per_day: InternalDateCountMetric[];
+  reliability_trends: InternalDateScoreMetric[];
+};
+
 export type InternalQueueJobEntry = {
   job_id: string;
   status: string;
@@ -1008,6 +1025,14 @@ export const api = {
     requestJson<InternalAnalyticsOverview>("/v1/internal/analytics", undefined, {
       requireProjectHeader: false,
     }),
+  getInternalAnalyticsTimeSeries: (days = 14) =>
+    requestJson<InternalTimeSeriesMetrics>(
+      `/v1/internal/analytics/time-series?days=${Math.max(7, Math.min(Math.trunc(days), 90))}`,
+      undefined,
+      {
+        requireProjectHeader: false,
+      }
+    ),
   getInternalQueues: () =>
     requestJson<InternalQueueOverview>("/v1/internal/queues", undefined, {
       requireProjectHeader: false,

@@ -28,6 +28,7 @@ from app.schemas import (
     InternalSearchUserResult,
     InternalSystemHealth,
     InternalSystemOverview,
+    InternalTimeSeriesMetrics,
 )
 from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
 from app.services.internal_analytics_service import build_internal_analytics
@@ -47,6 +48,7 @@ from app.services.internal_settings_service import (
     update_internal_feature_flags,
 )
 from app.services.internal_system_service import build_internal_system_overview
+from app.services.internal_time_series_service import build_internal_time_series
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -365,6 +367,24 @@ def get_internal_analytics(
         actor=_actor_label(db, super_admin),
         entity="internal.analytics",
         metadata={},
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/analytics/time-series", response_model=InternalTimeSeriesMetrics)
+def get_internal_analytics_time_series(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+    days: Annotated[int, Query(ge=7, le=90)] = 14,
+) -> InternalTimeSeriesMetrics:
+    payload = build_internal_time_series(db, window_days=days)
+    create_audit_log(
+        db,
+        action="internal.analytics.time_series.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.analytics.time_series",
+        metadata={"window_days": payload.window_days},
     )
     db.commit()
     return payload

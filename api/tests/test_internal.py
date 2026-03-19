@@ -465,6 +465,46 @@ def test_internal_analytics_reject_non_super_admin(
     assert response.json() == {"detail": "Super admin access required"}
 
 
+def test_internal_time_series_metrics_returns_windowed_data(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/analytics/time-series", params={"days": 7})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["window_days"] == 7
+    assert len(payload["failures_over_time"]) == 7
+    assert len(payload["campaigns_per_day"]) == 7
+    assert len(payload["reliability_trends"]) == 7
+    assert any(point["value"] >= 1 for point in payload["failures_over_time"])
+    assert all(0 <= point["value"] <= 100 for point in payload["reliability_trends"])
+
+
+def test_internal_time_series_metrics_reject_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/analytics/time-series", params={"days": 7})
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
+
+
 def test_internal_queues_returns_overview(
     internal_test_context: tuple[TestClient, sessionmaker[Session]],
 ) -> None:
