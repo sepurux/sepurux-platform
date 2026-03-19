@@ -13,6 +13,7 @@ from app.models import (
     Base,
     Campaign,
     CreditTransaction,
+    CreditWallet,
     Failure,
     Project,
     ProjectMembership,
@@ -23,7 +24,7 @@ from app.models import (
     User,
 )
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -168,6 +169,14 @@ def _seed_internal_fixture(db: Session) -> dict[str, str]:
                 type="usage",
                 reason="internal-test-run",
                 created_at=now,
+            ),
+            CreditWallet(
+                wallet_id=uuid4(),
+                user_id=super_user_id,
+                balance=200,
+                monthly_credits=120,
+                topup_credits=80,
+                updated_at=now,
             ),
         ]
     )
@@ -516,6 +525,72 @@ def test_internal_queues_reject_non_super_admin(
         auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
     )
     response = client.get("/v1/internal/queues")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_billing_lists_wallets_and_transactions(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    wallets_response = client.get("/v1/internal/billing/wallets")
+    assert wallets_response.status_code == 200
+    wallets_payload = wallets_response.json()
+    assert len(wallets_payload) >= 1
+    assert wallets_payload[0]["email"] == "ops@sepurux.com"
+
+    transactions_response = client.get("/v1/internal/billing/transactions")
+    assert transactions_response.status_code == 200
+    transactions_payload = transactions_response.json()
+    assert len(transactions_payload) >= 1
+
+
+def test_internal_billing_adjusts_credits(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+        ops_user = db.scalar(select(User).where(User.email == "ops@sepurux.com"))
+        assert isinstance(ops_user, User)
+        user_id = str(ops_user.user_id)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    response = client.post(
+        "/v1/internal/billing/adjust",
+        json={"user_id": user_id, "amount": 50, "reason": "manual top-up"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["wallet"]["balance"] == 250
+    assert payload["transaction"]["type"] == "manual_adjustment"
+
+
+def test_internal_billing_rejects_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/billing/wallets")
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Super admin access required"}

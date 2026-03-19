@@ -546,6 +546,32 @@ export type InternalQueueActionResponse = {
   detail: string | null;
 };
 
+export type InternalBillingWalletEntry = {
+  wallet_id: string;
+  user_id: string;
+  email: string | null;
+  name: string | null;
+  balance: number;
+  monthly_credits: number;
+  topup_credits: number;
+  updated_at: string;
+};
+
+export type InternalBillingTransactionEntry = {
+  credit_transaction_id: string;
+  user_id: string;
+  email: string | null;
+  amount: number;
+  type: string;
+  reason: string;
+  created_at: string;
+};
+
+export type InternalBillingAdjustmentResponse = {
+  wallet: InternalBillingWalletEntry;
+  transaction: InternalBillingTransactionEntry;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -980,6 +1006,30 @@ export const api = {
     postJson<InternalQueueActionResponse, { job_id: string }>(
       "/v1/internal/queues/cancel",
       { job_id: jobId },
+      { requireProjectHeader: false }
+    ),
+  listInternalBillingWallets: (options?: { limit?: number; offset?: number }) =>
+    requestJson<InternalBillingWalletEntry[]>(
+      "/v1/internal/billing/wallets",
+      {
+        limit: clampLimit(options?.limit, 100),
+        offset: options?.offset ?? 0,
+      },
+      { requireProjectHeader: false }
+    ),
+  listInternalBillingTransactions: (options?: { limit?: number; offset?: number }) =>
+    requestJson<InternalBillingTransactionEntry[]>(
+      "/v1/internal/billing/transactions",
+      {
+        limit: clampLimit(options?.limit, 100),
+        offset: options?.offset ?? 0,
+      },
+      { requireProjectHeader: false }
+    ),
+  adjustInternalBillingCredits: (payload: { user_id: string; amount: number; reason: string }) =>
+    postJson<InternalBillingAdjustmentResponse, typeof payload>(
+      "/v1/internal/billing/adjust",
+      payload,
       { requireProjectHeader: false }
     ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
