@@ -12,9 +12,10 @@ from app.auth import (
     require_role,
 )
 from app.db import get_db
-from app.models import ApiKey, ProjectMembership, Tenant, User
+from app.models import ApiKey, ProjectMembership, User
 from app.schemas import MemberInviteRequest, MemberMetadata
 from app.services.auth_service import ROLE_IDS, _get_or_create_role
+from app.services.billing_service import get_billing_snapshot_for_context
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -68,9 +69,16 @@ def invite_member(
     project_scope: ProjectScopeDep,
     tenant_auth: AdminAuth,
 ) -> MemberMetadata:
-    # Check plan allows team members (starter plan is solo only)
-    tenant = db.get(Tenant, tenant_auth.tenant_id)
-    if isinstance(tenant, Tenant) and tenant.pricing_tier == "starter":
+    billing_snapshot = get_billing_snapshot_for_context(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
+    subscription = (
+        billing_snapshot.get("subscription") if isinstance(billing_snapshot, dict) else None
+    )
+    plan_name = subscription.get("plan_name") if isinstance(subscription, dict) else None
+    if str(plan_name or "").strip().lower() not in {"team", "enterprise"}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Upgrade to Team or Enterprise to invite members.",

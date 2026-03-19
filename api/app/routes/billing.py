@@ -14,6 +14,7 @@ from app.schemas import (
     BillingRedirectSessionResponse,
     BillingSubscribeRequest,
     BillingTopupRequest,
+    CreditTransactionMetadata,
     CreditWalletMetadata,
     SubscriptionPlanMetadata,
     UserSubscriptionMetadata,
@@ -21,8 +22,10 @@ from app.schemas import (
 from app.services.billing_service import (
     BillingSubjectNotFoundError,
     get_billing_snapshot_for_context,
+    list_credit_transactions_for_user,
     list_subscription_plans,
     resolve_billable_user_id,
+    serialize_credit_transaction,
     serialize_subscription_plan,
 )
 from app.services.stripe_billing_service import (
@@ -31,7 +34,7 @@ from app.services.stripe_billing_service import (
     create_topup_billing_redirect,
     process_stripe_webhook,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
@@ -114,6 +117,24 @@ def get_billing_credits(
         project_scope=project_scope,
     )
     return CreditWalletMetadata(**wallet)
+
+
+@router.get("/transactions", response_model=list[CreditTransactionMetadata])
+def get_billing_transactions(
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    tenant_auth: TenantAuthDep,
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[CreditTransactionMetadata]:
+    user_id = resolve_billable_user_id(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_scope.project_id,
+    )
+    if user_id is None:
+        return []
+    records = list_credit_transactions_for_user(db, user_id=user_id, limit=limit)
+    return [CreditTransactionMetadata(**serialize_credit_transaction(record)) for record in records]
 
 
 @router.post("/subscribe", response_model=BillingRedirectSessionResponse)
