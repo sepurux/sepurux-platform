@@ -582,6 +582,12 @@ export type InternalSystemOverview = {
   uptime_seconds: number;
 };
 
+export type InternalFeatureFlags = {
+  enable_ci: boolean;
+  enable_mutations: boolean;
+  enable_billing: boolean;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -1046,6 +1052,19 @@ export const api = {
     requestJson<InternalSystemOverview>("/v1/internal/system", undefined, {
       requireProjectHeader: false,
     }),
+  getInternalFeatureFlags: () =>
+    requestJson<InternalFeatureFlags>("/v1/internal/settings", undefined, {
+      requireProjectHeader: false,
+    }),
+  updateInternalFeatureFlags: (payload: InternalFeatureFlags) =>
+    requestJson<InternalFeatureFlags>(
+      "/v1/internal/settings",
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+      { requireProjectHeader: false }
+    ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
