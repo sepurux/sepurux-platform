@@ -666,6 +666,16 @@ class InternalBillingAdjustmentResponse(BaseModel):
     transaction: InternalBillingTransactionEntry
 
 
+class InternalSystemOverview(BaseModel):
+    api_latency_ms: float
+    worker_status: Literal["online", "offline", "unknown"]
+    queue_backlog: int
+    runs_last_24h: int
+    failed_runs_last_24h: int
+    error_rate_24h: float
+    uptime_seconds: int
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str

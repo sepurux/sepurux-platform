@@ -25,6 +25,7 @@ from app.schemas import (
     InternalSearchResults,
     InternalSearchUserResult,
     InternalSystemHealth,
+    InternalSystemOverview,
 )
 from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
 from app.services.internal_analytics_service import build_internal_analytics
@@ -39,6 +40,7 @@ from app.services.internal_queue_service import (
     get_internal_queue_overview,
     retry_queue_job,
 )
+from app.services.internal_system_service import build_internal_system_overview
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -486,3 +488,20 @@ def post_internal_billing_adjust(
     )
     db.commit()
     return result
+
+
+@router.get("/system", response_model=InternalSystemOverview)
+def get_internal_system_overview(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalSystemOverview:
+    payload = build_internal_system_overview(db)
+    create_audit_log(
+        db,
+        action="internal.system.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.system",
+        metadata=payload.model_dump(),
+    )
+    db.commit()
+    return payload
