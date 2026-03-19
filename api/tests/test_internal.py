@@ -454,3 +454,68 @@ def test_internal_analytics_reject_non_super_admin(
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_queues_returns_overview(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/queues")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["jobs_running"] >= 0
+    assert payload["jobs_failed"] >= 0
+    assert payload["queue_backlog"] >= 0
+    assert payload["worker_status"] in {"online", "offline", "unknown"}
+
+
+def test_internal_queue_actions_return_result(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    retry_response = client.post("/v1/internal/queues/retry", json={"job_id": "missing-job"})
+    assert retry_response.status_code == 200
+    retry_payload = retry_response.json()
+    assert retry_payload["action"] == "retry"
+    assert retry_payload["job_id"] == "missing-job"
+    assert retry_payload["success"] is False
+
+    cancel_response = client.post("/v1/internal/queues/cancel", json={"job_id": "missing-job"})
+    assert cancel_response.status_code == 200
+    cancel_payload = cancel_response.json()
+    assert cancel_payload["action"] == "cancel"
+    assert cancel_payload["job_id"] == "missing-job"
+    assert cancel_payload["success"] is False
+
+
+def test_internal_queues_reject_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/queues")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
