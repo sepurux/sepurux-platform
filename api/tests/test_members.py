@@ -111,7 +111,11 @@ def test_invite_member_allows_enterprise_plan(
     client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
     response = client.post(
         "/v1/members",
-        json={"email": "enterprise-invite@example.com", "name": "Enterprise Invite", "role": "viewer"},
+        json={
+            "email": "enterprise-invite@example.com",
+            "name": "Enterprise Invite",
+            "role": "viewer",
+        },
     )
 
     assert response.status_code == 201

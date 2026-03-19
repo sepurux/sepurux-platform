@@ -24,6 +24,7 @@ export * from './CampaignRunPackRequest';
 export * from './CampaignRunPackResponse';
 export * from './CounterfactualListItem';
 export * from './CounterfactualMetadata';
+export * from './CreditTransactionMetadata';
 export * from './CreditWalletMetadata';
 export * from './DemoInfoResponse';
 export * from './DemoLimits';

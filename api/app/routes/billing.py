@@ -134,10 +134,7 @@ def get_billing_transactions(
     if user_id is None:
         return []
     records = list_credit_transactions_for_user(db, user_id=user_id, limit=limit)
-    return [
-        CreditTransactionMetadata(**serialize_credit_transaction(record))
-        for record in records
-    ]
+    return [CreditTransactionMetadata(**serialize_credit_transaction(record)) for record in records]
 
 
 @router.post("/subscribe", response_model=BillingRedirectSessionResponse)

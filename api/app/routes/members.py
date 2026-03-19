@@ -74,7 +74,9 @@ def invite_member(
         tenant_auth=tenant_auth,
         project_id=project_scope.project_id,
     )
-    subscription = billing_snapshot.get("subscription") if isinstance(billing_snapshot, dict) else None
+    subscription = (
+        billing_snapshot.get("subscription") if isinstance(billing_snapshot, dict) else None
+    )
     plan_name = subscription.get("plan_name") if isinstance(subscription, dict) else None
     if str(plan_name or "").strip().lower() not in {"team", "enterprise"}:
         raise HTTPException(

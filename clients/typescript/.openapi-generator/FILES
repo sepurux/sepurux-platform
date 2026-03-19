@@ -49,6 +49,7 @@ src/models/CampaignRunPackRequest.ts
 src/models/CampaignRunPackResponse.ts
 src/models/CounterfactualListItem.ts
 src/models/CounterfactualMetadata.ts
+src/models/CreditTransactionMetadata.ts
 src/models/CreditWalletMetadata.ts
 src/models/DemoInfoResponse.ts
 src/models/DemoLimits.ts

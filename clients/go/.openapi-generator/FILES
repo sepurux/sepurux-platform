@@ -58,6 +58,7 @@ docs/CiAPI.md
 docs/CounterfactualListItem.md
 docs/CounterfactualMetadata.md
 docs/CounterfactualsAPI.md
+docs/CreditTransactionMetadata.md
 docs/CreditWalletMetadata.md
 docs/DemoAPI.md
 docs/DemoInfoResponse.md
@@ -169,6 +170,7 @@ model_ci_run_status_response.go
 model_ci_run_thresholds.go
 model_counterfactual_list_item.go
 model_counterfactual_metadata.go
+model_credit_transaction_metadata.go
 model_credit_wallet_metadata.go
 model_demo_info_response.go
 model_demo_limits.go

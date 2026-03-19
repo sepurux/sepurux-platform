@@ -7,6 +7,7 @@ Method | HTTP request | Description
 [**GetBillingCreditsV1BillingCreditsGet**](BillingAPI.md#GetBillingCreditsV1BillingCreditsGet) | **Get** /v1/billing/credits | Get Billing Credits
 [**GetBillingPlansV1BillingPlansGet**](BillingAPI.md#GetBillingPlansV1BillingPlansGet) | **Get** /v1/billing/plans | Get Billing Plans
 [**GetBillingSubscriptionV1BillingSubscriptionGet**](BillingAPI.md#GetBillingSubscriptionV1BillingSubscriptionGet) | **Get** /v1/billing/subscription | Get Billing Subscription
+[**GetBillingTransactionsV1BillingTransactionsGet**](BillingAPI.md#GetBillingTransactionsV1BillingTransactionsGet) | **Get** /v1/billing/transactions | Get Billing Transactions
 [**PostBillingPortalV1BillingPortalPost**](BillingAPI.md#PostBillingPortalV1BillingPortalPost) | **Post** /v1/billing/portal | Post Billing Portal
 [**PostBillingSubscribeV1BillingSubscribePost**](BillingAPI.md#PostBillingSubscribeV1BillingSubscribePost) | **Post** /v1/billing/subscribe | Post Billing Subscribe
 [**PostBillingTopupV1BillingTopupPost**](BillingAPI.md#PostBillingTopupV1BillingTopupPost) | **Post** /v1/billing/topup | Post Billing Topup
@@ -190,6 +191,72 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**UserSubscriptionMetadata**](UserSubscriptionMetadata.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## GetBillingTransactionsV1BillingTransactionsGet
+
+> []CreditTransactionMetadata GetBillingTransactionsV1BillingTransactionsGet(ctx).Limit(limit).XProjectId(xProjectId).Execute()
+
+Get Billing Transactions
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	limit := int32(56) // int32 |  (optional) (default to 50)
+	xProjectId := "xProjectId_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.BillingAPI.GetBillingTransactionsV1BillingTransactionsGet(context.Background()).Limit(limit).XProjectId(xProjectId).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `BillingAPI.GetBillingTransactionsV1BillingTransactionsGet``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `GetBillingTransactionsV1BillingTransactionsGet`: []CreditTransactionMetadata
+	fmt.Fprintf(os.Stdout, "Response from `BillingAPI.GetBillingTransactionsV1BillingTransactionsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiGetBillingTransactionsV1BillingTransactionsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **limit** | **int32** |  | [default to 50]
+ **xProjectId** | **string** |  | 
+
+### Return type
+
+[**[]CreditTransactionMetadata**](CreditTransactionMetadata.md)
 
 ### Authorization
 
