@@ -7,7 +7,17 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import AuditEvent, Base, Campaign, ReplayAttempt, Run, Trace
+from app.models import (
+    AuditEvent,
+    Base,
+    Campaign,
+    GitHubIntegration,
+    Project,
+    ReplayAttempt,
+    Run,
+    Trace,
+    User,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -113,6 +123,68 @@ def test_ci_post_run_allows_when_ci_token_unset_and_stores_thresholds(
         assert row.status == "queued"
         assert row.summary == {
             "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0, "max_failures": 2}
+        }
+
+
+def test_ci_post_run_stores_github_context(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = _seed_trace_and_campaign(db, project_id=project_id)
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+            "repo": "sepurux/sepurux-platform",
+            "pull_request_number": 97,
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+    with testing_session_local() as db:
+        row = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+        assert row.summary == {
+            "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+            "github_context": {"repo": "sepurux/sepurux-platform", "pull_request_number": 97},
+        }
+
+
+def test_ci_post_run_reads_repo_and_pr_number_from_env(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+    monkeypatch.setenv("GITHUB_REPO", "sepurux/sepurux-platform")
+    monkeypatch.setenv("PR_NUMBER", "123")
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = _seed_trace_and_campaign(db, project_id=project_id)
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+    with testing_session_local() as db:
+        row = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+        assert row.summary == {
+            "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+            "github_context": {"repo": "sepurux/sepurux-platform", "pull_request_number": 123},
         }
 
 
@@ -314,3 +386,157 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
     decision_types = {event.event_type for event in decision_events}
     assert "ci.decision.fail" in decision_types
     assert "ci.decision.pass" in decision_types
+
+
+def test_get_ci_run_posts_github_report_once_with_warning_and_failure_status(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.setenv("CI_TOKEN", "secret-token")
+    monkeypatch.setenv("GITHUB_TOKEN", "fallback-env-token")
+
+    comment_calls: list[dict[str, object]] = []
+    status_calls: list[dict[str, object]] = []
+
+    def fake_post_pr_comment(
+        repo: str,
+        pr_number: int,
+        body: str,
+        *,
+        access_token: str | None = None,
+    ) -> dict[str, object]:
+        comment_calls.append(
+            {
+                "repo": repo,
+                "pr_number": pr_number,
+                "body": body,
+                "access_token": access_token,
+            }
+        )
+        return {"html_url": "https://github.com/sepurux/sepurux-platform/pull/97#issuecomment-1"}
+
+    def fake_set_pr_status(
+        repo: str,
+        pr_number: int,
+        *,
+        passed: bool,
+        description: str,
+        target_url: str,
+        access_token: str | None = None,
+    ) -> dict[str, object]:
+        status_calls.append(
+            {
+                "repo": repo,
+                "pr_number": pr_number,
+                "passed": passed,
+                "description": description,
+                "target_url": target_url,
+                "access_token": access_token,
+            }
+        )
+        return {"url": "https://api.github.com/repos/sepurux/sepurux-platform/statuses/abc"}
+
+    monkeypatch.setattr("app.routes.ci.post_pr_comment", fake_post_pr_comment)
+    monkeypatch.setattr("app.routes.ci.set_pr_status", fake_set_pr_status)
+
+    run_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    owner_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(User(user_id=owner_id, email=f"owner-{owner_id}@example.com"))
+        project = db.scalar(select(Project).where(Project.project_id == project_id))
+        assert isinstance(project, Project)
+        project.owner_id = owner_id
+        db.add(project)
+
+        db.add(
+            GitHubIntegration(
+                id=uuid4(),
+                user_id=owner_id,
+                repo="sepurux/sepurux-platform",
+                installation_id=101,
+                access_token="integration-token",
+            )
+        )
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="CI Campaign",
+                mutation_set=[],
+                eval_set=[],
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="completed",
+                summary={
+                    "ci_thresholds": {
+                        "min_pass_rate": 0.5,
+                        "max_unsafe": 0,
+                        "min_reliability_score": 80,
+                    },
+                    "github_context": {
+                        "repo": "sepurux/sepurux-platform",
+                        "pull_request_number": 97,
+                    },
+                    "reliability_score": 72.0,
+                },
+                created_at=datetime(2026, 2, 26, 12, 2, tzinfo=UTC),
+            )
+        )
+        db.add(
+            ReplayAttempt(
+                attempt_id=uuid4(),
+                project_id=project_id,
+                run_id=run_id,
+                mutation_id="m1",
+                result="failed",
+                failure_reason="timeout",
+                first_failure_event_index=3,
+                first_failure_tool="github.create_pr",
+                artifacts_s3_key=None,
+            )
+        )
+        db.commit()
+
+    headers = {"X-Sepurux-Token": "secret-token"}
+
+    first_response = client.get(f"/v1/ci/runs/{run_id}", headers=headers)
+    assert first_response.status_code == 200
+    assert len(comment_calls) == 1
+    assert len(status_calls) == 1
+    assert comment_calls[0]["access_token"] == "integration-token"
+    assert status_calls[0]["access_token"] == "integration-token"
+    assert status_calls[0]["passed"] is False
+    assert "⚠️ This PR reduces AI reliability" in str(comment_calls[0]["body"])
+    assert "github.create_pr" in str(comment_calls[0]["body"])
+
+    second_response = client.get(f"/v1/ci/runs/{run_id}", headers=headers)
+    assert second_response.status_code == 200
+    assert len(comment_calls) == 1
+    assert len(status_calls) == 1
+
+    with testing_session_local() as db:
+        row = db.scalar(select(Run).where(Run.run_id == run_id))
+        assert isinstance(row, Run)
+        assert isinstance(row.summary, dict)
+        reporting = row.summary.get("github_reporting")
+        assert isinstance(reporting, dict)
+        assert reporting.get("comment_posted") is True
+        assert reporting.get("status_set") is True
