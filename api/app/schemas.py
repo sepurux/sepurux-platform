@@ -576,6 +576,27 @@ class InternalAlertNotificationResponse(BaseModel):
     notifications: list[InternalAlertNotificationResult]
 
 
+class InternalProjectAnalyticsEntry(BaseModel):
+    project_id: UUID
+    name: str
+    runs_count: int
+    failures_count: int
+
+
+class InternalFailureTrend(BaseModel):
+    failures_last_24h: int
+    failures_previous_24h: int
+    delta_percentage: float
+    direction: Literal["up", "down", "flat"]
+
+
+class InternalAnalyticsOverview(BaseModel):
+    active_users: int
+    top_projects: list[InternalProjectAnalyticsEntry]
+    credits_used_last_30_days: int
+    failure_trend: InternalFailureTrend
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str
