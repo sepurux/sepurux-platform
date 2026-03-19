@@ -37,6 +37,12 @@ export function InternalShell({ children }: { children: ReactNode }) {
           <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">Sepurux</p>
           <p className="mt-1 text-sm font-semibold text-white">Internal Console</p>
           <p className="mt-1 text-[11px] text-neutral-500">Super admin only</p>
+          <Link
+            href="/internal/search"
+            className="mt-3 inline-flex rounded-md border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-xs text-neutral-200 hover:bg-neutral-900"
+          >
+            Global Search
+          </Link>
         </div>
 
         <nav className="space-y-1 px-3 py-3">

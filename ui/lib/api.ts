@@ -429,6 +429,47 @@ export type InternalDashboardOverview = {
   system_health: InternalSystemHealth;
 };
 
+export type InternalSearchUserResult = {
+  user_id: string;
+  email: string;
+  name: string | null;
+  created_at: string;
+};
+
+export type InternalSearchProjectResult = {
+  project_id: string;
+  tenant_id: string;
+  name: string;
+  created_at: string;
+};
+
+export type InternalSearchCampaignResult = {
+  campaign_id: string;
+  project_id: string;
+  name: string;
+  status: string;
+  created_at: string;
+};
+
+export type InternalSearchFailureResult = {
+  failure_id: string;
+  project_id: string;
+  run_id: string;
+  campaign_id: string;
+  mutation_name: string;
+  failure_type: string;
+  description: string;
+  created_at: string;
+};
+
+export type InternalSearchResults = {
+  query: string;
+  users: InternalSearchUserResult[];
+  projects: InternalSearchProjectResult[];
+  campaigns: InternalSearchCampaignResult[];
+  failures: InternalSearchFailureResult[];
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -811,6 +852,12 @@ export const api = {
     requestJson<InternalDashboardOverview>("/v1/internal/dashboard", undefined, {
       requireProjectHeader: false,
     }),
+  searchInternal: (query: string) =>
+    requestJson<InternalSearchResults>(
+      "/v1/internal/search",
+      { q: query },
+      { requireProjectHeader: false }
+    ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
