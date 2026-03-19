@@ -594,3 +594,41 @@ def test_internal_billing_rejects_non_super_admin(
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_system_overview_returns_metrics(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/system")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["api_latency_ms"] >= 0
+    assert payload["worker_status"] in {"online", "offline", "unknown"}
+    assert payload["error_rate_24h"] >= 0
+    assert payload["uptime_seconds"] >= 0
+
+
+def test_internal_system_rejects_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/system")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
