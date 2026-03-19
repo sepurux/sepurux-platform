@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GetCreditsModal } from "@/components/billing/get-credits-modal";
 import { cn } from "@/lib/utils";
+import { dispatchProjectsUpdatedEvent, upsertCachedProject } from "@/lib/project-cache";
 
 type Tab = "settings" | "billing" | "members" | "projects";
 
@@ -176,7 +177,12 @@ export function ProfileView() {
     setCreateError(null);
     try {
       const created = await api.createProject(name);
-      setProjects((prev) => [...prev, created]);
+      setProjects((prev) => {
+        const deduped = prev.filter((project) => project.project_id !== created.project_id);
+        return [created, ...deduped];
+      });
+      upsertCachedProject(created);
+      dispatchProjectsUpdatedEvent();
       setNewProjectName("");
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : "Failed to create project");

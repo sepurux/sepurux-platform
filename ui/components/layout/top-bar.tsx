@@ -12,10 +12,17 @@ import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
 import { GetCreditsModal } from "@/components/billing/get-credits-modal";
 import {
+  PROJECTS_UPDATED_EVENT,
+  cacheProjects,
+  getCachedProjects,
+  mergeProjects,
+} from "@/lib/project-cache";
+import {
   clearStoredApiBaseUrl,
   clearStoredApiKey,
   clearStoredProjectId,
   getStoredProjectId,
+  setStoredApiKey,
   setStoredProjectId,
 } from "@/lib/tenant-settings";
 import { cn } from "@/lib/utils";
@@ -45,45 +52,109 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
+  const [projectSwitching, setProjectSwitching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadProjects() {
-      if (authSession?.project_scoped) {
-        setProjects([]);
-        setProjectsError(null);
-        setSelectedProjectId(authSession.project_id);
-        setStoredProjectId(authSession.project_id);
-        return;
-      }
+      const cached = getCachedProjects().filter(
+        (project) => !authSession?.tenant_id || project.tenant_id === authSession.tenant_id
+      );
+      const sessionProject =
+        authSession?.project_id && authSession.tenant_id
+          ? [
+              {
+                project_id: authSession.project_id,
+                tenant_id: authSession.tenant_id,
+                name: authSession.project_name ?? "Workspace",
+                created_at: new Date(0).toISOString(),
+              } satisfies ProjectMetadata,
+            ]
+          : [];
 
       try {
         const records = await api.listProjects();
         if (cancelled) return;
-        setProjects(records);
+        const merged = mergeProjects(records, [...sessionProject, ...cached]);
+        setProjects(merged);
+        cacheProjects(merged);
         setProjectsError(null);
 
         const stored = getStoredProjectId();
-        const fallback = records[0]?.project_id ?? "";
-        const next = records.some((project) => project.project_id == stored) ? (stored ?? "") : fallback;
+        const fallback =
+          merged.find((project) => project.project_id === authSession?.project_id)?.project_id ??
+          merged[0]?.project_id ??
+          "";
+        const next = merged.some((project) => project.project_id === stored) ? (stored ?? "") : fallback;
         setSelectedProjectId(next);
         if (next) setStoredProjectId(next);
       } catch (error) {
         if (cancelled) return;
-        setProjectsError(error instanceof Error ? error.message : "Failed to load projects");
+        const fallbackProjects = mergeProjects(sessionProject, cached);
+        setProjects(fallbackProjects);
+        if (!fallbackProjects.length) {
+          setProjectsError(error instanceof Error ? error.message : "Failed to load projects");
+          return;
+        }
+        const stored = getStoredProjectId();
+        const fallback =
+          fallbackProjects.find((project) => project.project_id === authSession?.project_id)?.project_id ??
+          fallbackProjects[0]?.project_id ??
+          "";
+        const next =
+          fallbackProjects.some((project) => project.project_id === stored) ? (stored ?? "") : fallback;
+        setSelectedProjectId(next);
+        if (next) setStoredProjectId(next);
       }
     }
 
     void loadProjects();
-    return () => { cancelled = true; };
-  }, [authSession?.project_id, authSession?.project_scoped]);
+    const onProjectsUpdated = () => {
+      void loadProjects();
+    };
+    window.addEventListener(PROJECTS_UPDATED_EVENT, onProjectsUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(PROJECTS_UPDATED_EVENT, onProjectsUpdated);
+    };
+  }, [authSession?.project_id, authSession?.project_name, authSession?.tenant_id]);
 
-  function handleProjectChange(nextProjectId: string) {
-    if (authSession?.project_scoped) return;
+  async function handleProjectChange(nextProjectId: string) {
+    if (!nextProjectId || nextProjectId === selectedProjectId || projectSwitching) return;
     setSelectedProjectId(nextProjectId);
     setStoredProjectId(nextProjectId);
-    window.location.reload();
+    setProjectsError(null);
+
+    if (!authSession?.project_scoped) {
+      window.location.reload();
+      return;
+    }
+
+    if (!(authSession?.permissions.can_manage_workspace ?? false)) {
+      setProjectsError("This session cannot switch workspaces");
+      return;
+    }
+
+    setProjectSwitching(true);
+    try {
+      const switchedKey = await api.createApiKey({
+        name: `workspace-switch-${Date.now()}`,
+        project_id: nextProjectId,
+        rate_limit_per_minute: 240,
+      });
+      setStoredApiKey(switchedKey.api_key);
+      window.location.reload();
+    } catch (error) {
+      setProjectsError(error instanceof Error ? error.message : "Failed to switch workspace");
+      const fallbackProjectId = authSession?.project_id ?? "";
+      setSelectedProjectId(fallbackProjectId);
+      if (fallbackProjectId) {
+        setStoredProjectId(fallbackProjectId);
+      }
+    } finally {
+      setProjectSwitching(false);
+    }
   }
 
   function handleSignOut() {
@@ -100,8 +171,8 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   );
   const userInitials = initialsForSession(authSession);
   const userLabel = authSession?.name || authSession?.email || "Workspace User";
-  const showProjectSelector = !authSession?.project_scoped;
   const canManageWorkspace = authSession?.permissions.can_manage_workspace ?? false;
+  const showProjectSelector = !authSession?.project_scoped || canManageWorkspace;
   const creditBalance = authSession?.credits_balance;
 
   return (
@@ -183,13 +254,16 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               <select
                 className="w-full truncate bg-transparent text-sm text-foreground outline-none"
                 value={selectedProjectId}
-                onChange={(event) => handleProjectChange(event.target.value)}
-                disabled={!projects.length}
+                onChange={(event) => { void handleProjectChange(event.target.value); }}
+                disabled={!projects.length || projectSwitching}
               >
                 {!projects.length ? (
                   <option value="">
                     {projectsError ? "Unavailable" : "Loading..."}
                   </option>
+                ) : null}
+                {projectSwitching ? (
+                  <option value={selectedProjectId}>Switching...</option>
                 ) : null}
                 {projects.map((project) => (
                   <option key={project.project_id} value={project.project_id}>
