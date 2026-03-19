@@ -27,10 +27,12 @@ from sqlalchemy.orm import Session
 ROLE_ADMIN_ID = UUID("10000000-0000-0000-0000-000000000001")
 ROLE_DEVELOPER_ID = UUID("10000000-0000-0000-0000-000000000002")
 ROLE_VIEWER_ID = UUID("10000000-0000-0000-0000-000000000003")
+ROLE_SUPER_ADMIN_ID = UUID("10000000-0000-0000-0000-000000000004")
 ROLE_IDS: dict[str, UUID] = {
     "admin": ROLE_ADMIN_ID,
     "developer": ROLE_DEVELOPER_ID,
     "viewer": ROLE_VIEWER_ID,
+    "super_admin": ROLE_SUPER_ADMIN_ID,
 }
 
 SESSION_KEY_NAME_PREFIX = "web-session:"
@@ -208,7 +210,7 @@ def _issue_session(
     *,
     user: User,
     project: Project,
-    role_name: Literal["admin", "developer", "viewer"] | str,
+    role_name: Literal["admin", "developer", "viewer", "super_admin"] | str,
     is_demo: bool,
 ) -> dict[str, object]:
     api_key_name = f"{SESSION_KEY_NAME_PREFIX}{uuid4().hex[:12]}"
@@ -317,7 +319,9 @@ def bootstrap_workspace_for_user(
     return project
 
 
-def _get_or_create_role(db: Session, name: Literal["admin", "developer", "viewer"]) -> Role:
+def _get_or_create_role(
+    db: Session, name: Literal["admin", "developer", "viewer", "super_admin"]
+) -> Role:
     existing = db.scalar(select(Role).where(Role.name == name))
     if isinstance(existing, Role):
         return existing
@@ -342,9 +346,11 @@ def _default_display_name(email: str) -> str:
     return " ".join(segment.capitalize() for segment in local_part.split())
 
 
-def _normalize_role_name(value: str) -> Literal["admin", "developer", "viewer"]:
+def _normalize_role_name(value: str) -> Literal["admin", "developer", "viewer", "super_admin"]:
     if value == "admin":
         return "admin"
     if value == "developer":
         return "developer"
+    if value == "super_admin":
+        return "super_admin"
     return "viewer"

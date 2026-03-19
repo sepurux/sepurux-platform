@@ -491,6 +491,21 @@ class AuthSessionResponse(AuthSessionMetadata):
     api_key: str
 
 
+class InternalSystemHealth(BaseModel):
+    status: str
+    worker_status: str
+    queue_backlog: int
+
+
+class InternalDashboardOverview(BaseModel):
+    total_users: int
+    active_projects: int
+    running_campaigns: int
+    failures_last_24h: int
+    credits_used: int
+    system_health: InternalSystemHealth
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str
