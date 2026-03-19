@@ -1,11 +1,85 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { ApiError, api, type InternalAnalyticsOverview } from "@/lib/api";
+import {
+  ApiError,
+  api,
+  type InternalAnalyticsOverview,
+  type InternalDateCountMetric,
+  type InternalDateScoreMetric,
+  type InternalTimeSeriesMetrics,
+} from "@/lib/api";
+
+function formatDayLabel(value: string) {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function maxValue(points: InternalDateCountMetric[]) {
+  return points.reduce((max, point) => Math.max(max, point.value), 0);
+}
+
+function CountTrendList({
+  title,
+  points,
+}: {
+  title: string;
+  points: InternalDateCountMetric[];
+}) {
+  const max = Math.max(maxValue(points), 1);
+
+  return (
+    <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+      <h3 className="text-sm font-semibold text-white">{title}</h3>
+      <div className="mt-3 space-y-2">
+        {points.map((point) => (
+          <div key={`${title}-${point.date}`} className="grid grid-cols-[90px_1fr_48px] items-center gap-2">
+            <p className="text-xs text-neutral-400">{formatDayLabel(point.date)}</p>
+            <div className="h-2 overflow-hidden rounded bg-neutral-800">
+              <div
+                className="h-full bg-white/80"
+                style={{ width: `${Math.max(4, Math.round((point.value / max) * 100))}%` }}
+              />
+            </div>
+            <p className="text-right text-xs text-neutral-300">{point.value}</p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function ReliabilityTrendList({ points }: { points: InternalDateScoreMetric[] }) {
+  return (
+    <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+      <h3 className="text-sm font-semibold text-white">Reliability Trends</h3>
+      <div className="mt-3 space-y-2">
+        {points.map((point) => (
+          <div
+            key={`reliability-${point.date}`}
+            className="grid grid-cols-[90px_1fr_52px] items-center gap-2"
+          >
+            <p className="text-xs text-neutral-400">{formatDayLabel(point.date)}</p>
+            <div className="h-2 overflow-hidden rounded bg-neutral-800">
+              <div
+                className="h-full bg-emerald-300"
+                style={{ width: `${Math.max(4, Math.min(point.value, 100))}%` }}
+              />
+            </div>
+            <p className="text-right text-xs text-neutral-300">{point.value.toFixed(1)}%</p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
 
 export function InternalAnalyticsView() {
   const [data, setData] = useState<InternalAnalyticsOverview | null>(null);
+  const [timeSeries, setTimeSeries] = useState<InternalTimeSeriesMetrics | null>(null);
+  const [windowDays, setWindowDays] = useState(14);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,10 +87,15 @@ export function InternalAnalyticsView() {
     let cancelled = false;
 
     async function load() {
+      setLoading(true);
       try {
-        const payload = await api.getInternalAnalytics();
+        const [analyticsPayload, timeSeriesPayload] = await Promise.all([
+          api.getInternalAnalytics(),
+          api.getInternalAnalyticsTimeSeries(windowDays),
+        ]);
         if (cancelled) return;
-        setData(payload);
+        setData(analyticsPayload);
+        setTimeSeries(timeSeriesPayload);
         setError(null);
       } catch (requestError) {
         if (cancelled) return;
@@ -37,13 +116,32 @@ export function InternalAnalyticsView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [windowDays]);
+
+  const latestReliability = useMemo(() => {
+    if (!timeSeries || timeSeries.reliability_trends.length === 0) return null;
+    return timeSeries.reliability_trends[timeSeries.reliability_trends.length - 1]?.value ?? null;
+  }, [timeSeries]);
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-neutral-800 pb-4">
-        <h1 className="text-2xl font-semibold text-white">Analytics</h1>
-        <p className="mt-1 text-sm text-neutral-400">Internal usage and reliability analytics.</p>
+      <div className="flex flex-col gap-3 border-b border-neutral-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Analytics</h1>
+          <p className="mt-1 text-sm text-neutral-400">Internal usage and reliability analytics.</p>
+        </div>
+        <label className="text-sm text-neutral-300">
+          Window
+          <select
+            value={windowDays}
+            onChange={(event) => setWindowDays(Number(event.target.value))}
+            className="ml-2 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-white"
+          >
+            <option value={7}>7d</option>
+            <option value={14}>14d</option>
+            <option value={30}>30d</option>
+          </select>
+        </label>
       </div>
 
       {loading ? <p className="text-sm text-neutral-400">Loading analytics...</p> : null}
@@ -54,9 +152,9 @@ export function InternalAnalyticsView() {
         </div>
       ) : null}
 
-      {!loading && !error && data ? (
+      {!loading && !error && data && timeSeries ? (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Active Users</p>
               <p className="mt-2 text-3xl font-semibold text-white">{data.active_users.toLocaleString()}</p>
@@ -73,8 +171,19 @@ export function InternalAnalyticsView() {
               <p className="mt-1 text-sm text-neutral-400">
                 24h: {data.failure_trend.failures_last_24h} | Prev: {data.failure_trend.failures_previous_24h}
               </p>
-              <p className="text-sm text-neutral-400">Delta: {data.failure_trend.delta_percentage}%</p>
             </article>
+            <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Latest Reliability</p>
+              <p className="mt-2 text-3xl font-semibold text-white">
+                {latestReliability !== null ? `${latestReliability.toFixed(1)}%` : "n/a"}
+              </p>
+            </article>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <CountTrendList title="Failures Over Time" points={timeSeries.failures_over_time} />
+            <CountTrendList title="Campaigns Per Day" points={timeSeries.campaigns_per_day} />
+            <ReliabilityTrendList points={timeSeries.reliability_trends} />
           </div>
 
           <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -595,6 +595,23 @@ class InternalAnalyticsOverview(BaseModel):
     top_projects: list[InternalProjectAnalyticsEntry]
     credits_used_last_30_days: int
     failure_trend: InternalFailureTrend
+
+
+class InternalDateCountMetric(BaseModel):
+    date: date
+    value: int
+
+
+class InternalDateScoreMetric(BaseModel):
+    date: date
+    value: float
+
+
+class InternalTimeSeriesMetrics(BaseModel):
+    window_days: int
+    failures_over_time: list[InternalDateCountMetric]
+    campaigns_per_day: list[InternalDateCountMetric]
+    reliability_trends: list[InternalDateScoreMetric]
 
 
 class InternalQueueJobEntry(BaseModel):
