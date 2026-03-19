@@ -13,6 +13,7 @@ src/apis/CiApi.ts
 src/apis/CounterfactualsApi.ts
 src/apis/DemoApi.ts
 src/apis/HealthApi.ts
+src/apis/MembersApi.ts
 src/apis/MutationPacksApi.ts
 src/apis/PolicyPacksApi.ts
 src/apis/ProjectsApi.ts
@@ -63,6 +64,8 @@ src/models/LethalMutationInsight.ts
 src/models/LethalMutationTopReason.ts
 src/models/LethalMutationTopTool.ts
 src/models/LoginRequest.ts
+src/models/MemberInviteRequest.ts
+src/models/MemberMetadata.ts
 src/models/MutationCountPct.ts
 src/models/MutationPackCoverageResponse.ts
 src/models/MutationPackCreateRequest.ts

@@ -203,6 +203,38 @@ export type ProjectMetadata = {
   created_at: string;
 };
 
+export type ApiKeyMetadata = {
+  api_key_id: string;
+  tenant_id: string;
+  project_id: string | null;
+  user_id: string | null;
+  name: string;
+  is_demo: boolean;
+  rate_limit_per_minute: number;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+};
+
+export type ApiKeyCreateResponse = ApiKeyMetadata & {
+  api_key: string;
+};
+
+export type MemberMetadata = {
+  user_id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  api_key: string | null;
+  created_at: string;
+};
+
+export type MemberInviteRequest = {
+  email: string;
+  name?: string;
+  role: "developer" | "viewer";
+};
+
 export type PolicyPackMetadata = {
   policy_pack_id: string;
   project_id: string;
@@ -771,6 +803,14 @@ export const api = {
   listProjects: () => requestJson<ProjectMetadata[]>("/v1/projects", undefined, { requireProjectHeader: false }),
   createProject: (name: string) =>
     postJson<ProjectMetadata, { name: string }>("/v1/projects", { name }, { requireProjectHeader: false }),
+  createApiKey: (payload: {
+    name: string;
+    project_id?: string | null;
+    rate_limit_per_minute?: number;
+  }) => postJson<ApiKeyCreateResponse, typeof payload>("/v1/api-keys", payload),
+  listMembers: () => requestJson<MemberMetadata[]>("/v1/members"),
+  inviteMember: (payload: MemberInviteRequest) => postJson<MemberMetadata, MemberInviteRequest>("/v1/members", payload),
+  removeMember: (userId: string) => deleteRequest(`/v1/members/${userId}`),
   listTraces: (options?: { limit?: number; offset?: number }) =>
     requestJson<TraceMetadata[]>("/v1/traces", {
       limit: options?.limit ?? 50,
