@@ -16,6 +16,8 @@ from app.schemas import (
     InternalBillingTransactionEntry,
     InternalBillingWalletEntry,
     InternalDashboardOverview,
+    InternalFeatureFlags,
+    InternalFeatureFlagsUpdate,
     InternalQueueActionRequest,
     InternalQueueActionResponse,
     InternalQueueOverview,
@@ -39,6 +41,10 @@ from app.services.internal_queue_service import (
     cancel_queue_job,
     get_internal_queue_overview,
     retry_queue_job,
+)
+from app.services.internal_settings_service import (
+    get_internal_feature_flags,
+    update_internal_feature_flags,
 )
 from app.services.internal_system_service import build_internal_system_overview
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -501,6 +507,41 @@ def get_internal_system_overview(
         action="internal.system.view",
         actor=_actor_label(db, super_admin),
         entity="internal.system",
+        metadata=payload.model_dump(),
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/settings", response_model=InternalFeatureFlags)
+def get_internal_settings(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalFeatureFlags:
+    payload = get_internal_feature_flags(db)
+    create_audit_log(
+        db,
+        action="internal.settings.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.settings",
+        metadata=payload.model_dump(),
+    )
+    db.commit()
+    return payload
+
+
+@router.put("/settings", response_model=InternalFeatureFlags)
+def put_internal_settings(
+    body: InternalFeatureFlagsUpdate,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalFeatureFlags:
+    payload = update_internal_feature_flags(db, body)
+    create_audit_log(
+        db,
+        action="internal.settings.update",
+        actor=_actor_label(db, super_admin),
+        entity="internal.settings",
         metadata=payload.model_dump(),
     )
     db.commit()
