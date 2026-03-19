@@ -9,6 +9,7 @@ from app.models import AuditLog, Campaign, CreditTransaction, Failure, Project, 
 from app.schemas import (
     InternalAlertItem,
     InternalAlertNotificationResponse,
+    InternalAnalyticsOverview,
     InternalAuditLogEntry,
     InternalDashboardOverview,
     InternalSearchCampaignResult,
@@ -19,6 +20,7 @@ from app.schemas import (
     InternalSystemHealth,
 )
 from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
+from app.services.internal_analytics_service import build_internal_analytics
 from app.services.internal_audit_service import create_audit_log
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
@@ -321,6 +323,23 @@ def notify_internal_alert_channels(
             "alerts_count": len(alerts),
             "notifications": [item.model_dump() for item in notifications],
         },
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/analytics", response_model=InternalAnalyticsOverview)
+def get_internal_analytics(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalAnalyticsOverview:
+    payload = build_internal_analytics(db)
+    create_audit_log(
+        db,
+        action="internal.analytics.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.analytics",
+        metadata={},
     )
     db.commit()
     return payload

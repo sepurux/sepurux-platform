@@ -499,6 +499,27 @@ export type InternalAlertNotificationResponse = {
   notifications: InternalAlertNotificationResult[];
 };
 
+export type InternalProjectAnalyticsEntry = {
+  project_id: string;
+  name: string;
+  runs_count: number;
+  failures_count: number;
+};
+
+export type InternalFailureTrend = {
+  failures_last_24h: number;
+  failures_previous_24h: number;
+  delta_percentage: number;
+  direction: "up" | "down" | "flat";
+};
+
+export type InternalAnalyticsOverview = {
+  active_users: number;
+  top_projects: InternalProjectAnalyticsEntry[];
+  credits_used_last_30_days: number;
+  failure_trend: InternalFailureTrend;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -915,6 +936,10 @@ export const api = {
       {},
       { requireProjectHeader: false }
     ),
+  getInternalAnalytics: () =>
+    requestJson<InternalAnalyticsOverview>("/v1/internal/analytics", undefined, {
+      requireProjectHeader: false,
+    }),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),

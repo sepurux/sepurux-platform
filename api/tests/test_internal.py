@@ -414,3 +414,43 @@ def test_internal_alerts_reject_non_super_admin(
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_analytics_returns_summary(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/analytics")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["active_users"] == 1
+    assert payload["credits_used_last_30_days"] == 37
+    assert payload["failure_trend"]["failures_last_24h"] == 1
+    assert payload["failure_trend"]["direction"] in {"up", "down", "flat"}
+    assert len(payload["top_projects"]) >= 1
+    assert payload["top_projects"][0]["name"] == "Alpha Internal Control"
+
+
+def test_internal_analytics_reject_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/analytics")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
