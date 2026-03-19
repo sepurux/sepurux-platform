@@ -479,6 +479,26 @@ export type InternalAuditLogEntry = {
   created_at: string;
 };
 
+export type InternalAlertItem = {
+  alert_type: "high_failure_rate" | "campaign_failures" | "system_errors";
+  severity: "warning" | "critical";
+  message: string;
+  metric: string;
+  value: number;
+  detected_at: string;
+};
+
+export type InternalAlertNotificationResult = {
+  channel: "slack" | "email";
+  delivered: boolean;
+  detail: string | null;
+};
+
+export type InternalAlertNotificationResponse = {
+  alerts_count: number;
+  notifications: InternalAlertNotificationResult[];
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -883,6 +903,16 @@ export const api = {
         actor: options?.actor,
         entity: options?.entity,
       },
+      { requireProjectHeader: false }
+    ),
+  listInternalAlerts: () =>
+    requestJson<InternalAlertItem[]>("/v1/internal/alerts", undefined, {
+      requireProjectHeader: false,
+    }),
+  notifyInternalAlerts: () =>
+    postJson<InternalAlertNotificationResponse, Record<string, never>>(
+      "/v1/internal/alerts/notify",
+      {},
       { requireProjectHeader: false }
     ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),

@@ -7,6 +7,8 @@ from app.auth import TenantAuthContext, require_super_admin
 from app.db import get_db
 from app.models import AuditLog, Campaign, CreditTransaction, Failure, Project, Run, User
 from app.schemas import (
+    InternalAlertItem,
+    InternalAlertNotificationResponse,
     InternalAuditLogEntry,
     InternalDashboardOverview,
     InternalSearchCampaignResult,
@@ -16,6 +18,7 @@ from app.schemas import (
     InternalSearchUserResult,
     InternalSystemHealth,
 )
+from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
 from app.services.internal_audit_service import create_audit_log
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
@@ -276,6 +279,48 @@ def list_internal_audit_logs(
         actor=_actor_label(db, super_admin),
         entity="internal.audit_logs",
         metadata={"limit": limit, "offset": offset},
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/alerts", response_model=list[InternalAlertItem])
+def list_internal_alerts(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> list[InternalAlertItem]:
+    alerts = evaluate_internal_alerts(db)
+    create_audit_log(
+        db,
+        action="internal.alerts.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.alerts",
+        metadata={"alerts_count": len(alerts)},
+    )
+    db.commit()
+    return alerts
+
+
+@router.post("/alerts/notify", response_model=InternalAlertNotificationResponse)
+def notify_internal_alert_channels(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalAlertNotificationResponse:
+    alerts = evaluate_internal_alerts(db)
+    notifications = notify_internal_alerts(alerts)
+    payload = InternalAlertNotificationResponse(
+        alerts_count=len(alerts),
+        notifications=notifications,
+    )
+    create_audit_log(
+        db,
+        action="internal.alerts.notify",
+        actor=_actor_label(db, super_admin),
+        entity="internal.alerts",
+        metadata={
+            "alerts_count": len(alerts),
+            "notifications": [item.model_dump() for item in notifications],
+        },
     )
     db.commit()
     return payload
