@@ -470,6 +470,15 @@ export type InternalSearchResults = {
   failures: InternalSearchFailureResult[];
 };
 
+export type InternalAuditLogEntry = {
+  id: string;
+  action: string;
+  actor: string;
+  entity: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -856,6 +865,24 @@ export const api = {
     requestJson<InternalSearchResults>(
       "/v1/internal/search",
       { q: query },
+      { requireProjectHeader: false }
+    ),
+  listInternalAuditLogs: (options?: {
+    limit?: number;
+    offset?: number;
+    action?: string;
+    actor?: string;
+    entity?: string;
+  }) =>
+    requestJson<InternalAuditLogEntry[]>(
+      "/v1/internal/audit-logs",
+      {
+        limit: clampLimit(options?.limit, 50),
+        offset: options?.offset ?? 0,
+        action: options?.action,
+        actor: options?.actor,
+        entity: options?.entity,
+      },
       { requireProjectHeader: false }
     ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),

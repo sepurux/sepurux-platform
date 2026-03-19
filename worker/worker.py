@@ -17,6 +17,7 @@ from db import get_session
 from failure_classifier import FailureClassificationInput, classify_attempt_failure
 from models import (
     AuditEvent,
+    AuditLog,
     Campaign,
     Counterfactual,
     CreditTransaction,
@@ -101,6 +102,16 @@ def _record_run_completed_audit_event(db: Session, *, run: Run) -> AuditEvent:
         created_at=created_at,
     )
     db.add(record)
+    db.add(
+        AuditLog(
+            id=uuid4(),
+            action="system.run.completed",
+            actor="system",
+            entity=f"run:{run.run_id}",
+            audit_metadata=metadata,
+            created_at=created_at,
+        )
+    )
     db.flush()
     return record
 
