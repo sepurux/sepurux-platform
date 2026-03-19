@@ -415,6 +415,10 @@ export type AuthSessionResponse = AuthSessionMetadata & {
   api_key: string;
 };
 
+export type OperationMessageResponse = {
+  message: string;
+};
+
 export type InternalSystemHealth = {
   status: string;
   worker_status: string;
@@ -970,6 +974,21 @@ export const api = {
   login: (payload: { email: string; password: string }, options?: { baseUrl?: string }) =>
     postJson<AuthSessionResponse, typeof payload>(
       "/auth/login",
+      payload,
+      { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
+    ),
+  requestPasswordReset: (payload: { email: string }, options?: { baseUrl?: string }) =>
+    postJson<OperationMessageResponse, typeof payload>(
+      "/auth/forgot-password",
+      payload,
+      { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
+    ),
+  resetPassword: (
+    payload: { token: string; password: string },
+    options?: { baseUrl?: string }
+  ) =>
+    postJson<OperationMessageResponse, typeof payload>(
+      "/auth/reset-password",
       payload,
       { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
     ),

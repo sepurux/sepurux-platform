@@ -263,6 +263,8 @@ export function AccessPortal() {
   const [signupProjectName, setSignupProjectName] = useState("");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const [demoInfo, setDemoInfo] = useState<DemoInfoResponse | null>(null);
   const [loadingDemo, setLoadingDemo] = useState(false);
   const [submittingAccess, setSubmittingAccess] = useState(false);
@@ -402,12 +404,14 @@ export function AccessPortal() {
     const nextIntent = nextMode === "access" ? intent : "signup";
     setMode(nextMode);
     setErrorMessage(null);
+    setForgotMessage(null);
     updateQuery(nextMode, nextIntent);
   }
 
   function handleIntentSwitch(nextIntent: AccessIntent) {
     setIntent(nextIntent);
     setErrorMessage(null);
+    setForgotMessage(null);
     updateQuery("access", nextIntent);
   }
 
@@ -441,6 +445,7 @@ export function AccessPortal() {
     if (submittingAccess) return;
     setSubmittingAccess(true);
     setErrorMessage(null);
+    setForgotMessage(null);
     try {
       const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
       const session = await api.login(
@@ -453,6 +458,25 @@ export function AccessPortal() {
       setErrorMessage(error instanceof Error ? error.message : "Unable to log in");
     } finally {
       setSubmittingAccess(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    const email = loginEmail.trim();
+    if (!email || forgotBusy || submittingAccess) {
+      return;
+    }
+    setForgotBusy(true);
+    setErrorMessage(null);
+    setForgotMessage(null);
+    try {
+      const resolvedBase = resolveBaseForBrowser(apiBaseUrl);
+      const response = await api.requestPasswordReset({ email }, { baseUrl: resolvedBase });
+      setForgotMessage(response.message);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to process password reset");
+    } finally {
+      setForgotBusy(false);
     }
   }
 
@@ -772,6 +796,18 @@ export function AccessPortal() {
                         required
                       />
                     </label>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleForgotPassword();
+                        }}
+                        disabled={forgotBusy || submittingAccess || !loginEmail.trim()}
+                        className="text-xs font-medium text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {forgotBusy ? "Sending reset link..." : "Forgot password?"}
+                      </button>
+                    </div>
                   </div>
 
                   <TealButton type="submit" disabled={submittingAccess || oauthPending}>
@@ -781,6 +817,9 @@ export function AccessPortal() {
                       <><LogIn className="h-4 w-4" /> Log in to dashboard</>
                     )}
                   </TealButton>
+                  {forgotMessage ? (
+                    <p className="text-xs text-primary">{forgotMessage}</p>
+                  ) : null}
                 </form>
               )}
 

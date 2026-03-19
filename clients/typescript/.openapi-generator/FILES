@@ -55,6 +55,7 @@ src/models/DemoInfoResponse.ts
 src/models/DemoLimits.ts
 src/models/DemoSessionResponse.ts
 src/models/EventIndexCount.ts
+src/models/ForgotPasswordRequest.ts
 src/models/HTTPValidationError.ts
 src/models/HardeningTemplateCreateRequest.ts
 src/models/HardeningTemplateMetadata.ts
@@ -77,6 +78,7 @@ src/models/MutationSummaryResponse.ts
 src/models/MutationSummaryTopReason.ts
 src/models/MutationSummaryTopTool.ts
 src/models/OAuthSessionExchangeRequest.ts
+src/models/OperationMessageResponse.ts
 src/models/PolicyEventListItem.ts
 src/models/PolicyPackCreateRequest.ts
 src/models/PolicyPackMetadata.ts
@@ -89,6 +91,7 @@ src/models/ProjectReliabilitySummaryResponse.ts
 src/models/ReasonCountPct.ts
 src/models/ReplayAttemptDetail.ts
 src/models/ReplayAttemptListItem.ts
+src/models/ResetPasswordRequest.ts
 src/models/RunAttemptsSummary.ts
 src/models/RunCreateRequest.ts
 src/models/RunInsight.ts

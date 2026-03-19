@@ -17,9 +17,12 @@ import * as runtime from '../runtime';
 import type {
   AuthSessionMetadata,
   AuthSessionResponse,
+  ForgotPasswordRequest,
   HTTPValidationError,
   LoginRequest,
   OAuthSessionExchangeRequest,
+  OperationMessageResponse,
+  ResetPasswordRequest,
   SignupRequest,
 } from '../models/index';
 import {
@@ -27,12 +30,18 @@ import {
     AuthSessionMetadataToJSON,
     AuthSessionResponseFromJSON,
     AuthSessionResponseToJSON,
+    ForgotPasswordRequestFromJSON,
+    ForgotPasswordRequestToJSON,
     HTTPValidationErrorFromJSON,
     HTTPValidationErrorToJSON,
     LoginRequestFromJSON,
     LoginRequestToJSON,
     OAuthSessionExchangeRequestFromJSON,
     OAuthSessionExchangeRequestToJSON,
+    OperationMessageResponseFromJSON,
+    OperationMessageResponseToJSON,
+    ResetPasswordRequestFromJSON,
+    ResetPasswordRequestToJSON,
     SignupRequestFromJSON,
     SignupRequestToJSON,
 } from '../models/index';
@@ -53,12 +62,20 @@ export interface GetOauthStartAuthOauthProviderStartGetRequest {
     next?: string | null;
 }
 
+export interface PostForgotPasswordAuthForgotPasswordPostRequest {
+    forgotPasswordRequest: ForgotPasswordRequest;
+}
+
 export interface PostLoginAuthLoginPostRequest {
     loginRequest: LoginRequest;
 }
 
 export interface PostOauthExchangeAuthOauthExchangePostRequest {
     oAuthSessionExchangeRequest: OAuthSessionExchangeRequest;
+}
+
+export interface PostResetPasswordAuthResetPasswordPostRequest {
+    resetPasswordRequest: ResetPasswordRequest;
 }
 
 export interface PostSignupAuthSignupPostRequest {
@@ -191,6 +208,42 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
+     * Post Forgot Password
+     */
+    async postForgotPasswordAuthForgotPasswordPostRaw(requestParameters: PostForgotPasswordAuthForgotPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OperationMessageResponse>> {
+        if (requestParameters['forgotPasswordRequest'] == null) {
+            throw new runtime.RequiredError(
+                'forgotPasswordRequest',
+                'Required parameter "forgotPasswordRequest" was null or undefined when calling postForgotPasswordAuthForgotPasswordPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/auth/forgot-password`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ForgotPasswordRequestToJSON(requestParameters['forgotPasswordRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OperationMessageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Post Forgot Password
+     */
+    async postForgotPasswordAuthForgotPasswordPost(requestParameters: PostForgotPasswordAuthForgotPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OperationMessageResponse> {
+        const response = await this.postForgotPasswordAuthForgotPasswordPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Post Login
      */
     async postLoginAuthLoginPostRaw(requestParameters: PostLoginAuthLoginPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthSessionResponse>> {
@@ -259,6 +312,42 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async postOauthExchangeAuthOauthExchangePost(requestParameters: PostOauthExchangeAuthOauthExchangePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthSessionResponse> {
         const response = await this.postOauthExchangeAuthOauthExchangePostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Post Reset Password
+     */
+    async postResetPasswordAuthResetPasswordPostRaw(requestParameters: PostResetPasswordAuthResetPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OperationMessageResponse>> {
+        if (requestParameters['resetPasswordRequest'] == null) {
+            throw new runtime.RequiredError(
+                'resetPasswordRequest',
+                'Required parameter "resetPasswordRequest" was null or undefined when calling postResetPasswordAuthResetPasswordPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/auth/reset-password`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ResetPasswordRequestToJSON(requestParameters['resetPasswordRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OperationMessageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Post Reset Password
+     */
+    async postResetPasswordAuthResetPasswordPost(requestParameters: PostResetPasswordAuthResetPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OperationMessageResponse> {
+        const response = await this.postResetPasswordAuthResetPasswordPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

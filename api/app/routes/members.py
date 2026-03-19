@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -12,15 +13,17 @@ from app.auth import (
     require_role,
 )
 from app.db import get_db
-from app.models import ApiKey, ProjectMembership, User
+from app.models import ApiKey, Project, ProjectMembership, User
 from app.schemas import MemberInviteRequest, MemberMetadata
-from app.services.auth_service import ROLE_IDS, _get_or_create_role
+from app.services.auth_service import ROLE_IDS, _get_or_create_role, normalize_email
 from app.services.billing_service import get_billing_snapshot_for_context
+from app.services.user_notification_service import send_member_invite_email
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/members", tags=["members"])
+logger = logging.getLogger(__name__)
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
@@ -69,6 +72,7 @@ def invite_member(
     project_scope: ProjectScopeDep,
     tenant_auth: AdminAuth,
 ) -> MemberMetadata:
+    normalized_email = normalize_email(payload.email)
     billing_snapshot = get_billing_snapshot_for_context(
         db,
         tenant_auth=tenant_auth,
@@ -85,7 +89,7 @@ def invite_member(
         )
 
     # Check email not already a member
-    existing_user = db.scalar(select(User).where(User.email == payload.email))
+    existing_user = db.scalar(select(User).where(User.email == normalized_email))
     if isinstance(existing_user, User):
         existing_membership = db.scalar(
             select(ProjectMembership).where(
@@ -100,7 +104,7 @@ def invite_member(
             )
         user = existing_user
     else:
-        user = User(user_id=uuid4(), email=payload.email, name=payload.name)
+        user = User(user_id=uuid4(), email=normalized_email, name=payload.name)
         db.add(user)
         db.flush()
 
@@ -119,11 +123,32 @@ def invite_member(
         tenant_id=tenant_auth.tenant_id,
         project_id=project_scope.project_id,
         user_id=user.user_id,
-        name=f"Invite key for {payload.email}",
+        name=f"Invite key for {normalized_email}",
         key_hash=hash_api_key(plaintext),
     )
     db.add(api_key_record)
+
+    project = db.scalar(select(Project).where(Project.project_id == project_scope.project_id))
+    project_name = project.name if isinstance(project, Project) else str(project_scope.project_id)
+    inviter_label = "Sepurux teammate"
+    if tenant_auth.user_id is not None:
+        inviter_user = db.scalar(select(User).where(User.user_id == tenant_auth.user_id))
+        if isinstance(inviter_user, User):
+            inviter_label = inviter_user.email
+
     db.commit()
+
+    try:
+        send_member_invite_email(
+            to_email=normalized_email,
+            recipient_name=user.name,
+            inviter_label=inviter_label,
+            project_name=project_name,
+            project_id=project_scope.project_id,
+            role=payload.role,
+        )
+    except Exception:
+        logger.exception("Failed to send member invite email to %s", normalized_email)
 
     return _to_member_metadata(user, role.role_id, api_key=plaintext)
 

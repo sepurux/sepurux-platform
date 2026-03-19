@@ -65,6 +65,7 @@ docs/DemoInfoResponse.md
 docs/DemoLimits.md
 docs/DemoSessionResponse.md
 docs/EventIndexCount.md
+docs/ForgotPasswordRequest.md
 docs/HTTPValidationError.md
 docs/HardeningTemplateCreateRequest.md
 docs/HardeningTemplateMetadata.md
@@ -90,6 +91,7 @@ docs/MutationSummaryResponse.md
 docs/MutationSummaryTopReason.md
 docs/MutationSummaryTopTool.md
 docs/OAuthSessionExchangeRequest.md
+docs/OperationMessageResponse.md
 docs/PolicyEventListItem.md
 docs/PolicyPackCreateRequest.md
 docs/PolicyPackMetadata.md
@@ -104,6 +106,7 @@ docs/ProjectsAPI.md
 docs/ReasonCountPct.md
 docs/ReplayAttemptDetail.md
 docs/ReplayAttemptListItem.md
+docs/ResetPasswordRequest.md
 docs/RunAttemptsSummary.md
 docs/RunCreateRequest.md
 docs/RunInsight.md
@@ -176,6 +179,7 @@ model_demo_info_response.go
 model_demo_limits.go
 model_demo_session_response.go
 model_event_index_count.go
+model_forgot_password_request.go
 model_hardening_template_create_request.go
 model_hardening_template_metadata.go
 model_http_validation_error.go
@@ -198,6 +202,7 @@ model_mutation_summary_response.go
 model_mutation_summary_top_reason.go
 model_mutation_summary_top_tool.go
 model_o_auth_session_exchange_request.go
+model_operation_message_response.go
 model_policy_event_list_item.go
 model_policy_pack_create_request.go
 model_policy_pack_metadata.go
@@ -210,6 +215,7 @@ model_project_reliability_summary_response.go
 model_reason_count_pct.go
 model_replay_attempt_detail.go
 model_replay_attempt_list_item.go
+model_reset_password_request.go
 model_run_attempts_summary.go
 model_run_create_request.go
 model_run_insight.go

@@ -484,6 +484,19 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=8, max_length=256)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+    password: str = Field(min_length=8, max_length=256)
+
+
+class OperationMessageResponse(BaseModel):
+    message: str
+
+
 class OAuthSessionExchangeRequest(BaseModel):
     token: str = Field(min_length=1, max_length=512)
 
