@@ -12,6 +12,9 @@ from app.schemas import (
     InternalAnalyticsOverview,
     InternalAuditLogEntry,
     InternalDashboardOverview,
+    InternalQueueActionRequest,
+    InternalQueueActionResponse,
+    InternalQueueOverview,
     InternalSearchCampaignResult,
     InternalSearchFailureResult,
     InternalSearchProjectResult,
@@ -22,6 +25,11 @@ from app.schemas import (
 from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
 from app.services.internal_analytics_service import build_internal_analytics
 from app.services.internal_audit_service import create_audit_log
+from app.services.internal_queue_service import (
+    cancel_queue_job,
+    get_internal_queue_overview,
+    retry_queue_job,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -343,3 +351,60 @@ def get_internal_analytics(
     )
     db.commit()
     return payload
+
+
+@router.get("/queues", response_model=InternalQueueOverview)
+def get_internal_queues(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalQueueOverview:
+    payload = get_internal_queue_overview()
+    create_audit_log(
+        db,
+        action="internal.queues.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.queues",
+        metadata={
+            "jobs_running": payload.jobs_running,
+            "jobs_failed": payload.jobs_failed,
+            "queue_backlog": payload.queue_backlog,
+        },
+    )
+    db.commit()
+    return payload
+
+
+@router.post("/queues/retry", response_model=InternalQueueActionResponse)
+def post_internal_queue_retry(
+    payload: InternalQueueActionRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalQueueActionResponse:
+    result = retry_queue_job(payload.job_id)
+    create_audit_log(
+        db,
+        action="internal.queues.retry",
+        actor=_actor_label(db, super_admin),
+        entity=f"queue-job:{payload.job_id}",
+        metadata=result.model_dump(),
+    )
+    db.commit()
+    return result
+
+
+@router.post("/queues/cancel", response_model=InternalQueueActionResponse)
+def post_internal_queue_cancel(
+    payload: InternalQueueActionRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalQueueActionResponse:
+    result = cancel_queue_job(payload.job_id)
+    create_audit_log(
+        db,
+        action="internal.queues.cancel",
+        actor=_actor_label(db, super_admin),
+        entity=f"queue-job:{payload.job_id}",
+        metadata=result.model_dump(),
+    )
+    db.commit()
+    return result

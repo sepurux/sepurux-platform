@@ -597,6 +597,36 @@ class InternalAnalyticsOverview(BaseModel):
     failure_trend: InternalFailureTrend
 
 
+class InternalQueueJobEntry(BaseModel):
+    job_id: str
+    status: str
+    queue: str
+    description: str | None = None
+    enqueued_at: datetime | None = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+
+
+class InternalQueueOverview(BaseModel):
+    jobs_running: int
+    jobs_failed: int
+    queue_backlog: int
+    worker_status: Literal["online", "offline", "unknown"]
+    running_jobs: list[InternalQueueJobEntry]
+    failed_jobs: list[InternalQueueJobEntry]
+
+
+class InternalQueueActionRequest(BaseModel):
+    job_id: str
+
+
+class InternalQueueActionResponse(BaseModel):
+    job_id: str
+    action: Literal["retry", "cancel"]
+    success: bool
+    detail: str | None = None
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str
