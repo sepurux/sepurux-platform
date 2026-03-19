@@ -556,6 +556,26 @@ class InternalAuditLogEntry(BaseModel):
     created_at: datetime
 
 
+class InternalAlertItem(BaseModel):
+    alert_type: Literal["high_failure_rate", "campaign_failures", "system_errors"]
+    severity: Literal["warning", "critical"]
+    message: str
+    metric: str
+    value: float
+    detected_at: datetime
+
+
+class InternalAlertNotificationResult(BaseModel):
+    channel: Literal["slack", "email"]
+    delivered: bool
+    detail: str | None = None
+
+
+class InternalAlertNotificationResponse(BaseModel):
+    alerts_count: int
+    notifications: list[InternalAlertNotificationResult]
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str

@@ -74,6 +74,7 @@ def _seed_internal_fixture(db: Session) -> dict[str, str]:
     trace_id = uuid4()
     campaign_id = uuid4()
     run_id = uuid4()
+    failed_run_id = uuid4()
 
     super_api_key_plaintext = "cl_super_admin_test"
     admin_api_key_plaintext = "cl_admin_test"
@@ -136,6 +137,15 @@ def _seed_internal_fixture(db: Session) -> dict[str, str]:
                 trace_id=trace_id,
                 campaign_id=campaign_id,
                 status="running",
+                summary={},
+                created_at=now,
+            ),
+            Run(
+                run_id=failed_run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="failed",
                 summary={},
                 created_at=now,
             ),
@@ -343,6 +353,64 @@ def test_internal_audit_logs_reject_non_super_admin(
         auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
     )
     response = client.get("/v1/internal/audit-logs")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_alerts_list_returns_expected_alert_types(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/alerts")
+
+    assert response.status_code == 200
+    payload = response.json()
+    alert_types = {item["alert_type"] for item in payload}
+    assert "high_failure_rate" in alert_types
+    assert "campaign_failures" in alert_types
+    assert "system_errors" in alert_types
+
+
+def test_internal_alert_notify_returns_channel_results(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.post("/v1/internal/alerts/notify")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["alerts_count"] >= 1
+    channels = {item["channel"] for item in payload["notifications"]}
+    assert channels == {"slack", "email"}
+
+
+def test_internal_alerts_reject_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/alerts")
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Super admin access required"}
