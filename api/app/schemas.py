@@ -506,6 +506,47 @@ class InternalDashboardOverview(BaseModel):
     system_health: InternalSystemHealth
 
 
+class InternalSearchUserResult(BaseModel):
+    user_id: UUID
+    email: str
+    name: str | None = None
+    created_at: datetime
+
+
+class InternalSearchProjectResult(BaseModel):
+    project_id: UUID
+    tenant_id: UUID
+    name: str
+    created_at: datetime
+
+
+class InternalSearchCampaignResult(BaseModel):
+    campaign_id: UUID
+    project_id: UUID
+    name: str
+    status: str
+    created_at: datetime
+
+
+class InternalSearchFailureResult(BaseModel):
+    failure_id: UUID
+    project_id: UUID
+    run_id: UUID
+    campaign_id: UUID
+    mutation_name: str
+    failure_type: str
+    description: str
+    created_at: datetime
+
+
+class InternalSearchResults(BaseModel):
+    query: str
+    users: list[InternalSearchUserResult]
+    projects: list[InternalSearchProjectResult]
+    campaigns: list[InternalSearchCampaignResult]
+    failures: list[InternalSearchFailureResult]
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str
