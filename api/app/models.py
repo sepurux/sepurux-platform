@@ -341,6 +341,21 @@ class AuditLog(Base):
     )
 
 
+class InternalFeatureFlag(Base):
+    __tablename__ = "internal_feature_flags"
+
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=true()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class Webhook(Base):
     __tablename__ = "webhooks"
 

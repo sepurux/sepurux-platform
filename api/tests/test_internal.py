@@ -632,3 +632,75 @@ def test_internal_system_rejects_non_super_admin(
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_settings_get_and_update(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    get_response = client.get("/v1/internal/settings")
+    assert get_response.status_code == 200
+    assert get_response.json() == {
+        "enable_ci": True,
+        "enable_mutations": True,
+        "enable_billing": True,
+    }
+
+    update_response = client.put(
+        "/v1/internal/settings",
+        json={
+            "enable_ci": False,
+            "enable_mutations": True,
+            "enable_billing": False,
+        },
+    )
+    assert update_response.status_code == 200
+    assert update_response.json() == {
+        "enable_ci": False,
+        "enable_mutations": True,
+        "enable_billing": False,
+    }
+
+    verify_response = client.get("/v1/internal/settings")
+    assert verify_response.status_code == 200
+    assert verify_response.json() == {
+        "enable_ci": False,
+        "enable_mutations": True,
+        "enable_billing": False,
+    }
+
+
+def test_internal_settings_reject_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+
+    get_response = client.get("/v1/internal/settings")
+    assert get_response.status_code == 403
+    assert get_response.json() == {"detail": "Super admin access required"}
+
+    update_response = client.put(
+        "/v1/internal/settings",
+        json={
+            "enable_ci": False,
+            "enable_mutations": False,
+            "enable_billing": False,
+        },
+    )
+    assert update_response.status_code == 403
+    assert update_response.json() == {"detail": "Super admin access required"}

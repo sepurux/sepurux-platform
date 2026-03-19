@@ -676,6 +676,18 @@ class InternalSystemOverview(BaseModel):
     uptime_seconds: int
 
 
+class InternalFeatureFlags(BaseModel):
+    enable_ci: bool
+    enable_mutations: bool
+    enable_billing: bool
+
+
+class InternalFeatureFlagsUpdate(BaseModel):
+    enable_ci: bool
+    enable_mutations: bool
+    enable_billing: bool
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str
