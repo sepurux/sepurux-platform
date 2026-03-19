@@ -87,16 +87,16 @@ export function InternalSettingsView() {
 
   return (
     <section className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-neutral-800 pb-4">
-        <h1 className="text-2xl font-semibold text-white">Settings</h1>
-        <p className="mt-1 text-sm text-neutral-400">
+      <div className="border-b border-border/70 pb-4">
+        <h1 className="text-2xl font-semibold text-primary">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Global internal feature flags for Sepurux platform controls.
         </p>
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-          <p className="text-sm text-neutral-300">Loading settings...</p>
+        <div className="rounded-lg border border-border/70 bg-card/70 p-4">
+          <p className="text-sm text-muted-foreground">Loading settings...</p>
         </div>
       ) : null}
 
@@ -107,15 +107,15 @@ export function InternalSettingsView() {
       ) : null}
 
       {!loading && !error && flags ? (
-        <div className="space-y-4 rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+        <div className="space-y-4 rounded-lg border border-border/70 bg-card/70 p-4">
           {toggleRows.map((item) => (
             <label
               key={item.key}
-              className="flex items-start justify-between gap-3 rounded-md border border-neutral-800 bg-black/40 px-3 py-3"
+              className="flex items-start justify-between gap-3 rounded-md border border-border/70 bg-background/40 px-3 py-3"
             >
               <div>
-                <p className="text-sm font-semibold text-white">{item.label}</p>
-                <p className="text-xs text-neutral-400">{item.description}</p>
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground">{item.description}</p>
               </div>
               <input
                 type="checkbox"
@@ -130,7 +130,7 @@ export function InternalSettingsView() {
                       : current
                   )
                 }
-                className="mt-1 h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-white focus:ring-neutral-500"
+                className="mt-1 h-4 w-4 rounded border-border/70 bg-card accent-primary focus:ring-primary"
               />
             </label>
           ))}
@@ -140,11 +140,11 @@ export function InternalSettingsView() {
               type="button"
               onClick={saveFlags}
               disabled={saving}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? "Saving..." : "Save settings"}
             </button>
-            {status ? <p className="text-sm text-emerald-300">{status}</p> : null}
+            {status ? <p className="text-sm text-primary">{status}</p> : null}
           </div>
         </div>
       ) : null}

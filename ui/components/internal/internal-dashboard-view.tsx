@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { ApiError, api, type InternalDashboardOverview } from "@/lib/api";
 
-const cardBase = "rounded-lg border border-neutral-800 bg-neutral-950 p-4";
+const cardBase = "rounded-lg border border-border/70 bg-card/70 p-4";
 
 export function InternalDashboardView() {
   const [data, setData] = useState<InternalDashboardOverview | null>(null);
@@ -43,14 +43,14 @@ export function InternalDashboardView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-neutral-800 pb-4">
-        <h1 className="text-2xl font-semibold text-white">Internal Overview</h1>
-        <p className="mt-1 text-sm text-neutral-400">Operational telemetry for the Sepurux core team.</p>
+      <div className="border-b border-border/70 pb-4">
+        <h1 className="text-2xl font-semibold text-primary">Internal Overview</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Operational telemetry for the Sepurux core team.</p>
       </div>
 
       {loading ? (
         <div className={cardBase}>
-          <p className="text-sm text-neutral-300">Loading internal metrics...</p>
+          <p className="text-sm text-muted-foreground">Loading internal metrics...</p>
         </div>
       ) : null}
 
@@ -63,30 +63,30 @@ export function InternalDashboardView() {
       {!loading && !error && data ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <article className={cardBase}>
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Total Users</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.total_users.toLocaleString()}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Total Users</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.total_users.toLocaleString()}</p>
           </article>
           <article className={cardBase}>
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Active Projects</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.active_projects.toLocaleString()}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Active Projects</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.active_projects.toLocaleString()}</p>
           </article>
           <article className={cardBase}>
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Running Campaigns</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.running_campaigns.toLocaleString()}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Running Campaigns</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.running_campaigns.toLocaleString()}</p>
           </article>
           <article className={cardBase}>
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Failures (24h)</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.failures_last_24h.toLocaleString()}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Failures (24h)</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.failures_last_24h.toLocaleString()}</p>
           </article>
           <article className={cardBase}>
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Credits Used</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.credits_used.toLocaleString()}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Credits Used</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.credits_used.toLocaleString()}</p>
           </article>
           <article className={cardBase}>
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">System Health</p>
-            <p className="mt-2 text-2xl font-semibold text-white capitalize">{data.system_health.status}</p>
-            <p className="mt-1 text-sm text-neutral-400">Workers: {data.system_health.worker_status}</p>
-            <p className="text-sm text-neutral-400">Queue backlog: {data.system_health.queue_backlog}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">System Health</p>
+            <p className="mt-2 text-2xl font-semibold text-primary capitalize">{data.system_health.status}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Workers: {data.system_health.worker_status}</p>
+            <p className="text-sm text-muted-foreground">Queue backlog: {data.system_health.queue_backlog}</p>
           </article>
         </div>
       ) : null}

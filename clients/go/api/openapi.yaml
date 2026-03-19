@@ -3129,6 +3129,7 @@ components:
       example:
         tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         credits_balance: 0
+        is_super_admin: false
         is_low_credit: false
         project_name: project_name
         is_demo: false
@@ -3198,6 +3199,10 @@ components:
           default: false
           title: Is Demo
           type: boolean
+        is_super_admin:
+          default: false
+          title: Is Super Admin
+          type: boolean
         billing_plan_name:
           nullable: true
           type: string
@@ -3237,6 +3242,7 @@ components:
       example:
         tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         credits_balance: 0
+        is_super_admin: false
         is_low_credit: false
         project_name: project_name
         is_demo: false
@@ -3306,6 +3312,10 @@ components:
         is_demo:
           default: false
           title: Is Demo
+          type: boolean
+        is_super_admin:
+          default: false
+          title: Is Super Admin
           type: boolean
         billing_plan_name:
           nullable: true

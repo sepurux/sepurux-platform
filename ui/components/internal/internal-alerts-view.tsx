@@ -66,10 +66,10 @@ export function InternalAlertsView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-neutral-800 pb-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/70 pb-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Alerts</h1>
-          <p className="mt-1 text-sm text-neutral-400">High failure rate, campaign failures, and system errors.</p>
+          <h1 className="text-2xl font-semibold text-primary">Alerts</h1>
+          <p className="mt-1 text-sm text-muted-foreground">High failure rate, campaign failures, and system errors.</p>
         </div>
         <button
           type="button"
@@ -77,13 +77,13 @@ export function InternalAlertsView() {
             void handleNotify();
           }}
           disabled={notifying}
-          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {notifying ? "Dispatching..." : "Send Slack + Email"}
         </button>
       </div>
 
-      {loading ? <p className="text-sm text-neutral-400">Loading alerts...</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">Loading alerts...</p> : null}
 
       {!loading && error ? (
         <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-4">
@@ -97,10 +97,10 @@ export function InternalAlertsView() {
             alerts.map((alert, index) => (
               <article
                 key={`${alert.alert_type}-${index}`}
-                className="rounded-lg border border-neutral-800 bg-neutral-950 p-4"
+                className="rounded-lg border border-border/70 bg-card/70 p-4"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral-300">
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">
                     {alert.alert_type.replaceAll("_", " ")}
                   </p>
                   <span
@@ -113,14 +113,14 @@ export function InternalAlertsView() {
                     {alert.severity}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-white">{alert.message}</p>
-                <p className="mt-2 text-xs text-neutral-500">
+                <p className="mt-2 text-sm text-foreground">{alert.message}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
                   Metric: {alert.metric} ({alert.value})
                 </p>
               </article>
             ))
           ) : (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4 text-sm text-neutral-400">
+            <div className="rounded-lg border border-border/70 bg-card/70 p-4 text-sm text-muted-foreground">
               No active alerts.
             </div>
           )}
@@ -128,11 +128,11 @@ export function InternalAlertsView() {
       ) : null}
 
       {notificationResult ? (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-          <p className="text-sm font-medium text-white">
+        <div className="rounded-lg border border-border/70 bg-card/70 p-4">
+          <p className="text-sm font-medium text-foreground">
             Notifications processed for {notificationResult.alerts_count} alerts
           </p>
-          <ul className="mt-2 space-y-1 text-sm text-neutral-300">
+          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
             {notificationResult.notifications.map((item) => (
               <li key={item.channel}>
                 {item.channel}: {item.delivered ? "delivered" : `not delivered (${item.detail ?? "error"})`}

@@ -94,6 +94,12 @@ export interface AuthSessionMetadata {
     is_demo?: boolean;
     /**
      * 
+     * @type {boolean}
+     * @memberof AuthSessionMetadata
+     */
+    is_super_admin?: boolean;
+    /**
+     * 
      * @type {string}
      * @memberof AuthSessionMetadata
      */
@@ -187,6 +193,7 @@ export function AuthSessionMetadataFromJSONTyped(json: any, ignoreDiscriminator:
         'email': json['email'] == null ? undefined : json['email'],
         'name': json['name'] == null ? undefined : json['name'],
         'is_demo': json['is_demo'] == null ? undefined : json['is_demo'],
+        'is_super_admin': json['is_super_admin'] == null ? undefined : json['is_super_admin'],
         'billing_plan_name': json['billing_plan_name'] == null ? undefined : json['billing_plan_name'],
         'credits_balance': json['credits_balance'] == null ? undefined : json['credits_balance'],
         'monthly_credits': json['monthly_credits'] == null ? undefined : json['monthly_credits'],
@@ -215,6 +222,7 @@ export function AuthSessionMetadataToJSON(value?: AuthSessionMetadata | null): a
         'email': value['email'],
         'name': value['name'],
         'is_demo': value['is_demo'],
+        'is_super_admin': value['is_super_admin'],
         'billing_plan_name': value['billing_plan_name'],
         'credits_balance': value['credits_balance'],
         'monthly_credits': value['monthly_credits'],
