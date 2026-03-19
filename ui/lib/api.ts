@@ -414,6 +414,21 @@ export type AuthSessionResponse = AuthSessionMetadata & {
   api_key: string;
 };
 
+export type InternalSystemHealth = {
+  status: string;
+  worker_status: string;
+  queue_backlog: number;
+};
+
+export type InternalDashboardOverview = {
+  total_users: number;
+  active_projects: number;
+  running_campaigns: number;
+  failures_last_24h: number;
+  credits_used: number;
+  system_health: InternalSystemHealth;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -792,6 +807,10 @@ export const api = {
     ),
   getAuthSession: () =>
     requestJson<AuthSessionMetadata>("/v1/auth/session"),
+  getInternalDashboard: () =>
+    requestJson<InternalDashboardOverview>("/v1/internal/dashboard", undefined, {
+      requireProjectHeader: false,
+    }),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),

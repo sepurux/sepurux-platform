@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -12,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, get_db
-from app.models import ApiKey, Project, ProjectMembership, Role, Tenant
+from app.models import ApiKey, Project, ProjectMembership, Role, Tenant, User
 from app.services.pricing_service import build_auth_permissions
 
 # Deterministic dev seed values inserted by the Alembic migration for local compose usage.
@@ -22,7 +23,7 @@ DEV_API_KEY_NAME = "dev-default"
 DEV_API_KEY_PLAINTEXT = "sepurux-dev-key"
 DEMO_API_KEY_PLAINTEXT = "demo_sepurux_key"
 
-ROLE_RANKS: dict[str, int] = {"viewer": 1, "developer": 2, "admin": 3}
+ROLE_RANKS: dict[str, int] = {"viewer": 1, "developer": 2, "admin": 3, "super_admin": 4}
 
 
 @dataclass(frozen=True)
@@ -119,6 +120,35 @@ def require_role(role_name: str):
         return tenant_auth
 
     return dependency
+
+
+def _configured_super_admin_emails() -> set[str]:
+    raw = os.getenv("SUPER_ADMIN_EMAILS", "")
+    return {item.strip().lower() for item in raw.split(",") if item.strip()}
+
+
+def is_super_admin(db: Session, tenant_auth: TenantAuthContext) -> bool:
+    if tenant_auth.role_name == "super_admin":
+        return True
+
+    if tenant_auth.user_id is None:
+        return False
+
+    user = db.scalar(select(User).where(User.user_id == tenant_auth.user_id))
+    if not isinstance(user, User):
+        return False
+
+    allowed_emails = _configured_super_admin_emails()
+    if not allowed_emails:
+        return False
+
+    return user.email.strip().lower() in allowed_emails
+
+
+def require_super_admin(db: DbSession, tenant_auth: TenantAuthDep) -> TenantAuthContext:
+    if not is_super_admin(db, tenant_auth):
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return tenant_auth
 
 
 def _project_permission_bundle(db: Session, project_scope: ProjectScope):
