@@ -1,0 +1,229 @@
+from __future__ import annotations
+
+from collections.abc import Generator
+from datetime import UTC, datetime
+from uuid import uuid4
+
+import pytest
+from app.auth import hash_api_key
+from app.db import get_db
+from app.main import app
+from app.models import (
+    ApiKey,
+    Base,
+    Campaign,
+    CreditTransaction,
+    Failure,
+    Project,
+    ProjectMembership,
+    Role,
+    Run,
+    Tenant,
+    Trace,
+    User,
+)
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from .conftest import auth_headers
+
+
+@pytest.fixture()
+def internal_test_context() -> Generator[tuple[TestClient, sessionmaker[Session]], None, None]:
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db() -> Generator[Session, None, None]:
+        db = testing_session_local()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.state.auth_session_factory = testing_session_local
+
+    with TestClient(app) as client:
+        yield client, testing_session_local
+
+    app.dependency_overrides.clear()
+    if hasattr(app.state, "auth_session_factory"):
+        delattr(app.state, "auth_session_factory")
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+
+def _seed_internal_fixture(db: Session) -> dict[str, str]:
+    now = datetime.now(UTC)
+
+    tenant_id = uuid4()
+    project_id = uuid4()
+    super_user_id = uuid4()
+    admin_user_id = uuid4()
+
+    role_super_admin_id = uuid4()
+    role_admin_id = uuid4()
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+
+    super_api_key_plaintext = "cl_super_admin_test"
+    admin_api_key_plaintext = "cl_admin_test"
+
+    db.add_all(
+        [
+            Tenant(tenant_id=tenant_id, name="Sepurux Team", pricing_tier="enterprise"),
+            Role(role_id=role_super_admin_id, name="super_admin"),
+            Role(role_id=role_admin_id, name="admin"),
+            User(user_id=super_user_id, email="ops@sepurux.com", name="Ops"),
+            User(user_id=admin_user_id, email="admin@example.com", name="Admin"),
+            Project(
+                project_id=project_id,
+                tenant_id=tenant_id,
+                owner_id=super_user_id,
+                name="Internal Control",
+            ),
+            ProjectMembership(
+                user_id=super_user_id,
+                project_id=project_id,
+                role_id=role_super_admin_id,
+            ),
+            ProjectMembership(
+                user_id=admin_user_id,
+                project_id=project_id,
+                role_id=role_admin_id,
+            ),
+            ApiKey(
+                api_key_id=uuid4(),
+                tenant_id=tenant_id,
+                project_id=project_id,
+                user_id=super_user_id,
+                name="super-admin-key",
+                key_hash=hash_api_key(super_api_key_plaintext),
+            ),
+            ApiKey(
+                api_key_id=uuid4(),
+                tenant_id=tenant_id,
+                project_id=project_id,
+                user_id=admin_user_id,
+                name="admin-key",
+                key_hash=hash_api_key(admin_api_key_plaintext),
+            ),
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            ),
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Internal Campaign",
+                mutation_set=[],
+                eval_set={},
+            ),
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="running",
+                summary={},
+                created_at=now,
+            ),
+            Failure(
+                failure_id=uuid4(),
+                project_id=project_id,
+                run_id=run_id,
+                campaign_id=campaign_id,
+                trace_id=trace_id,
+                mutation_name="prompt.injection",
+                failure_type="security",
+                severity="high",
+                description="injection detected",
+                created_at=now,
+            ),
+            CreditTransaction(
+                credit_transaction_id=uuid4(),
+                user_id=super_user_id,
+                amount=-37,
+                type="usage",
+                reason="internal-test-run",
+                created_at=now,
+            ),
+        ]
+    )
+    db.commit()
+
+    return {
+        "project_id": str(project_id),
+        "super_api_key": super_api_key_plaintext,
+        "admin_api_key": admin_api_key_plaintext,
+    }
+
+
+def test_internal_dashboard_allows_super_admin_role(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/dashboard")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total_users"] == 2
+    assert payload["active_projects"] == 1
+    assert payload["running_campaigns"] == 1
+    assert payload["failures_last_24h"] == 1
+    assert payload["credits_used"] == 37
+    assert payload["system_health"]["status"] in {"healthy", "degraded", "unknown"}
+
+
+def test_internal_dashboard_rejects_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/dashboard")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_dashboard_allows_super_admin_email_allowlist(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    monkeypatch.setenv("SUPER_ADMIN_EMAILS", "admin@example.com")
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/dashboard")
+
+    assert response.status_code == 200

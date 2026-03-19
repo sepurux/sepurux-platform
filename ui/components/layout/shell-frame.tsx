@@ -76,6 +76,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
   const [authSession, setAuthSession] = useState<AuthSessionMetadata | null>(null);
 
   const isAuthPage = pathname.startsWith("/auth");
+  const isInternalPage = pathname.startsWith("/internal");
 
   useEffect(() => {
     if (isAuthPage) {
@@ -97,12 +98,14 @@ export function ShellFrame({ children }: { children: ReactNode }) {
           if (cancelled) return;
           setStoredAuthSession(session);
           setAuthSession(session);
-          const currentSection = sectionForPath(pathname);
-          if (!session.permissions.visible_sections.includes(currentSection)) {
-            const nextSection = session.permissions.visible_sections[0] ?? "dashboard";
-            setGateState("redirecting");
-            router.replace(pathForSection(nextSection));
-            return;
+          if (!isInternalPage) {
+            const currentSection = sectionForPath(pathname);
+            if (!session.permissions.visible_sections.includes(currentSection)) {
+              const nextSection = session.permissions.visible_sections[0] ?? "dashboard";
+              setGateState("redirecting");
+              router.replace(pathForSection(nextSection));
+              return;
+            }
           }
           setGateState("allowed");
         } catch {
@@ -132,7 +135,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
     clearStoredAuthSession();
     setGateState("redirecting");
     router.replace(`/auth?mode=access&intent=signup&next=${encodeURIComponent(nextPath)}`);
-  }, [isAuthPage, pathname, router, searchParams]);
+  }, [isAuthPage, isInternalPage, pathname, router, searchParams]);
 
   if (isAuthPage) {
     return <main className="faint-grid min-h-screen p-4 md:p-8">{children}</main>;
@@ -149,6 +152,10 @@ export function ShellFrame({ children }: { children: ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  if (isInternalPage) {
+    return <div className="min-h-screen bg-black text-white">{children}</div>;
   }
 
   return (
