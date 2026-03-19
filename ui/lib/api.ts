@@ -520,6 +520,32 @@ export type InternalAnalyticsOverview = {
   failure_trend: InternalFailureTrend;
 };
 
+export type InternalQueueJobEntry = {
+  job_id: string;
+  status: string;
+  queue: string;
+  description: string | null;
+  enqueued_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+};
+
+export type InternalQueueOverview = {
+  jobs_running: number;
+  jobs_failed: number;
+  queue_backlog: number;
+  worker_status: "online" | "offline" | "unknown";
+  running_jobs: InternalQueueJobEntry[];
+  failed_jobs: InternalQueueJobEntry[];
+};
+
+export type InternalQueueActionResponse = {
+  job_id: string;
+  action: "retry" | "cancel";
+  success: boolean;
+  detail: string | null;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -940,6 +966,22 @@ export const api = {
     requestJson<InternalAnalyticsOverview>("/v1/internal/analytics", undefined, {
       requireProjectHeader: false,
     }),
+  getInternalQueues: () =>
+    requestJson<InternalQueueOverview>("/v1/internal/queues", undefined, {
+      requireProjectHeader: false,
+    }),
+  retryInternalQueueJob: (jobId: string) =>
+    postJson<InternalQueueActionResponse, { job_id: string }>(
+      "/v1/internal/queues/retry",
+      { job_id: jobId },
+      { requireProjectHeader: false }
+    ),
+  cancelInternalQueueJob: (jobId: string) =>
+    postJson<InternalQueueActionResponse, { job_id: string }>(
+      "/v1/internal/queues/cancel",
+      { job_id: jobId },
+      { requireProjectHeader: false }
+    ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
