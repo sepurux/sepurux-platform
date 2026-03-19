@@ -83,13 +83,13 @@ def _seed_internal_fixture(db: Session) -> dict[str, str]:
             Tenant(tenant_id=tenant_id, name="Sepurux Team", pricing_tier="enterprise"),
             Role(role_id=role_super_admin_id, name="super_admin"),
             Role(role_id=role_admin_id, name="admin"),
-            User(user_id=super_user_id, email="ops@sepurux.com", name="Ops"),
+            User(user_id=super_user_id, email="ops@sepurux.com", name="Alpha Ops"),
             User(user_id=admin_user_id, email="admin@example.com", name="Admin"),
             Project(
                 project_id=project_id,
                 tenant_id=tenant_id,
                 owner_id=super_user_id,
-                name="Internal Control",
+                name="Alpha Internal Control",
             ),
             ProjectMembership(
                 user_id=super_user_id,
@@ -126,7 +126,7 @@ def _seed_internal_fixture(db: Session) -> dict[str, str]:
             Campaign(
                 campaign_id=campaign_id,
                 project_id=project_id,
-                name="Internal Campaign",
+                name="Alpha Internal Campaign",
                 mutation_set=[],
                 eval_set={},
             ),
@@ -145,10 +145,10 @@ def _seed_internal_fixture(db: Session) -> dict[str, str]:
                 run_id=run_id,
                 campaign_id=campaign_id,
                 trace_id=trace_id,
-                mutation_name="prompt.injection",
-                failure_type="security",
+                mutation_name="alpha.prompt.injection",
+                failure_type="alpha-security",
                 severity="high",
-                description="injection detected",
+                description="alpha injection detected",
                 created_at=now,
             ),
             CreditTransaction(
@@ -227,3 +227,63 @@ def test_internal_dashboard_allows_super_admin_email_allowlist(
     response = client.get("/v1/internal/dashboard")
 
     assert response.status_code == 200
+
+
+def test_internal_search_returns_cross_entity_results(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/search?q=alpha")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["query"] == "alpha"
+    assert len(payload["users"]) >= 1
+    assert len(payload["projects"]) >= 1
+    assert len(payload["campaigns"]) >= 1
+    assert len(payload["failures"]) >= 1
+    assert payload["users"][0]["email"] == "ops@sepurux.com"
+    assert payload["projects"][0]["name"] == "Alpha Internal Control"
+    assert payload["campaigns"][0]["name"] == "Alpha Internal Campaign"
+    assert payload["failures"][0]["failure_type"] == "alpha-security"
+
+
+def test_internal_search_rejects_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/search?q=alpha")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_search_rejects_blank_query(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/search?q=%20%20%20")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Search query cannot be empty"}
