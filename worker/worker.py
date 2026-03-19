@@ -1299,6 +1299,8 @@ def execute_run(run_id: str) -> None:
 
         prior_summary = run.summary if isinstance(run.summary, dict) else {}
         ci_thresholds = prior_summary.get("ci_thresholds")
+        github_context = prior_summary.get("github_context")
+        github_reporting = prior_summary.get("github_reporting")
         reliability = calculate_reliability_score(
             critical=severity_counts.get("critical", 0),
             high=severity_counts.get("high", 0),
@@ -1351,6 +1353,10 @@ def execute_run(run_id: str) -> None:
         }
         if ci_thresholds is not None:
             run.summary["ci_thresholds"] = ci_thresholds
+        if isinstance(github_context, dict):
+            run.summary["github_context"] = github_context
+        if isinstance(github_reporting, dict):
+            run.summary["github_reporting"] = github_reporting
         template_application = prior_summary.get("template_application")
         if isinstance(template_application, dict):
             run.summary["template_application"] = template_application

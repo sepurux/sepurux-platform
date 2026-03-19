@@ -192,12 +192,15 @@ class CIRunThresholds(BaseModel):
     min_pass_rate: float = Field(ge=0.0, le=1.0)
     max_unsafe: int = Field(ge=0)
     max_failures: int | None = Field(default=None, ge=0)
+    min_reliability_score: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
 class CIRunCreateRequest(BaseModel):
     trace_id: UUID
     campaign_id: UUID
     thresholds: CIRunThresholds
+    repo: str | None = None
+    pull_request_number: int | None = Field(default=None, ge=1)
 
 
 class CIRunCreateResponse(BaseModel):
