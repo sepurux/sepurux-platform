@@ -572,6 +572,16 @@ export type InternalBillingAdjustmentResponse = {
   transaction: InternalBillingTransactionEntry;
 };
 
+export type InternalSystemOverview = {
+  api_latency_ms: number;
+  worker_status: "online" | "offline" | "unknown";
+  queue_backlog: number;
+  runs_last_24h: number;
+  failed_runs_last_24h: number;
+  error_rate_24h: number;
+  uptime_seconds: number;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -1032,6 +1042,10 @@ export const api = {
       payload,
       { requireProjectHeader: false }
     ),
+  getInternalSystemOverview: () =>
+    requestJson<InternalSystemOverview>("/v1/internal/system", undefined, {
+      requireProjectHeader: false,
+    }),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
