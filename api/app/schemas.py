@@ -547,6 +547,15 @@ class InternalSearchResults(BaseModel):
     failures: list[InternalSearchFailureResult]
 
 
+class InternalAuditLogEntry(BaseModel):
+    id: UUID
+    action: str
+    actor: str
+    entity: str
+    metadata: dict[str, Any]
+    created_at: datetime
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str

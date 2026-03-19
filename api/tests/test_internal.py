@@ -287,3 +287,62 @@ def test_internal_search_rejects_blank_query(
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Search query cannot be empty"}
+
+
+def test_internal_audit_logs_list_admin_actions(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    assert client.get("/v1/internal/dashboard").status_code == 200
+    assert client.get("/v1/internal/search?q=alpha").status_code == 200
+
+    response = client.get("/v1/internal/audit-logs?limit=20")
+    assert response.status_code == 200
+    payload = response.json()
+    actions = {item["action"] for item in payload}
+    assert "internal.dashboard.view" in actions
+    assert "internal.search" in actions
+
+
+def test_internal_audit_logs_include_user_project_create_action(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    create_response = client.post("/v1/projects", json={"name": "Alpha New Project"})
+    assert create_response.status_code == 201
+
+    logs_response = client.get("/v1/internal/audit-logs?limit=50&action=project.create")
+    assert logs_response.status_code == 200
+    payload = logs_response.json()
+    assert any(item["action"] == "project.create" for item in payload)
+
+
+def test_internal_audit_logs_reject_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.get("/v1/internal/audit-logs")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Super admin access required"}
