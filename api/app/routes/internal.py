@@ -11,6 +11,10 @@ from app.schemas import (
     InternalAlertNotificationResponse,
     InternalAnalyticsOverview,
     InternalAuditLogEntry,
+    InternalBillingAdjustmentRequest,
+    InternalBillingAdjustmentResponse,
+    InternalBillingTransactionEntry,
+    InternalBillingWalletEntry,
     InternalDashboardOverview,
     InternalQueueActionRequest,
     InternalQueueActionResponse,
@@ -25,6 +29,11 @@ from app.schemas import (
 from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
 from app.services.internal_analytics_service import build_internal_analytics
 from app.services.internal_audit_service import create_audit_log
+from app.services.internal_billing_service import (
+    adjust_internal_credits,
+    list_internal_transactions,
+    list_internal_wallets,
+)
 from app.services.internal_queue_service import (
     cancel_queue_job,
     get_internal_queue_overview,
@@ -405,6 +414,75 @@ def post_internal_queue_cancel(
         actor=_actor_label(db, super_admin),
         entity=f"queue-job:{payload.job_id}",
         metadata=result.model_dump(),
+    )
+    db.commit()
+    return result
+
+
+@router.get("/billing/wallets", response_model=list[InternalBillingWalletEntry])
+def get_internal_billing_wallets(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[InternalBillingWalletEntry]:
+    payload = list_internal_wallets(db, limit=limit, offset=offset)
+    create_audit_log(
+        db,
+        action="internal.billing.wallets.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.billing.wallets",
+        metadata={"limit": limit, "offset": offset},
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/billing/transactions", response_model=list[InternalBillingTransactionEntry])
+def get_internal_billing_transactions(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[InternalBillingTransactionEntry]:
+    payload = list_internal_transactions(db, limit=limit, offset=offset)
+    create_audit_log(
+        db,
+        action="internal.billing.transactions.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.billing.transactions",
+        metadata={"limit": limit, "offset": offset},
+    )
+    db.commit()
+    return payload
+
+
+@router.post("/billing/adjust", response_model=InternalBillingAdjustmentResponse)
+def post_internal_billing_adjust(
+    payload: InternalBillingAdjustmentRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalBillingAdjustmentResponse:
+    try:
+        result = adjust_internal_credits(
+            db,
+            user_id=payload.user_id,
+            amount=payload.amount,
+            reason=payload.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    create_audit_log(
+        db,
+        action="internal.billing.adjust",
+        actor=_actor_label(db, super_admin),
+        entity=f"user:{payload.user_id}",
+        metadata={
+            "amount": payload.amount,
+            "reason": payload.reason,
+            "transaction_id": str(result.transaction.credit_transaction_id),
+        },
     )
     db.commit()
     return result

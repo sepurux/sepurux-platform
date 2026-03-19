@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TraceMetadata(BaseModel):
@@ -625,6 +625,45 @@ class InternalQueueActionResponse(BaseModel):
     action: Literal["retry", "cancel"]
     success: bool
     detail: str | None = None
+
+
+class InternalBillingWalletEntry(BaseModel):
+    wallet_id: UUID
+    user_id: UUID
+    email: str | None = None
+    name: str | None = None
+    balance: int
+    monthly_credits: int
+    topup_credits: int
+    updated_at: datetime
+
+
+class InternalBillingTransactionEntry(BaseModel):
+    credit_transaction_id: UUID
+    user_id: UUID
+    email: str | None = None
+    amount: int
+    type: str
+    reason: str
+    created_at: datetime
+
+
+class InternalBillingAdjustmentRequest(BaseModel):
+    user_id: UUID
+    amount: int
+    reason: str = Field(min_length=1, max_length=200)
+
+    @field_validator("amount")
+    @classmethod
+    def validate_non_zero_amount(cls, value: int) -> int:
+        if value == 0:
+            raise ValueError("amount must be non-zero")
+        return value
+
+
+class InternalBillingAdjustmentResponse(BaseModel):
+    wallet: InternalBillingWalletEntry
+    transaction: InternalBillingTransactionEntry
 
 
 class SubscriptionPlanMetadata(BaseModel):
