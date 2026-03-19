@@ -89,12 +89,12 @@ export function InternalBillingView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-neutral-800 pb-4">
-        <h1 className="text-2xl font-semibold text-white">Billing Control</h1>
-        <p className="mt-1 text-sm text-neutral-400">View all wallets, adjust credits, and inspect transactions.</p>
+      <div className="border-b border-border/70 pb-4">
+        <h1 className="text-2xl font-semibold text-primary">Billing Control</h1>
+        <p className="mt-1 text-sm text-muted-foreground">View all wallets, adjust credits, and inspect transactions.</p>
       </div>
 
-      {loading ? <p className="text-sm text-neutral-400">Loading billing controls...</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">Loading billing controls...</p> : null}
 
       {!loading && error ? (
         <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-4">
@@ -104,14 +104,14 @@ export function InternalBillingView() {
 
       <form
         onSubmit={submitAdjustment}
-        className="grid gap-3 rounded-lg border border-neutral-800 bg-neutral-950 p-4 md:grid-cols-4"
+        className="grid gap-3 rounded-lg border border-border/70 bg-card/70 p-4 md:grid-cols-4"
       >
-        <label className="text-sm text-neutral-300">
+        <label className="text-sm text-muted-foreground">
           User
           <select
             value={userId}
             onChange={(event) => setUserId(event.target.value)}
-            className="mt-1 h-10 w-full rounded border border-neutral-700 bg-black px-3 text-sm text-white"
+            className="mt-1 h-10 w-full rounded border border-border/70 bg-background px-3 text-sm text-foreground"
           >
             {wallets.map((wallet) => (
               <option key={wallet.user_id} value={wallet.user_id}>
@@ -121,22 +121,22 @@ export function InternalBillingView() {
           </select>
         </label>
 
-        <label className="text-sm text-neutral-300">
+        <label className="text-sm text-muted-foreground">
           Amount
           <input
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            className="mt-1 h-10 w-full rounded border border-neutral-700 bg-black px-3 text-sm text-white"
+            className="mt-1 h-10 w-full rounded border border-border/70 bg-background px-3 text-sm text-foreground"
             placeholder="e.g. 50 or -20"
           />
         </label>
 
-        <label className="text-sm text-neutral-300 md:col-span-2">
+        <label className="text-sm text-muted-foreground md:col-span-2">
           Reason
           <input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            className="mt-1 h-10 w-full rounded border border-neutral-700 bg-black px-3 text-sm text-white"
+            className="mt-1 h-10 w-full rounded border border-border/70 bg-background px-3 text-sm text-foreground"
             placeholder="Manual correction"
           />
         </label>
@@ -145,7 +145,7 @@ export function InternalBillingView() {
           <button
             type="submit"
             disabled={adjusting}
-            className="rounded border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-800 disabled:opacity-60"
+            className="rounded border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
           >
             {adjusting ? "Applying..." : "Apply Adjustment"}
           </button>
@@ -153,19 +153,19 @@ export function InternalBillingView() {
       </form>
 
       {adjustResult ? (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4 text-sm text-neutral-300">
+        <div className="rounded-lg border border-border/70 bg-card/70 p-4 text-sm text-muted-foreground">
           Applied adjustment for {adjustResult.wallet.email ?? adjustResult.wallet.user_id}: {" "}
           {adjustResult.transaction.amount > 0 ? "+" : ""}
           {adjustResult.transaction.amount} credits
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
-        <p className="border-b border-neutral-800 px-4 py-3 text-xs uppercase tracking-[0.14em] text-neutral-400">
+      <div className="overflow-hidden rounded-lg border border-border/70 bg-card/70">
+        <p className="border-b border-border/70 px-4 py-3 text-xs uppercase tracking-[0.14em] text-muted-foreground">
           Wallets
         </p>
         <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="bg-black/50 text-xs uppercase tracking-[0.14em] text-neutral-500">
+          <thead className="bg-background/50 text-xs uppercase tracking-[0.14em] text-muted-foreground">
             <tr>
               <th className="px-4 py-2">User</th>
               <th className="px-4 py-2">Balance</th>
@@ -177,19 +177,19 @@ export function InternalBillingView() {
           <tbody>
             {wallets.length ? (
               wallets.map((wallet) => (
-                <tr key={wallet.wallet_id} className="border-t border-neutral-800 text-neutral-200">
-                  <td className="px-4 py-3 text-white">{wallet.email ?? wallet.user_id}</td>
+                <tr key={wallet.wallet_id} className="border-t border-border/70 text-muted-foreground">
+                  <td className="px-4 py-3 text-foreground">{wallet.email ?? wallet.user_id}</td>
                   <td className="px-4 py-3">{wallet.balance}</td>
                   <td className="px-4 py-3">{wallet.monthly_credits}</td>
                   <td className="px-4 py-3">{wallet.topup_credits}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-400">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
                     {new Date(wallet.updated_at).toLocaleString()}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
                   No wallets found.
                 </td>
               </tr>
@@ -198,12 +198,12 @@ export function InternalBillingView() {
         </table>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
-        <p className="border-b border-neutral-800 px-4 py-3 text-xs uppercase tracking-[0.14em] text-neutral-400">
+      <div className="overflow-hidden rounded-lg border border-border/70 bg-card/70">
+        <p className="border-b border-border/70 px-4 py-3 text-xs uppercase tracking-[0.14em] text-muted-foreground">
           Transactions
         </p>
         <table className="w-full min-w-[920px] text-left text-sm">
-          <thead className="bg-black/50 text-xs uppercase tracking-[0.14em] text-neutral-500">
+          <thead className="bg-background/50 text-xs uppercase tracking-[0.14em] text-muted-foreground">
             <tr>
               <th className="px-4 py-2">Created</th>
               <th className="px-4 py-2">User</th>
@@ -215,11 +215,11 @@ export function InternalBillingView() {
           <tbody>
             {transactions.length ? (
               transactions.map((transaction) => (
-                <tr key={transaction.credit_transaction_id} className="border-t border-neutral-800 text-neutral-200">
-                  <td className="px-4 py-3 text-xs text-neutral-400">
+                <tr key={transaction.credit_transaction_id} className="border-t border-border/70 text-muted-foreground">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
                     {new Date(transaction.created_at).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-white">{transaction.email ?? transaction.user_id}</td>
+                  <td className="px-4 py-3 text-foreground">{transaction.email ?? transaction.user_id}</td>
                   <td className="px-4 py-3">{transaction.amount}</td>
                   <td className="px-4 py-3">{transaction.type}</td>
                   <td className="px-4 py-3">{transaction.reason}</td>
@@ -227,7 +227,7 @@ export function InternalBillingView() {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
                   No transactions found.
                 </td>
               </tr>

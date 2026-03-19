@@ -6,7 +6,7 @@ import hmac
 from typing import Literal
 from uuid import UUID, uuid4
 
-from app.auth import ROLE_RANKS, TenantAuthContext
+from app.auth import ROLE_RANKS, TenantAuthContext, is_super_admin
 from app.models import Project, ProjectMembership, Role, Tenant, User
 from app.services.api_key_service import create_api_key_for_tenant
 from app.services.billing_service import (
@@ -192,6 +192,7 @@ def session_metadata(
         "email": email,
         "name": display_name,
         "is_demo": tenant_auth.is_demo,
+        "is_super_admin": is_super_admin(db, tenant_auth),
         "billing_plan_name": billing_plan_name,
         "credits_balance": wallet.get("balance") if isinstance(wallet, dict) else None,
         "monthly_credits": wallet.get("monthly_credits") if isinstance(wallet, dict) else None,

@@ -49,12 +49,12 @@ export function InternalSystemView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-neutral-800 pb-4">
-        <h1 className="text-2xl font-semibold text-white">System Health</h1>
-        <p className="mt-1 text-sm text-neutral-400">API latency, worker state, error rates, and uptime.</p>
+      <div className="border-b border-border/70 pb-4">
+        <h1 className="text-2xl font-semibold text-primary">System Health</h1>
+        <p className="mt-1 text-sm text-muted-foreground">API latency, worker state, error rates, and uptime.</p>
       </div>
 
-      {loading ? <p className="text-sm text-neutral-400">Loading system health...</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">Loading system health...</p> : null}
 
       {!loading && error ? (
         <div className="rounded-lg border border-red-900/60 bg-red-950/30 p-4">
@@ -64,33 +64,33 @@ export function InternalSystemView() {
 
       {!loading && !error && data ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-4">
-          <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">API Latency</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.api_latency_ms}ms</p>
+          <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">API Latency</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.api_latency_ms}ms</p>
           </article>
-          <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Worker Status</p>
-            <p className="mt-2 text-2xl font-semibold capitalize text-white">{data.worker_status}</p>
+          <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Worker Status</p>
+            <p className="mt-2 text-2xl font-semibold capitalize text-primary">{data.worker_status}</p>
           </article>
-          <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Error Rate (24h)</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.error_rate_24h}%</p>
+          <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Error Rate (24h)</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.error_rate_24h}%</p>
           </article>
-          <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Uptime</p>
-            <p className="mt-2 text-lg font-semibold text-white">{formatUptime(data.uptime_seconds)}</p>
+          <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Uptime</p>
+            <p className="mt-2 text-lg font-semibold text-primary">{formatUptime(data.uptime_seconds)}</p>
           </article>
-          <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Queue Backlog</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.queue_backlog}</p>
+          <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Queue Backlog</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.queue_backlog}</p>
           </article>
-          <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Runs (24h)</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.runs_last_24h}</p>
+          <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Runs (24h)</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.runs_last_24h}</p>
           </article>
-          <article className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-neutral-500">Failed Runs (24h)</p>
-            <p className="mt-2 text-3xl font-semibold text-white">{data.failed_runs_last_24h}</p>
+          <article className="rounded-lg border border-border/70 bg-card/70 p-4">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Failed Runs (24h)</p>
+            <p className="mt-2 text-3xl font-semibold text-primary">{data.failed_runs_last_24h}</p>
           </article>
         </div>
       ) : null}

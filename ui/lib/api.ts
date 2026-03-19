@@ -400,6 +400,7 @@ export type AuthSessionMetadata = {
   email: string | null;
   name: string | null;
   is_demo: boolean;
+  is_super_admin: boolean;
   billing_plan_name: string | null;
   credits_balance: number | null;
   monthly_credits: number | null;

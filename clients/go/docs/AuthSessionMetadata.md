@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **Email** | Pointer to **NullableString** |  | [optional] 
 **Name** | Pointer to **NullableString** |  | [optional] 
 **IsDemo** | Pointer to **bool** |  | [optional] [default to false]
+**IsSuperAdmin** | Pointer to **bool** |  | [optional] [default to false]
 **BillingPlanName** | Pointer to **NullableString** |  | [optional] 
 **CreditsBalance** | Pointer to **NullableInt32** |  | [optional] 
 **MonthlyCredits** | Pointer to **NullableInt32** |  | [optional] 
@@ -322,6 +323,31 @@ SetIsDemo sets IsDemo field to given value.
 `func (o *AuthSessionMetadata) HasIsDemo() bool`
 
 HasIsDemo returns a boolean if a field has been set.
+
+### GetIsSuperAdmin
+
+`func (o *AuthSessionMetadata) GetIsSuperAdmin() bool`
+
+GetIsSuperAdmin returns the IsSuperAdmin field if non-nil, zero value otherwise.
+
+### GetIsSuperAdminOk
+
+`func (o *AuthSessionMetadata) GetIsSuperAdminOk() (*bool, bool)`
+
+GetIsSuperAdminOk returns a tuple with the IsSuperAdmin field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetIsSuperAdmin
+
+`func (o *AuthSessionMetadata) SetIsSuperAdmin(v bool)`
+
+SetIsSuperAdmin sets IsSuperAdmin field to given value.
+
+### HasIsSuperAdmin
+
+`func (o *AuthSessionMetadata) HasIsSuperAdmin() bool`
+
+HasIsSuperAdmin returns a boolean if a field has been set.
 
 ### GetBillingPlanName
 

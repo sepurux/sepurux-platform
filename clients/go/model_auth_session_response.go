@@ -32,6 +32,7 @@ type AuthSessionResponse struct {
 	Email NullableString `json:"email,omitempty"`
 	Name NullableString `json:"name,omitempty"`
 	IsDemo *bool `json:"is_demo,omitempty"`
+	IsSuperAdmin *bool `json:"is_super_admin,omitempty"`
 	BillingPlanName NullableString `json:"billing_plan_name,omitempty"`
 	CreditsBalance NullableInt32 `json:"credits_balance,omitempty"`
 	MonthlyCredits NullableInt32 `json:"monthly_credits,omitempty"`
@@ -62,6 +63,8 @@ func NewAuthSessionResponse(tenantId string, projectId string, projectName strin
 	this.RoleName = roleName
 	var isDemo bool = false
 	this.IsDemo = &isDemo
+	var isSuperAdmin bool = false
+	this.IsSuperAdmin = &isSuperAdmin
 	var isLowCredit bool = false
 	this.IsLowCredit = &isLowCredit
 	this.Permissions = permissions
@@ -80,6 +83,8 @@ func NewAuthSessionResponseWithDefaults() *AuthSessionResponse {
 	this.PricingTier = &pricingTier
 	var isDemo bool = false
 	this.IsDemo = &isDemo
+	var isSuperAdmin bool = false
+	this.IsSuperAdmin = &isSuperAdmin
 	var isLowCredit bool = false
 	this.IsLowCredit = &isLowCredit
 	return &this
@@ -425,6 +430,38 @@ func (o *AuthSessionResponse) HasIsDemo() bool {
 // SetIsDemo gets a reference to the given bool and assigns it to the IsDemo field.
 func (o *AuthSessionResponse) SetIsDemo(v bool) {
 	o.IsDemo = &v
+}
+
+// GetIsSuperAdmin returns the IsSuperAdmin field value if set, zero value otherwise.
+func (o *AuthSessionResponse) GetIsSuperAdmin() bool {
+	if o == nil || IsNil(o.IsSuperAdmin) {
+		var ret bool
+		return ret
+	}
+	return *o.IsSuperAdmin
+}
+
+// GetIsSuperAdminOk returns a tuple with the IsSuperAdmin field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AuthSessionResponse) GetIsSuperAdminOk() (*bool, bool) {
+	if o == nil || IsNil(o.IsSuperAdmin) {
+		return nil, false
+	}
+	return o.IsSuperAdmin, true
+}
+
+// HasIsSuperAdmin returns a boolean if a field has been set.
+func (o *AuthSessionResponse) HasIsSuperAdmin() bool {
+	if o != nil && !IsNil(o.IsSuperAdmin) {
+		return true
+	}
+
+	return false
+}
+
+// SetIsSuperAdmin gets a reference to the given bool and assigns it to the IsSuperAdmin field.
+func (o *AuthSessionResponse) SetIsSuperAdmin(v bool) {
+	o.IsSuperAdmin = &v
 }
 
 // GetBillingPlanName returns the BillingPlanName field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -791,6 +828,9 @@ func (o AuthSessionResponse) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.IsDemo) {
 		toSerialize["is_demo"] = o.IsDemo
+	}
+	if !IsNil(o.IsSuperAdmin) {
+		toSerialize["is_super_admin"] = o.IsSuperAdmin
 	}
 	if o.BillingPlanName.IsSet() {
 		toSerialize["billing_plan_name"] = o.BillingPlanName.Get()

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { ApiError, api, type InternalSearchResults } from "@/lib/api";
 
-const sectionCard = "rounded-lg border border-neutral-800 bg-neutral-950 p-4";
+const sectionCard = "rounded-lg border border-border/70 bg-card/70 p-4";
 
 export function InternalSearchView() {
   const router = useRouter();
@@ -73,9 +73,9 @@ export function InternalSearchView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-neutral-800 pb-4">
-        <h1 className="text-2xl font-semibold text-white">Global Search</h1>
-        <p className="mt-1 text-sm text-neutral-400">Search across users, projects, campaigns, and failures.</p>
+      <div className="border-b border-border/70 pb-4">
+        <h1 className="text-2xl font-semibold text-primary">Global Search</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Search across users, projects, campaigns, and failures.</p>
       </div>
 
       <form onSubmit={submitSearch} className="flex gap-2">
@@ -83,11 +83,11 @@ export function InternalSearchView() {
           value={queryInput}
           onChange={(event) => setQueryInput(event.target.value)}
           placeholder="Search internal entities"
-          className="h-11 flex-1 rounded-md border border-neutral-800 bg-black px-3 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-neutral-600"
+          className="h-11 flex-1 rounded-md border border-border/70 bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/70"
         />
         <button
           type="submit"
-          className="h-11 rounded-md border border-neutral-700 bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800"
+          className="h-11 rounded-md border border-primary/40 bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/20"
         >
           Search
         </button>
@@ -95,13 +95,13 @@ export function InternalSearchView() {
 
       {!query ? (
         <div className={sectionCard}>
-          <p className="text-sm text-neutral-400">Enter a term to run internal search.</p>
+          <p className="text-sm text-muted-foreground">Enter a term to run internal search.</p>
         </div>
       ) : null}
 
       {loading ? (
         <div className={sectionCard}>
-          <p className="text-sm text-neutral-300">Searching for "{query}"...</p>
+          <p className="text-sm text-muted-foreground">Searching for "{query}"...</p>
         </div>
       ) : null}
 
@@ -114,65 +114,65 @@ export function InternalSearchView() {
       {!loading && !error && results ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <article className={sectionCard}>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral-400">Users</h2>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-200">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Users</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {results.users.length ? (
                 results.users.map((item) => (
-                  <li key={item.user_id} className="rounded border border-neutral-800 bg-black px-3 py-2">
-                    <p className="font-medium text-white">{item.email}</p>
-                    <p className="text-xs text-neutral-400">{item.name ?? "-"}</p>
+                  <li key={item.user_id} className="rounded border border-border/70 bg-background px-3 py-2">
+                    <p className="font-medium text-foreground">{item.email}</p>
+                    <p className="text-xs text-muted-foreground">{item.name ?? "-"}</p>
                   </li>
                 ))
               ) : (
-                <li className="text-neutral-500">No users found</li>
+                <li className="text-muted-foreground">No users found</li>
               )}
             </ul>
           </article>
 
           <article className={sectionCard}>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral-400">Projects</h2>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-200">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Projects</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {results.projects.length ? (
                 results.projects.map((item) => (
-                  <li key={item.project_id} className="rounded border border-neutral-800 bg-black px-3 py-2">
-                    <p className="font-medium text-white">{item.name}</p>
-                    <p className="text-xs text-neutral-500">{item.project_id}</p>
+                  <li key={item.project_id} className="rounded border border-border/70 bg-background px-3 py-2">
+                    <p className="font-medium text-foreground">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{item.project_id}</p>
                   </li>
                 ))
               ) : (
-                <li className="text-neutral-500">No projects found</li>
+                <li className="text-muted-foreground">No projects found</li>
               )}
             </ul>
           </article>
 
           <article className={sectionCard}>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral-400">Campaigns</h2>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-200">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Campaigns</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {results.campaigns.length ? (
                 results.campaigns.map((item) => (
-                  <li key={item.campaign_id} className="rounded border border-neutral-800 bg-black px-3 py-2">
-                    <p className="font-medium text-white">{item.name}</p>
-                    <p className="text-xs text-neutral-400">Status: {item.status}</p>
+                  <li key={item.campaign_id} className="rounded border border-border/70 bg-background px-3 py-2">
+                    <p className="font-medium text-foreground">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">Status: {item.status}</p>
                   </li>
                 ))
               ) : (
-                <li className="text-neutral-500">No campaigns found</li>
+                <li className="text-muted-foreground">No campaigns found</li>
               )}
             </ul>
           </article>
 
           <article className={sectionCard}>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral-400">Failures</h2>
-            <ul className="mt-3 space-y-2 text-sm text-neutral-200">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Failures</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {results.failures.length ? (
                 results.failures.map((item) => (
-                  <li key={item.failure_id} className="rounded border border-neutral-800 bg-black px-3 py-2">
-                    <p className="font-medium text-white">{item.failure_type}</p>
-                    <p className="text-xs text-neutral-300">{item.description}</p>
+                  <li key={item.failure_id} className="rounded border border-border/70 bg-background px-3 py-2">
+                    <p className="font-medium text-foreground">{item.failure_type}</p>
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
                   </li>
                 ))
               ) : (
-                <li className="text-neutral-500">No failures found</li>
+                <li className="text-muted-foreground">No failures found</li>
               )}
             </ul>
           </article>

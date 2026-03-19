@@ -72,6 +72,7 @@ def test_signup_bootstraps_workspace_and_session(
     assert payload["pricing_tier"] == "credits"
     assert payload["plan_name"] == "Enterprise"
     assert payload["role_name"] == "member"
+    assert payload["is_super_admin"] is False
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert payload["permissions"]["can_manage_billing"] is True
     assert "audit" in payload["permissions"]["visible_sections"]
@@ -113,6 +114,7 @@ def test_signup_bootstraps_workspace_and_session(
     assert session_payload["email"] == "alice@example.com"
     assert session_payload["pricing_tier"] == "credits"
     assert session_payload["role_name"] == "member"
+    assert session_payload["is_super_admin"] is False
     assert session_payload["permissions"]["can_manage_workspace"] is True
 
 
@@ -180,6 +182,7 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert payload["pricing_tier"] == "credits"
     assert payload["plan_name"] == "Team"
     assert payload["role_name"] == "member"
+    assert payload["is_super_admin"] is False
     assert payload["permissions"]["can_run_campaigns"] is True
     assert payload["permissions"]["can_manage_mutation_packs"] is True
     assert payload["permissions"]["can_manage_policy_packs"] is True
@@ -226,6 +229,7 @@ def test_viewer_login_still_gets_full_workspace_access(
     payload = response.json()
     assert payload["pricing_tier"] == "credits"
     assert payload["role_name"] == "member"
+    assert payload["is_super_admin"] is False
     assert "audit" in payload["permissions"]["visible_sections"]
     assert payload["permissions"]["can_upload_traces"] is True
     assert payload["permissions"]["can_create_campaigns"] is True
@@ -307,6 +311,7 @@ def test_github_oauth_bootstraps_workspace_and_exchanges_session(
     assert payload["email"] == "octo@example.com"
     assert payload["name"] == "Octo Dev"
     assert payload["role_name"] == "member"
+    assert payload["is_super_admin"] is False
     assert payload["pricing_tier"] == "credits"
     assert payload["api_key"].startswith("cl_")
 
@@ -321,6 +326,47 @@ def test_github_oauth_bootstraps_workspace_and_exchanges_session(
         )
         assert isinstance(identity, UserIdentity)
         assert identity.user_id == user.user_id
+
+
+def test_super_admin_login_sets_internal_session_flag(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = auth_test_context
+    tenant_id = uuid4()
+    user_id = uuid4()
+    project_id = uuid4()
+    role_id = uuid4()
+
+    with session_factory() as db:
+        db.add(Tenant(tenant_id=tenant_id, name="Sepurux Team", pricing_tier="enterprise"))
+        db.add(Role(role_id=role_id, name="super_admin"))
+        db.add(
+            User(
+                user_id=user_id,
+                email="ops@sepurux.com",
+                name="Sepurux Ops",
+                password_hash=hash_password("ops-pass-123"),
+            )
+        )
+        db.add(
+            Project(
+                project_id=project_id,
+                tenant_id=tenant_id,
+                owner_id=user_id,
+                name="Internal Control",
+            )
+        )
+        db.add(ProjectMembership(user_id=user_id, project_id=project_id, role_id=role_id))
+        db.commit()
+
+    response = client.post(
+        "/auth/login",
+        json={"email": "ops@sepurux.com", "password": "ops-pass-123"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["role_name"] == "member"
+    assert payload["is_super_admin"] is True
 
 
 def test_google_oauth_links_existing_user_by_verified_email(
