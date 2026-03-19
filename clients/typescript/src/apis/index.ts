@@ -11,6 +11,7 @@ export * from './CiApi';
 export * from './CounterfactualsApi';
 export * from './DemoApi';
 export * from './HealthApi';
+export * from './MembersApi';
 export * from './MutationPacksApi';
 export * from './PolicyPacksApi';
 export * from './ProjectsApi';

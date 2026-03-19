@@ -963,6 +963,102 @@ paths:
       summary: Get Counterfactual
       tags:
       - counterfactuals
+  /v1/members:
+    get:
+      operationId: list_members_v1_members_get
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/MemberMetadata'
+                type: array
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: List Members
+      tags:
+      - members
+    post:
+      operationId: invite_member_v1_members_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberInviteRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberMetadata'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Invite Member
+      tags:
+      - members
+  /v1/members/{user_id}:
+    delete:
+      operationId: remove_member_v1_members__user_id__delete
+      parameters:
+      - explode: false
+        in: path
+        name: user_id
+        required: true
+        schema:
+          format: uuid
+          title: User Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Remove Member
+      tags:
+      - members
   /v1/mutation-packs:
     get:
       operationId: get_mutation_packs_v1_mutation_packs_get
@@ -4086,6 +4182,64 @@ components:
       - email
       - password
       title: LoginRequest
+    MemberInviteRequest:
+      example:
+        role: developer
+        name: name
+        email: email
+      properties:
+        email:
+          title: Email
+          type: string
+        name:
+          nullable: true
+          type: string
+        role:
+          default: developer
+          enum:
+          - developer
+          - viewer
+          title: Role
+          type: string
+      required:
+      - email
+      title: MemberInviteRequest
+    MemberMetadata:
+      example:
+        role: role
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        api_key: api_key
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        email: email
+      properties:
+        user_id:
+          format: uuid
+          title: User Id
+          type: string
+        email:
+          title: Email
+          type: string
+        name:
+          nullable: true
+          type: string
+        role:
+          title: Role
+          type: string
+        api_key:
+          nullable: true
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - email
+      - name
+      - role
+      - user_id
+      title: MemberMetadata
     MutationCountPct:
       example:
         pct: 2.027123023002322

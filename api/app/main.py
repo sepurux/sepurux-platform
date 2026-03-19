@@ -17,6 +17,7 @@ from app.routes.campaigns import router as campaigns_router
 from app.routes.ci import router as ci_router
 from app.routes.counterfactuals import router as counterfactuals_router
 from app.routes.demo import router as demo_router
+from app.routes.members import router as members_router
 from app.routes.mutation_packs import router as mutation_packs_router
 from app.routes.policy_packs import router as policy_packs_router
 from app.routes.projects import router as projects_router
@@ -105,6 +106,7 @@ app.include_router(billing_router)
 app.include_router(campaigns_router)
 app.include_router(ci_router)
 app.include_router(counterfactuals_router)
+app.include_router(members_router)
 app.include_router(mutation_packs_router)
 app.include_router(policy_packs_router)
 app.include_router(projects_router)

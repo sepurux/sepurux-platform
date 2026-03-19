@@ -726,3 +726,18 @@ class ToolRegistryMetadata(BaseModel):
     name: str
     zone: str
     created_at: datetime
+
+
+class MemberInviteRequest(BaseModel):
+    email: str
+    name: str | None = None
+    role: Literal["developer", "viewer"] = "developer"
+
+
+class MemberMetadata(BaseModel):
+    user_id: UUID
+    email: str
+    name: str | None
+    role: str
+    api_key: str | None = None
+    created_at: datetime
