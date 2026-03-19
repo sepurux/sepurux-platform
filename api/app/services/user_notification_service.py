@@ -93,7 +93,7 @@ def _email_layout(
             f'<p style="margin:20px 0 0;">'
             f'<a href="{html.escape(cta_url, quote=True)}" '
             'style="display:inline-block;padding:11px 16px;border-radius:10px;'
-            f'background:{escaped_accent};color:#04120b;text-decoration:none;font-weight:700;'
+            f"background:{escaped_accent};color:#04120b;text-decoration:none;font-weight:700;"
             'font-size:14px;">'
             f"{html.escape(cta_label)}"
             "</a></p>"
@@ -104,7 +104,7 @@ def _email_layout(
         '<html lang="en"><body style="margin:0;padding:0;background:#060910;">'
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
         'style="background:#060910;padding:24px 12px;">'
-        "<tr><td align=\"center\">"
+        '<tr><td align="center">'
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
         'style="max-width:640px;background:#0b1020;border:1px solid #1a2236;border-radius:16px;'
         'overflow:hidden;">'
@@ -257,7 +257,7 @@ def send_member_invite_email(
             '<p style="margin:0 0 10px;"><strong>Workspace details</strong></p>'
             '<div style="margin:0 0 14px;padding:12px;border:1px solid #263149;'
             'border-radius:10px;background:#0e1528;color:#d8e8ff;">'
-            f'<div><code>Project ID: {html.escape(str(project_id))}</code></div>'
+            f"<div><code>Project ID: {html.escape(str(project_id))}</code></div>"
             "</div>"
             '<p style="margin:0 0 14px;">For security, API keys are not sent by email. '
             "Ask your workspace admin for API credentials, or sign in to your workspace.</p>"
