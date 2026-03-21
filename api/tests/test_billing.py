@@ -34,8 +34,11 @@ from .conftest import auth_headers, seed_project_membership_api_key
 class FakeQueue:
     def __init__(self) -> None:
         self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+        self.fail_with: Exception | None = None
 
     def enqueue(self, *args: object, **kwargs: object) -> object:
+        if self.fail_with is not None:
+            raise self.fail_with
         self.calls.append((args, kwargs))
         return {"queued": True}
 
@@ -153,8 +156,8 @@ def test_billing_endpoints_bootstrap_plans_and_wallet(
     wallet_response = client.get("/v1/billing/credits")
     assert wallet_response.status_code == 200
     wallet = wallet_response.json()
-    assert wallet["balance"] == 250
-    assert wallet["monthly_credits"] == 250
+    assert wallet["balance"] == 0
+    assert wallet["monthly_credits"] == 0
     assert wallet["topup_credits"] == 0
 
 
@@ -230,7 +233,7 @@ def test_billing_routes_return_redirect_sessions_without_local_mutation(
         assert subscription is not None
         assert isinstance(tenant, Tenant)
         assert subscription.plan_id != PRO_PLAN_ID
-        assert wallet.balance == 250
+        assert wallet.balance == 0
         assert wallet.topup_credits == 0
         assert tenant.pricing_tier == "starter"
 
@@ -353,8 +356,8 @@ def test_topup_checkout_webhook_adds_credits_once(
         events = list(db.scalars(select(BillingWebhookEvent)))
 
         assert wallet is not None
-        assert wallet.balance == 1250
-        assert wallet.monthly_credits == 250
+        assert wallet.balance == 1000
+        assert wallet.monthly_credits == 0
         assert wallet.topup_credits == 1000
         assert len(events) == 1
 
@@ -420,19 +423,52 @@ def test_run_is_blocked_when_wallet_is_short(
     assert response.json()["detail"] == "Insufficient credits"
 
 
+def test_post_run_refunds_credits_when_enqueue_fails(
+    billing_test_context: tuple[
+        TestClient, sessionmaker[Session], UUID, UUID, str, FakeQueue, FakeQueue
+    ],
+) -> None:
+    client, testing_session_local, tenant_id, project_id, _, _, priority_queue = (
+        billing_test_context
+    )
+
+    with testing_session_local() as db:
+        owner_id = _project_owner_id(db, project_id=project_id)
+        subscribe_user(db, user_id=owner_id, plan_id=PRO_PLAN_ID, tenant_id=tenant_id)
+        trace_id, campaign_id = _seed_trace_and_campaign(
+            db, project_id=project_id, attempts_count=10
+        )
+
+    priority_queue.fail_with = RuntimeError("queue unavailable")
+    with pytest.raises(RuntimeError, match="queue unavailable"):
+        client.post(
+            "/v1/runs",
+            json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)},
+        )
+
+    with testing_session_local() as db:
+        owner_id = _project_owner_id(db, project_id=project_id)
+        wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == owner_id))
+        assert isinstance(wallet, CreditWallet)
+        assert wallet.balance == 2000
+        assert wallet.monthly_credits == 1980
+        assert wallet.topup_credits == 20
+
+
 def test_monthly_credit_grant_replenishes_due_subscription(
     billing_test_context: tuple[
         TestClient, sessionmaker[Session], UUID, UUID, str, FakeQueue, FakeQueue
     ],
 ) -> None:
-    _, testing_session_local, _, project_id, _, _, _ = billing_test_context
+    _, testing_session_local, tenant_id, project_id, _, _, _ = billing_test_context
 
     with testing_session_local() as db:
         owner_id = _project_owner_id(db, project_id=project_id)
-        subscription, wallet, plan = ensure_user_billing(
+        subscription, wallet, plan = subscribe_user(
             db,
             user_id=owner_id,
-            pricing_tier="starter",
+            plan_id=PRO_PLAN_ID,
+            tenant_id=tenant_id,
         )
         wallet.balance = 0
         wallet.monthly_credits = 0

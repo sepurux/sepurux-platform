@@ -25,7 +25,8 @@ const valuePoints = [
   {
     icon: Coins,
     title: "Monthly credits",
-    description: "Every plan ships with a monthly credit grant and keeps top-ups separate from the core allowance.",
+    description:
+      "Paid plans ship with monthly credit grants. Free includes a one-time signup credit grant, and top-ups stay separate from monthly allowances.",
   },
   {
     icon: Gauge,

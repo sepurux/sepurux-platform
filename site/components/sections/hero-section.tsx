@@ -73,7 +73,6 @@ export function HeroSection() {
                 Live in pilot with 12 teams
               </span>
             </motion.div>
-
             <motion.h1
               variants={fadeUp}
               transition={{ duration: 0.6, ease: "easeOut" }}
@@ -89,6 +88,14 @@ export function HeroSection() {
             >
               The chaos engineering platform for AI agents. Validate failure modes in staging before
               they impact production.
+            </motion.p>
+            <motion.p
+              variants={fadeUp}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="mx-auto mt-4 max-w-2xl text-base font-semibold uppercase tracking-[0.08em]"
+              style={{ color: "var(--accent-teal)" }}
+            >
+              Multi-agent support is coming soon.
             </motion.p>
 
             <motion.div

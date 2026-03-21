@@ -12,6 +12,8 @@ from app.services.audit_service import create_audit_event
 from app.services.billing_service import (
     InsufficientCreditsError,
     consume_credits_for_project_campaign,
+    operation_cost_for_campaign_record,
+    refund_credits_for_project_owner,
 )
 from app.services.github_client import (
     GitHubClientError,
@@ -40,12 +42,17 @@ logger = logging.getLogger(__name__)
 
 @router.post("/runs", status_code=status.HTTP_201_CREATED, response_model=CIRunCreateResponse)
 def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateResponse:
+    charged_amount: int | None = None
+    charged_reason: str | None = None
+    charged_project_id: UUID | None = None
     # Pre-fetch the campaign so we can compute the credit cost before creating the run.
     # create_ci_run_and_enqueue will re-validate below; the double query is intentional
     # so that a 402 is returned before any run record is written.
     campaign = db.scalar(select(Campaign).where(Campaign.campaign_id == payload.campaign_id))
     if campaign is not None:
         try:
+            charged_amount, charged_reason = operation_cost_for_campaign_record(campaign)
+            charged_project_id = campaign.project_id
             consume_credits_for_project_campaign(
                 db,
                 project_id=campaign.project_id,
@@ -72,9 +79,53 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
             github_context=github_context,
         )
     except RelatedRecordNotFoundError as exc:
+        if (
+            charged_amount is not None
+            and charged_reason is not None
+            and charged_project_id is not None
+        ):
+            try:
+                refund_credits_for_project_owner(
+                    db,
+                    project_id=charged_project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:ci_run_creation_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after CI run creation failure")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
+        if (
+            charged_amount is not None
+            and charged_reason is not None
+            and charged_project_id is not None
+        ):
+            try:
+                refund_credits_for_project_owner(
+                    db,
+                    project_id=charged_project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:ci_validation_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after CI validation failure")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception:
+        if (
+            charged_amount is not None
+            and charged_reason is not None
+            and charged_project_id is not None
+        ):
+            try:
+                refund_credits_for_project_owner(
+                    db,
+                    project_id=charged_project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:ci_enqueue_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after CI enqueue failure")
+        raise
     return CIRunCreateResponse(run_id=run.run_id)
 
 
