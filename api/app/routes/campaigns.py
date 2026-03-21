@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -19,6 +20,8 @@ from app.services.billing_service import (
     InsufficientCreditsError,
     consume_credits_for_pack_run,
     get_queue_priority_for_context,
+    operation_cost_for_pack_run,
+    refund_credits_for_context,
 )
 from app.services.campaign_service import create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
@@ -39,6 +42,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
+logger = logging.getLogger(__name__)
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
@@ -208,6 +212,8 @@ def post_campaign_run_pack(
     tenant_auth: DeveloperAuth,
     request: Request,
 ) -> CampaignRunPackResponse:
+    charged_amount: int | None = None
+    charged_reason: str | None = None
     campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -236,6 +242,9 @@ def post_campaign_run_pack(
         )
     else:
         try:
+            charged_amount, charged_reason = operation_cost_for_pack_run(
+                mutation_pack=mutation_pack
+            )
             consume_credits_for_pack_run(
                 db,
                 tenant_auth=tenant_auth,
@@ -253,14 +262,28 @@ def post_campaign_run_pack(
         project_id=project_scope.project_id,
     )
 
-    run = create_run_pack_and_enqueue(
-        db,
-        project_id=project_scope.project_id,
-        campaign=campaign,
-        mutation_pack=mutation_pack,
-        queue_priority=queue_priority,
-        actor=actor_from_request(request),
-    )
+    try:
+        run = create_run_pack_and_enqueue(
+            db,
+            project_id=project_scope.project_id,
+            campaign=campaign,
+            mutation_pack=mutation_pack,
+            queue_priority=queue_priority,
+            actor=actor_from_request(request),
+        )
+    except Exception:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:run_pack_enqueue_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after run-pack enqueue failure")
+        raise
     return CampaignRunPackResponse(
         run_id=run.run_id,
         trace_id=run.trace_id,

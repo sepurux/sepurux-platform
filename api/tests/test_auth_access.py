@@ -80,14 +80,14 @@ def test_signup_bootstraps_workspace_and_session(
     assert payload["name"] == "Alice Example"
     assert payload["project_name"] == "Alice Sandbox"
     assert payload["pricing_tier"] == "credits"
-    assert payload["plan_name"] == "Enterprise"
+    assert payload["plan_name"] == "Free"
     assert payload["role_name"] == "member"
     assert payload["is_super_admin"] is False
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert payload["permissions"]["can_manage_billing"] is True
     assert "audit" in payload["permissions"]["visible_sections"]
-    assert payload["billing_plan_name"] == "Enterprise"
-    assert payload["credits_balance"] == 50100
+    assert payload["billing_plan_name"] == "Free"
+    assert payload["credits_balance"] == 100
     assert payload["api_key"].startswith("cl_")
 
     project_id = UUID(payload["project_id"])

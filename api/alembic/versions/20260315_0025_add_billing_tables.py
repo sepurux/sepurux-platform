@@ -34,7 +34,9 @@ def upgrade() -> None:
         sa.Column("monthly_price", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("monthly_credits", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("features", sa.JSON(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("plan_id"),
         sa.UniqueConstraint("name"),
     )
@@ -58,7 +60,9 @@ def upgrade() -> None:
         sa.Column("balance", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("monthly_credits", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("topup_credits", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
         sa.PrimaryKeyConstraint("wallet_id"),
         sa.UniqueConstraint("user_id"),
@@ -70,12 +74,16 @@ def upgrade() -> None:
         sa.Column("amount", sa.Integer(), nullable=False),
         sa.Column("type", sa.Text(), nullable=False),
         sa.Column("reason", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
         sa.PrimaryKeyConstraint("credit_transaction_id"),
     )
     op.create_index("ix_user_subscriptions_plan_id", "user_subscriptions", ["plan_id"])
-    op.create_index("ix_credit_transactions_user_created_at", "credit_transactions", ["user_id", "created_at"])
+    op.create_index(
+        "ix_credit_transactions_user_created_at", "credit_transactions", ["user_id", "created_at"]
+    )
 
     plans_table = sa.table(
         "subscription_plans",
@@ -92,11 +100,11 @@ def upgrade() -> None:
                 "plan_id": FREE_PLAN_ID,
                 "name": "Free",
                 "monthly_price": 0,
-                "monthly_credits": 250,
+                "monthly_credits": 0,
                 "features": {
                     "workspace_tier": "starter",
                     "queue_priority": "normal",
-                    "highlights": ["250 credits / month", "Single workspace"],
+                    "highlights": ["100 signup credits", "Single workspace"],
                 },
             },
             {

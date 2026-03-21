@@ -1389,6 +1389,22 @@ def execute_run(run_id: str) -> None:
     logger.info("Completed run %s", run_id)
 
 
+def _consume_wallet_credits(wallet: CreditWallet, *, amount: int) -> None:
+    if amount <= 0:
+        return
+    if wallet.balance < amount:
+        raise ValueError("Insufficient wallet balance for scheduled campaign debit")
+
+    # Scheduled runs must debit the same buckets as API-triggered runs.
+    remaining = amount
+    from_monthly = min(int(wallet.monthly_credits), remaining)
+    wallet.monthly_credits -= from_monthly
+    remaining -= from_monthly
+    if remaining > 0:
+        wallet.topup_credits -= remaining
+    wallet.balance = wallet.monthly_credits + wallet.topup_credits
+
+
 def execute_scheduled_campaign(scheduled_campaign_id: str) -> None:
     """Credit-checked execution of a scheduled campaign run pack."""
     sc_uuid = UUID(scheduled_campaign_id)
@@ -1447,8 +1463,7 @@ def execute_scheduled_campaign(scheduled_campaign_id: str) -> None:
             db.commit()
             return
 
-        # Deduct credits
-        wallet.balance -= credit_cost
+        _consume_wallet_credits(wallet, amount=credit_cost)
         db.add(
             CreditTransaction(
                 credit_transaction_id=uuid4(),
