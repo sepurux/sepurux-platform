@@ -142,13 +142,15 @@ def signup_user(
     )
     db.add(user)
     db.flush()
+    # Self-serve signup always starts on the starter tier. Upgrades flow through billing checkout.
+    resolved_pricing_tier = DEFAULT_PRICING_TIER
     bootstrap_workspace_for_user(
         db,
         user=user,
         project_name=project_name,
-        pricing_tier=pricing_tier,
+        pricing_tier=resolved_pricing_tier,
     )
-    ensure_user_billing(db, user_id=user.user_id, pricing_tier=pricing_tier)
+    ensure_user_billing(db, user_id=user.user_id, pricing_tier=resolved_pricing_tier)
     grant_signup_credits(db, user_id=user.user_id)
     session = issue_session_for_user(db, user=user, is_demo=False)
     try:

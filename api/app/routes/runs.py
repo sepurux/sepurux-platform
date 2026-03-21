@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Literal, cast
 from uuid import UUID
 
@@ -21,6 +22,9 @@ from app.services.billing_service import (
     get_queue_priority_for_context,
     maybe_consume_credits_for_campaign_run,
     maybe_consume_credits_for_trace_replay,
+    operation_cost_for_campaign_record,
+    operation_cost_for_template_replay,
+    refund_credits_for_context,
 )
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.demo_service import enforce_demo_run_limits
@@ -51,6 +55,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/runs", tags=["runs"])
+logger = logging.getLogger(__name__)
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
@@ -124,6 +129,8 @@ def post_run(
     tenant_auth: DeveloperAuth,
     request: Request,
 ) -> RunMetadata:
+    charged_amount: int | None = None
+    charged_reason: str | None = None
     trace = db.scalar(
         select(Trace).where(
             Trace.trace_id == payload.trace_id,
@@ -169,6 +176,7 @@ def post_run(
         )
     else:
         try:
+            charged_amount, charged_reason = operation_cost_for_campaign_record(campaign)
             maybe_consume_credits_for_campaign_run(
                 db,
                 tenant_auth=tenant_auth,
@@ -198,7 +206,31 @@ def post_run(
             actor=actor_from_request(request),
         )
     except RelatedRecordNotFoundError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:run_creation_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after run creation failure")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except Exception:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:enqueue_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after enqueue failure")
+        raise
     return _to_run_metadata(run)
 
 
@@ -298,6 +330,8 @@ def post_apply_template(
     tenant_auth: DeveloperAuth,
     request: Request,
 ) -> ApplyTemplateRunResponse:
+    charged_amount: int | None = None
+    charged_reason: str | None = None
     source_run = get_run_record(db, project_id=project_scope.project_id, run_id=run_id)
     if source_run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
@@ -308,6 +342,7 @@ def post_apply_template(
 
     if not tenant_auth.is_demo:
         try:
+            charged_amount, charged_reason = operation_cost_for_template_replay()
             maybe_consume_credits_for_trace_replay(
                 db,
                 tenant_auth=tenant_auth,
@@ -334,8 +369,43 @@ def post_apply_template(
             actor=actor_from_request(request),
         )
     except TemplateRunNotFoundError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:template_source_missing",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after template source run failure")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except TemplateNotFoundError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:template_missing",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after template lookup failure")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except Exception:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:template_enqueue_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after template enqueue failure")
+        raise
 
     return ApplyTemplateRunResponse(new_run_id=new_run.run_id)

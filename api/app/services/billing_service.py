@@ -31,10 +31,12 @@ STRIPE_PROVIDER = "stripe"
 TRANSACTION_USAGE = "usage"
 TRANSACTION_MONTHLY_GRANT = "monthly_grant"
 TRANSACTION_TOPUP_PURCHASE = "topup_purchase"
+TRANSACTION_REFUND = "refund"
 
 QUEUE_NORMAL = "normal"
 QUEUE_PRIORITY = "priority"
 LOW_CREDIT_THRESHOLD = 50
+FREE_SUBSCRIPTION_STATUS = "free"
 
 TRACE_REPLAY_CREDIT_COST = 5
 MUTATION_CAMPAIGN_CREDIT_COST = 20
@@ -59,11 +61,11 @@ DEFAULT_PLAN_SEEDS: tuple[PlanSeed, ...] = (
         plan_id=FREE_PLAN_ID,
         name="Free",
         monthly_price=0,
-        monthly_credits=250,
+        monthly_credits=0,
         features={
             "workspace_tier": "starter",
             "queue_priority": QUEUE_NORMAL,
-            "highlights": ["250 credits / month", "Single workspace"],
+            "highlights": [f"{SIGNUP_CREDITS} signup credits", "Single workspace"],
         },
     ),
     PlanSeed(
@@ -245,6 +247,10 @@ def _workspace_tier_for_plan(plan: SubscriptionPlan | None) -> str:
     return DEFAULT_PRICING_TIER
 
 
+def _is_free_plan(plan: SubscriptionPlan | None) -> bool:
+    return isinstance(plan, SubscriptionPlan) and plan.plan_id == FREE_PLAN_ID
+
+
 def self_serve_checkout_enabled_for_plan(plan: SubscriptionPlan | None) -> bool:
     if not isinstance(plan, SubscriptionPlan):
         return False
@@ -294,6 +300,36 @@ def grant_signup_credits(db: Session, *, user_id: UUID) -> None:
     db.commit()
 
 
+def refund_credits(
+    db: Session,
+    *,
+    user_id: UUID,
+    amount: int,
+    reason: str,
+    pricing_tier: str | None = None,
+) -> CreditWallet:
+    if amount <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Refund amount must be greater than zero",
+        )
+
+    _, wallet, _ = ensure_user_billing(db, user_id=user_id, pricing_tier=pricing_tier)
+    wallet.topup_credits += amount
+    wallet.balance = wallet.monthly_credits + wallet.topup_credits
+    db.add(wallet)
+    _create_credit_transaction(
+        db,
+        user_id=user_id,
+        amount=amount,
+        transaction_type=TRANSACTION_REFUND,
+        reason=reason,
+    )
+    db.commit()
+    db.refresh(wallet)
+    return wallet
+
+
 def has_processed_billing_webhook_event(db: Session, *, event_id: str) -> bool:
     return (
         db.scalar(
@@ -333,6 +369,16 @@ def ensure_user_billing(
         plan = get_subscription_plan(db, plan_id=subscription.plan_id)
         if plan is None:
             raise BillingSubjectNotFoundError("Subscription plan not found")
+        changed = False
+        if (
+            _is_free_plan(plan)
+            and not subscription.stripe_subscription_id
+            and subscription.status == "active"
+        ):
+            # Free users are non-renewing and should not be considered an active paid subscription.
+            subscription.status = FREE_SUBSCRIPTION_STATUS
+            db.add(subscription)
+            changed = True
         if wallet is None:
             wallet = CreditWallet(
                 wallet_id=uuid4(),
@@ -342,19 +388,22 @@ def ensure_user_billing(
                 topup_credits=0,
             )
             db.add(wallet)
-            _create_credit_transaction(
-                db,
-                user_id=user_id,
-                amount=plan.monthly_credits,
-                transaction_type=TRANSACTION_MONTHLY_GRANT,
-                reason="billing wallet backfill grant",
-            )
-            db.commit()
-            db.refresh(wallet)
+            if plan.monthly_credits > 0:
+                _create_credit_transaction(
+                    db,
+                    user_id=user_id,
+                    amount=plan.monthly_credits,
+                    transaction_type=TRANSACTION_MONTHLY_GRANT,
+                    reason="billing wallet backfill grant",
+                )
+            changed = True
         elif wallet.balance != wallet.monthly_credits + wallet.topup_credits:
             wallet.balance = wallet.monthly_credits + wallet.topup_credits
             db.add(wallet)
+            changed = True
+        if changed:
             db.commit()
+            db.refresh(subscription)
             db.refresh(wallet)
         return subscription, wallet, plan
 
@@ -364,12 +413,13 @@ def ensure_user_billing(
         raise BillingSubjectNotFoundError("Default subscription plan not found")
 
     cycle_start = utcnow()
-    renewal_date = cycle_start + timedelta(days=BILLING_CYCLE_DAYS)
+    is_free_plan = _is_free_plan(plan)
+    renewal_date = cycle_start if is_free_plan else cycle_start + timedelta(days=BILLING_CYCLE_DAYS)
     subscription = UserSubscription(
         user_subscription_id=uuid4(),
         user_id=user_id,
         plan_id=plan.plan_id,
-        status="active",
+        status=FREE_SUBSCRIPTION_STATUS if is_free_plan else "active",
         start_date=cycle_start,
         renewal_date=renewal_date,
     )
@@ -381,13 +431,14 @@ def ensure_user_billing(
         topup_credits=0,
     )
     db.add_all([subscription, wallet])
-    _create_credit_transaction(
-        db,
-        user_id=user_id,
-        amount=plan.monthly_credits,
-        transaction_type=TRANSACTION_MONTHLY_GRANT,
-        reason="initial monthly grant",
-    )
+    if plan.monthly_credits > 0:
+        _create_credit_transaction(
+            db,
+            user_id=user_id,
+            amount=plan.monthly_credits,
+            transaction_type=TRANSACTION_MONTHLY_GRANT,
+            reason="initial monthly grant",
+        )
     db.commit()
     db.refresh(subscription)
     db.refresh(wallet)
@@ -415,13 +466,16 @@ def subscribe_user(
     wallet = get_credit_wallet(db, user_id=user_id)
     if subscription is None and wallet is None:
         cycle_start = utcnow()
+        is_free_plan = _is_free_plan(plan)
         subscription = UserSubscription(
             user_subscription_id=uuid4(),
             user_id=user_id,
             plan_id=plan.plan_id,
-            status="active",
+            status=FREE_SUBSCRIPTION_STATUS if is_free_plan else "active",
             start_date=cycle_start,
-            renewal_date=cycle_start + timedelta(days=BILLING_CYCLE_DAYS),
+            renewal_date=(
+                cycle_start if is_free_plan else cycle_start + timedelta(days=BILLING_CYCLE_DAYS)
+            ),
         )
         wallet = CreditWallet(
             wallet_id=uuid4(),
@@ -431,19 +485,20 @@ def subscribe_user(
             topup_credits=0,
         )
         db.add_all([subscription, wallet])
-        _create_credit_transaction(
-            db,
-            user_id=user_id,
-            amount=plan.monthly_credits,
-            transaction_type=TRANSACTION_MONTHLY_GRANT,
-            reason="initial monthly grant",
-        )
+        if plan.monthly_credits > 0:
+            _create_credit_transaction(
+                db,
+                user_id=user_id,
+                amount=plan.monthly_credits,
+                transaction_type=TRANSACTION_MONTHLY_GRANT,
+                reason="initial monthly grant",
+            )
         db.flush()
     elif subscription is None or wallet is None:
         subscription, wallet, _ = ensure_user_billing(db, user_id=user_id)
 
     subscription.plan_id = plan.plan_id
-    subscription.status = "active"
+    subscription.status = FREE_SUBSCRIPTION_STATUS if _is_free_plan(plan) else "active"
     if stripe_customer_id is not None:
         subscription.stripe_customer_id = stripe_customer_id
     if stripe_subscription_id is not None:
@@ -538,13 +593,14 @@ def apply_subscription_cycle_grant(
     wallet.monthly_credits += plan.monthly_credits
     wallet.balance = wallet.monthly_credits + wallet.topup_credits
     db.add_all([subscription, wallet])
-    _create_credit_transaction(
-        db,
-        user_id=subscription.user_id,
-        amount=plan.monthly_credits,
-        transaction_type=TRANSACTION_MONTHLY_GRANT,
-        reason=reason,
-    )
+    if plan.monthly_credits > 0:
+        _create_credit_transaction(
+            db,
+            user_id=subscription.user_id,
+            amount=plan.monthly_credits,
+            transaction_type=TRANSACTION_MONTHLY_GRANT,
+            reason=reason,
+        )
     db.commit()
     db.refresh(subscription)
     db.refresh(wallet)
@@ -643,6 +699,8 @@ def grant_due_monthly_credits(
 
         plan = plan_map.get(subscription.plan_id)
         if plan is None:
+            continue
+        if plan.monthly_credits <= 0:
             continue
 
         wallet = get_credit_wallet(db, user_id=subscription.user_id)
@@ -743,6 +801,17 @@ def operation_cost_for_template_replay() -> tuple[int, str]:
     return TRACE_REPLAY_CREDIT_COST, "trace_replay"
 
 
+def operation_cost_for_pack_run(*, mutation_pack: Any) -> tuple[int, str]:
+    cost = int(getattr(mutation_pack, "credit_cost", 20))
+    pack_name = str(getattr(mutation_pack, "name", "unknown"))
+    return cost, f"pack_run:{pack_name}"
+
+
+def operation_cost_for_campaign_record(campaign: Any) -> tuple[int, str]:
+    attempt_count = _attempt_count_from_eval_set(getattr(campaign, "eval_set", None))
+    return operation_cost_for_campaign(attempt_count=attempt_count)
+
+
 def _attempt_count_from_eval_set(eval_set: Any) -> int:
     if isinstance(eval_set, dict):
         value = eval_set.get("attempts_count")
@@ -766,8 +835,7 @@ def maybe_consume_credits_for_campaign_run(
     if billable_user_id is None:
         return None
     pricing_tier = _pricing_tier_for_project(db, project_id=project_id)
-    attempt_count = _attempt_count_from_eval_set(getattr(campaign, "eval_set", None))
-    cost, reason = operation_cost_for_campaign(attempt_count=attempt_count)
+    cost, reason = operation_cost_for_campaign_record(campaign)
     return consume_credits(
         db,
         user_id=billable_user_id,
@@ -792,12 +860,12 @@ def consume_credits_for_pack_run(
     if billable_user_id is None:
         return None
     pricing_tier = _pricing_tier_for_project(db, project_id=project_id)
-    credit_cost = int(getattr(mutation_pack, "credit_cost", 20))
+    credit_cost, reason = operation_cost_for_pack_run(mutation_pack=mutation_pack)
     return consume_credits(
         db,
         user_id=billable_user_id,
         amount=credit_cost,
-        reason=f"pack_run:{mutation_pack.name}",
+        reason=reason,
         pricing_tier=pricing_tier,
     )
 
@@ -818,8 +886,7 @@ def consume_credits_for_project_campaign(
     if not isinstance(project, Project) or project.owner_id is None:
         return None
     pricing_tier = _pricing_tier_for_project(db, project_id=project_id)
-    attempt_count = _attempt_count_from_eval_set(getattr(campaign, "eval_set", None))
-    cost, reason = operation_cost_for_campaign(attempt_count=attempt_count)
+    cost, reason = operation_cost_for_campaign_record(campaign)
     return consume_credits(
         db,
         user_id=project.owner_id,
@@ -848,6 +915,51 @@ def maybe_consume_credits_for_trace_replay(
         db,
         user_id=billable_user_id,
         amount=cost,
+        reason=reason,
+        pricing_tier=pricing_tier,
+    )
+
+
+def refund_credits_for_context(
+    db: Session,
+    *,
+    tenant_auth: TenantAuthContext,
+    project_id: UUID,
+    amount: int,
+    reason: str,
+) -> CreditWallet | None:
+    billable_user_id = resolve_billable_user_id(
+        db,
+        tenant_auth=tenant_auth,
+        project_id=project_id,
+    )
+    if billable_user_id is None:
+        return None
+    pricing_tier = _pricing_tier_for_project(db, project_id=project_id)
+    return refund_credits(
+        db,
+        user_id=billable_user_id,
+        amount=amount,
+        reason=reason,
+        pricing_tier=pricing_tier,
+    )
+
+
+def refund_credits_for_project_owner(
+    db: Session,
+    *,
+    project_id: UUID,
+    amount: int,
+    reason: str,
+) -> CreditWallet | None:
+    project = db.scalar(select(Project).where(Project.project_id == project_id))
+    if not isinstance(project, Project) or project.owner_id is None:
+        return None
+    pricing_tier = _pricing_tier_for_project(db, project_id=project_id)
+    return refund_credits(
+        db,
+        user_id=project.owner_id,
+        amount=amount,
         reason=reason,
         pricing_tier=pricing_tier,
     )
