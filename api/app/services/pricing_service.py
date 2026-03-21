@@ -63,8 +63,14 @@ def plan_label(value: str | None) -> str:
 
 def _normalize_billing_plan_name(value: str | None) -> BillingPlanName | None:
     normalized = (value or "").strip().lower()
-    if normalized in {"free", "pro", "team", "enterprise"}:
-        return normalized
+    if normalized == "free":
+        return "free"
+    if normalized == "pro":
+        return "pro"
+    if normalized == "team":
+        return "team"
+    if normalized == "enterprise":
+        return "enterprise"
     return None
 
 
