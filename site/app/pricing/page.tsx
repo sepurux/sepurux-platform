@@ -10,15 +10,15 @@ import { pricingTiers } from "@/lib/pricing";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    "Subscription and credit pricing for Sepurux. Run replay campaigns, mutation packs, and reliability checks with monthly credits and priority execution.",
+    "Subscription and credit pricing for Sepurux. Free includes one-time signup credits, while paid plans add recurring monthly credits and priority execution.",
   path: "/pricing",
 });
 
 const operationCosts = [
   { label: "Trace replay", credits: "5 credits" },
   { label: "Mutation campaign", credits: "20 credits" },
-  { label: "Large campaign", credits: "50 credits" },
-  { label: "Scheduled pack run", credits: "pack credit cost" },
+  { label: "Large campaign", credits: "50 credits (>=50 attempts)" },
+  { label: "Scheduled pack run", credits: "pack-specific cost (default 20)" },
 ];
 
 const valuePoints = [
@@ -35,8 +35,8 @@ const valuePoints = [
   },
   {
     icon: Layers3,
-    title: "Shared control plane",
-    description: "Upgrade from solo debugging to team-wide reliability programs with policy, security, and governance surfaces.",
+    title: "Collaboration gating",
+    description: "Member invites are available on Team and Enterprise plans.",
   },
 ];
 

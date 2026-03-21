@@ -350,7 +350,11 @@ def session_metadata(
             wallet.get("low_credit_threshold") if isinstance(wallet, dict) else None
         ),
         "is_low_credit": bool(wallet.get("is_low_credit")) if isinstance(wallet, dict) else False,
-        "permissions": build_auth_permissions(tenant_auth.role_name, pricing_tier).model_dump(),
+        "permissions": build_auth_permissions(
+            tenant_auth.role_name,
+            pricing_tier,
+            billing_plan_name=billing_plan_name,
+        ).model_dump(),
     }
 
 
