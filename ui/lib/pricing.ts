@@ -11,20 +11,20 @@ export const pricingTierDefinitions: PricingTierDefinition[] = [
   {
     tier: "starter",
     name: "Starter",
-    summary: "Replay, mutation basics, and run history for one agent stack.",
-    menuHighlights: ["Traces", "Campaigns", "Runs", "Reports", "Mutation Packs"],
+    summary: "One-time signup credits with normal queue execution.",
+    menuHighlights: ["Normal queue", "100 signup credits", "No member invites"],
   },
   {
     tier: "team",
     name: "Team",
-    summary: "Adds policies, security insights, and webhook automation.",
-    menuHighlights: ["Policies", "Security", "Webhooks"],
+    summary: "Recurring monthly credits, priority queue, and member invites.",
+    menuHighlights: ["Priority queue", "Invite members", "Shared collaboration"],
   },
   {
     tier: "enterprise",
     name: "Enterprise",
-    summary: "Unlocks governance surfaces and enterprise operating controls.",
-    menuHighlights: ["Audit", "Advanced controls", "Support"],
+    summary: "Highest monthly credits with priority queue and member invites.",
+    menuHighlights: ["Priority queue", "Invite members", "Enterprise tier"],
   },
 ];
 

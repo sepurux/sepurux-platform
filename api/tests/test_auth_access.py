@@ -85,7 +85,7 @@ def test_signup_bootstraps_workspace_and_session(
     assert payload["is_super_admin"] is False
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert payload["permissions"]["can_manage_billing"] is True
-    assert "audit" in payload["permissions"]["visible_sections"]
+    assert "audit" not in payload["permissions"]["visible_sections"]
     assert payload["billing_plan_name"] == "Free"
     assert payload["credits_balance"] == 100
     assert payload["api_key"].startswith("cl_")
@@ -148,10 +148,12 @@ def test_signup_with_starter_plan_still_gets_full_access(
     assert payload["plan_name"] == "Free"
     assert "billing" in payload["permissions"]["visible_sections"]
     assert "mutation-packs" in payload["permissions"]["visible_sections"]
-    assert "policies" in payload["permissions"]["visible_sections"]
-    assert "audit" in payload["permissions"]["visible_sections"]
-    assert payload["permissions"]["can_manage_policy_packs"] is True
-    assert payload["permissions"]["can_manage_security_config"] is True
+    assert "policies" not in payload["permissions"]["visible_sections"]
+    assert "security" not in payload["permissions"]["visible_sections"]
+    assert "webhooks" not in payload["permissions"]["visible_sections"]
+    assert "audit" not in payload["permissions"]["visible_sections"]
+    assert payload["permissions"]["can_manage_policy_packs"] is False
+    assert payload["permissions"]["can_manage_security_config"] is False
 
 
 def test_login_returns_project_scoped_session_for_existing_user(
@@ -240,12 +242,12 @@ def test_viewer_login_still_gets_full_workspace_access(
     assert payload["pricing_tier"] == "credits"
     assert payload["role_name"] == "member"
     assert payload["is_super_admin"] is False
-    assert "audit" in payload["permissions"]["visible_sections"]
+    assert "audit" not in payload["permissions"]["visible_sections"]
     assert payload["permissions"]["can_upload_traces"] is True
     assert payload["permissions"]["can_create_campaigns"] is True
     assert payload["permissions"]["can_manage_mutation_packs"] is True
-    assert payload["permissions"]["can_manage_policy_packs"] is True
-    assert payload["permissions"]["can_manage_security_config"] is True
+    assert payload["permissions"]["can_manage_policy_packs"] is False
+    assert payload["permissions"]["can_manage_security_config"] is False
     assert payload["permissions"]["can_manage_billing"] is True
 
 

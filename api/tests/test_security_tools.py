@@ -245,7 +245,7 @@ def test_security_tool_registry_write_is_available_to_all_authenticated_users() 
     assert response.status_code == 201
 
 
-def test_security_section_is_available_on_all_workspace_tiers() -> None:
+def test_security_section_is_blocked_on_starter_workspace_tier() -> None:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -280,4 +280,4 @@ def test_security_section_is_available_on_all_workspace_tiers() -> None:
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
-    assert response.status_code == 200
+    assert response.status_code == 403
