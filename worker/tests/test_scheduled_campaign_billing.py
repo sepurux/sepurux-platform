@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 
 import worker as worker_module
 
 
 def test_consume_wallet_credits_uses_monthly_before_topup() -> None:
-    wallet = SimpleNamespace(monthly_credits=40, topup_credits=30, balance=70)
+    wallet = cast(Any, SimpleNamespace(monthly_credits=40, topup_credits=30, balance=70))
 
     worker_module._consume_wallet_credits(wallet, amount=50)
 
@@ -16,7 +17,7 @@ def test_consume_wallet_credits_uses_monthly_before_topup() -> None:
 
 
 def test_consume_wallet_credits_all_from_monthly_when_available() -> None:
-    wallet = SimpleNamespace(monthly_credits=80, topup_credits=5, balance=85)
+    wallet = cast(Any, SimpleNamespace(monthly_credits=80, topup_credits=5, balance=85))
 
     worker_module._consume_wallet_credits(wallet, amount=20)
 
