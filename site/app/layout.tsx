@@ -64,6 +64,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: siteConfig.twitterHandle,
+    creator: siteConfig.twitterHandle,
     title: "Sepurux | Reliability infrastructure for AI agents",
     description: siteConfig.description,
     images: [siteConfig.ogImage],

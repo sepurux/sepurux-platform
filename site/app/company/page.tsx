@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { buildPageMetadata } from "@/lib/site";
+import { buildPageMetadata, siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Company",
   description:
-    "About Sepurux and contact information for platform engineering, security, and partnerships.",
+    "About Sepurux and contact information for founder and support channels.",
   path: "/company",
 });
 
@@ -42,9 +42,31 @@ export default function CompanyPage() {
         <div id="contact" className="rounded-[28px] border border-white/8 bg-white/[0.03] p-7 md:p-8">
           <h2 className="text-lg font-semibold text-white">Contact</h2>
           <div className="mt-4 space-y-3 text-sm leading-7 text-neutral-400">
-            <p>Email: hello@sepurux.com</p>
-            <p>Security: security@sepurux.com</p>
-            <p>Partnerships: partners@sepurux.com</p>
+            <p>
+              Founder:{" "}
+              <a
+                href={`mailto:${siteConfig.founderEmail}`}
+                className="text-white underline-offset-4 hover:underline"
+              >
+                {siteConfig.founderEmail}
+              </a>{" "}
+              ·{" "}
+              <a
+                href={`tel:${siteConfig.founderPhone}`}
+                className="text-white underline-offset-4 hover:underline"
+              >
+                {siteConfig.founderPhone}
+              </a>
+            </p>
+            <p>
+              Support:{" "}
+              <a
+                href={`mailto:${siteConfig.supportEmail}`}
+                className="text-white underline-offset-4 hover:underline"
+              >
+                {siteConfig.supportEmail}
+              </a>
+            </p>
             <p>
               Read legal details in{" "}
               <Link href="/legal/privacy" className="text-white underline-offset-4 hover:underline">Privacy</Link>{" "}
