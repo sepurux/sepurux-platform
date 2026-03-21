@@ -22,6 +22,33 @@ export function Footer() {
             <p className="mt-2 max-w-md text-sm text-neutral-500">
               Chaos engineering, replay, and policy-aware reliability testing for AI agents.
             </p>
+            <div className="mt-3 space-y-1 text-xs text-neutral-400">
+              <p>
+                Founder:{" "}
+                <a
+                  href={`mailto:${siteConfig.founderEmail}`}
+                  className="text-neutral-300 transition-colors hover:text-white"
+                >
+                  {siteConfig.founderEmail}
+                </a>{" "}
+                ·{" "}
+                <a
+                  href={`tel:${siteConfig.founderPhone}`}
+                  className="text-neutral-300 transition-colors hover:text-white"
+                >
+                  {siteConfig.founderPhone}
+                </a>
+              </p>
+              <p>
+                Support:{" "}
+                <a
+                  href={`mailto:${siteConfig.supportEmail}`}
+                  className="text-neutral-300 transition-colors hover:text-white"
+                >
+                  {siteConfig.supportEmail}
+                </a>
+              </p>
+            </div>
 
             {/* social links */}
             <div className="mt-5 flex items-center gap-3">

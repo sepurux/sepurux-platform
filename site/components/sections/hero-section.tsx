@@ -87,7 +87,8 @@ export function HeroSection() {
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="mx-auto mt-7 max-w-xl text-lg leading-8 text-white/60"
             >
-              The chaos engineering layer for AI agents. Break things in staging so production never does.
+              The chaos engineering platform for AI agents. Validate failure modes in staging before
+              they impact production.
             </motion.p>
 
             <motion.div
