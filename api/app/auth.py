@@ -13,7 +13,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, get_db
-from app.models import ApiKey, Project, ProjectMembership, Role, Tenant, User
+from app.models import (
+    ApiKey,
+    Project,
+    ProjectMembership,
+    Role,
+    SubscriptionPlan,
+    Tenant,
+    User,
+    UserSubscription,
+)
 from app.services.pricing_service import build_auth_permissions
 
 # Deterministic dev seed values inserted by the Alembic migration for local compose usage.
@@ -154,7 +163,23 @@ def require_super_admin(db: DbSession, tenant_auth: TenantAuthDep) -> TenantAuth
 def _project_permission_bundle(db: Session, project_scope: ProjectScope):
     tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == project_scope.tenant_id))
     pricing_tier = tenant.pricing_tier if isinstance(tenant, Tenant) else None
-    return build_auth_permissions(project_scope.role_name, pricing_tier)
+    project = db.scalar(select(Project).where(Project.project_id == project_scope.project_id))
+    billing_plan_name: str | None = None
+    if isinstance(project, Project) and project.owner_id is not None:
+        subscription = db.scalar(
+            select(UserSubscription).where(UserSubscription.user_id == project.owner_id)
+        )
+        if isinstance(subscription, UserSubscription):
+            plan = db.scalar(
+                select(SubscriptionPlan).where(SubscriptionPlan.plan_id == subscription.plan_id)
+            )
+            if isinstance(plan, SubscriptionPlan):
+                billing_plan_name = plan.name
+    return build_auth_permissions(
+        project_scope.role_name,
+        pricing_tier,
+        billing_plan_name=billing_plan_name,
+    )
 
 
 def require_visible_section(section_name: str):
