@@ -72,13 +72,22 @@ export function Footer() {
               Pricing
             </Link>
             <Link href="/docs" className="transition-colors hover:text-white">
-              Docs
+              Docs Home
             </Link>
-            <Link href="/legal/privacy" className="transition-colors hover:text-white">
-              Privacy
+            <Link href="/docs/getting-started" className="transition-colors hover:text-white">
+              Getting Started
+            </Link>
+            <Link href="/docs/api-reference" className="transition-colors hover:text-white">
+              API Guide
+            </Link>
+            <Link href="/docs/faq" className="transition-colors hover:text-white">
+              FAQ
             </Link>
             <Link href="/book-demo" className="transition-colors hover:text-white">
               Book a Demo
+            </Link>
+            <Link href="/legal/privacy" className="transition-colors hover:text-white">
+              Privacy
             </Link>
           </div>
         </div>
