@@ -3,8 +3,11 @@
 import type { ReactNode } from "react";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 
+import { clearStoredAuthSession } from "@/lib/auth-session";
+import { clearStoredApiBaseUrl, clearStoredApiKey, clearStoredProjectId } from "@/lib/tenant-settings";
 import { cn } from "@/lib/utils";
 
 type InternalNavItem = {
@@ -29,10 +32,19 @@ const navItems: InternalNavItem[] = [
 
 export function InternalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  function handleSignOut() {
+    clearStoredAuthSession();
+    clearStoredApiKey();
+    clearStoredProjectId();
+    clearStoredApiBaseUrl();
+    router.push("/auth?mode=access&intent=login");
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <aside className="hidden h-screen w-64 shrink-0 border-r border-border bg-sidebar/95 px-4 py-4 backdrop-blur xl:block">
+      <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar/95 px-4 py-4 backdrop-blur xl:flex">
         <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Sepurux</p>
           <p className="mt-1 text-sm font-semibold text-foreground">Internal Console</p>
@@ -47,7 +59,7 @@ export function InternalShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <nav className="space-y-1 px-1 py-3">
+        <nav className="flex-1 space-y-1 px-1 py-3">
           {navItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
@@ -66,9 +78,46 @@ export function InternalShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+
+        <div className="px-1 pb-1">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex w-full items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent/35"
+          >
+            <LogOut className="h-4 w-4 text-muted-foreground" />
+            Sign out
+          </button>
+        </div>
       </aside>
 
-      <main className="h-screen min-w-0 flex-1 overflow-y-auto bg-background">{children}</main>
+      <main className="h-screen min-w-0 flex-1 overflow-y-auto bg-background">
+        <header className="sticky top-0 z-10 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Internal Console</p>
+              <p className="text-xs text-muted-foreground">Super admin workspace</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/internal/search"
+                className="inline-flex rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+              >
+                Global Search
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/35"
+              >
+                <LogOut className="h-3.5 w-3.5 text-muted-foreground" />
+                Sign out
+              </button>
+            </div>
+          </div>
+        </header>
+        {children}
+      </main>
     </div>
   );
 }
