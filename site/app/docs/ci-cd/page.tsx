@@ -16,6 +16,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  statuses: write
+
 jobs:
   reliability-gate:
     runs-on: ubuntu-latest
@@ -26,21 +32,92 @@ jobs:
           python-version: "3.11"
 
       - name: Install Sepurux CLI
-        run: pip install sepurux
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install sepurux
 
       - name: Run reliability gate
-        run: |
-          sepurux run campaign \\
-            --project my-agent \\
-            --campaign core-reliability \\
-            --min-reliability 80 \\
-            --timeout 600 \\
-            --api-key \${{ secrets.SEPURUX_API_KEY }}
         env:
-          SEPURUX_API_BASE_URL: ${siteConfig.appUrl}/api/backend
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPO: \${{ github.repository }}
-          PR_NUMBER: \${{ github.event.pull_request.number }}`;
+          # Use the live cloud API in CI, not localhost.
+          SEPURUX_API_BASE_URL: https://app.sepurux.dev/api/backend
+          SEPURUX_API_KEY: \${{ secrets.SEPURUX_API_KEY }}
+          SEPURUX_PROJECT_ID: \${{ secrets.SEPURUX_PROJECT_ID }}
+          SEPURUX_CAMPAIGN_ID: \${{ secrets.SEPURUX_CAMPAIGN_ID }}
+          # Produced by earlier instrumentation/upload steps in your pipeline.
+          SEPURUX_TRACE_ID: \${{ secrets.SEPURUX_TRACE_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          import time
+
+          from sepurux import SepuruxClient
+
+          min_reliability = 80.0
+          timeout_seconds = 600
+
+          campaign_id = (os.getenv("SEPURUX_CAMPAIGN_ID") or "").strip()
+          trace_id = (os.getenv("SEPURUX_TRACE_ID") or "").strip()
+          if not campaign_id:
+              print("Missing SEPURUX_CAMPAIGN_ID")
+              sys.exit(1)
+          if not trace_id:
+              print("Missing SEPURUX_TRACE_ID")
+              sys.exit(1)
+
+          client = SepuruxClient(
+              base_url=os.environ["SEPURUX_API_BASE_URL"],
+              api_key=os.environ["SEPURUX_API_KEY"],
+              project_id=(os.getenv("SEPURUX_PROJECT_ID") or None),
+          )
+
+          run_id = client.start_run(trace_id=trace_id, campaign_id=campaign_id)
+          print(f"Started Sepurux run: {run_id}")
+
+          terminal_success = {"completed", "success", "succeeded", "done", "pass", "passed"}
+          terminal_failure = {"failed", "error", "cancelled", "fail"}
+          deadline = time.time() + timeout_seconds
+          latest = {"status": "unknown", "summary": {}}
+
+          while time.time() < deadline:
+              latest = client.get_run(run_id)
+              status = str(latest.get("status", "")).lower()
+              print(f"Run status: {status}")
+              if status in terminal_success | terminal_failure:
+                  break
+              time.sleep(5)
+          else:
+              print(f"Run timed out after {timeout_seconds}s")
+              sys.exit(1)
+
+          status = str(latest.get("status", "")).lower()
+          if status in terminal_failure:
+              print(f"Run ended in failure state: {status}")
+              sys.exit(1)
+          if status not in terminal_success:
+              print(f"Run ended in unknown non-success state: {status}")
+              sys.exit(1)
+
+          summary = latest.get("summary") or {}
+          score = None
+          for key in ("reliability", "reliability_score", "score", "pass_rate"):
+              value = summary.get(key)
+              if isinstance(value, (int, float)):
+                  score = float(value)
+                  break
+
+          if score is None:
+              print("Could not find a numeric reliability score in run summary.")
+              print(f"Summary payload: {summary}")
+              sys.exit(1)
+
+          if score <= 1:
+              score *= 100.0
+
+          print(f"Reliability score: {score:.2f} (threshold: {min_reliability:.2f})")
+          if score < min_reliability:
+              sys.exit(1)
+          PY`;
 
 const ciApiSnippet = `# 1) create CI run
 curl -X POST ${siteConfig.appUrl}/api/backend/v1/ci/runs \\
@@ -96,7 +173,7 @@ export default function CICDPage() {
       <DocsSection
         id="workflow"
         title="GitHub Workflow Integration"
-        description="Use a dedicated reliability gate job in pull requests and mark it as a required status check in repository branch protection rules."
+        description="Use a dedicated reliability gate job in pull requests and mark it as a required status check in repository branch protection rules. Run gates against captured traces, not synthetic placeholder payloads."
       >
         <DocsCodeBlock code={workflowSnippet} label=".github/workflows/sepurux-gate.yml" />
       </DocsSection>
