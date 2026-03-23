@@ -30,12 +30,20 @@ const createTraceSnippet = `curl -X POST ${siteConfig.appUrl}/api/backend/v1/tra
     ]
   }'`;
 
-const runCampaignSnippet = `curl -X POST ${siteConfig.appUrl}/api/backend/v1/campaigns/$SEPURUX_CAMPAIGN_ID/run-pack \\
+const basicBuilderSnippet = `# In the app UI:
+# 1) Open Mutation Packs -> Create Mutation Pack
+# 2) Select Basic Builder and choose a preset + intensity
+# 3) Optional: paste trace_id and click "Load Tools"
+# 4) Save, then copy mutation_pack_id from the packs table`;
+
+const runWithPackSnippet = `curl -X POST ${siteConfig.appUrl}/api/backend/v1/runs \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: $SEPURUX_API_KEY" \\
   -H "X-Project-Id: $SEPURUX_PROJECT_ID" \\
   -d '{
-    "pack": "sepurux.core.reliability"
+    "trace_id": "<trace_uuid>",
+    "campaign_id": "$SEPURUX_CAMPAIGN_ID",
+    "mutation_pack_id": "<mutation_pack_uuid>"
   }'`;
 
 export default function GettingStartedPage() {
@@ -48,7 +56,8 @@ export default function GettingStartedPage() {
         { href: "#prerequisites", label: "Prerequisites" },
         { href: "#environment", label: "Environment Setup" },
         { href: "#first-trace", label: "First Trace" },
-        { href: "#first-run", label: "First Campaign Run" },
+        { href: "#basic-builder", label: "Basic Builder" },
+        { href: "#first-run", label: "First Run" },
       ]}
       actions={[
         { href: "/docs/api-reference", label: "API guide" },
@@ -91,11 +100,19 @@ export default function GettingStartedPage() {
       </DocsSection>
 
       <DocsSection
-        id="first-run"
-        title="Run a Seeded Reliability Pack"
-        description="Execute a baseline mutation pack to validate your integration before custom packs or policy tuning."
+        id="basic-builder"
+        title="Create a Mutation Pack with Basic Builder"
+        description="Use the Basic Builder to generate valid mutation packs without hand-writing JSON."
       >
-        <DocsCodeBlock code={runCampaignSnippet} label="bash" />
+        <DocsCodeBlock code={basicBuilderSnippet} label="steps" />
+      </DocsSection>
+
+      <DocsSection
+        id="first-run"
+        title="Run with Trace + Campaign + Mutation Pack"
+        description="Run directly from the Mutation Packs page with Run Now, or use the API endpoint below for automation."
+      >
+        <DocsCodeBlock code={runWithPackSnippet} label="bash" />
       </DocsSection>
     </DocsShell>
   );
