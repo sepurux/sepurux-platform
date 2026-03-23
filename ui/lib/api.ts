@@ -1173,6 +1173,12 @@ export const api = {
     eval_set: unknown;
     mutation_pack_id?: string | null;
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
+  createRun: (payload: {
+    trace_id: string;
+    campaign_id: string;
+    mutation_pack_id?: string | null;
+    policy_pack_id?: string | null;
+  }) => postJson<RunMetadata, typeof payload>("/v1/runs", payload),
   createMutationPack: (payload: {
     name: string;
     description?: string | null;
