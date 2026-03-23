@@ -56,8 +56,14 @@ function scoreColor(status: "healthy" | "warning" | "critical") {
   return COLOR_HEALTHY;
 }
 
+function normalizeScore(score: number) {
+  if (!Number.isFinite(score)) return 0;
+  if (score >= 0 && score <= 1) return score * 100;
+  return score;
+}
+
 function ReliabilityGauge({ score, status }: { score: number; status: "healthy" | "warning" | "critical" }) {
-  const clampedScore = Math.max(0, Math.min(100, score));
+  const clampedScore = Math.max(0, Math.min(100, normalizeScore(score)));
   const color = scoreColor(status);
 
   // Build a simple arc gauge using SVG
@@ -82,7 +88,7 @@ function ReliabilityGauge({ score, status }: { score: number; status: "healthy" 
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg width="160" height="130" viewBox="0 0 160 130">
+      <svg width="160" height="150" viewBox="0 0 160 150">
         {/* Track */}
         <path
           d={arcPath(startAngle, startAngle + totalDegrees, r)}
