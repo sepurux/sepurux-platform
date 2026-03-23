@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { api, type MutationPackMetadata } from "@/lib/api";
+import {
+  api,
+  type CampaignMetadata,
+  type MutationPackMetadata,
+  type TraceMetadata,
+} from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
-import { Copy, Check } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +22,18 @@ type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; records: MutationPackMetadata[] };
+
+type RunDependenciesState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; traces: TraceMetadata[]; campaigns: CampaignMetadata[] };
+
+type RunState =
+  | { status: "idle" }
+  | { status: "running" }
+  | { status: "error"; message: string }
+  | { status: "success"; runId: string };
 
 function CopyIdButton({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
@@ -40,9 +57,16 @@ function CopyIdButton({ id }: { id: string }) {
 export function MutationPacksView() {
   const authSession = useAuthSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [runDependencies, setRunDependencies] = useState<RunDependenciesState>({
+    status: "idle",
+  });
+  const [selectedMutationPackId, setSelectedMutationPackId] = useState("");
+  const [selectedTraceId, setSelectedTraceId] = useState("");
+  const [selectedCampaignId, setSelectedCampaignId] = useState("");
+  const [runState, setRunState] = useState<RunState>({ status: "idle" });
 
-  const canManageMutationPacks =
-    authSession?.permissions.can_manage_mutation_packs ?? false;
+  const canManageMutationPacks = authSession?.permissions.can_manage_mutation_packs ?? false;
+  const canRunCampaigns = authSession?.permissions.can_run_campaigns ?? false;
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +95,42 @@ export function MutationPacksView() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!canRunCampaigns) {
+      setRunDependencies({ status: "idle" });
+      return;
+    }
+
+    let cancelled = false;
+    setRunDependencies({ status: "loading" });
+
+    async function loadDependencies() {
+      try {
+        const [traces, campaigns] = await Promise.all([
+          api.listTraces({ limit: 200, offset: 0 }),
+          api.listCampaigns({ limit: 200, offset: 0 }),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setRunDependencies({ status: "ready", traces, campaigns });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setRunDependencies({
+          status: "error",
+          message: error instanceof Error ? error.message : "Failed to load traces/campaigns",
+        });
+      }
+    }
+
+    void loadDependencies();
+    return () => {
+      cancelled = true;
+    };
+  }, [canRunCampaigns]);
+
   const records =
     state.status === "ready"
       ? [...state.records].sort((left, right) => {
@@ -83,6 +143,89 @@ export function MutationPacksView() {
           return left.name.localeCompare(right.name);
         })
       : [];
+
+  useEffect(() => {
+    if (records.length === 0) {
+      setSelectedMutationPackId("");
+      return;
+    }
+    setSelectedMutationPackId((previous) => {
+      if (previous && records.some((record) => record.mutation_pack_id === previous)) {
+        return previous;
+      }
+      return records[0].mutation_pack_id;
+    });
+  }, [records]);
+
+  useEffect(() => {
+    if (runDependencies.status !== "ready") {
+      return;
+    }
+
+    setSelectedTraceId((previous) => {
+      if (previous && runDependencies.traces.some((trace) => trace.trace_id === previous)) {
+        return previous;
+      }
+      return runDependencies.traces[0]?.trace_id ?? "";
+    });
+
+    setSelectedCampaignId((previous) => {
+      if (
+        previous &&
+        runDependencies.campaigns.some((campaign) => campaign.campaign_id === previous)
+      ) {
+        return previous;
+      }
+      return runDependencies.campaigns[0]?.campaign_id ?? "";
+    });
+  }, [runDependencies]);
+
+  async function onRunMutationPack(packIdOverride?: string) {
+    const mutationPackId = (packIdOverride ?? selectedMutationPackId).trim();
+    if (!mutationPackId) {
+      setRunState({ status: "error", message: "Select a mutation pack before running." });
+      return;
+    }
+
+    if (runDependencies.status !== "ready") {
+      setRunState({
+        status: "error",
+        message: "Trace and campaign options are still loading. Try again in a moment.",
+      });
+      return;
+    }
+
+    if (!selectedTraceId || !selectedCampaignId) {
+      setRunState({
+        status: "error",
+        message: "Select both a trace and a campaign before running.",
+      });
+      return;
+    }
+
+    setSelectedMutationPackId(mutationPackId);
+    setRunState({ status: "running" });
+
+    try {
+      const run = await api.createRun({
+        trace_id: selectedTraceId,
+        campaign_id: selectedCampaignId,
+        mutation_pack_id: mutationPackId,
+      });
+      setRunState({ status: "success", runId: run.run_id });
+    } catch (error) {
+      setRunState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Failed to create run",
+      });
+    }
+  }
+
+  const runControlsDisabled =
+    runState.status === "running" ||
+    runDependencies.status !== "ready" ||
+    runDependencies.traces.length === 0 ||
+    runDependencies.campaigns.length === 0;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -103,7 +246,115 @@ export function MutationPacksView() {
       {!canManageMutationPacks && authSession ? (
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Custom mutation packs follow workspace membership rules. Your current membership can view packs but cannot create or modify them.
+            Custom mutation packs follow workspace membership rules. Your current membership can
+            view packs but cannot create or modify them.
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {canRunCampaigns ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Run Mutation Pack</CardTitle>
+            <CardDescription>
+              One-click execution using the selected trace and campaign.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {runDependencies.status === "loading" ? (
+              <Skeleton className="h-28 w-full" />
+            ) : runDependencies.status === "error" ? (
+              <p className="text-sm text-rose-200">{runDependencies.message}</p>
+            ) : runDependencies.status === "ready" ? (
+              runDependencies.traces.length === 0 || runDependencies.campaigns.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Add at least one trace and one campaign before running mutation packs.
+                </p>
+              ) : (
+                <>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Mutation Pack</span>
+                      <select
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={selectedMutationPackId}
+                        onChange={(event) => setSelectedMutationPackId(event.target.value)}
+                        disabled={runState.status === "running"}
+                      >
+                        {records.map((record) => (
+                          <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
+                            {record.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Campaign</span>
+                      <select
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={selectedCampaignId}
+                        onChange={(event) => setSelectedCampaignId(event.target.value)}
+                        disabled={runState.status === "running"}
+                      >
+                        {runDependencies.campaigns.map((campaign) => (
+                          <option key={campaign.campaign_id} value={campaign.campaign_id}>
+                            {campaign.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block space-y-1 text-sm">
+                      <span className="text-muted-foreground">Trace</span>
+                      <select
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                        value={selectedTraceId}
+                        onChange={(event) => setSelectedTraceId(event.target.value)}
+                        disabled={runState.status === "running"}
+                      >
+                        {runDependencies.traces.map((trace) => (
+                          <option key={trace.trace_id} value={trace.trace_id}>
+                            {trace.task_name?.trim() || shortId(trace.trace_id, 12)} ·{" "}
+                            {formatRelativeDate(trace.created_at)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => void onRunMutationPack()}
+                      disabled={runControlsDisabled}
+                    >
+                      {runState.status === "running" ? "Starting run..." : "Run Selected Pack"}
+                    </Button>
+                    {runState.status === "error" ? (
+                      <p className="text-sm text-rose-200">{runState.message}</p>
+                    ) : null}
+                    {runState.status === "success" ? (
+                      <p className="text-sm text-emerald-300">
+                        Run started.{" "}
+                        <Link
+                          href={`/runs/${runState.runId}`}
+                          className="underline underline-offset-4"
+                        >
+                          Open run
+                        </Link>
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              )
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : authSession ? (
+        <Card className="border-border/60">
+          <CardContent className="p-5 text-sm text-muted-foreground">
+            This membership can view mutation packs but cannot start campaign runs.
           </CardContent>
         </Card>
       ) : null}
@@ -135,12 +386,16 @@ export function MutationPacksView() {
                   <TableHead>Mutations</TableHead>
                   <TableHead>Pack ID</TableHead>
                   <TableHead className="text-right">Created</TableHead>
+                  {canRunCampaigns ? <TableHead className="text-right">Actions</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {records.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={canRunCampaigns ? 8 : 7}
+                      className="py-10 text-center text-muted-foreground"
+                    >
                       No mutation packs found for this project.
                     </TableCell>
                   </TableRow>
@@ -178,6 +433,19 @@ export function MutationPacksView() {
                         <TableCell className="text-right text-muted-foreground">
                           {formatRelativeDate(record.created_at)}
                         </TableCell>
+                        {canRunCampaigns ? (
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={runControlsDisabled}
+                              onClick={() => void onRunMutationPack(record.mutation_pack_id)}
+                            >
+                              Run Now
+                            </Button>
+                          </TableCell>
+                        ) : null}
                       </TableRow>
                     );
                   })

@@ -14,7 +14,8 @@ export const metadata: Metadata = buildPageMetadata({
 const docTracks = [
   {
     title: "Getting Started",
-    description: "Set up your environment, create your first trace, and run reliability checks in minutes.",
+    description:
+      "Set up environment variables, capture a trace, build a mutation pack in Basic Builder, and run checks in minutes.",
     href: "/docs/getting-started",
   },
   {
@@ -91,7 +92,10 @@ export default function DocsPage() {
           {[
             ["1. Connect project", "Generate a project API key and copy your project UUID from the app."],
             ["2. Set environment", "Define base URLs and auth variables once in your shell or CI secrets."],
-            ["3. Send first trace", "Post a minimal trace and confirm it appears in Runs and Traces."],
+            [
+              "3. Build + run",
+              "Capture a trace, create a pack with Basic Builder, and run it from the Mutation Packs page.",
+            ],
           ].map(([title, body]) => (
             <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <p className="text-sm font-semibold text-white">{title}</p>
