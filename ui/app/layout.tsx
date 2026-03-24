@@ -8,6 +8,12 @@ import "./globals.css";
 const themeBootScript = `
 (() => {
   try {
+    const path = window.location.pathname || "";
+    if (path.startsWith("/auth")) {
+      document.documentElement.classList.add("dark");
+      document.documentElement.style.colorScheme = "dark";
+      return;
+    }
     const storageKey = "sepurux.ui.theme";
     const legacyStorageKey = "crashlab.ui.theme";
     const storedTheme =

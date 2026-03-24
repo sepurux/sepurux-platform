@@ -308,7 +308,7 @@ export function ProfileView() {
 
   if (state.status === "error") {
     return (
-      <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+      <p className="rounded-md border border-rose-300 bg-rose-100 px-4 py-3 text-sm text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
         {state.message}
       </p>
     );
@@ -398,7 +398,7 @@ export function ProfileView() {
           </p>
         ) : null}
         {actionError ? (
-          <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <p className="rounded-md border border-rose-300 bg-rose-100 px-4 py-3 text-sm text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
             {actionError}
           </p>
         ) : null}

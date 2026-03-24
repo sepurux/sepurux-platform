@@ -112,8 +112,8 @@ export function BillingView() {
           </CardContent>
         </Card>
       ) : state.status === "error" ? (
-        <Card className="border-rose-500/30">
-          <CardContent className="p-5 text-sm text-rose-200">{state.message}</CardContent>
+        <Card className="border-rose-300 bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10">
+          <CardContent className="p-5 text-sm text-rose-900 dark:text-rose-200">{state.message}</CardContent>
         </Card>
       ) : (
         <>
@@ -126,8 +126,8 @@ export function BillingView() {
           ) : null}
 
           {actionError ? (
-            <Card className="border-rose-500/30">
-              <CardContent className="p-5 text-sm text-rose-200">{actionError}</CardContent>
+            <Card className="border-rose-300 bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10">
+              <CardContent className="p-5 text-sm text-rose-900 dark:text-rose-200">{actionError}</CardContent>
             </Card>
           ) : null}
 
