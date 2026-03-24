@@ -73,8 +73,14 @@ def post_project(
         tenant_auth=tenant_auth,
         project_id=tenant_project.project_id,
     )
-    subscription = billing_snapshot.get("subscription") if isinstance(billing_snapshot, dict) else None
-    plan_name = str(subscription.get("plan_name") or "").strip().lower() if isinstance(subscription, dict) else ""
+    subscription = (
+        billing_snapshot.get("subscription") if isinstance(billing_snapshot, dict) else None
+    )
+    plan_name = (
+        str(subscription.get("plan_name") or "").strip().lower()
+        if isinstance(subscription, dict)
+        else ""
+    )
     has_workspace_addon = plan_name in {"team", "enterprise"}
     if not has_workspace_addon:
         tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == tenant_auth.tenant_id))
