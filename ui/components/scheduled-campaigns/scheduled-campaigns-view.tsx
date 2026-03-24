@@ -6,6 +6,7 @@ import { api, type ScheduledCampaignMetadata } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -13,6 +14,8 @@ type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; items: ScheduledCampaignMetadata[] };
+
+const PAGE_SIZE = 25;
 
 function statusBadge(status: string | null) {
   if (!status) return <span className="text-muted-foreground">—</span>;
@@ -23,6 +26,8 @@ function statusBadge(status: string | null) {
 
 export function ScheduledCampaignsView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,21 +35,26 @@ export function ScheduledCampaignsView() {
     async function load() {
       setState({ status: "loading" });
       try {
-        const items = await api.listScheduledCampaigns({ limit: 200, offset: 0 });
+        const items = await api.listScheduledCampaigns({
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        });
         if (cancelled) return;
         setState({ status: "ready", items });
+        setHasNext(items.length === PAGE_SIZE);
       } catch (error) {
         if (cancelled) return;
         setState({
           status: "error",
           message: error instanceof Error ? error.message : "Failed to load scheduled campaigns",
         });
+        setHasNext(false);
       }
     }
 
     void load();
     return () => { cancelled = true; };
-  }, []);
+  }, [page]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -70,10 +80,10 @@ export function ScheduledCampaignsView() {
           <CardHeader>
             <CardTitle>Schedules</CardTitle>
             <CardDescription>
-              {state.items.length} scheduled campaign(s) in current project scope.
+              {state.items.length} scheduled campaign(s) in current project scope for this page.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -120,6 +130,14 @@ export function ScheduledCampaignsView() {
                 )}
               </TableBody>
             </Table>
+            <PaginationControls
+              page={page}
+              pageSize={PAGE_SIZE}
+              currentCount={state.items.length}
+              hasNext={hasNext}
+              onPrev={() => setPage((currentValue) => Math.max(0, currentValue - 1))}
+              onNext={() => setPage((currentValue) => currentValue + 1)}
+            />
           </CardContent>
         </Card>
       )}

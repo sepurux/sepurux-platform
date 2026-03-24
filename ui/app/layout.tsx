@@ -29,7 +29,12 @@ const themeBootScript = `
 
 export const metadata: Metadata = {
   title: "Sepurux UI",
-  description: "Agent Sepurux dashboard"
+  description: "Agent Sepurux dashboard",
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    shortcut: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

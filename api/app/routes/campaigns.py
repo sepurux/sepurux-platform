@@ -37,6 +37,7 @@ from app.services.failure_service import (
     serialize_failure_record,
 )
 from app.services.mutation_pack_service import ensure_registered_mutation_pack, get_mutation_pack
+from app.services.notification_service import create_notification
 from app.services.run_service import create_run_pack_and_enqueue
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
@@ -119,6 +120,26 @@ def post_campaign(
         mutation_pack_id=payload.mutation_pack_id,
         actor=actor_from_request(request),
     )
+    try:
+        create_notification(
+            db,
+            tenant_id=project_scope.tenant_id,
+            project_id=project_scope.project_id,
+            user_id=tenant_auth.user_id,
+            event_type="campaign.created",
+            severity="info",
+            title="Campaign created",
+            message=f"Campaign '{campaign.name}' is ready to run.",
+            link_url="/campaigns",
+            metadata={
+                "campaign_id": str(campaign.campaign_id),
+                "mutation_pack_id": (
+                    str(campaign.mutation_pack_id) if campaign.mutation_pack_id is not None else None
+                ),
+            },
+        )
+    except Exception:
+        logger.exception("Failed to create campaign notification")
     return _to_campaign_metadata(campaign)
 
 
@@ -252,6 +273,27 @@ def post_campaign_run_pack(
                 mutation_pack=mutation_pack,
             )
         except InsufficientCreditsError as exc:
+            try:
+                create_notification(
+                    db,
+                    tenant_id=project_scope.tenant_id,
+                    project_id=project_scope.project_id,
+                    user_id=tenant_auth.user_id,
+                    event_type="credits.insufficient",
+                    severity="warning",
+                    title="Run blocked: insufficient credits",
+                    message=(
+                        f"Pack run for '{mutation_pack.name}' was blocked because available "
+                        "credits are too low."
+                    ),
+                    link_url="/billing",
+                    metadata={
+                        "campaign_id": str(campaign.campaign_id),
+                        "mutation_pack_id": str(mutation_pack.mutation_pack_id),
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to create pack-run insufficient-credits notification")
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
             ) from exc
@@ -284,6 +326,29 @@ def post_campaign_run_pack(
             except Exception:
                 logger.exception("Failed to refund credits after run-pack enqueue failure")
         raise
+
+    try:
+        create_notification(
+            db,
+            tenant_id=project_scope.tenant_id,
+            project_id=project_scope.project_id,
+            user_id=tenant_auth.user_id,
+            event_type="run.pack_queued",
+            severity="info",
+            title="Mutation pack run queued",
+            message=(
+                f"Campaign '{campaign.name}' was queued with mutation pack '{mutation_pack.name}'."
+            ),
+            link_url=f"/runs/{run.run_id}",
+            metadata={
+                "run_id": str(run.run_id),
+                "campaign_id": str(run.campaign_id),
+                "mutation_pack_id": str(mutation_pack.mutation_pack_id),
+            },
+        )
+    except Exception:
+        logger.exception("Failed to create run-pack notification")
+
     return CampaignRunPackResponse(
         run_id=run.run_id,
         trace_id=run.trace_id,
