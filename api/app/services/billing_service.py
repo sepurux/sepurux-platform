@@ -423,22 +423,28 @@ def ensure_user_billing(
         start_date=cycle_start,
         renewal_date=renewal_date,
     )
-    wallet = CreditWallet(
-        wallet_id=uuid4(),
-        user_id=user_id,
-        balance=plan.monthly_credits,
-        monthly_credits=plan.monthly_credits,
-        topup_credits=0,
-    )
-    db.add_all([subscription, wallet])
-    if plan.monthly_credits > 0:
-        _create_credit_transaction(
-            db,
+    db.add(subscription)
+
+    if wallet is None:
+        wallet = CreditWallet(
+            wallet_id=uuid4(),
             user_id=user_id,
-            amount=plan.monthly_credits,
-            transaction_type=TRANSACTION_MONTHLY_GRANT,
-            reason="initial monthly grant",
+            balance=plan.monthly_credits,
+            monthly_credits=plan.monthly_credits,
+            topup_credits=0,
         )
+        db.add(wallet)
+        if plan.monthly_credits > 0:
+            _create_credit_transaction(
+                db,
+                user_id=user_id,
+                amount=plan.monthly_credits,
+                transaction_type=TRANSACTION_MONTHLY_GRANT,
+                reason="initial monthly grant",
+            )
+    elif wallet.balance != wallet.monthly_credits + wallet.topup_credits:
+        wallet.balance = wallet.monthly_credits + wallet.topup_credits
+        db.add(wallet)
     db.commit()
     db.refresh(subscription)
     db.refresh(wallet)
