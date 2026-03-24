@@ -192,6 +192,24 @@ export function ProfileView() {
     return () => clearTimeout(t);
   }, [checkoutStatus, load]);
 
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    const normalizedPlan = (state.subscription.plan_name ?? state.session.billing_plan_name ?? "")
+      .trim()
+      .toLowerCase();
+    const canInviteFromPlan = new Set(["team", "enterprise"]).has(normalizedPlan);
+    const canManageWorkspaceFromPermissions = state.session.permissions.can_manage_workspace;
+    if (activeTab === "members" && !(canManageWorkspaceFromPermissions && canInviteFromPlan)) {
+      setActiveTab("settings");
+      window.history.replaceState(null, "", "/profile");
+      return;
+    }
+    if (activeTab === "projects" && !canManageWorkspaceFromPermissions) {
+      setActiveTab("settings");
+      window.history.replaceState(null, "", "/profile");
+    }
+  }, [activeTab, state]);
+
   async function handleTopup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTopupBusy(true);
@@ -316,13 +334,14 @@ export function ProfileView() {
       amountUsd: transaction.amount * 0.1,
     }));
   const canInviteMembers = new Set(["team", "enterprise"]).has(
-    (subscription.plan_name ?? "").trim().toLowerCase()
+    (subscription.plan_name ?? session.billing_plan_name ?? "").trim().toLowerCase()
   );
+  const canAccessTeamWorkspaceFeatures = canManageWorkspace && canInviteMembers;
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "settings", label: "Settings" },
     { id: "billing", label: "Plans & Billing" },
-    { id: "members", label: "Members" },
+    ...(canAccessTeamWorkspaceFeatures ? [{ id: "members" as Tab, label: "Members" }] : []),
     ...(canManageWorkspace ? [{ id: "projects" as Tab, label: "Projects" }] : []),
   ];
 
@@ -627,27 +646,11 @@ export function ProfileView() {
       ) : null}
 
       {/* ── Members tab ── */}
-      {activeTab === "members" ? (
+      {activeTab === "members" && canAccessTeamWorkspaceFeatures ? (
         <div className="mt-6">
           <h2 className="mb-4 text-base font-semibold text-foreground">Workspace Members</h2>
 
-          {/* Starter plan upgrade gate */}
-          {!canInviteMembers ? (
-            <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-6 py-5">
-              <p className="font-medium text-amber-100">Team members require a Team or Enterprise plan</p>
-              <p className="mt-1 text-sm text-amber-200/70">
-                Upgrade your plan to invite collaborators to your workspace.
-              </p>
-              <button
-                className="mt-3 rounded-md px-4 py-2 text-sm font-semibold transition-colors"
-                style={{ background: "var(--accent-teal)", color: "#000" }}
-                onClick={() => setCreditsModalOpen(true)}
-              >
-                Upgrade plan
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
+          <div className="space-y-4">
               {/* New API key reveal */}
               {newMemberKey ? (
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
@@ -732,8 +735,7 @@ export function ProfileView() {
                   {inviteError ? <p className="mt-2 text-sm text-rose-300">{inviteError}</p> : null}
                 </div>
               </div>
-            </div>
-          )}
+          </div>
         </div>
       ) : null}
 

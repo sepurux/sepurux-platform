@@ -52,9 +52,11 @@ PLAN_LABELS: dict[PricingTier, str] = {
 def normalize_pricing_tier(value: str | None) -> PricingTier:
     if value == "starter":
         return "starter"
+    if value == "team":
+        return "team"
     if value == "enterprise":
         return "enterprise"
-    return "team"
+    return DEFAULT_PRICING_TIER
 
 
 def plan_label(value: str | None) -> str:
@@ -108,7 +110,7 @@ def build_auth_permissions(
         can_manage_mutation_packs=True,
         can_manage_policy_packs=advanced_enabled,
         can_manage_security_config=advanced_enabled,
-        can_manage_workspace=True,
+        can_manage_workspace=advanced_enabled,
         can_manage_api_keys=True,
         can_manage_billing=True,
     )
