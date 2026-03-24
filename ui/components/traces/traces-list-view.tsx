@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { api, type TraceMetadata } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import { resolveTraceSdkLabel } from "@/lib/trace-display";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -109,7 +110,7 @@ export function TracesListView() {
                       <TableCell className="text-muted-foreground">{trace.source}</TableCell>
                       <TableCell className="text-foreground">{trace.trace_version}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {trace.sdk_meta ?? "--"}
+                        {resolveTraceSdkLabel(trace)}
                       </TableCell>
                       <TableCell>
                         <ValidationStatusBadge status={trace.validation_status} />
