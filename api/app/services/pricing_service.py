@@ -100,6 +100,7 @@ def build_auth_permissions(
         billing_plan_name
     ) or _default_billing_plan_for_pricing_tier(pricing_tier)
     advanced_enabled = resolved_plan in {"team", "enterprise"}
+    workspace_management_enabled = resolved_plan in {"team", "enterprise"}
     return AuthPermissionSet(
         visible_sections=_visible_sections_for_plan(resolved_plan),
         can_upload_traces=True,
@@ -108,7 +109,7 @@ def build_auth_permissions(
         can_manage_mutation_packs=True,
         can_manage_policy_packs=advanced_enabled,
         can_manage_security_config=advanced_enabled,
-        can_manage_workspace=True,
+        can_manage_workspace=workspace_management_enabled,
         can_manage_api_keys=True,
         can_manage_billing=True,
     )

@@ -125,7 +125,7 @@ def test_signup_bootstraps_workspace_and_session(
     assert session_payload["pricing_tier"] == "credits"
     assert session_payload["role_name"] == "member"
     assert session_payload["is_super_admin"] is False
-    assert session_payload["permissions"]["can_manage_workspace"] is True
+    assert session_payload["permissions"]["can_manage_workspace"] is False
 
 
 def test_signup_with_starter_plan_still_gets_full_access(
@@ -154,6 +154,7 @@ def test_signup_with_starter_plan_still_gets_full_access(
     assert "audit" not in payload["permissions"]["visible_sections"]
     assert payload["permissions"]["can_manage_policy_packs"] is False
     assert payload["permissions"]["can_manage_security_config"] is False
+    assert payload["permissions"]["can_manage_workspace"] is False
 
 
 def test_login_returns_project_scoped_session_for_existing_user(
@@ -199,6 +200,7 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert payload["permissions"]["can_manage_mutation_packs"] is True
     assert payload["permissions"]["can_manage_policy_packs"] is True
     assert payload["permissions"]["can_manage_security_config"] is True
+    assert payload["permissions"]["can_manage_workspace"] is True
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert payload["permissions"]["can_manage_billing"] is True
     assert "campaigns" in payload["permissions"]["visible_sections"]
@@ -248,6 +250,7 @@ def test_viewer_login_still_gets_full_workspace_access(
     assert payload["permissions"]["can_manage_mutation_packs"] is True
     assert payload["permissions"]["can_manage_policy_packs"] is False
     assert payload["permissions"]["can_manage_security_config"] is False
+    assert payload["permissions"]["can_manage_workspace"] is False
     assert payload["permissions"]["can_manage_billing"] is True
 
 
