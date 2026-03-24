@@ -52,9 +52,11 @@ PLAN_LABELS: dict[PricingTier, str] = {
 def normalize_pricing_tier(value: str | None) -> PricingTier:
     if value == "starter":
         return "starter"
+    if value == "team":
+        return "team"
     if value == "enterprise":
         return "enterprise"
-    return "team"
+    return DEFAULT_PRICING_TIER
 
 
 def plan_label(value: str | None) -> str:

@@ -14,7 +14,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .conftest import auth_headers, seed_tenant_project_and_key
+from .conftest import auth_headers, seed_project_membership_api_key, seed_tenant_project_and_key
 
 
 @pytest.fixture()
@@ -110,6 +110,27 @@ def test_projects_list_and_create_are_scoped_to_authenticated_tenant(
     assert str(project_id) in item_ids
     assert created["project_id"] in item_ids
     assert str(other_project_id) not in item_ids
+
+
+def test_create_project_requires_team_or_enterprise_plan(
+    auth_test_context: tuple[TestClient, sessionmaker[Session], UUID, str],
+) -> None:
+    client, testing_session_local, _, _ = auth_test_context
+    with testing_session_local() as db:
+        _, _, _, _, starter_api_key = seed_project_membership_api_key(
+            db,
+            role_name="admin",
+            pricing_tier="starter",
+        )
+
+    response = client.post(
+        "/v1/projects",
+        json={"name": "Starter Extra Project"},
+        headers={"X-API-Key": starter_api_key},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Upgrade to Team or Enterprise to add workspaces."}
 
 
 def test_project_scoped_api_key_only_sees_its_bound_project(

@@ -301,7 +301,7 @@ def test_subscription_checkout_webhook_activates_plan_once(
         assert wallet.balance == 2000
         assert wallet.monthly_credits == 2000
         assert wallet.topup_credits == 0
-        assert tenant.pricing_tier == "team"
+        assert tenant.pricing_tier == "starter"
         assert len(events) == 1
 
 
@@ -421,6 +421,35 @@ def test_run_is_blocked_when_wallet_is_short(
 
     assert response.status_code == 402
     assert response.json()["detail"] == "Insufficient credits"
+
+
+def test_ensure_user_billing_creates_subscription_without_duplicate_wallet(
+    billing_test_context: tuple[
+        TestClient, sessionmaker[Session], UUID, UUID, str, FakeQueue, FakeQueue
+    ],
+) -> None:
+    _, testing_session_local, _, project_id, _, _, _ = billing_test_context
+
+    with testing_session_local() as db:
+        owner_id = _project_owner_id(db, project_id=project_id)
+        db.add(
+            CreditWallet(
+                wallet_id=uuid4(),
+                user_id=owner_id,
+                balance=200,
+                monthly_credits=120,
+                topup_credits=80,
+            )
+        )
+        db.commit()
+
+        subscription, wallet, _ = ensure_user_billing(db, user_id=owner_id, pricing_tier="starter")
+
+        wallets = list(db.scalars(select(CreditWallet).where(CreditWallet.user_id == owner_id)))
+        assert subscription.user_id == owner_id
+        assert wallet.user_id == owner_id
+        assert len(wallets) == 1
+        assert wallet.balance == wallet.monthly_credits + wallet.topup_credits
 
 
 def test_post_run_refunds_credits_when_enqueue_fails(
