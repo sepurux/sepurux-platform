@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { clearStoredAuthSession } from "@/lib/auth-session";
 import { clearStoredApiBaseUrl, clearStoredApiKey, clearStoredProjectId } from "@/lib/tenant-settings";
 import { cn } from "@/lib/utils";
@@ -99,6 +100,7 @@ export function InternalShell({ children }: { children: ReactNode }) {
               <p className="text-xs text-muted-foreground">Super admin workspace</p>
             </div>
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <Link
                 href="/internal/search"
                 className="inline-flex rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"

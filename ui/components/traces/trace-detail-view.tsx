@@ -6,6 +6,7 @@ import { ArrowLeft, Bot, RefreshCcw, RotateCcw, Sparkles, Wrench, ShieldAlert, M
 
 import { api, type TraceMetadata, type TraceTimelineStep } from "@/lib/api";
 import { formatDurationMs, formatRelativeDate, shortId } from "@/lib/format";
+import { resolveTraceSdkLabel } from "@/lib/trace-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,7 +91,7 @@ export function TraceDetailView({ traceId }: { traceId: string }) {
               <MetadataRow label="Task / Agent" value={state.trace.task_name ?? "--"} />
               <MetadataRow label="Source" value={state.trace.source} />
               <MetadataRow label="Trace Version" value={state.trace.trace_version} />
-              <MetadataRow label="SDK Metadata" value={state.trace.sdk_meta ?? "--"} mono />
+              <MetadataRow label="SDK Metadata" value={resolveTraceSdkLabel(state.trace)} mono />
               <div className="grid gap-1 sm:grid-cols-[12rem_1fr] sm:items-start">
                 <span className="text-muted-foreground">Validation</span>
                 <div>

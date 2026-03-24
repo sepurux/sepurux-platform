@@ -177,7 +177,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <TopBar authSession={authSession} />
           {pathname.startsWith("/dashboard") && authSession?.is_low_credit ? (
-            <div className="border-b border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 md:px-6">
+            <div className="border-b border-amber-300 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100 md:px-6">
               Credits are running low. This workspace has {authSession.credits_balance ?? 0} credits remaining.
               Upgrade the plan or top up credits before the next campaign run is blocked.
             </div>
