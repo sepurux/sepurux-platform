@@ -23,6 +23,7 @@ import {
   type DemoInfoResponse,
   type SocialOAuthProvider,
 } from "@/lib/api";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { clearStoredAuthSession, setStoredAuthSession } from "@/lib/auth-session";
 import {
   setStoredApiBaseUrl,
@@ -593,17 +594,20 @@ export function AccessPortal() {
             </Link>
 
             {/* mode tabs */}
-            <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
-              <Tab active={mode === "demo"} onClick={() => handleModeSwitch("demo")}>
-                <span className="flex items-center gap-1.5">
-                  <MonitorPlay className="h-3 w-3" /> Demo
-                </span>
-              </Tab>
-              <Tab active={mode === "access"} onClick={() => handleModeSwitch("access")}>
-                <span className="flex items-center gap-1.5">
-                  <KeyRound className="h-3 w-3" /> Get Access
-                </span>
-              </Tab>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
+                <Tab active={mode === "demo"} onClick={() => handleModeSwitch("demo")}>
+                  <span className="flex items-center gap-1.5">
+                    <MonitorPlay className="h-3 w-3" /> Demo
+                  </span>
+                </Tab>
+                <Tab active={mode === "access"} onClick={() => handleModeSwitch("access")}>
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="h-3 w-3" /> Get Access
+                  </span>
+                </Tab>
+              </div>
             </div>
           </div>
 

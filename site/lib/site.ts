@@ -14,7 +14,7 @@ export const siteConfig = {
     "Reliability infrastructure for AI agents. Replay workflows, inject failures, enforce policies, and block regressions before production.",
   url: process.env.NEXT_PUBLIC_SITE_URL || defaultSiteUrl,
   appUrl: process.env.NEXT_PUBLIC_APP_URL || defaultAppUrl,
-  founderEmail: process.env.NEXT_PUBLIC_FOUNDER_EMAIL || "felix@sepurux.com",
+  founderEmail: process.env.NEXT_PUBLIC_FOUNDER_EMAIL || "felix.sarpong@supurux.com",
   founderPhone: process.env.NEXT_PUBLIC_FOUNDER_PHONE || "+16055853783",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@sepurux.com",
   linkedinUrl: process.env.NEXT_PUBLIC_LINKEDIN_URL || "https://www.linkedin.com/company/sepurux/",

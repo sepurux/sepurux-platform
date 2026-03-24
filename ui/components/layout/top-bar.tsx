@@ -11,6 +11,7 @@ import { Bell, ChevronDown, Coins, CreditCard, FolderKanban, LogOut, Plus, User 
 import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
 import { GetCreditsModal } from "@/components/billing/get-credits-modal";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import {
   PROJECTS_UPDATED_EVENT,
   cacheProjects,
@@ -182,14 +183,13 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-3">
             <div
-              className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold sm:flex"
+              className="hidden h-8 w-8 shrink-0 overflow-hidden rounded-md border sm:block"
               style={{
                 borderColor: "rgba(0,229,204,0.25)",
                 background: "rgba(0,229,204,0.08)",
-                color: "var(--accent-teal)",
               }}
             >
-              S
+              <img src="/brand-icon.png" alt="Sepurux mark" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">
@@ -235,12 +235,15 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               className={cn(
                 "hidden items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent/40 lg:flex",
                 authSession?.is_low_credit
-                  ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                  ? "border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-100"
                   : "border-border/70 bg-card/70 text-foreground"
               )}
             >
               <Coins
-                className="h-4 w-4"
+                className={cn(
+                  "h-4 w-4",
+                  authSession?.is_low_credit ? "text-amber-700 dark:text-amber-300" : ""
+                )}
                 style={{ color: authSession?.is_low_credit ? undefined : "var(--accent-teal)" }}
               />
               <span className="font-medium">{creditBalance.toLocaleString()} credits</span>
@@ -284,6 +287,8 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               New Project
             </Link>
           ) : null}
+
+          <ThemeToggle />
 
           {/* bell */}
           <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/70 text-muted-foreground transition-colors hover:text-foreground">

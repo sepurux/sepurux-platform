@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   Bell,
   Bug,
   ChevronDown,
@@ -155,13 +154,13 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
       {/* workspace header */}
       <div className="mb-4 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
         <div
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-md border"
+          className="h-10 w-10 shrink-0 overflow-hidden rounded-md border"
           style={{
             borderColor: "rgba(0,229,204,0.2)",
             background: "rgba(0,229,204,0.08)",
           }}
         >
-          <Activity className="h-5 w-5" style={{ color: "var(--accent-teal)" }} />
+          <img src="/brand-icon.png" alt="Sepurux mark" className="h-full w-full object-cover" />
         </div>
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Sepurux</p>
