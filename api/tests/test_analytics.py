@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, ReplayAttempt, Run, Trace
+from app.models import Base, Campaign, Failure, ReplayAttempt, Run, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -478,3 +478,109 @@ def test_get_tools_fragility_orders_by_failures_and_respects_window(
     assert slack["failures"] == 1
     assert slack["failure_rate"] == 0.3333
     assert all(tool["tool"] != "legacy.tool" for tool in tools)
+
+
+def test_get_project_reliability_summary_uses_weighted_run_pass_rate(
+    analytics_test_context: tuple[TestClient, sessionmaker[Session], object],
+) -> None:
+    client, testing_session_local, project_id = analytics_test_context
+    with testing_session_local() as db:
+        now = datetime.now(UTC)
+        trace_id = uuid4()
+        campaign_id = uuid4()
+        run_good_id = uuid4()
+        run_bad_id = uuid4()
+
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Reliability Campaign",
+                mutation_set=[],
+                eval_set={},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_good_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="completed",
+                summary={"attempt_count": 80, "pass_rate": 0.9},
+                created_at=now - timedelta(hours=3),
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_bad_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="completed",
+                summary={"attempt_count": 20, "pass_rate": 0.5},
+                created_at=now - timedelta(hours=2),
+            )
+        )
+        db.add_all(
+            [
+                Failure(
+                    failure_id=uuid4(),
+                    project_id=project_id,
+                    run_id=run_good_id,
+                    campaign_id=campaign_id,
+                    trace_id=trace_id,
+                    mutation_name="db.timeout",
+                    failure_type="db.timeout",
+                    severity="high",
+                    description="DB timeout",
+                    created_at=now - timedelta(hours=2, minutes=30),
+                ),
+                Failure(
+                    failure_id=uuid4(),
+                    project_id=project_id,
+                    run_id=run_bad_id,
+                    campaign_id=campaign_id,
+                    trace_id=trace_id,
+                    mutation_name="db.timeout",
+                    failure_type="db.timeout",
+                    severity="critical",
+                    description="DB timeout",
+                    created_at=now - timedelta(hours=1, minutes=50),
+                ),
+                Failure(
+                    failure_id=uuid4(),
+                    project_id=project_id,
+                    run_id=run_bad_id,
+                    campaign_id=campaign_id,
+                    trace_id=trace_id,
+                    mutation_name="policy.blocked",
+                    failure_type="policy.blocked",
+                    severity="medium",
+                    description="Policy blocked tool",
+                    created_at=now - timedelta(hours=1, minutes=40),
+                ),
+            ]
+        )
+        db.commit()
+
+    response = client.get("/v1/analytics/reliability")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["campaigns_run"] == 2
+    assert payload["reliability_score"] == 82.0
+    assert payload["status"] == "warning"
+    assert payload["credits_used"] == 0
+    assert payload["failure_breakdown"] == [
+        {"type": "db.timeout", "count": 2},
+        {"type": "policy.blocked", "count": 1},
+    ]

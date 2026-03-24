@@ -548,26 +548,63 @@ def _summary_int(summary: dict[str, Any], *, keys: tuple[str, ...]) -> int:
     return 0
 
 
+def _summary_float(summary: dict[str, Any], *, keys: tuple[str, ...]) -> float | None:
+    for key in keys:
+        value = summary.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int | float):
+            return float(value)
+    return None
+
+
+def _normalize_percent(value: float) -> float:
+    normalized = value * 100.0 if 0.0 <= value <= 1.0 else value
+    return max(0.0, min(100.0, float(normalized)))
+
+
 def get_project_reliability_summary(
     db: Session,
     *,
     project_id: UUID,
     billable_user_id: UUID | None = None,
 ) -> dict[str, Any]:
-    campaigns_run = (
-        db.scalar(select(func.count(Run.run_id)).where(Run.project_id == project_id)) or 0
-    )
+    runs = list(db.scalars(select(Run).where(Run.project_id == project_id)))
+    campaigns_run = len(runs)
 
-    severity_counts: Counter[str] = Counter()
     failure_breakdown: Counter[str] = Counter()
     for failure in db.scalars(select(Failure).where(Failure.project_id == project_id)):
-        severity_counts[failure.severity] += 1
         failure_breakdown[failure.failure_type] += 1
 
-    score = 100.0 - severity_counts.get("critical", 0) * 10
-    score -= severity_counts.get("high", 0) * 5
-    score -= severity_counts.get("medium", 0) * 2
-    score = max(0.0, score)
+    weighted_score_total = 0.0
+    weighted_attempts_total = 0
+    failed_runs = 0
+
+    for run in runs:
+        status = (run.status or "").lower()
+        if status in {"failed", "error", "cancelled"}:
+            failed_runs += 1
+
+        summary = run.summary if isinstance(run.summary, dict) else {}
+        attempt_count = _summary_int(summary, keys=("attempt_count",))
+        if attempt_count <= 0:
+            continue
+
+        pass_rate_value = _summary_float(summary, keys=("pass_rate",))
+        if pass_rate_value is None:
+            passed_count = _summary_int(summary, keys=("passed_count", "passed"))
+            pass_rate_value = _ratio(passed_count, attempt_count)
+
+        normalized_score = _normalize_percent(pass_rate_value)
+        weighted_score_total += normalized_score * attempt_count
+        weighted_attempts_total += attempt_count
+
+    if weighted_attempts_total > 0:
+        score = round(weighted_score_total / weighted_attempts_total, 1)
+    elif campaigns_run > 0:
+        score = round(_ratio(campaigns_run - failed_runs, campaigns_run) * 100.0, 1)
+    else:
+        score = 100.0
 
     status = "healthy"
     if score < 70:
