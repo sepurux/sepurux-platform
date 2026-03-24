@@ -897,6 +897,30 @@ class AuditEventListItem(BaseModel):
     created_at: datetime
 
 
+class UserNotificationItem(BaseModel):
+    notification_id: UUID
+    tenant_id: UUID
+    project_id: UUID
+    user_id: UUID | None = None
+    event_type: str
+    severity: Literal["info", "warning", "critical"]
+    title: str
+    message: str
+    link_url: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    read_at: datetime | None = None
+    created_at: datetime
+
+
+class UserNotificationInboxResponse(BaseModel):
+    items: list[UserNotificationItem]
+    unread_count: int
+
+
+class UserNotificationReadAllResponse(BaseModel):
+    updated: int
+
+
 class SecurityEventListItem(BaseModel):
     security_event_id: UUID
     run_id: UUID

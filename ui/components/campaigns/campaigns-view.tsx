@@ -8,6 +8,7 @@ import { formatRelativeDate, shortId } from "@/lib/format";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -16,10 +17,14 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; campaigns: CampaignMetadata[] };
 
+const PAGE_SIZE = 25;
+
 export function CampaignsView() {
   const authSession = useAuthSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
 
   const canCreateCampaigns = authSession?.permissions.can_create_campaigns ?? false;
 
@@ -29,11 +34,15 @@ export function CampaignsView() {
     async function load() {
       setState({ status: "loading" });
       try {
-        const campaigns = await api.listCampaigns({ limit: 200, offset: 0 });
+        const campaigns = await api.listCampaigns({
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        });
         if (cancelled) {
           return;
         }
         setState({ status: "ready", campaigns });
+        setHasNext(campaigns.length === PAGE_SIZE);
       } catch (error) {
         if (cancelled) {
           return;
@@ -42,6 +51,7 @@ export function CampaignsView() {
           status: "error",
           message: error instanceof Error ? error.message : "Failed to load campaigns",
         });
+        setHasNext(false);
       }
     }
 
@@ -50,7 +60,7 @@ export function CampaignsView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [page]);
 
   async function onCopyCampaignId(campaignId: string) {
     try {
@@ -105,10 +115,10 @@ export function CampaignsView() {
           <CardHeader>
             <CardTitle>Campaign Catalog</CardTitle>
             <CardDescription>
-              {state.campaigns.length} campaign(s) in current project scope.
+              {state.campaigns.length} campaign(s) in current project scope for this page.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -153,6 +163,14 @@ export function CampaignsView() {
                 )}
               </TableBody>
             </Table>
+            <PaginationControls
+              page={page}
+              pageSize={PAGE_SIZE}
+              currentCount={state.campaigns.length}
+              hasNext={hasNext}
+              onPrev={() => setPage((currentValue) => Math.max(0, currentValue - 1))}
+              onNext={() => setPage((currentValue) => currentValue + 1)}
+            />
           </CardContent>
         </Card>
       )}

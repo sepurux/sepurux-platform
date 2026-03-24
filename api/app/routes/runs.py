@@ -29,6 +29,7 @@ from app.services.billing_service import (
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.demo_service import enforce_demo_run_limits
 from app.services.mutation_pack_service import get_mutation_pack
+from app.services.notification_service import create_notification
 from app.services.policy_service import get_policy_pack
 from app.services.run_service import (
     RelatedRecordNotFoundError,
@@ -184,6 +185,24 @@ def post_run(
                 campaign=campaign,
             )
         except InsufficientCreditsError as exc:
+            try:
+                create_notification(
+                    db,
+                    tenant_id=project_scope.tenant_id,
+                    project_id=project_scope.project_id,
+                    user_id=tenant_auth.user_id,
+                    event_type="credits.insufficient",
+                    severity="warning",
+                    title="Run blocked: insufficient credits",
+                    message=(
+                        f"Campaign '{campaign.name}' could not start because available "
+                        "credits are below required minimum."
+                    ),
+                    link_url="/billing",
+                    metadata={"campaign_id": str(campaign.campaign_id)},
+                )
+            except Exception:
+                logger.exception("Failed to create insufficient-credits notification")
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
             ) from exc
@@ -231,6 +250,29 @@ def post_run(
             except Exception:
                 logger.exception("Failed to refund credits after enqueue failure")
         raise
+
+    try:
+        create_notification(
+            db,
+            tenant_id=project_scope.tenant_id,
+            project_id=project_scope.project_id,
+            user_id=tenant_auth.user_id,
+            event_type="run.queued",
+            severity="info",
+            title="Run queued",
+            message=(
+                f"Campaign '{campaign.name}' was queued successfully and is waiting for execution."
+            ),
+            link_url=f"/runs/{run.run_id}",
+            metadata={
+                "run_id": str(run.run_id),
+                "campaign_id": str(run.campaign_id),
+                "trace_id": str(run.trace_id),
+            },
+        )
+    except Exception:
+        logger.exception("Failed to create run queued notification")
+
     return _to_run_metadata(run)
 
 
@@ -349,6 +391,21 @@ def post_apply_template(
                 project_id=project_scope.project_id,
             )
         except InsufficientCreditsError as exc:
+            try:
+                create_notification(
+                    db,
+                    tenant_id=project_scope.tenant_id,
+                    project_id=project_scope.project_id,
+                    user_id=tenant_auth.user_id,
+                    event_type="credits.insufficient",
+                    severity="warning",
+                    title="Replay blocked: insufficient credits",
+                    message="Template replay was blocked because available credits are too low.",
+                    link_url="/billing",
+                    metadata={"source_run_id": str(source_run.run_id)},
+                )
+            except Exception:
+                logger.exception("Failed to create replay insufficient-credits notification")
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)
             ) from exc
@@ -407,5 +464,25 @@ def post_apply_template(
             except Exception:
                 logger.exception("Failed to refund credits after template enqueue failure")
         raise
+
+    try:
+        create_notification(
+            db,
+            tenant_id=project_scope.tenant_id,
+            project_id=project_scope.project_id,
+            user_id=tenant_auth.user_id,
+            event_type="run.replay_queued",
+            severity="info",
+            title="Template replay queued",
+            message="A new replay run was queued from your selected hardening template.",
+            link_url=f"/runs/{new_run.run_id}",
+            metadata={
+                "new_run_id": str(new_run.run_id),
+                "source_run_id": str(source_run.run_id),
+                "template_id": str(template_id),
+            },
+        )
+    except Exception:
+        logger.exception("Failed to create replay queued notification")
 
     return ApplyTemplateRunResponse(new_run_id=new_run.run_id)

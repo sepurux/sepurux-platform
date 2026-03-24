@@ -118,8 +118,8 @@ export function BillingView() {
       ) : (
         <>
           {state.wallet.is_low_credit ? (
-            <Card className="border-amber-400/30 bg-amber-500/10">
-              <CardContent className="p-5 text-sm text-amber-100">
+            <Card className="border-amber-300 bg-amber-100 dark:border-amber-400/30 dark:bg-amber-500/10">
+              <CardContent className="p-5 text-sm text-amber-900 dark:text-amber-100">
                 This workspace is under the low-credit threshold. Campaign runs will stop once the wallet reaches zero.
               </CardContent>
             </Card>

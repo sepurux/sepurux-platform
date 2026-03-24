@@ -388,12 +388,12 @@ export function ProfileView() {
       {/* alerts */}
       <div className="mt-6 space-y-3">
         {checkoutStatus === "success" ? (
-          <p className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <p className="flex items-center gap-2 rounded-md border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             Payment successful — your balance will update in a moment.
           </p>
         ) : checkoutStatus === "cancelled" ? (
-          <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <p className="rounded-md border border-amber-300 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100">
             Checkout was cancelled. No charge was made.
           </p>
         ) : null}
@@ -472,7 +472,7 @@ export function ProfileView() {
                       <p className="text-sm text-muted-foreground">Credits are consumed per campaign run.</p>
                     </div>
                     {wallet.is_low_credit ? (
-                      <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-100">
+                      <p className="rounded-md border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100">
                         Low balance — runs will stop when credits reach zero.
                       </p>
                     ) : null}
@@ -620,7 +620,9 @@ export function ProfileView() {
                         <td
                           className={cn(
                             "px-4 py-3 font-medium",
-                            row.cost < 0 ? "text-rose-300" : "text-emerald-300"
+                            row.cost < 0
+                              ? "text-rose-700 dark:text-rose-300"
+                              : "text-emerald-700 dark:text-emerald-300"
                           )}
                         >
                           {row.cost}
@@ -653,14 +655,14 @@ export function ProfileView() {
           <div className="space-y-4">
               {/* New API key reveal */}
               {newMemberKey ? (
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
-                  <p className="text-sm font-medium text-emerald-200">
+                <div className="rounded-lg border border-emerald-300 bg-emerald-100 px-5 py-4 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                  <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
                     Invite sent for <span className="font-semibold">{newMemberKey.email}</span> — share this API key with them (shown once):
                   </p>
-                  <code className="mt-2 block break-all rounded bg-black/30 px-3 py-2 text-xs text-emerald-300">
+                  <code className="mt-2 block break-all rounded bg-emerald-900/10 px-3 py-2 text-xs text-emerald-800 dark:bg-black/30 dark:text-emerald-300">
                     {newMemberKey.key}
                   </code>
-                  <button className="mt-2 text-xs text-emerald-400 underline" onClick={() => setNewMemberKey(null)}>
+                  <button className="mt-2 text-xs text-emerald-700 underline dark:text-emerald-400" onClick={() => setNewMemberKey(null)}>
                     Dismiss
                   </button>
                 </div>
@@ -678,7 +680,7 @@ export function ProfileView() {
                       <span className={cn(
                         "rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
                         member.role === "admin"
-                          ? "bg-amber-500/15 text-amber-300"
+                          ? "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300"
                           : member.role === "developer"
                           ? "bg-teal-500/15 text-teal-300"
                           : "bg-muted/50 text-muted-foreground"

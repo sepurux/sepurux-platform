@@ -1,15 +1,21 @@
 // ui/components/layout/top-bar.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronDown, Coins, CreditCard, FolderKanban, LogOut, Plus, User } from "lucide-react";
 
-import { api, type AuthSessionMetadata, type ProjectMetadata } from "@/lib/api";
+import {
+  api,
+  type AuthSessionMetadata,
+  type ProjectMetadata,
+  type UserNotificationMetadata,
+} from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
+import { formatRelativeDate } from "@/lib/format";
 import { GetCreditsModal } from "@/components/billing/get-credits-modal";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import {
@@ -54,6 +60,12 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
   const [projectSwitching, setProjectSwitching] = useState(false);
+  const [notifications, setNotifications] = useState<UserNotificationMetadata[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
+  const [markingAllNotifications, setMarkingAllNotifications] = useState(false);
+  const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,6 +132,64 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
       window.removeEventListener(PROJECTS_UPDATED_EVENT, onProjectsUpdated);
     };
   }, [authSession?.project_id, authSession?.project_name, authSession?.tenant_id]);
+
+  const loadNotifications = useCallback(async (silent = false) => {
+    if (!silent) {
+      setNotificationsLoading(true);
+    }
+    try {
+      const payload = await api.getNotifications({ limit: 10 });
+      setNotifications(payload.items);
+      setNotificationsUnreadCount(payload.unread_count);
+      setNotificationsError(null);
+    } catch (error) {
+      setNotificationsError(error instanceof Error ? error.message : "Failed to load notifications");
+    } finally {
+      if (!silent) {
+        setNotificationsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadNotifications(false);
+    const timer = window.setInterval(() => {
+      void loadNotifications(true);
+    }, 60_000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [loadNotifications, authSession?.project_id]);
+
+  async function handleMarkNotificationRead(notificationId: string) {
+    if (markingNotificationId) return;
+    setMarkingNotificationId(notificationId);
+    try {
+      await api.markNotificationRead(notificationId);
+      await loadNotifications(true);
+    } catch (error) {
+      setNotificationsError(
+        error instanceof Error ? error.message : "Failed to update notification"
+      );
+    } finally {
+      setMarkingNotificationId(null);
+    }
+  }
+
+  async function handleMarkAllNotificationsRead() {
+    if (markingAllNotifications || notificationsUnreadCount === 0) return;
+    setMarkingAllNotifications(true);
+    try {
+      await api.markAllNotificationsRead();
+      await loadNotifications(true);
+    } catch (error) {
+      setNotificationsError(
+        error instanceof Error ? error.message : "Failed to mark notifications as read"
+      );
+    } finally {
+      setMarkingAllNotifications(false);
+    }
+  }
 
   async function handleProjectChange(nextProjectId: string) {
     if (!nextProjectId || nextProjectId === selectedProjectId || projectSwitching) return;
@@ -291,9 +361,111 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
           <ThemeToggle />
 
           {/* bell */}
-          <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/70 bg-card/70 text-muted-foreground transition-colors hover:text-foreground">
-            <Bell className="h-4 w-4" />
-          </button>
+          <details className="group relative">
+            <summary className="relative inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md border border-border/70 bg-card/70 text-muted-foreground transition-colors hover:text-foreground">
+              <Bell className="h-4 w-4" />
+              {notificationsUnreadCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                  {notificationsUnreadCount > 99 ? "99+" : notificationsUnreadCount}
+                </span>
+              ) : null}
+            </summary>
+            <div className="absolute right-0 mt-2 w-[360px] overflow-hidden rounded-xl border border-border/70 bg-card shadow-panel">
+              <div className="flex items-center justify-between px-4 py-3">
+                <p className="text-sm font-semibold text-foreground">Notifications</p>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                  onClick={() => void loadNotifications(false)}
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="border-t border-border/50" />
+
+              <div className="max-h-[360px] overflow-y-auto">
+                {notificationsLoading ? (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    Loading notifications...
+                  </div>
+                ) : notificationsError ? (
+                  <div className="px-4 py-8 text-center text-sm text-rose-500">
+                    {notificationsError}
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No notifications yet.
+                  </div>
+                ) : (
+                  notifications.map((item) => {
+                    const content = (
+                      <div
+                        className={cn(
+                          "w-full px-4 py-3 text-left transition-colors hover:bg-accent/50",
+                          item.read_at ? "opacity-80" : "bg-muted/20"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-medium text-foreground">{item.title}</p>
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              notificationSeverityStyles(item.severity)
+                            )}
+                          >
+                            {item.severity}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          {formatRelativeDate(item.created_at)}
+                        </p>
+                      </div>
+                    );
+
+                    if (item.link_url) {
+                      return (
+                        <Link
+                          key={item.notification_id}
+                          href={item.link_url}
+                          onClick={() => {
+                            if (!item.read_at) {
+                              void handleMarkNotificationRead(item.notification_id);
+                            }
+                          }}
+                        >
+                          {content}
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={item.notification_id}
+                        type="button"
+                        disabled={markingNotificationId === item.notification_id}
+                        onClick={() => void handleMarkNotificationRead(item.notification_id)}
+                        className="w-full"
+                      >
+                        {content}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="border-t border-border/50 p-2">
+                <button
+                  type="button"
+                  className="w-full rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={markingAllNotifications || notificationsUnreadCount === 0}
+                  onClick={() => void handleMarkAllNotificationsRead()}
+                >
+                  {markingAllNotifications ? "Marking..." : "Mark All Read"}
+                </button>
+              </div>
+            </div>
+          </details>
 
           {/* user menu */}
           <details className="group relative">
@@ -392,4 +564,14 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         : null}
     </header>
   );
+}
+
+function notificationSeverityStyles(severity: UserNotificationMetadata["severity"]) {
+  if (severity === "critical") {
+    return "bg-rose-500/15 text-rose-500";
+  }
+  if (severity === "warning") {
+    return "bg-amber-500/15 text-amber-500";
+  }
+  return "bg-sky-500/15 text-sky-500";
 }
