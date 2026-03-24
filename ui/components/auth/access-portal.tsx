@@ -23,8 +23,8 @@ import {
   type DemoInfoResponse,
   type SocialOAuthProvider,
 } from "@/lib/api";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { clearStoredAuthSession, setStoredAuthSession } from "@/lib/auth-session";
+import { applyThemeMode, getStoredThemeMode, resolveSystemThemeMode } from "@/lib/theme";
 import {
   setStoredApiBaseUrl,
   setStoredApiKey,
@@ -275,6 +275,20 @@ export function AccessPortal() {
   const nextPath = useMemo(() => normalizeNextPath(searchParams.get("next")), [searchParams]);
   const oauthExchangeToken = searchParams.get("exchange");
   const oauthError = searchParams.get("oauth_error");
+
+  useEffect(() => {
+    const previousTheme =
+      getStoredThemeMode() ??
+      (typeof document !== "undefined" &&
+      document.documentElement.classList.contains("dark")
+        ? "dark"
+        : "light");
+    applyThemeMode("dark");
+    return () => {
+      const restoreTheme = getStoredThemeMode() ?? previousTheme ?? resolveSystemThemeMode();
+      applyThemeMode(restoreTheme);
+    };
+  }, []);
 
   useEffect(() => {
     setMode(searchParams.get("mode") === "access" ? "access" : "demo");
@@ -595,7 +609,6 @@ export function AccessPortal() {
 
             {/* mode tabs */}
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
                 <Tab active={mode === "demo"} onClick={() => handleModeSwitch("demo")}>
                   <span className="flex items-center gap-1.5">
