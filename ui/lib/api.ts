@@ -329,6 +329,30 @@ export type AuditEventListItem = {
   created_at: string;
 };
 
+export type UserNotificationMetadata = {
+  notification_id: string;
+  tenant_id: string;
+  project_id: string;
+  user_id: string | null;
+  event_type: string;
+  severity: "info" | "warning" | "critical";
+  title: string;
+  message: string;
+  link_url: string | null;
+  metadata: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type UserNotificationInboxResponse = {
+  items: UserNotificationMetadata[];
+  unread_count: number;
+};
+
+export type UserNotificationReadAllResponse = {
+  updated: number;
+};
+
 export type WebhookMetadata = {
   webhook_id: string;
   project_id: string;
@@ -1251,6 +1275,22 @@ export const api = {
       offset: options?.offset ?? 0,
       event_type: options?.event_type,
     }),
+  getNotifications: (options?: { limit?: number; offset?: number; unread_only?: boolean }) =>
+    requestJson<UserNotificationInboxResponse>("/v1/notifications", {
+      limit: clampLimit(options?.limit, 20, 100),
+      offset: options?.offset ?? 0,
+      unread_only: options?.unread_only ? "true" : undefined,
+    }),
+  markNotificationRead: (notificationId: string) =>
+    postJson<UserNotificationMetadata, Record<string, never>>(
+      `/v1/notifications/${notificationId}/read`,
+      {}
+    ),
+  markAllNotificationsRead: () =>
+    postJson<UserNotificationReadAllResponse, Record<string, never>>(
+      "/v1/notifications/read-all",
+      {}
+    ),
   listWebhooks: () => requestJson<WebhookMetadata[]>("/v1/webhooks"),
   createWebhook: (payload: {
     url: string;

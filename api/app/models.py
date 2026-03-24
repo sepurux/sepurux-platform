@@ -341,6 +341,42 @@ class AuditEvent(Base):
     )
 
 
+class UserNotification(Base):
+    __tablename__ = "user_notifications"
+
+    notification_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.tenant_id"), nullable=False)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
+    user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
+    event_type: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="system",
+        server_default=text("'system'"),
+    )
+    severity: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="info",
+        server_default=text("'info'"),
+    )
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    link_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notification_metadata: Mapped[Any] = mapped_column(
+        "metadata",
+        JSONB_COMPAT,
+        nullable=False,
+        default=dict,
+    )
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

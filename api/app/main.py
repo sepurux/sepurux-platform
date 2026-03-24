@@ -20,6 +20,7 @@ from app.routes.demo import router as demo_router
 from app.routes.internal import router as internal_router
 from app.routes.members import router as members_router
 from app.routes.mutation_packs import router as mutation_packs_router
+from app.routes.notifications import router as notifications_router
 from app.routes.policy_packs import router as policy_packs_router
 from app.routes.projects import router as projects_router
 from app.routes.runs import router as runs_router
@@ -109,6 +110,7 @@ app.include_router(ci_router)
 app.include_router(counterfactuals_router)
 app.include_router(members_router)
 app.include_router(mutation_packs_router)
+app.include_router(notifications_router)
 app.include_router(policy_packs_router)
 app.include_router(projects_router)
 app.include_router(runs_router)
