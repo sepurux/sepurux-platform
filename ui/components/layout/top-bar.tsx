@@ -172,7 +172,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const userInitials = initialsForSession(authSession);
   const userLabel = authSession?.name || authSession?.email || "Workspace User";
   const canManageWorkspace = authSession?.permissions.can_manage_workspace ?? false;
-  const showProjectSelector = !authSession?.project_scoped || canManageWorkspace;
+  const showProjectSelector = canManageWorkspace;
   const creditBalance = authSession?.credits_balance;
 
   return (
@@ -345,16 +345,18 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                     <p className="text-xs text-muted-foreground">Plans &amp; credits</p>
                   </div>
                 </Link>
-                <Link
-                  href="/profile#projects"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50"
-                >
-                  <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Projects</p>
-                    <p className="text-xs text-muted-foreground">Manage workspaces</p>
-                  </div>
-                </Link>
+                {canManageWorkspace ? (
+                  <Link
+                    href="/profile#projects"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/50"
+                  >
+                    <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Projects</p>
+                      <p className="text-xs text-muted-foreground">Manage workspaces</p>
+                    </div>
+                  </Link>
+                ) : null}
               </div>
 
               <div className="border-t border-border/50" />

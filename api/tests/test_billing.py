@@ -301,7 +301,7 @@ def test_subscription_checkout_webhook_activates_plan_once(
         assert wallet.balance == 2000
         assert wallet.monthly_credits == 2000
         assert wallet.topup_credits == 0
-        assert tenant.pricing_tier == "team"
+        assert tenant.pricing_tier == "starter"
         assert len(events) == 1
 
 
