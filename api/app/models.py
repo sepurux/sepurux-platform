@@ -267,6 +267,35 @@ class Tenant(Base):
     )
 
 
+class TenantControl(Base):
+    __tablename__ = "tenant_controls"
+
+    tenant_id: Mapped[UUID] = mapped_column(
+        ForeignKey("tenants.tenant_id"),
+        primary_key=True,
+    )
+    runs_paused: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=false(),
+    )
+    workspace_creation_locked: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=false(),
+    )
+    updated_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class Project(Base):
     __tablename__ = "projects"
 

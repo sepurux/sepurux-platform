@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from app.auth import hash_api_key
@@ -183,6 +183,7 @@ def _seed_internal_fixture(db: Session) -> dict[str, str]:
     db.commit()
 
     return {
+        "tenant_id": str(tenant_id),
         "project_id": str(project_id),
         "super_api_key": super_api_key_plaintext,
         "admin_api_key": admin_api_key_plaintext,
@@ -744,3 +745,111 @@ def test_internal_settings_reject_non_super_admin(
     )
     assert update_response.status_code == 403
     assert update_response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_tenant_controls_update_and_revoke_keys(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+        tenant_id = fixture["tenant_id"]
+        project_id = fixture["project_id"]
+        other_tenant_id = uuid4()
+        other_project_id = uuid4()
+        db.add(Tenant(tenant_id=other_tenant_id, name="Other Tenant", pricing_tier="team"))
+        db.add(
+            Project(
+                project_id=other_project_id,
+                tenant_id=other_tenant_id,
+                owner_id=None,
+                name="Other Tenant Project",
+            )
+        )
+        db.add(
+            ApiKey(
+                api_key_id=uuid4(),
+                tenant_id=other_tenant_id,
+                project_id=other_project_id,
+                user_id=None,
+                name="other-tenant-key",
+                key_hash=hash_api_key("other-tenant-key"),
+            )
+        )
+        db.commit()
+
+    client.headers.update(auth_headers(api_key=fixture["super_api_key"], project_id=project_id))
+
+    get_response = client.get(f"/v1/internal/tenants/{tenant_id}/controls")
+    assert get_response.status_code == 200
+    assert get_response.json()["runs_paused"] is False
+    assert get_response.json()["workspace_creation_locked"] is False
+
+    patch_response = client.patch(
+        f"/v1/internal/tenants/{tenant_id}/controls",
+        json={
+            "runs_paused": True,
+            "workspace_creation_locked": True,
+            "reason": "incident containment",
+        },
+    )
+    assert patch_response.status_code == 200
+    patch_payload = patch_response.json()
+    assert patch_payload["runs_paused"] is True
+    assert patch_payload["workspace_creation_locked"] is True
+    assert patch_payload["reason"] == "incident containment"
+
+    revoke_response = client.post(
+        f"/v1/internal/tenants/{tenant_id}/controls/revoke-api-keys",
+        json={"reason": "credential reset"},
+    )
+    assert revoke_response.status_code == 200
+    revoke_payload = revoke_response.json()
+    assert revoke_payload["tenant_id"] == tenant_id
+    assert revoke_payload["revoked_count"] == 2
+    assert revoke_payload["controls"]["reason"] == "credential reset"
+
+    with session_factory() as db:
+        tenant_uuid = UUID(patch_payload["tenant_id"])
+        fixture_keys = list(db.scalars(select(ApiKey).where(ApiKey.tenant_id == tenant_uuid)))
+        assert len(fixture_keys) == 2
+        assert all(record.revoked_at is not None for record in fixture_keys)
+
+        other_tenant_keys = list(
+            db.scalars(select(ApiKey).where(ApiKey.tenant_id == other_tenant_id))
+        )
+        assert len(other_tenant_keys) == 1
+        assert other_tenant_keys[0].revoked_at is None
+
+
+def test_internal_tenant_controls_reject_non_super_admin(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["admin_api_key"], project_id=fixture["project_id"])
+    )
+    tenant_id = fixture["tenant_id"]
+
+    get_response = client.get(f"/v1/internal/tenants/{tenant_id}/controls")
+    assert get_response.status_code == 403
+    assert get_response.json() == {"detail": "Super admin access required"}
+
+    patch_response = client.patch(
+        f"/v1/internal/tenants/{tenant_id}/controls",
+        json={"runs_paused": True},
+    )
+    assert patch_response.status_code == 403
+    assert patch_response.json() == {"detail": "Super admin access required"}
+
+    revoke_response = client.post(
+        f"/v1/internal/tenants/{tenant_id}/controls/revoke-api-keys",
+        json={},
+    )
+    assert revoke_response.status_code == 403
+    assert revoke_response.json() == {"detail": "Super admin access required"}

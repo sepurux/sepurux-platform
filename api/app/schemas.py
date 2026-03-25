@@ -719,6 +719,59 @@ class InternalFeatureFlagsUpdate(BaseModel):
     enable_billing: bool
 
 
+class InternalTenantControls(BaseModel):
+    tenant_id: UUID
+    runs_paused: bool
+    workspace_creation_locked: bool
+    updated_by: str | None = None
+    reason: str | None = None
+    updated_at: datetime
+
+
+class InternalTenantControlsUpdateRequest(BaseModel):
+    runs_paused: bool | None = None
+    workspace_creation_locked: bool | None = None
+    reason: str | None = Field(default=None, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+    @field_validator("workspace_creation_locked", mode="before")
+    @classmethod
+    def require_at_least_one_toggle(cls, value: bool | None, info) -> bool | None:
+        data = info.data if hasattr(info, "data") and isinstance(info.data, dict) else {}
+        runs_paused = data.get("runs_paused")
+        if runs_paused is None and value is None:
+            raise ValueError(
+                "At least one control value must be provided "
+                "(runs_paused or workspace_creation_locked)."
+            )
+        return value
+
+
+class InternalTenantApiKeyRevokeRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+
+class InternalTenantApiKeyRevokeResponse(BaseModel):
+    tenant_id: UUID
+    revoked_count: int
+    controls: InternalTenantControls
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str
