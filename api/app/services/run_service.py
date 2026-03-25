@@ -52,6 +52,7 @@ def create_run(
         select(Campaign).where(
             Campaign.campaign_id == campaign_id,
             Campaign.project_id == project_id,
+            Campaign.status != "archived",
         )
     )
     if campaign is None:
@@ -75,6 +76,7 @@ def create_run(
             select(PolicyPack).where(
                 PolicyPack.policy_pack_id == policy_pack_id,
                 PolicyPack.project_id == project_id,
+                PolicyPack.is_archived.is_(False),
             )
         )
         if policy_pack is None:
@@ -194,6 +196,8 @@ def create_ci_run_and_enqueue(
 
     campaign = db.scalar(select(Campaign).where(Campaign.campaign_id == campaign_id))
     if campaign is None:
+        raise RelatedRecordNotFoundError("Campaign not found")
+    if campaign.status == "archived":
         raise RelatedRecordNotFoundError("Campaign not found")
 
     if trace.project_id != campaign.project_id:

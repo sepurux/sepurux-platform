@@ -168,7 +168,8 @@ def _bootstrap_tool_zones(
                 if isinstance(record.name, str) and record.name
             }
             continue
-        if current.zone != desired_zone:
+        # Preserve explicit user-managed zones; bootstrap should only default unknown tools.
+        if current.zone in {"", None}:
             create_or_update_tool_registry_entry(
                 db,
                 project_id=project_id,
@@ -190,6 +191,7 @@ def _bootstrap_policy_pack(
         select(PolicyPack).where(
             PolicyPack.project_id == project_id,
             PolicyPack.name == BOOTSTRAP_POLICY_NAME,
+            PolicyPack.is_archived.is_(False),
         )
     )
     if isinstance(existing, PolicyPack):
@@ -217,6 +219,7 @@ def _bootstrap_campaign_bundle(
     existing_by_name = {
         campaign.name: campaign
         for campaign in db.scalars(select(Campaign).where(Campaign.project_id == project_id))
+        if campaign.status != "archived"
     }
 
     primary_tool = tools[0] if tools else "replay.execute"

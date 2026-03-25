@@ -20,6 +20,8 @@ type LoadState =
 export function PolicyPacksView() {
   const authSession = useAuthSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [archivingPolicyPackId, setArchivingPolicyPackId] = useState<string | null>(null);
 
   const canManagePolicyPacks =
     authSession?.permissions.can_manage_policy_packs ?? false;
@@ -51,6 +53,31 @@ export function PolicyPacksView() {
     };
   }, []);
 
+  async function onArchivePolicyPack(policyPackId: string) {
+    const confirmed = window.confirm("Archive this policy pack? It will be hidden from default views.");
+    if (!confirmed) {
+      return;
+    }
+    setArchiveError(null);
+    setArchivingPolicyPackId(policyPackId);
+    try {
+      await api.deletePolicyPack(policyPackId);
+      setState((currentState) => {
+        if (currentState.status !== "ready") {
+          return currentState;
+        }
+        return {
+          status: "ready",
+          records: currentState.records.filter((record) => record.policy_pack_id !== policyPackId),
+        };
+      });
+    } catch (error) {
+      setArchiveError(error instanceof Error ? error.message : "Failed to archive policy pack");
+    } finally {
+      setArchivingPolicyPackId(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -72,6 +99,12 @@ export function PolicyPacksView() {
           <CardContent className="p-5 text-sm text-muted-foreground">
             Policy packs follow workspace membership and plan access. Your current membership can review policy packs but cannot create or change them.
           </CardContent>
+        </Card>
+      ) : null}
+
+      {archiveError ? (
+        <Card className="border-rose-400/20">
+          <CardContent className="p-5 text-sm text-rose-100">{archiveError}</CardContent>
         </Card>
       ) : null}
 
@@ -101,13 +134,17 @@ export function PolicyPacksView() {
                   <TableHead>Unknown Tools</TableHead>
                   <TableHead>Irreversible Tools</TableHead>
                   <TableHead>Pack ID</TableHead>
+                  {canManagePolicyPacks ? <TableHead className="text-right">Actions</TableHead> : null}
                   <TableHead className="text-right">Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {state.records.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={canManagePolicyPacks ? 8 : 7}
+                      className="py-10 text-center text-muted-foreground"
+                    >
                       No policy packs found for this project.
                     </TableCell>
                   </TableRow>
@@ -152,6 +189,19 @@ export function PolicyPacksView() {
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {shortId(record.policy_pack_id, 14)}
                         </TableCell>
+                        {canManagePolicyPacks ? (
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void onArchivePolicyPack(record.policy_pack_id)}
+                              disabled={archivingPolicyPackId === record.policy_pack_id}
+                            >
+                              {archivingPolicyPackId === record.policy_pack_id ? "Archiving..." : "Archive"}
+                            </Button>
+                          </TableCell>
+                        ) : null}
                         <TableCell className="text-right text-muted-foreground">
                           {formatRelativeDate(record.created_at)}
                         </TableCell>
