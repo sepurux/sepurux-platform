@@ -61,20 +61,32 @@ def create_policy_pack(
     return record
 
 
-def list_policy_packs(db: Session, *, project_id: UUID) -> list[PolicyPack]:
-    stmt = (
-        select(PolicyPack)
-        .where(PolicyPack.project_id == project_id)
-        .order_by(PolicyPack.created_at.desc(), PolicyPack.policy_pack_id.desc())
-    )
+def list_policy_packs(
+    db: Session,
+    *,
+    project_id: UUID,
+    include_archived: bool = False,
+) -> list[PolicyPack]:
+    stmt = select(PolicyPack).where(PolicyPack.project_id == project_id)
+    if not include_archived:
+        stmt = stmt.where(PolicyPack.is_archived.is_(False))
+    stmt = stmt.order_by(PolicyPack.created_at.desc(), PolicyPack.policy_pack_id.desc())
     return list(db.scalars(stmt))
 
 
-def get_policy_pack(db: Session, *, project_id: UUID, policy_pack_id: UUID) -> PolicyPack | None:
+def get_policy_pack(
+    db: Session,
+    *,
+    project_id: UUID,
+    policy_pack_id: UUID,
+    include_archived: bool = False,
+) -> PolicyPack | None:
     stmt = select(PolicyPack).where(
         PolicyPack.policy_pack_id == policy_pack_id,
         PolicyPack.project_id == project_id,
     )
+    if not include_archived:
+        stmt = stmt.where(PolicyPack.is_archived.is_(False))
     return db.scalar(stmt)
 
 
@@ -91,6 +103,41 @@ def list_policy_pack_versions(
         .order_by(PolicyPackVersion.version_number.desc())
     )
     return list(db.scalars(stmt))
+
+
+def archive_policy_pack(
+    db: Session,
+    *,
+    project_id: UUID,
+    policy_pack_id: UUID,
+    actor: str | None = None,
+) -> PolicyPack | None:
+    record = get_policy_pack(
+        db,
+        project_id=project_id,
+        policy_pack_id=policy_pack_id,
+        include_archived=True,
+    )
+    if record is None:
+        return None
+    if not record.is_archived:
+        record.is_archived = True
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+        create_audit_event(
+            db,
+            project_id=project_id,
+            event_type="policy_pack.archived",
+            actor=actor,
+            metadata={
+                "policy_pack_id": str(record.policy_pack_id),
+                "name": record.name,
+                "engine": record.engine,
+                "is_archived": True,
+            },
+        )
+    return record
 
 
 def update_policy_pack(

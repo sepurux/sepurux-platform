@@ -552,6 +552,12 @@ class PolicyPack(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     engine: Mapped[str] = mapped_column(Text, nullable=False, default="builtin")
     policy: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=false(),
+    )
     active_version_id: Mapped[UUID | None] = mapped_column(
         ForeignKey(
             "policy_pack_versions.version_id",

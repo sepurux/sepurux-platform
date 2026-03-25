@@ -888,6 +888,7 @@ class PolicyPackMetadata(BaseModel):
     name: str
     engine: str
     policy: Any
+    is_archived: bool = False
     active_version_id: UUID | None = None
     active_version_number: int | None = None
     created_at: datetime
