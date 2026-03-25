@@ -15,6 +15,7 @@ api_demo.go
 api_health.go
 api_members.go
 api_mutation_packs.go
+api_notifications.go
 api_policy_packs.go
 api_projects.go
 api_runs.go
@@ -90,6 +91,7 @@ docs/MutationSummaryItem.md
 docs/MutationSummaryResponse.md
 docs/MutationSummaryTopReason.md
 docs/MutationSummaryTopTool.md
+docs/NotificationsAPI.md
 docs/OAuthSessionExchangeRequest.md
 docs/OperationMessageResponse.md
 docs/PolicyEventListItem.md
@@ -137,6 +139,9 @@ docs/ToolsAPI.md
 docs/TraceMetadata.md
 docs/TraceTimelineStep.md
 docs/TracesAPI.md
+docs/UserNotificationInboxResponse.md
+docs/UserNotificationItem.md
+docs/UserNotificationReadAllResponse.md
 docs/UserSubscriptionMetadata.md
 docs/ValidationError.md
 docs/ValidationErrorLocInner.md
@@ -241,6 +246,9 @@ model_tool_registry_zone_update_request.go
 model_tool_usage_stats_item.go
 model_trace_metadata.go
 model_trace_timeline_step.go
+model_user_notification_inbox_response.go
+model_user_notification_item.go
+model_user_notification_read_all_response.go
 model_user_subscription_metadata.go
 model_validation_error.go
 model_validation_error_loc_inner.go

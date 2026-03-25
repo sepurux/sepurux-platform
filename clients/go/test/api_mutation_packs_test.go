@@ -22,13 +22,13 @@ func Test_sepuruxclient_MutationPacksAPIService(t *testing.T) {
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
 
-	t.Run("Test MutationPacksAPIService GetMutationPackByIdV1MutationPacksMutationPackIdGet", func(t *testing.T) {
+	t.Run("Test MutationPacksAPIService GetMutationPackByIdV1MutationPacksPackRefGet", func(t *testing.T) {
 
 		t.Skip("skip test")  // remove to run test
 
-		var mutationPackId string
+		var packRef string
 
-		resp, httpRes, err := apiClient.MutationPacksAPI.GetMutationPackByIdV1MutationPacksMutationPackIdGet(context.Background(), mutationPackId).Execute()
+		resp, httpRes, err := apiClient.MutationPacksAPI.GetMutationPackByIdV1MutationPacksPackRefGet(context.Background(), packRef).Execute()
 
 		require.Nil(t, err)
 		require.NotNil(t, resp)

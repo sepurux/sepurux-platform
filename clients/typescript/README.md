@@ -39,5 +39,5 @@ console.log(recorder.runId);
 
 ## Release
 
-- Push a tag in the format `ts-client-v0.4.0`.
+- Push a tag in the format `ts-client-v0.5.0`.
 - GitHub Actions workflow `ts-client-publish-npm.yml` will validate the package version, build it, and publish to npm.

@@ -75,6 +75,8 @@ type APIClient struct {
 
 	MutationPacksAPI *MutationPacksAPIService
 
+	NotificationsAPI *NotificationsAPIService
+
 	PolicyPacksAPI *PolicyPacksAPIService
 
 	ProjectsAPI *ProjectsAPIService
@@ -121,6 +123,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.HealthAPI = (*HealthAPIService)(&c.common)
 	c.MembersAPI = (*MembersAPIService)(&c.common)
 	c.MutationPacksAPI = (*MutationPacksAPIService)(&c.common)
+	c.NotificationsAPI = (*NotificationsAPIService)(&c.common)
 	c.PolicyPacksAPI = (*PolicyPacksAPIService)(&c.common)
 	c.ProjectsAPI = (*ProjectsAPIService)(&c.common)
 	c.RunsAPI = (*RunsAPIService)(&c.common)
