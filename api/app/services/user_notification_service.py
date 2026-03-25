@@ -320,3 +320,4 @@ def send_password_changed_email(*, to_email: str, recipient_name: str | None) ->
         ),
     )
     return send_email(to_email=to_email, subject=subject, text_body=text_body, html_body=html_body)
+
