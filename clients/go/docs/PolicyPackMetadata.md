@@ -9,6 +9,7 @@ Name | Type | Description | Notes
 **Name** | **string** |  | 
 **Engine** | **string** |  | 
 **Policy** | **interface{}** |  | 
+**IsArchived** | Pointer to **bool** |  | [optional] [default to false]
 **ActiveVersionId** | Pointer to **NullableString** |  | [optional] 
 **ActiveVersionNumber** | Pointer to **NullableInt32** |  | [optional] 
 **CreatedAt** | **time.Time** |  | 
@@ -142,6 +143,31 @@ SetPolicy sets Policy field to given value.
 `func (o *PolicyPackMetadata) UnsetPolicy()`
 
 UnsetPolicy ensures that no value is present for Policy, not even an explicit nil
+### GetIsArchived
+
+`func (o *PolicyPackMetadata) GetIsArchived() bool`
+
+GetIsArchived returns the IsArchived field if non-nil, zero value otherwise.
+
+### GetIsArchivedOk
+
+`func (o *PolicyPackMetadata) GetIsArchivedOk() (*bool, bool)`
+
+GetIsArchivedOk returns a tuple with the IsArchived field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetIsArchived
+
+`func (o *PolicyPackMetadata) SetIsArchived(v bool)`
+
+SetIsArchived sets IsArchived field to given value.
+
+### HasIsArchived
+
+`func (o *PolicyPackMetadata) HasIsArchived() bool`
+
+HasIsArchived returns a boolean if a field has been set.
+
 ### GetActiveVersionId
 
 `func (o *PolicyPackMetadata) GetActiveVersionId() string`

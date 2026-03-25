@@ -430,7 +430,10 @@ def test_policy_pack_template_auto_confirmation_token_allows_irreversible_tool(
     assert attempt.failure_reason is None
     assert policy_event.decision == "allow"
     assert isinstance(policy_event.input, dict)
-    assert policy_event.input["tool"]["args"]["confirmation_token"] == "template-auto-confirmation-token"
+    assert (
+        policy_event.input["tool"]["args"]["confirmation_token"]
+        == "template-auto-confirmation-token"
+    )
     summary = run.summary or {}
     assert summary.get("policy_requires_approval") == 0
     assert summary.get("policy_events_count") == 1
@@ -519,7 +522,10 @@ def test_policy_pack_template_legacy_confirmation_gate_still_injects_token(
     assert attempt.failure_reason is None
     assert policy_event.decision == "allow"
     assert isinstance(policy_event.input, dict)
-    assert policy_event.input["tool"]["args"]["confirmation_token"] == "template-auto-confirmation-token"
+    assert (
+        policy_event.input["tool"]["args"]["confirmation_token"]
+        == "template-auto-confirmation-token"
+    )
 
 
 def test_opa_policy_pack_requires_approval_without_token(

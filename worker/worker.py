@@ -874,7 +874,9 @@ def _apply_eval_checks_to_attempt(
     )
 
     timeline_artifact["first_failure"] = {
-        "event_index": failure_event_index if failure_event_index is not None else error_event_index,
+        "event_index": (
+            failure_event_index if failure_event_index is not None else error_event_index
+        ),
         "tool": failure_tool,
         "reason": failed_reason,
     }
@@ -1295,7 +1297,9 @@ def execute_run(run_id: str) -> None:
                 )
                 pending_policy_events: list[dict[str, Any]] = []
                 if isinstance(policy_document, dict):
-                    tool_name, policy_args, event_index = _extract_policy_inputs(mutation_for_replay)
+                    tool_name, policy_args, event_index = _extract_policy_inputs(
+                        mutation_for_replay
+                    )
                     _, commit_like = normalize_action(tool_name, policy_args)
                     policy_input = _build_policy_event_input(
                         tool_name=tool_name,

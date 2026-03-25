@@ -37,8 +37,14 @@ import {
     PolicyPackVersionMetadataToJSON,
 } from '../models/index';
 
+export interface DeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest {
+    policyPackId: string;
+    xProjectId?: string | null;
+}
+
 export interface GetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest {
     policyPackId: string;
+    includeArchived?: boolean;
     xProjectId?: string | null;
 }
 
@@ -48,6 +54,7 @@ export interface GetPolicyPackVersionsV1PolicyPacksPolicyPackIdVersionsGetReques
 }
 
 export interface GetPolicyPacksV1PolicyPacksGetRequest {
+    includeArchived?: boolean;
     xProjectId?: string | null;
 }
 
@@ -80,6 +87,42 @@ export interface PostPolicyPackV1PolicyPacksPostRequest {
 export class PolicyPacksApi extends runtime.BaseAPI {
 
     /**
+     * Delete Policy Pack
+     */
+    async deletePolicyPackV1PolicyPacksPolicyPackIdDeleteRaw(requestParameters: DeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['policyPackId'] == null) {
+            throw new runtime.RequiredError(
+                'policyPackId',
+                'Required parameter "policyPackId" was null or undefined when calling deletePolicyPackV1PolicyPacksPolicyPackIdDelete().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/policy-packs/{policy_pack_id}`.replace(`{${"policy_pack_id"}}`, encodeURIComponent(String(requestParameters['policyPackId']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete Policy Pack
+     */
+    async deletePolicyPackV1PolicyPacksPolicyPackIdDelete(requestParameters: DeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deletePolicyPackV1PolicyPacksPolicyPackIdDeleteRaw(requestParameters, initOverrides);
+    }
+
+    /**
      * Get Policy Pack By Id
      */
     async getPolicyPackByIdV1PolicyPacksPolicyPackIdGetRaw(requestParameters: GetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PolicyPackMetadata>> {
@@ -91,6 +134,10 @@ export class PolicyPacksApi extends runtime.BaseAPI {
         }
 
         const queryParameters: any = {};
+
+        if (requestParameters['includeArchived'] != null) {
+            queryParameters['include_archived'] = requestParameters['includeArchived'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -158,6 +205,10 @@ export class PolicyPacksApi extends runtime.BaseAPI {
      */
     async getPolicyPacksV1PolicyPacksGetRaw(requestParameters: GetPolicyPacksV1PolicyPacksGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PolicyPackMetadata>>> {
         const queryParameters: any = {};
+
+        if (requestParameters['includeArchived'] != null) {
+            queryParameters['include_archived'] = requestParameters['includeArchived'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 

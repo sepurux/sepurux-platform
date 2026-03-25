@@ -620,6 +620,15 @@ paths:
           title: Offset
           type: integer
         style: form
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -680,6 +689,38 @@ paths:
       tags:
       - campaigns
   /v1/campaigns/{campaign_id}:
+    delete:
+      operationId: delete_campaign_v1_campaigns__campaign_id__delete
+      parameters:
+      - explode: false
+        in: path
+        name: campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Campaign Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Campaign
+      tags:
+      - campaigns
     get:
       operationId: get_campaign_v1_campaigns__campaign_id__get
       parameters:
@@ -692,6 +733,15 @@ paths:
           title: Campaign Id
           type: string
         style: simple
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -1404,6 +1454,15 @@ paths:
     get:
       operationId: get_policy_packs_v1_policy_packs_get
       parameters:
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -1464,6 +1523,38 @@ paths:
       tags:
       - policy-packs
   /v1/policy-packs/{policy_pack_id}:
+    delete:
+      operationId: delete_policy_pack_v1_policy_packs__policy_pack_id__delete
+      parameters:
+      - explode: false
+        in: path
+        name: policy_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Policy Pack
+      tags:
+      - policy-packs
     get:
       operationId: get_policy_pack_by_id_v1_policy_packs__policy_pack_id__get
       parameters:
@@ -1476,6 +1567,15 @@ paths:
           title: Policy Pack Id
           type: string
         style: simple
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -5004,6 +5104,7 @@ components:
       title: PolicyPackCreateRequest
     PolicyPackMetadata:
       example:
+        is_archived: false
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         engine: engine
         active_version_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -5028,6 +5129,10 @@ components:
           title: Engine
           type: string
         policy: {}
+        is_archived:
+          default: false
+          title: Is Archived
+          type: boolean
         active_version_id:
           format: uuid
           nullable: true
