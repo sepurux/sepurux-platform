@@ -15,6 +15,7 @@ from app.models import (
     Project,
     ReplayAttempt,
     Run,
+    TenantControl,
     Trace,
     User,
 )
@@ -186,6 +187,39 @@ def test_ci_post_run_reads_repo_and_pr_number_from_env(
             "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
             "github_context": {"repo": "sepurux/sepurux-platform", "pull_request_number": 123},
         }
+
+
+def test_ci_post_run_returns_423_when_tenant_runs_paused(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = _seed_trace_and_campaign(db, project_id=project_id)
+        project = db.scalar(select(Project).where(Project.project_id == project_id))
+        assert isinstance(project, Project)
+        db.add(
+            TenantControl(
+                tenant_id=project.tenant_id,
+                runs_paused=True,
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 423
+    assert response.json() == {"detail": "Run creation is paused for this tenant."}
+    assert fake_queue.calls == []
 
 
 def test_ci_routes_require_ci_token_when_configured_but_not_api_key(

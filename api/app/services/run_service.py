@@ -18,6 +18,7 @@ from app.models import (
 from app.queue import get_run_queue
 from app.services.audit_service import create_audit_event
 from app.services.policy_service import get_policy_pack_active_version
+from app.services.tenant_control_service import assert_project_runs_allowed
 from app.services.trace_intake import create_trace
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -37,6 +38,8 @@ def create_run(
     policy_pack_id: UUID | None = None,
     actor: str | None = None,
 ) -> Run:
+    assert_project_runs_allowed(db, project_id=project_id)
+
     policy_pack: PolicyPack | None = None
     effective_policy_pack_version_id: UUID | None = None
 
@@ -195,6 +198,7 @@ def create_ci_run_and_enqueue(
 
     if trace.project_id != campaign.project_id:
         raise ValueError("Trace and campaign must belong to the same project")
+    assert_project_runs_allowed(db, project_id=campaign.project_id)
 
     summary: dict[str, Any] = {"ci_thresholds": thresholds}
     if isinstance(github_context, dict):

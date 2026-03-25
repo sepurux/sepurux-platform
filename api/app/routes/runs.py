@@ -51,6 +51,10 @@ from app.services.template_service import (
     apply_template_and_enqueue,
     get_template,
 )
+from app.services.tenant_control_service import (
+    TenantControlViolationError,
+    assert_tenant_runs_allowed,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -132,6 +136,12 @@ def post_run(
 ) -> RunMetadata:
     charged_amount: int | None = None
     charged_reason: str | None = None
+
+    try:
+        assert_tenant_runs_allowed(db, tenant_id=project_scope.tenant_id)
+    except TenantControlViolationError as exc:
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
+
     trace = db.scalar(
         select(Trace).where(
             Trace.trace_id == payload.trace_id,
@@ -237,6 +247,19 @@ def post_run(
             except Exception:
                 logger.exception("Failed to refund credits after run creation failure")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except TenantControlViolationError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:tenant_runs_paused",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after tenant run lock")
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
     except Exception:
         if charged_amount is not None and charged_reason is not None:
             try:
@@ -382,6 +405,12 @@ def post_apply_template(
 ) -> ApplyTemplateRunResponse:
     charged_amount: int | None = None
     charged_reason: str | None = None
+
+    try:
+        assert_tenant_runs_allowed(db, tenant_id=project_scope.tenant_id)
+    except TenantControlViolationError as exc:
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
+
     source_run = get_run_record(db, project_id=project_scope.project_id, run_id=run_id)
     if source_run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
@@ -459,6 +488,19 @@ def post_apply_template(
             except Exception:
                 logger.exception("Failed to refund credits after template lookup failure")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except TenantControlViolationError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:tenant_runs_paused",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after tenant run lock")
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
     except Exception:
         if charged_amount is not None and charged_reason is not None:
             try:

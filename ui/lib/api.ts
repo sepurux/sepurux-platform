@@ -634,6 +634,21 @@ export type InternalFeatureFlags = {
   enable_billing: boolean;
 };
 
+export type InternalTenantControls = {
+  tenant_id: string;
+  runs_paused: boolean;
+  workspace_creation_locked: boolean;
+  updated_by: string | null;
+  reason: string | null;
+  updated_at: string;
+};
+
+export type InternalTenantApiKeyRevokeResponse = {
+  tenant_id: string;
+  revoked_count: number;
+  controls: InternalTenantControls;
+};
+
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
 
 export type SubscriptionPlanMetadata = {
@@ -1132,6 +1147,30 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(payload),
       },
+      { requireProjectHeader: false }
+    ),
+  getInternalTenantControls: (tenantId: string) =>
+    requestJson<InternalTenantControls>(
+      `/v1/internal/tenants/${encodeURIComponent(tenantId)}/controls`,
+      undefined,
+      { requireProjectHeader: false }
+    ),
+  updateInternalTenantControls: (
+    tenantId: string,
+    payload: { runs_paused?: boolean; workspace_creation_locked?: boolean; reason?: string | null }
+  ) =>
+    patchJson<InternalTenantControls, typeof payload>(
+      `/v1/internal/tenants/${encodeURIComponent(tenantId)}/controls`,
+      payload,
+      { requireProjectHeader: false }
+    ),
+  revokeInternalTenantApiKeys: (
+    tenantId: string,
+    payload: { reason?: string | null } = {}
+  ) =>
+    postJson<InternalTenantApiKeyRevokeResponse, typeof payload>(
+      `/v1/internal/tenants/${encodeURIComponent(tenantId)}/controls/revoke-api-keys`,
+      payload,
       { requireProjectHeader: false }
     ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
