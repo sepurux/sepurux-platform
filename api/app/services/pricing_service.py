@@ -120,9 +120,10 @@ def build_auth_permissions(
         billing_plan_name
     ) or _default_billing_plan_for_pricing_tier(pricing_tier)
     policy_and_security_enabled = resolved_plan in {"pro", "team", "enterprise"}
-    workspace_management_enabled = (
-        resolved_plan in {"team", "enterprise"} and normalized_role in {"admin", "super_admin"}
-    )
+    workspace_management_enabled = resolved_plan in {"team", "enterprise"} and normalized_role in {
+        "admin",
+        "super_admin",
+    }
     return AuthPermissionSet(
         visible_sections=_visible_sections_for_plan(resolved_plan),
         can_upload_traces=True,
