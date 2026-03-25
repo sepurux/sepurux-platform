@@ -104,7 +104,7 @@ def test_execute_run_with_mutation_pack_persists_seed_and_trace(
                         "args": {"title": "Demo"},
                     }
                 ],
-                eval_set={"checks": ["status"]},
+                eval_set={"checks": ["ok"]},
             )
         )
         db.add(
@@ -516,7 +516,7 @@ def test_execute_run_repeats_attempts_from_eval_set_count(
                         "args": {"title": "Demo"},
                     }
                 ],
-                eval_set={"checks": ["status"], "attempts_count": 3},
+                eval_set={"checks": ["ok"], "attempts_count": 3},
             )
         )
         db.add(
@@ -551,6 +551,171 @@ def test_execute_run_repeats_attempts_from_eval_set_count(
     assert summary["passed_count"] == 3
     assert summary["pass_rate"] == 1.0
     assert len(artifacts) == 3
+
+
+def test_execute_run_status_check_fails_on_schema_rename(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Strict Status Pack",
+                description="Always rename status to state",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "rename-status",
+                            "type": "schema.rename_field",
+                            "target": {"tool": "jira.*"},
+                            "params": {"from": "status", "to": "state"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Strict Status Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert attempt.result == "failed"
+    assert attempt.failure_reason == "missing_field"
+    assert attempt.first_failure_tool == "jira.create_issue"
+    summary = run.summary
+    assert isinstance(summary, dict)
+    assert summary["failed_count"] == 1
+    assert summary["pass_rate"] == 0.0
+
+
+def test_execute_run_status_check_fails_on_poisoned_status(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Poison Status Pack",
+                description="Always poison the status field",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "poison-status",
+                            "type": "poison.inject",
+                            "target": {"tool": "jira.*"},
+                            "params": {"field": "status", "payload": "::poisoned::"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Strict Poison Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "failed"
+    assert attempt.failure_reason == "schema_mismatch"
+    assert attempt.first_failure_tool == "jira.create_issue"
 
 
 def test_execute_run_counterfactuals_use_applied_mutation_context(

@@ -593,6 +593,175 @@ def _campaign_attempt_repeats(campaign: Campaign) -> int:
     return 1
 
 
+def _campaign_eval_checks(campaign: Campaign) -> list[str]:
+    eval_set = campaign.eval_set if isinstance(campaign.eval_set, dict) else {}
+    raw_checks = eval_set.get("checks")
+    if not isinstance(raw_checks, list):
+        return []
+    checks: list[str] = []
+    for item in raw_checks:
+        if not isinstance(item, str):
+            continue
+        normalized = item.strip()
+        if normalized:
+            checks.append(normalized)
+    return checks
+
+
+def _last_replay_tool_result_event(
+    timeline_artifact: dict[str, Any],
+) -> dict[str, Any] | None:
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        return None
+    for event in reversed(events):
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "tool_result":
+            continue
+        tool_name = event.get("tool")
+        if not isinstance(tool_name, str):
+            continue
+        if tool_name in {"trace.load", "campaign.load"}:
+            continue
+        result_obj = event.get("result")
+        if not isinstance(result_obj, dict):
+            continue
+        return event
+    return None
+
+
+def _evaluate_attempt_checks(
+    *,
+    checks: list[str],
+    timeline_artifact: dict[str, Any],
+) -> tuple[str, str] | None:
+    if not checks:
+        return None
+
+    tool_result_event = _last_replay_tool_result_event(timeline_artifact)
+    if not isinstance(tool_result_event, dict):
+        return (
+            "replay_contract_invalid_response",
+            "Eval checks require a replay tool_result event, but none was found.",
+        )
+    result_obj = tool_result_event.get("result")
+    if not isinstance(result_obj, dict):
+        return (
+            "replay_contract_invalid_response",
+            "Eval checks require an object tool_result payload.",
+        )
+
+    for check in checks:
+        if check == "status":
+            if "status" not in result_obj:
+                return ("missing_field", "Eval check 'status' failed: missing 'status'.")
+            status_value = result_obj.get("status")
+            if not isinstance(status_value, str):
+                return (
+                    "type_mismatch",
+                    "Eval check 'status' failed: status must be a string.",
+                )
+            if status_value != "replayed":
+                return (
+                    "schema_mismatch",
+                    (
+                        "Eval check 'status' failed: expected "
+                        "'replayed' but received "
+                        f"'{status_value}'."
+                    ),
+                )
+            continue
+
+        if check == "ok":
+            if "ok" not in result_obj:
+                return ("missing_field", "Eval check 'ok' failed: missing 'ok'.")
+            ok_value = result_obj.get("ok")
+            if not isinstance(ok_value, bool):
+                return ("type_mismatch", "Eval check 'ok' failed: ok must be boolean.")
+            if ok_value is not True:
+                return ("schema_mismatch", "Eval check 'ok' failed: expected ok=true.")
+            continue
+
+    return None
+
+
+def _apply_eval_checks_to_attempt(
+    *,
+    checks: list[str],
+    result: str,
+    failure_reason: str | None,
+    first_failure_event_index: int | None,
+    first_failure_tool: str | None,
+    timeline_artifact: dict[str, Any],
+) -> tuple[str, str | None, int | None, str | None, dict[str, Any]]:
+    if result != "passed":
+        return (
+            result,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+            timeline_artifact,
+        )
+    check_failure = _evaluate_attempt_checks(
+        checks=checks,
+        timeline_artifact=timeline_artifact,
+    )
+    if check_failure is None:
+        return (
+            result,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+            timeline_artifact,
+        )
+
+    failed_reason, failed_message = check_failure
+    tool_result_event = _last_replay_tool_result_event(timeline_artifact)
+    failure_tool = "replay.execute"
+    failure_event_index: int | None = None
+    if isinstance(tool_result_event, dict):
+        tool_name = tool_result_event.get("tool")
+        if isinstance(tool_name, str) and tool_name:
+            failure_tool = tool_name
+        event_index = tool_result_event.get("index")
+        if isinstance(event_index, int):
+            failure_event_index = event_index
+
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        events = []
+        timeline_artifact["events"] = events
+    max_index = _max_timeline_event_index(events)
+    error_event_index = max_index + 1 if max_index >= 0 else 0
+    events.append(
+        {
+            "index": error_event_index,
+            "type": "error",
+            "tool": failure_tool,
+            "error": {
+                "type": "EvalCheckFailedError",
+                "code": failed_reason,
+                "message": failed_message,
+            },
+        }
+    )
+
+    timeline_artifact["first_failure"] = {
+        "event_index": failure_event_index if failure_event_index is not None else error_event_index,
+        "tool": failure_tool,
+        "reason": failed_reason,
+    }
+
+    return (
+        "failed",
+        failed_reason,
+        failure_event_index if failure_event_index is not None else error_event_index,
+        failure_tool,
+        timeline_artifact,
+    )
+
+
 def _select_applied_mutation(
     mutation_trace: dict[str, Any] | None,
     *,
@@ -975,6 +1144,7 @@ def execute_run(run_id: str) -> None:
 
         baseline_mutations = iter_mutations(campaign.mutation_set)
         attempt_repeats = _campaign_attempt_repeats(campaign)
+        eval_checks = _campaign_eval_checks(campaign)
         total_attempts = len(baseline_mutations) * attempt_repeats
         passed_count = 0
         failed_count = 0
@@ -1173,6 +1343,20 @@ def execute_run(run_id: str) -> None:
                 timeline_artifact = _apply_sanitizer_to_timeline(
                     timeline_artifact,
                     sanitizer_config,
+                )
+                (
+                    result,
+                    failure_reason,
+                    first_failure_event_index,
+                    first_failure_tool,
+                    timeline_artifact,
+                ) = _apply_eval_checks_to_attempt(
+                    checks=eval_checks,
+                    result=result,
+                    failure_reason=failure_reason,
+                    first_failure_event_index=first_failure_event_index,
+                    first_failure_tool=first_failure_tool,
+                    timeline_artifact=timeline_artifact,
                 )
 
                 artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"
