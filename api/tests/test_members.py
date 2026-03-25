@@ -189,3 +189,42 @@ def test_invite_member_blocks_pro_plan(
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Upgrade to Team or Enterprise to invite members."}
+
+
+def test_members_endpoints_require_workspace_management_permission(
+    members_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, testing_session_local = members_test_context
+    with testing_session_local() as db:
+        _, project_id, _, _, api_key_plaintext = seed_project_membership_api_key(
+            db,
+            role_name="admin",
+            pricing_tier="starter",
+        )
+
+    client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+    response = client.get("/v1/members")
+
+    assert response.status_code == 403
+    assert "can_manage_workspace" in response.json()["detail"]
+
+
+def test_invite_member_requires_admin_role(
+    members_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, testing_session_local = members_test_context
+    with testing_session_local() as db:
+        _, project_id, _, _, api_key_plaintext = seed_project_membership_api_key(
+            db,
+            role_name="developer",
+            pricing_tier="team",
+        )
+
+    client.headers.update(auth_headers(api_key=api_key_plaintext, project_id=project_id))
+    response = client.post(
+        "/v1/members",
+        json={"email": "developer-invite@example.com", "role": "viewer"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "admin role required"}
