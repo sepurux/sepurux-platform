@@ -4,6 +4,7 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**DeletePolicyPackV1PolicyPacksPolicyPackIdDelete**](PolicyPacksAPI.md#DeletePolicyPackV1PolicyPacksPolicyPackIdDelete) | **Delete** /v1/policy-packs/{policy_pack_id} | Delete Policy Pack
 [**GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet**](PolicyPacksAPI.md#GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet) | **Get** /v1/policy-packs/{policy_pack_id} | Get Policy Pack By Id
 [**GetPolicyPackVersionsV1PolicyPacksPolicyPackIdVersionsGet**](PolicyPacksAPI.md#GetPolicyPackVersionsV1PolicyPacksPolicyPackIdVersionsGet) | **Get** /v1/policy-packs/{policy_pack_id}/versions | Get Policy Pack Versions
 [**GetPolicyPacksV1PolicyPacksGet**](PolicyPacksAPI.md#GetPolicyPacksV1PolicyPacksGet) | **Get** /v1/policy-packs | Get Policy Packs
@@ -14,11 +15,11 @@ Method | HTTP request | Description
 
 
 
-## GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet
+## DeletePolicyPackV1PolicyPacksPolicyPackIdDelete
 
-> PolicyPackMetadata GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet(ctx, policyPackId).XProjectId(xProjectId).Execute()
+> DeletePolicyPackV1PolicyPacksPolicyPackIdDelete(ctx, policyPackId).XProjectId(xProjectId).Execute()
 
-Get Policy Pack By Id
+Delete Policy Pack
 
 ### Example
 
@@ -38,7 +39,76 @@ func main() {
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.PolicyPacksAPI.GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet(context.Background(), policyPackId).XProjectId(xProjectId).Execute()
+	r, err := apiClient.PolicyPacksAPI.DeletePolicyPackV1PolicyPacksPolicyPackIdDelete(context.Background(), policyPackId).XProjectId(xProjectId).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `PolicyPacksAPI.DeletePolicyPackV1PolicyPacksPolicyPackIdDelete``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**policyPackId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **xProjectId** | **string** |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet
+
+> PolicyPackMetadata GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet(ctx, policyPackId).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
+
+Get Policy Pack By Id
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	policyPackId := "38400000-8cf0-11bd-b23e-10b96e4ef00d" // string | 
+	includeArchived := true // bool |  (optional) (default to false)
+	xProjectId := "xProjectId_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.PolicyPacksAPI.GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet(context.Background(), policyPackId).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `PolicyPacksAPI.GetPolicyPackByIdV1PolicyPacksPolicyPackIdGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -64,6 +134,7 @@ Other parameters are passed through a pointer to a apiGetPolicyPackByIdV1PolicyP
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
+ **includeArchived** | **bool** |  | [default to false]
  **xProjectId** | **string** |  | 
 
 ### Return type
@@ -156,7 +227,7 @@ No authorization required
 
 ## GetPolicyPacksV1PolicyPacksGet
 
-> []PolicyPackMetadata GetPolicyPacksV1PolicyPacksGet(ctx).XProjectId(xProjectId).Execute()
+> []PolicyPackMetadata GetPolicyPacksV1PolicyPacksGet(ctx).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
 
 Get Policy Packs
 
@@ -173,11 +244,12 @@ import (
 )
 
 func main() {
+	includeArchived := true // bool |  (optional) (default to false)
 	xProjectId := "xProjectId_example" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.PolicyPacksAPI.GetPolicyPacksV1PolicyPacksGet(context.Background()).XProjectId(xProjectId).Execute()
+	resp, r, err := apiClient.PolicyPacksAPI.GetPolicyPacksV1PolicyPacksGet(context.Background()).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `PolicyPacksAPI.GetPolicyPacksV1PolicyPacksGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -198,6 +270,7 @@ Other parameters are passed through a pointer to a apiGetPolicyPacksV1PolicyPack
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **includeArchived** | **bool** |  | [default to false]
  **xProjectId** | **string** |  | 
 
 ### Return type

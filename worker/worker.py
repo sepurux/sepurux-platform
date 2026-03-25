@@ -269,6 +269,132 @@ def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | No
     return tool_name, merged_args, index
 
 
+def _template_auto_confirmation_enabled(config: dict[str, Any]) -> bool:
+    explicit = config.get("auto_provide_confirmation_token")
+    if isinstance(explicit, bool):
+        return explicit
+    if isinstance(explicit, str):
+        normalized = explicit.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+
+    # Backward compatibility for templates created before explicit flag support.
+    target_tool = config.get("target_tool")
+    source_attempt_id = config.get("source_attempt_id")
+    policy_obj = config.get("policy")
+    return (
+        isinstance(target_tool, str)
+        and bool(target_tool.strip())
+        and isinstance(source_attempt_id, str)
+        and bool(source_attempt_id.strip())
+        and isinstance(policy_obj, dict)
+        and isinstance(policy_obj.get("approval"), dict)
+    )
+
+
+def _collect_template_confirmation_overrides(
+    templates: list[HardeningTemplate],
+) -> list[tuple[str, str, str]]:
+    overrides: list[tuple[str, str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for template in templates:
+        if template.type != "policy_pack":
+            continue
+        config = _template_config_dict(template)
+        if not _template_auto_confirmation_enabled(config):
+            continue
+
+        policy_obj = config.get("policy")
+        token_field = "confirmation_token"
+        if isinstance(policy_obj, dict):
+            approval_obj = policy_obj.get("approval")
+            if isinstance(approval_obj, dict):
+                candidate_field = approval_obj.get("token_field")
+                if isinstance(candidate_field, str) and candidate_field.strip():
+                    token_field = candidate_field.strip()
+
+        token_value_obj = config.get("confirmation_token_value")
+        token_value = (
+            token_value_obj.strip()
+            if isinstance(token_value_obj, str) and token_value_obj.strip()
+            else "template-auto-confirmation-token"
+        )
+
+        tools: list[str] = []
+        target_tool_obj = config.get("target_tool")
+        if isinstance(target_tool_obj, str) and target_tool_obj.strip():
+            tools.append(target_tool_obj.strip())
+        if isinstance(policy_obj, dict):
+            irreversible_obj = policy_obj.get("irreversible")
+            if isinstance(irreversible_obj, dict):
+                tools_obj = irreversible_obj.get("tools")
+                if isinstance(tools_obj, list):
+                    for tool_obj in tools_obj:
+                        if isinstance(tool_obj, str) and tool_obj.strip():
+                            tools.append(tool_obj.strip())
+
+        for tool_name in tools:
+            dedupe_key = (tool_name, token_field)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            overrides.append((tool_name, token_field, token_value))
+
+    return overrides
+
+
+def _apply_template_confirmation_overrides(
+    mutation: Any,
+    *,
+    overrides: list[tuple[str, str, str]],
+) -> Any:
+    if not overrides or not isinstance(mutation, dict):
+        return mutation
+
+    tool_name = _mutation_tool_name(mutation)
+    relevant = [entry for entry in overrides if entry[0] == tool_name]
+    if not relevant:
+        return mutation
+
+    mutation_obj = dict(mutation)
+    merged_args = dict(_mutation_tool_args(mutation_obj))
+    event_obj = mutation_obj.get("event")
+    event_copy = dict(event_obj) if isinstance(event_obj, dict) else None
+    event_args_copy: dict[str, Any] | None = None
+    if event_copy is not None:
+        event_args_obj = event_copy.get("args")
+        if isinstance(event_args_obj, dict):
+            event_args_copy = dict(event_args_obj)
+
+    changed = False
+    for _, token_field, token_value in relevant:
+        if not token_field:
+            continue
+        if token_field not in merged_args or not merged_args[token_field]:
+            merged_args[token_field] = token_value
+            changed = True
+        if token_field not in mutation_obj or not mutation_obj[token_field]:
+            mutation_obj[token_field] = token_value
+            changed = True
+        if event_args_copy is not None and (
+            token_field not in event_args_copy or not event_args_copy[token_field]
+        ):
+            event_args_copy[token_field] = token_value
+            changed = True
+
+    if not changed:
+        return mutation
+
+    mutation_obj["args"] = merged_args
+    if event_copy is not None and event_args_copy is not None:
+        event_copy["args"] = event_args_copy
+        mutation_obj["event"] = event_copy
+    return mutation_obj
+
+
 def _build_policy_event_input(
     *,
     tool_name: str,
@@ -748,7 +874,9 @@ def _apply_eval_checks_to_attempt(
     )
 
     timeline_artifact["first_failure"] = {
-        "event_index": failure_event_index if failure_event_index is not None else error_event_index,
+        "event_index": (
+            failure_event_index if failure_event_index is not None else error_event_index
+        ),
         "tool": failure_tool,
         "reason": failed_reason,
     }
@@ -1114,6 +1242,7 @@ def execute_run(run_id: str) -> None:
                     policy_pack = policy_override
                     policy_pack_version = policy_override_version
 
+        template_confirmation_overrides = _collect_template_confirmation_overrides(templates)
         policy_document: dict[str, Any] | None = None
         policy_engine_name = "builtin"
         if policy_pack is not None and isinstance(policy_pack_version, PolicyPackVersion):
@@ -1162,10 +1291,15 @@ def execute_run(run_id: str) -> None:
         for baseline_index, mutation in enumerate(baseline_mutations):
             for repeat_index in range(attempt_repeats):
                 attempt_id = uuid4()
-                mutation_for_replay = mutation
+                mutation_for_replay = _apply_template_confirmation_overrides(
+                    mutation,
+                    overrides=template_confirmation_overrides,
+                )
                 pending_policy_events: list[dict[str, Any]] = []
                 if isinstance(policy_document, dict):
-                    tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
+                    tool_name, policy_args, event_index = _extract_policy_inputs(
+                        mutation_for_replay
+                    )
                     _, commit_like = normalize_action(tool_name, policy_args)
                     policy_input = _build_policy_event_input(
                         tool_name=tool_name,
@@ -1278,7 +1412,7 @@ def execute_run(run_id: str) -> None:
                     )
                     if blocked_failure_reason is not None:
                         mutation_for_replay = _policy_blocked_mutation(
-                            mutation,
+                            mutation_for_replay,
                             failure_reason=blocked_failure_reason,
                             error_type=blocked_error_type,
                             error_message=blocked_error_message,

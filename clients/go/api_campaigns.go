@@ -23,6 +23,115 @@ import (
 // CampaignsAPIService CampaignsAPI service
 type CampaignsAPIService service
 
+type ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest struct {
+	ctx context.Context
+	ApiService *CampaignsAPIService
+	campaignId string
+	xProjectId *string
+}
+
+func (r ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest) XProjectId(xProjectId string) ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest {
+	r.xProjectId = &xProjectId
+	return r
+}
+
+func (r ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.DeleteCampaignV1CampaignsCampaignIdDeleteExecute(r)
+}
+
+/*
+DeleteCampaignV1CampaignsCampaignIdDelete Delete Campaign
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param campaignId
+ @return ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest
+*/
+func (a *CampaignsAPIService) DeleteCampaignV1CampaignsCampaignIdDelete(ctx context.Context, campaignId string) ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest {
+	return ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest{
+		ApiService: a,
+		ctx: ctx,
+		campaignId: campaignId,
+	}
+}
+
+// Execute executes the request
+func (a *CampaignsAPIService) DeleteCampaignV1CampaignsCampaignIdDeleteExecute(r ApiDeleteCampaignV1CampaignsCampaignIdDeleteRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodDelete
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CampaignsAPIService.DeleteCampaignV1CampaignsCampaignIdDelete")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/campaigns/{campaign_id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"campaign_id"+"}", url.PathEscape(parameterValueToString(r.campaignId, "campaignId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.xProjectId != nil {
+		parameterAddToHeaderOrQuery(localVarHeaderParams, "X-Project-Id", r.xProjectId, "simple", "")
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
 type ApiGetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest struct {
 	ctx context.Context
 	ApiService *CampaignsAPIService
@@ -309,7 +418,13 @@ type ApiGetCampaignV1CampaignsCampaignIdGetRequest struct {
 	ctx context.Context
 	ApiService *CampaignsAPIService
 	campaignId string
+	includeArchived *bool
 	xProjectId *string
+}
+
+func (r ApiGetCampaignV1CampaignsCampaignIdGetRequest) IncludeArchived(includeArchived bool) ApiGetCampaignV1CampaignsCampaignIdGetRequest {
+	r.includeArchived = &includeArchived
+	return r
 }
 
 func (r ApiGetCampaignV1CampaignsCampaignIdGetRequest) XProjectId(xProjectId string) ApiGetCampaignV1CampaignsCampaignIdGetRequest {
@@ -358,6 +473,12 @@ func (a *CampaignsAPIService) GetCampaignV1CampaignsCampaignIdGetExecute(r ApiGe
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.includeArchived != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "include_archived", r.includeArchived, "form", "")
+	} else {
+		var defaultValue bool = false
+		r.includeArchived = &defaultValue
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -430,6 +551,7 @@ type ApiGetCampaignsV1CampaignsGetRequest struct {
 	ApiService *CampaignsAPIService
 	limit *int32
 	offset *int32
+	includeArchived *bool
 	xProjectId *string
 }
 
@@ -440,6 +562,11 @@ func (r ApiGetCampaignsV1CampaignsGetRequest) Limit(limit int32) ApiGetCampaigns
 
 func (r ApiGetCampaignsV1CampaignsGetRequest) Offset(offset int32) ApiGetCampaignsV1CampaignsGetRequest {
 	r.offset = &offset
+	return r
+}
+
+func (r ApiGetCampaignsV1CampaignsGetRequest) IncludeArchived(includeArchived bool) ApiGetCampaignsV1CampaignsGetRequest {
+	r.includeArchived = &includeArchived
 	return r
 }
 
@@ -497,6 +624,12 @@ func (a *CampaignsAPIService) GetCampaignsV1CampaignsGetExecute(r ApiGetCampaign
 	} else {
 		var defaultValue int32 = 0
 		r.offset = &defaultValue
+	}
+	if r.includeArchived != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "include_archived", r.includeArchived, "form", "")
+	} else {
+		var defaultValue bool = false
+		r.includeArchived = &defaultValue
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}

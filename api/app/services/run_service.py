@@ -23,6 +23,8 @@ from app.services.trace_intake import create_trace
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+DEFAULT_BOOTSTRAP_POLICY_PACK_NAME = "trace.bootstrap.default"
+
 
 class RelatedRecordNotFoundError(Exception):
     pass
@@ -40,6 +42,7 @@ def create_run(
 ) -> Run:
     assert_project_runs_allowed(db, project_id=project_id)
 
+    effective_policy_pack_id = policy_pack_id
     policy_pack: PolicyPack | None = None
     effective_policy_pack_version_id: UUID | None = None
 
@@ -71,14 +74,33 @@ def create_run(
         is None
     ):
         raise RelatedRecordNotFoundError("Mutation pack not found")
-    if policy_pack_id is not None:
+
+    if effective_policy_pack_id is None:
         policy_pack = db.scalar(
-            select(PolicyPack).where(
-                PolicyPack.policy_pack_id == policy_pack_id,
+            select(PolicyPack)
+            .where(
                 PolicyPack.project_id == project_id,
+                PolicyPack.name == DEFAULT_BOOTSTRAP_POLICY_PACK_NAME,
                 PolicyPack.is_archived.is_(False),
             )
+            .order_by(PolicyPack.created_at.desc(), PolicyPack.policy_pack_id.desc())
+            .limit(1)
         )
+        if policy_pack is not None:
+            effective_policy_pack_id = policy_pack.policy_pack_id
+
+    if effective_policy_pack_id is not None:
+        if policy_pack is not None and policy_pack.policy_pack_id == effective_policy_pack_id:
+            selected_policy_pack: PolicyPack | None = policy_pack
+        else:
+            selected_policy_pack = db.scalar(
+                select(PolicyPack).where(
+                    PolicyPack.policy_pack_id == effective_policy_pack_id,
+                    PolicyPack.project_id == project_id,
+                    PolicyPack.is_archived.is_(False),
+                )
+            )
+        policy_pack = selected_policy_pack
         if policy_pack is None:
             raise RelatedRecordNotFoundError("Policy pack not found")
         active_version = get_policy_pack_active_version(db, policy_pack=policy_pack)
@@ -91,7 +113,7 @@ def create_run(
         trace_id=trace_id,
         campaign_id=campaign_id,
         mutation_pack_id=effective_mutation_pack_id,
-        policy_pack_id=policy_pack_id,
+        policy_pack_id=effective_policy_pack_id,
         effective_policy_pack_version_id=effective_policy_pack_version_id,
         summary=None,
         actor=actor,

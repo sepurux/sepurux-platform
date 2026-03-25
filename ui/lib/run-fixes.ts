@@ -204,6 +204,8 @@ function buildApprovalTemplate(
         engine: "builtin",
         source_attempt_id: evidence.attempt?.attempt_id ?? null,
         target_tool: tool,
+        auto_provide_confirmation_token: true,
+        confirmation_token_value: "template-auto-confirmation-token",
         policy: {
           version: "0.1",
           defaults: { unknown_tools: "allow" },
