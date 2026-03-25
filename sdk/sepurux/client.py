@@ -186,7 +186,11 @@ class SepuruxClient:
         campaign_id: str,
         mutation_pack_id: str | None = None,
         thresholds: dict[str, Any] | None = None,
+        preflight: bool = False,
     ) -> str:
+        if preflight:
+            self.preflight_run_inputs(trace_id=trace_id, campaign_id=campaign_id)
+
         run_payload = {
             "trace_id": trace_id,
             "campaign_id": campaign_id,
@@ -232,6 +236,28 @@ class SepuruxClient:
         if not isinstance(run_id, str) or not run_id:
             raise ValueError("Run creation succeeded but run_id was missing")
         return run_id
+
+    def preflight_run_inputs(self, *, trace_id: str, campaign_id: str) -> None:
+        self._assert_resource_exists(
+            path=f"/v1/traces/{trace_id}",
+            label="Trace",
+            identifier=trace_id,
+        )
+        self._assert_resource_exists(
+            path=f"/v1/campaigns/{campaign_id}",
+            label="Campaign",
+            identifier=campaign_id,
+        )
+
+    def _assert_resource_exists(self, *, path: str, label: str, identifier: str) -> None:
+        response = self._client.get(path, headers=self._request_headers())
+        if response.status_code == 404:
+            detail = _extract_error_detail(response)
+            message = f"{label} not found: {identifier}"
+            if detail and detail.lower() not in {"not found", f"{label.lower()} not found"}:
+                message = f"{message} ({detail})"
+            raise ValueError(message)
+        response.raise_for_status()
 
     def run_pack(self, *, campaign_id: str, mutation_pack: str) -> str:
         response = self._client.post(
@@ -358,6 +384,7 @@ class SepuruxClient:
         wait_for_completion: bool = True,
         timeout_seconds: float = 60,
         poll_interval: float = 1.0,
+        preflight: bool = False,
     ) -> CampaignRunResult:
         campaign_id = self._resolve_campaign_id(campaign_name_or_id)
         trace_id: str | None = None
@@ -366,7 +393,7 @@ class SepuruxClient:
         else:
             trace_payload = trace or _build_demo_trace(campaign_name_or_id)
             trace_id = self.upload_trace(trace_payload)
-            run_id = self.start_run(trace_id=trace_id, campaign_id=campaign_id)
+            run_id = self.start_run(trace_id=trace_id, campaign_id=campaign_id, preflight=preflight)
 
         if not wait_for_completion:
             return {
@@ -559,6 +586,17 @@ def _parse_json_list_response(response: httpx.Response) -> list[Any]:
     if not isinstance(data, list):
         raise ValueError("Expected JSON array response")
     return data
+
+
+def _extract_error_detail(response: httpx.Response) -> str | None:
+    try:
+        data = response.json()
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    detail = data.get("detail")
+    return detail if isinstance(detail, str) else None
 
 
 def _default_sdk_header() -> str:

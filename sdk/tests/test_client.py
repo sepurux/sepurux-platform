@@ -490,3 +490,93 @@ def test_start_run_ci_fallback_includes_github_context_from_env(
     ci_payload = json.loads(requests[1].content.decode())
     assert ci_payload["repo"] == "sepurux/sepurux-platform"
     assert ci_payload["pull_request_number"] == 97
+
+
+def test_preflight_run_inputs_calls_trace_and_campaign_endpoints() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/v1/traces/trace-123":
+            return httpx.Response(200, json={"trace_id": "trace-123"})
+        if request.url.path == "/v1/campaigns/campaign-123":
+            return httpx.Response(200, json={"campaign_id": "campaign-123"})
+        return httpx.Response(404, json={"detail": "not found"})
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=httpx.MockTransport(handler),
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    client.preflight_run_inputs(trace_id="trace-123", campaign_id="campaign-123")
+
+    assert [request.url.path for request in requests] == [
+        "/v1/traces/trace-123",
+        "/v1/campaigns/campaign-123",
+    ]
+
+
+def test_preflight_run_inputs_raises_clear_error_when_campaign_is_missing() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/traces/trace-123":
+            return httpx.Response(200, json={"trace_id": "trace-123"})
+        if request.url.path == "/v1/campaigns/campaign-404":
+            return httpx.Response(404, json={"detail": "Campaign not found"})
+        return httpx.Response(404, json={"detail": "not found"})
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=httpx.MockTransport(handler),
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    with pytest.raises(ValueError, match="Campaign not found: campaign-404"):
+        client.preflight_run_inputs(trace_id="trace-123", campaign_id="campaign-404")
+
+
+def test_start_run_with_preflight_validates_resources_first() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/v1/traces/trace-123":
+            return httpx.Response(200, json={"trace_id": "trace-123"})
+        if request.url.path == "/v1/campaigns/campaign-123":
+            return httpx.Response(200, json={"campaign_id": "campaign-123"})
+        if request.url.path == "/v1/runs":
+            return httpx.Response(201, json={"run_id": "run-789"})
+        return httpx.Response(404, json={"detail": "not found"})
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=httpx.MockTransport(handler),
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    run_id = client.start_run(trace_id="trace-123", campaign_id="campaign-123", preflight=True)
+
+    assert run_id == "run-789"
+    assert [request.url.path for request in requests] == [
+        "/v1/traces/trace-123",
+        "/v1/campaigns/campaign-123",
+        "/v1/runs",
+    ]
