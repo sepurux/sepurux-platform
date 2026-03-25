@@ -24,6 +24,10 @@ Hetzner single-server deploy guide:
 
 - [docs/hetzner-cx22-setup.md](docs/hetzner-cx22-setup.md)
 
+Automatic deploy after merge to `main` is documented in:
+
+- [CI/CD section in Hetzner guide](docs/hetzner-cx22-setup.md#10-enable-cicd-auto-deploy-on-merge-to-main)
+
 Run DB migrations in the API container:
 
 ```bash
