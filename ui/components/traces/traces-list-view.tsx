@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { api, type TraceMetadata } from "@/lib/api";
-import { formatRelativeDate, shortId } from "@/lib/format";
+import { formatRelativeDate } from "@/lib/format";
 import { resolveTraceSdkLabel } from "@/lib/trace-display";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { IdPill } from "@/components/ui/id-pill";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -106,12 +107,12 @@ export function TracesListView() {
                       className="cursor-pointer"
                       onClick={() => router.push(`/traces/${trace.trace_id}`)}
                     >
-                      <TableCell className="font-mono text-xs text-foreground" title={trace.trace_id}>
-                        {shortId(trace.trace_id, 20)}
+                      <TableCell>
+                        <IdPill id={trace.trace_id} />
                       </TableCell>
-                      <TableCell className="text-foreground">
+                      <TableCell>
                         {trace.task_name ? (
-                          <span className="font-medium">{trace.task_name}</span>
+                          <span className="font-medium text-teal">{trace.task_name}</span>
                         ) : (
                           <span className="text-muted-foreground">--</span>
                         )}
