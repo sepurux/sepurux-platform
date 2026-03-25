@@ -30,13 +30,6 @@ export function Footer() {
                   className="text-neutral-300 transition-colors hover:text-white"
                 >
                   {siteConfig.founderEmail}
-                </a>{" "}
-                ·{" "}
-                <a
-                  href={`tel:${siteConfig.founderPhone}`}
-                  className="text-neutral-300 transition-colors hover:text-white"
-                >
-                  {siteConfig.founderPhone}
                 </a>
               </p>
               <p>

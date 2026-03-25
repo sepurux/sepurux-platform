@@ -179,15 +179,18 @@ function RunDetailPanels({
             <StatTile label="Attempts" value={String(derived.total)} />
             <StatTile label="Passed" value={String(derived.passed)} tone="success" />
             <StatTile label="Failed" value={String(derived.failed)} tone="danger" />
-            <StatTile label="Pass Rate" value={derived.passRateLabel} tone="info" />
+            <StatTile
+              label="Pass Rate"
+              value={derived.passRateLabel}
+              tone="success"
+              progress={derived.passed > 0 && derived.total > 0 ? (derived.passed / derived.total) * 100 : 0}
+            />
             <StatTile
               label="Reliability Score"
-              value={
-                reliability ? formatPercent(reliability.reliability_score / 100, 1) : "n/a"
-              }
-              tone={reliability?.status === "critical" ? "danger" : reliability?.status === "warning" ? "info" : "success"}
+              value={reliability ? formatPercent(reliability.reliability_score / 100, 1) : "n/a"}
+              tone={reliability?.status === "critical" ? "danger" : reliability?.status === "warning" ? "warning" : "success"}
             />
-            <StatTile label="Policy Violations" value={String(policyViolationCount)} tone={policyViolationCount > 0 ? "danger" : "default"} />
+            <StatTile label="Policy Violations" value={String(policyViolationCount)} tone={policyViolationCount > 0 ? "warning" : "default"} />
           </div>
         </CardContent>
       </Card>
@@ -279,10 +282,10 @@ function RunStatsCards({
         <CardContent className="space-y-3">
           {reliability ? (
             <>
-              <div className="flex items-end justify-between gap-4 rounded-md border border-border/60 bg-muted/15 px-4 py-3">
+              <div className="flex items-end justify-between gap-4 rounded-md border border-border bg-muted/30 px-4 py-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Score</p>
-                  <p className="text-3xl font-semibold text-foreground">
+                  <p className={cn("text-3xl font-semibold", reliability.status === "critical" ? "text-rose-400" : reliability.status === "warning" ? "text-amber-400" : "text-teal")}>
                     {formatPercent(reliability.reliability_score / 100, 1)}
                   </p>
                 </div>
@@ -838,17 +841,23 @@ function derivePassRate(run: RunMetadata, stats: RunStats | null): number {
   return passed / attempts;
 }
 
-function StatTile({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "danger" | "info" }) {
+function StatTile({ label, value, tone = "default", progress }: { label: string; value: string; tone?: "default" | "success" | "danger" | "warning" | "info"; progress?: number }) {
   const toneClasses: Record<string, string> = {
     default: "text-foreground",
-    success: "text-success",
-    danger: "text-danger",
-    info: "text-info",
+    success: "text-teal",
+    danger: "text-rose-400",
+    warning: "text-amber-400",
+    info: "text-blue-400",
   };
   return (
-    <div className="rounded-md border border-border/60 bg-muted/15 p-4">
+    <div className="rounded-md border border-border bg-muted/30 p-4">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 text-[28px] font-semibold leading-none", toneClasses[tone])}>{value}</p>
+      <p className={cn("mt-2 text-3xl font-semibold leading-none", toneClasses[tone])}>{value}</p>
+      {typeof progress === "number" ? (
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-teal/70 transition-all duration-300" style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+        </div>
+      ) : null}
     </div>
   );
 }

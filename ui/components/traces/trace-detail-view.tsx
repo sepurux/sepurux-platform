@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bot, RefreshCcw, RotateCcw, Sparkles, Wrench, ShieldAlert, MessageSquareText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, RefreshCcw } from "lucide-react";
 
 import { api, type TraceMetadata, type TraceTimelineStep } from "@/lib/api";
 import { formatDurationMs, formatRelativeDate, shortId } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { resolveTraceSdkLabel } from "@/lib/trace-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,20 +87,25 @@ export function TraceDetailView({ traceId }: { traceId: string }) {
               <CardTitle>Metadata</CardTitle>
               <CardDescription>Trace identity, source, and storage reference.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <MetadataRow label="Trace ID" value={state.trace.trace_id} mono />
-              <MetadataRow label="Task / Agent" value={state.trace.task_name ?? "--"} />
-              <MetadataRow label="Source" value={state.trace.source} />
-              <MetadataRow label="Trace Version" value={state.trace.trace_version} />
-              <MetadataRow label="SDK Metadata" value={resolveTraceSdkLabel(state.trace)} mono />
-              <div className="grid gap-1 sm:grid-cols-[12rem_1fr] sm:items-start">
-                <span className="text-muted-foreground">Validation</span>
-                <div>
-                  <ValidationStatusBadge status={state.trace.validation_status} />
-                </div>
-              </div>
-              <MetadataRow label="S3 Key" value={state.trace.s3_key} mono />
-              <MetadataRow label="Created" value={formatRelativeDate(state.trace.created_at)} />
+            <CardContent>
+              <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2.5 text-sm">
+                <dt className="text-muted-foreground">Trace ID</dt>
+                <dd className="font-mono text-xs text-foreground">{state.trace.trace_id}</dd>
+                <dt className="text-muted-foreground">Task / Agent</dt>
+                <dd className="text-teal">{state.trace.task_name ?? "--"}</dd>
+                <dt className="text-muted-foreground">Source</dt>
+                <dd className="text-foreground">{state.trace.source}</dd>
+                <dt className="text-muted-foreground">Trace Version</dt>
+                <dd className="text-foreground">{state.trace.trace_version}</dd>
+                <dt className="text-muted-foreground">SDK Metadata</dt>
+                <dd className="font-mono text-xs text-foreground">{resolveTraceSdkLabel(state.trace)}</dd>
+                <dt className="text-muted-foreground">Validation</dt>
+                <dd><ValidationStatusBadge status={state.trace.validation_status} /></dd>
+                <dt className="text-muted-foreground">S3 Key</dt>
+                <dd className="font-mono text-xs text-foreground">{state.trace.s3_key}</dd>
+                <dt className="text-muted-foreground">Created</dt>
+                <dd className="text-foreground">{formatRelativeDate(state.trace.created_at)}</dd>
+              </dl>
             </CardContent>
           </Card>
 
@@ -170,23 +176,6 @@ function ValidationStatusBadge({ status }: { status: string }) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
-function MetadataRow({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="grid gap-1 sm:grid-cols-[12rem_1fr] sm:items-start">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={mono ? "font-mono text-xs text-foreground" : "text-foreground"}>{value}</span>
-    </div>
-  );
-}
-
 function TraceTimelinePanel({ timeline }: { timeline: TraceTimelineStep[] }) {
   return (
     <Card>
@@ -202,36 +191,29 @@ function TraceTimelinePanel({ timeline }: { timeline: TraceTimelineStep[] }) {
             No trace steps recorded yet.
           </div>
         ) : (
-          <div className="space-y-4">
-            {timeline.map((step, index) => {
-              const Icon = iconForStep(step.step_type);
+          <div className="relative border-l-2 border-primary/20 pl-5 space-y-4">
+            {timeline.map((step) => {
               const source = typeof step.metadata?.source === "string" ? step.metadata.source : null;
               const runId = typeof step.metadata?.run_id === "string" ? step.metadata.run_id : null;
               const attemptId = typeof step.metadata?.attempt_id === "string" ? step.metadata.attempt_id : null;
+              const dotClass = stepDotClass(step.status);
               return (
-                <div key={step.id} className="relative pl-8">
-                  {index < timeline.length - 1 ? (
-                    <div className="absolute left-[0.8rem] top-8 h-[calc(100%+0.5rem)] w-px bg-border/70" />
-                  ) : null}
-                  <div className="absolute left-0 top-1 grid h-6 w-6 place-items-center rounded-full border border-border/70 bg-background shadow-sm">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                  <div className="rounded-lg border border-border/70 bg-card/60 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-foreground">{step.step_name}</span>
-                          <Badge variant={variantForStatus(step.status)}>{step.status}</Badge>
-                          <Badge variant="outline">{step.step_type.replace(/_/g, " ")}</Badge>
-                          {step.mutation_name ? <Badge variant="warning">{step.mutation_name}</Badge> : null}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span>{formatRelativeDate(step.started_at)}</span>
-                          {step.latency_ms != null ? <span>{formatDurationMs(step.latency_ms)}</span> : null}
-                          {source ? <span>{source}</span> : null}
-                          {runId ? <span>run {shortId(runId, 8)}</span> : null}
-                          {attemptId ? <span>attempt {shortId(attemptId, 8)}</span> : null}
-                        </div>
+                <div key={step.id} className="relative">
+                  <div className={cn("absolute -left-[1.625rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 bg-background", dotClass)} />
+                  <div className="rounded-lg border border-border bg-muted/20 p-4">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">{step.step_name}</span>
+                        <Badge variant={variantForStatus(step.status)}>{step.status}</Badge>
+                        <Badge variant="outline">{step.step_type.replace(/_/g, " ")}</Badge>
+                        {step.mutation_name ? <Badge variant="warning">{step.mutation_name}</Badge> : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>{formatRelativeDate(step.started_at)}</span>
+                        {step.latency_ms != null ? <span>{formatDurationMs(step.latency_ms)}</span> : null}
+                        {source ? <span>{source}</span> : null}
+                        {runId ? <span>run {shortId(runId, 8)}</span> : null}
+                        {attemptId ? <span>attempt {shortId(attemptId, 8)}</span> : null}
                       </div>
                     </div>
                     <div className="mt-3 grid gap-3 lg:grid-cols-2">
@@ -276,31 +258,17 @@ function toPreview(value: unknown) {
   }
 }
 
-function iconForStep(stepType: string) {
-  switch (stepType) {
-    case "prompt":
-      return MessageSquareText;
-    case "llm_call":
-      return Bot;
-    case "tool_call":
-      return Wrench;
-    case "mutation":
-      return Sparkles;
-    case "retry":
-      return RotateCcw;
-    case "failure":
-      return ShieldAlert;
-    case "agent_output":
-      return CheckCircle2;
-    default:
-      return Bot;
-  }
-}
-
 function variantForStatus(status: string): "default" | "success" | "warning" | "danger" | "outline" {
   const normalized = status.toLowerCase();
   if (normalized === "success") return "success";
   if (normalized === "retry") return "warning";
   if (normalized === "error" || normalized === "timeout") return "danger";
   return "outline";
+}
+
+function stepDotClass(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized === "success") return "border-primary bg-primary/20";
+  if (normalized === "error" || normalized === "timeout" || normalized === "failure") return "border-rose-400 bg-rose-400/20";
+  return "border-border bg-muted/50";
 }
