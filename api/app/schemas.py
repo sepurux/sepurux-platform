@@ -36,6 +36,25 @@ class TraceTimelineStep(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class TraceBootstrapCampaign(BaseModel):
+    campaign_id: UUID
+    name: str
+    mutation_pack_id: UUID
+    mutation_pack_name: str
+    created: bool = False
+
+
+class TraceBootstrapResponse(BaseModel):
+    trace_id: UUID
+    tools_discovered: list[str] = Field(default_factory=list)
+    tool_zones_created: int = 0
+    tool_zones_updated: int = 0
+    policy_pack_id: UUID | None = None
+    policy_pack_name: str | None = None
+    policy_pack_created: bool = False
+    campaigns: list[TraceBootstrapCampaign] = Field(default_factory=list)
+
+
 class CampaignCreateRequest(BaseModel):
     name: str
     mutation_set: Any
@@ -193,6 +212,8 @@ class CIRunThresholds(BaseModel):
     max_unsafe: int = Field(ge=0)
     max_failures: int | None = Field(default=None, ge=0)
     min_reliability_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    min_mutation_categories: int | None = Field(default=None, ge=1, le=5)
+    required_mutation_categories: list[str] | None = None
 
 
 class CIRunCreateRequest(BaseModel):
@@ -215,6 +236,8 @@ class CIRunStatusResponse(BaseModel):
     unsafe_attempts: int
     failures: int
     top_failing_tools: list[ToolCount]
+    mutation_categories: list[str] = Field(default_factory=list)
+    mutation_coverage_score: int | None = None
     dashboard_url: str
 
 

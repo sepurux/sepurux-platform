@@ -25,6 +25,8 @@ type CIRunThresholds struct {
 	MaxUnsafe int32 `json:"max_unsafe"`
 	MaxFailures NullableInt32 `json:"max_failures,omitempty"`
 	MinReliabilityScore NullableFloat32 `json:"min_reliability_score,omitempty"`
+	MinMutationCategories NullableInt32 `json:"min_mutation_categories,omitempty"`
+	RequiredMutationCategories []string `json:"required_mutation_categories,omitempty"`
 }
 
 type _CIRunThresholds CIRunThresholds
@@ -180,6 +182,81 @@ func (o *CIRunThresholds) UnsetMinReliabilityScore() {
 	o.MinReliabilityScore.Unset()
 }
 
+// GetMinMutationCategories returns the MinMutationCategories field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *CIRunThresholds) GetMinMutationCategories() int32 {
+	if o == nil || IsNil(o.MinMutationCategories.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.MinMutationCategories.Get()
+}
+
+// GetMinMutationCategoriesOk returns a tuple with the MinMutationCategories field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *CIRunThresholds) GetMinMutationCategoriesOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.MinMutationCategories.Get(), o.MinMutationCategories.IsSet()
+}
+
+// HasMinMutationCategories returns a boolean if a field has been set.
+func (o *CIRunThresholds) HasMinMutationCategories() bool {
+	if o != nil && o.MinMutationCategories.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetMinMutationCategories gets a reference to the given NullableInt32 and assigns it to the MinMutationCategories field.
+func (o *CIRunThresholds) SetMinMutationCategories(v int32) {
+	o.MinMutationCategories.Set(&v)
+}
+// SetMinMutationCategoriesNil sets the value for MinMutationCategories to be an explicit nil
+func (o *CIRunThresholds) SetMinMutationCategoriesNil() {
+	o.MinMutationCategories.Set(nil)
+}
+
+// UnsetMinMutationCategories ensures that no value is present for MinMutationCategories, not even an explicit nil
+func (o *CIRunThresholds) UnsetMinMutationCategories() {
+	o.MinMutationCategories.Unset()
+}
+
+// GetRequiredMutationCategories returns the RequiredMutationCategories field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *CIRunThresholds) GetRequiredMutationCategories() []string {
+	if o == nil {
+		var ret []string
+		return ret
+	}
+	return o.RequiredMutationCategories
+}
+
+// GetRequiredMutationCategoriesOk returns a tuple with the RequiredMutationCategories field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *CIRunThresholds) GetRequiredMutationCategoriesOk() ([]string, bool) {
+	if o == nil || IsNil(o.RequiredMutationCategories) {
+		return nil, false
+	}
+	return o.RequiredMutationCategories, true
+}
+
+// HasRequiredMutationCategories returns a boolean if a field has been set.
+func (o *CIRunThresholds) HasRequiredMutationCategories() bool {
+	if o != nil && !IsNil(o.RequiredMutationCategories) {
+		return true
+	}
+
+	return false
+}
+
+// SetRequiredMutationCategories gets a reference to the given []string and assigns it to the RequiredMutationCategories field.
+func (o *CIRunThresholds) SetRequiredMutationCategories(v []string) {
+	o.RequiredMutationCategories = v
+}
+
 func (o CIRunThresholds) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -197,6 +274,12 @@ func (o CIRunThresholds) ToMap() (map[string]interface{}, error) {
 	}
 	if o.MinReliabilityScore.IsSet() {
 		toSerialize["min_reliability_score"] = o.MinReliabilityScore.Get()
+	}
+	if o.MinMutationCategories.IsSet() {
+		toSerialize["min_mutation_categories"] = o.MinMutationCategories.Get()
+	}
+	if o.RequiredMutationCategories != nil {
+		toSerialize["required_mutation_categories"] = o.RequiredMutationCategories
 	}
 	return toSerialize, nil
 }
