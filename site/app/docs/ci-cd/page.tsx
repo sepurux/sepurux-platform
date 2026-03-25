@@ -71,6 +71,8 @@ jobs:
               project_id=(os.getenv("SEPURUX_PROJECT_ID") or None),
           )
 
+          # Validate IDs first to fail fast with actionable errors.
+          client.preflight_run_inputs(trace_id=trace_id, campaign_id=campaign_id)
           run_id = client.start_run(trace_id=trace_id, campaign_id=campaign_id)
           print(f"Started Sepurux run: {run_id}")
 
@@ -187,7 +189,7 @@ export default function CICDPage() {
       <DocsSection
         id="workflow"
         title="GitHub Workflow Integration"
-        description="Use a dedicated reliability gate job in pull requests and mark it as a required status check in repository branch protection rules. Run gates against captured traces, not synthetic placeholder payloads."
+        description="Use a dedicated reliability gate job in pull requests and mark it as a required status check in repository branch protection rules. Run gates against captured traces, not synthetic placeholder payloads, and preflight IDs before enqueueing a run."
       >
         <DocsCodeBlock code={workflowSnippet} label=".github/workflows/sepurux-gate.yml" />
       </DocsSection>

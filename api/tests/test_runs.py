@@ -281,6 +281,16 @@ def test_get_run_and_list_runs(
     assert [item["run_id"] for item in items] == [str(newer), str(older)]
     assert str(other_run_id) not in {item["run_id"] for item in items}
 
+    paged_response = client.get("/v1/runs", params={"limit": 1, "offset": 1})
+    assert paged_response.status_code == 200
+    paged_items = paged_response.json()
+    assert [item["run_id"] for item in paged_items] == [str(older)]
+
+    filtered_response = client.get("/v1/runs", params={"status": "done"})
+    assert filtered_response.status_code == 200
+    filtered_items = filtered_response.json()
+    assert [item["run_id"] for item in filtered_items] == [str(older)]
+
 
 def test_post_run_returns_404_when_related_records_missing(
     run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],

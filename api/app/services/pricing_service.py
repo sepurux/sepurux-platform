@@ -97,12 +97,14 @@ def build_auth_permissions(
     *,
     billing_plan_name: str | None = None,
 ) -> AuthPermissionSet:
-    del role_name
+    normalized_role = (role_name or "").strip().lower()
     resolved_plan = _normalize_billing_plan_name(
         billing_plan_name
     ) or _default_billing_plan_for_pricing_tier(pricing_tier)
     advanced_enabled = resolved_plan in {"team", "enterprise"}
-    workspace_management_enabled = resolved_plan in {"team", "enterprise"}
+    workspace_management_enabled = (
+        resolved_plan in {"team", "enterprise"} and normalized_role in {"admin", "super_admin"}
+    )
     return AuthPermissionSet(
         visible_sections=_visible_sections_for_plan(resolved_plan),
         can_upload_traces=True,

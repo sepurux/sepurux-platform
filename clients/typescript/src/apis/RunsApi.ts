@@ -69,6 +69,8 @@ export interface GetRunV1RunsRunIdGetRequest {
 
 export interface GetRunsV1RunsGetRequest {
     limit?: number;
+    offset?: number;
+    status?: string | null;
     xProjectId?: string | null;
 }
 
@@ -272,6 +274,14 @@ export class RunsApi extends runtime.BaseAPI {
 
         if (requestParameters['limit'] != null) {
             queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        if (requestParameters['status'] != null) {
+            queryParameters['status'] = requestParameters['status'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

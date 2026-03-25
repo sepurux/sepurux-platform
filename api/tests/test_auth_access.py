@@ -200,7 +200,7 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert payload["permissions"]["can_manage_mutation_packs"] is True
     assert payload["permissions"]["can_manage_policy_packs"] is True
     assert payload["permissions"]["can_manage_security_config"] is True
-    assert payload["permissions"]["can_manage_workspace"] is True
+    assert payload["permissions"]["can_manage_workspace"] is False
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert payload["permissions"]["can_manage_billing"] is True
     assert "campaigns" in payload["permissions"]["visible_sections"]

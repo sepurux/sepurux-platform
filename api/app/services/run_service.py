@@ -224,13 +224,19 @@ def get_run_unscoped(db: Session, *, run_id: UUID) -> Run | None:
     return db.scalar(select(Run).where(Run.run_id == run_id))
 
 
-def list_recent_runs(db: Session, *, project_id: UUID, limit: int = 20) -> list[Run]:
-    stmt = (
-        select(Run)
-        .where(Run.project_id == project_id)
-        .order_by(Run.created_at.desc(), Run.run_id.desc())
-        .limit(limit)
-    )
+def list_recent_runs(
+    db: Session,
+    *,
+    project_id: UUID,
+    limit: int = 20,
+    offset: int = 0,
+    status: str | None = None,
+) -> list[Run]:
+    stmt = select(Run).where(Run.project_id == project_id)
+    normalized_status = (status or "").strip().lower()
+    if normalized_status:
+        stmt = stmt.where(Run.status == normalized_status)
+    stmt = stmt.order_by(Run.created_at.desc(), Run.run_id.desc()).offset(offset).limit(limit)
     return list(db.scalars(stmt))
 
 

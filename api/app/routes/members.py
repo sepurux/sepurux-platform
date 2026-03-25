@@ -9,6 +9,7 @@ from app.auth import (
     TenantAuthContext,
     generate_api_key,
     hash_api_key,
+    require_permission,
     require_project_scope,
     require_role,
 )
@@ -27,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+WorkspaceManageScope = Annotated[
+    ProjectScope,
+    Depends(require_permission("can_manage_workspace", section_name="settings")),
+]
 AdminAuth = Annotated[TenantAuthContext, Depends(require_role("admin"))]
 
 
@@ -51,7 +56,7 @@ def _to_member_metadata(user: User, role_id: UUID, api_key: str | None = None) -
 @router.get("", response_model=list[MemberMetadata])
 def list_members(
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: WorkspaceManageScope,
 ) -> list[MemberMetadata]:
     memberships = db.scalars(
         select(ProjectMembership).where(ProjectMembership.project_id == project_scope.project_id)
@@ -157,7 +162,7 @@ def invite_member(
 def remove_member(
     user_id: UUID,
     db: DbSession,
-    project_scope: ProjectScopeDep,
+    project_scope: WorkspaceManageScope,
     tenant_auth: AdminAuth,
 ) -> Response:
     # Prevent removing yourself

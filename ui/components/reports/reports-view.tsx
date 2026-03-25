@@ -7,6 +7,7 @@ import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -15,15 +16,19 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; runs: RunMetadata[]; campaignsById: Record<string, CampaignMetadata> };
 
+const PAGE_SIZE = 25;
+
 export function ReportsView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [exportingRunId, setExportingRunId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
 
   async function load() {
     setState({ status: "loading" });
 
     const [runsResult, campaignsResult] = await Promise.allSettled([
-      api.listRuns(100),
+      api.listRuns({ limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
       api.listCampaigns({ limit: 200, offset: 0 }),
     ]);
 
@@ -43,11 +48,12 @@ export function ReportsView() {
     }
 
     setState({ status: "ready", runs: runsResult.value, campaignsById });
+    setHasNext(runsResult.value.length === PAGE_SIZE);
   }
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [page]);
 
   const rows = useMemo(() => {
     if (state.status !== "ready") {
@@ -61,7 +67,7 @@ export function ReportsView() {
       }>;
     }
 
-    return state.runs.slice(0, 50).map((run) => {
+    return state.runs.map((run) => {
       const summary = (run.summary ?? {}) as Record<string, unknown>;
       const attemptCount = typeof summary.attempt_count === "number" ? summary.attempt_count : null;
       const passedCount = typeof summary.passed_count === "number" ? summary.passed_count : null;
@@ -127,9 +133,9 @@ export function ReportsView() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Runs</CardTitle>
-            <CardDescription>{rows.length} run(s) in current report view.</CardDescription>
+            <CardDescription>{rows.length} run(s) in this page.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -181,6 +187,14 @@ export function ReportsView() {
                 )}
               </TableBody>
             </Table>
+            <PaginationControls
+              page={page}
+              pageSize={PAGE_SIZE}
+              currentCount={rows.length}
+              hasNext={hasNext}
+              onPrev={() => setPage((currentValue) => Math.max(0, currentValue - 1))}
+              onNext={() => setPage((currentValue) => currentValue + 1)}
+            />
           </CardContent>
         </Card>
       )}

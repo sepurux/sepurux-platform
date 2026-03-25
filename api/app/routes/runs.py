@@ -290,10 +290,18 @@ def get_runs(
     db: DbSession,
     project_scope: ProjectScopeDep,
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    status: str | None = Query(None),
 ) -> list[RunMetadata]:
     return [
         _to_run_metadata(run)
-        for run in list_recent_runs(db, project_id=project_scope.project_id, limit=limit)
+        for run in list_recent_runs(
+            db,
+            project_id=project_scope.project_id,
+            limit=limit,
+            offset=offset,
+            status=status,
+        )
     ]
 
 

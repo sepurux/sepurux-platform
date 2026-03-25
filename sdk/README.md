@@ -102,7 +102,8 @@ Methods:
 - `traceable(name=None, campaign_id=None, mutation_pack=None) -> decorator`
 - `upload_trace(trace: dict) -> str`
 - `create_campaign(name, mutation_set, eval_set, mutation_pack_id=None) -> str`
-- `start_run(trace_id, campaign_id, thresholds=None) -> str`
+- `preflight_run_inputs(trace_id, campaign_id) -> None`
+- `start_run(trace_id, campaign_id, thresholds=None, preflight=False) -> str`
 - `run_pack(campaign_id, mutation_pack) -> str`
 - `get_run(run_id) -> dict`
 - `get_campaign_failures(campaign_id, run_id=None) -> list[dict]`

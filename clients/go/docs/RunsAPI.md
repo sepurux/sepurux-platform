@@ -310,7 +310,7 @@ No authorization required
 
 ## GetRunsV1RunsGet
 
-> []RunMetadata GetRunsV1RunsGet(ctx).Limit(limit).XProjectId(xProjectId).Execute()
+> []RunMetadata GetRunsV1RunsGet(ctx).Limit(limit).Offset(offset).Status(status).XProjectId(xProjectId).Execute()
 
 Get Runs
 
@@ -328,11 +328,13 @@ import (
 
 func main() {
 	limit := int32(56) // int32 |  (optional) (default to 20)
+	offset := int32(56) // int32 |  (optional) (default to 0)
+	status := "status_example" // string |  (optional)
 	xProjectId := "xProjectId_example" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.RunsAPI.GetRunsV1RunsGet(context.Background()).Limit(limit).XProjectId(xProjectId).Execute()
+	resp, r, err := apiClient.RunsAPI.GetRunsV1RunsGet(context.Background()).Limit(limit).Offset(offset).Status(status).XProjectId(xProjectId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `RunsAPI.GetRunsV1RunsGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -354,6 +356,8 @@ Other parameters are passed through a pointer to a apiGetRunsV1RunsGetRequest st
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **limit** | **int32** |  | [default to 20]
+ **offset** | **int32** |  | [default to 0]
+ **status** | **string** |  | 
  **xProjectId** | **string** |  | 
 
 ### Return type

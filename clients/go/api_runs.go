@@ -588,11 +588,23 @@ type ApiGetRunsV1RunsGetRequest struct {
 	ctx context.Context
 	ApiService *RunsAPIService
 	limit *int32
+	offset *int32
+	status *string
 	xProjectId *string
 }
 
 func (r ApiGetRunsV1RunsGetRequest) Limit(limit int32) ApiGetRunsV1RunsGetRequest {
 	r.limit = &limit
+	return r
+}
+
+func (r ApiGetRunsV1RunsGetRequest) Offset(offset int32) ApiGetRunsV1RunsGetRequest {
+	r.offset = &offset
+	return r
+}
+
+func (r ApiGetRunsV1RunsGetRequest) Status(status string) ApiGetRunsV1RunsGetRequest {
+	r.status = &status
 	return r
 }
 
@@ -644,6 +656,15 @@ func (a *RunsAPIService) GetRunsV1RunsGetExecute(r ApiGetRunsV1RunsGetRequest) (
 	} else {
 		var defaultValue int32 = 20
 		r.limit = &defaultValue
+	}
+	if r.offset != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "offset", r.offset, "form", "")
+	} else {
+		var defaultValue int32 = 0
+		r.offset = &defaultValue
+	}
+	if r.status != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "status", r.status, "form", "")
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
