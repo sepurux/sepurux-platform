@@ -101,11 +101,16 @@ Methods:
 - `trace(task_name, task_input=None, campaign_id=None, mutation_pack=None) -> recorder`
 - `traceable(name=None, campaign_id=None, mutation_pack=None) -> decorator`
 - `upload_trace(trace: dict) -> str`
+- `list_traces(limit=50, offset=0) -> list[dict]`
+- `get_trace(trace_id, include_payload=False) -> dict`
+- `get_trace_timeline(trace_id) -> list[dict]`
+- `bootstrap_trace(trace_id) -> dict`
 - `create_campaign(name, mutation_set, eval_set, mutation_pack_id=None) -> str`
 - `preflight_run_inputs(trace_id, campaign_id) -> None`
 - `start_run(trace_id, campaign_id, thresholds=None, preflight=False) -> str`
 - `run_pack(campaign_id, mutation_pack) -> str`
 - `get_run(run_id) -> dict`
+- `get_ci_run(run_id) -> dict`
 - `get_campaign_failures(campaign_id, run_id=None) -> list[dict]`
 - `get_campaign_reliability(campaign_id, run_id=None) -> dict`
 

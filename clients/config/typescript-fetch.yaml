@@ -1,5 +1,5 @@
 npmName: "@sepurux/client"
-npmVersion: 0.5.0
+npmVersion: 0.6.0
 supportsES6: true
 useSingleRequestParameter: true
 withoutRuntimeChecks: false
