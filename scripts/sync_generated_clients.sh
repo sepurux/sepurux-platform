@@ -13,6 +13,7 @@ TS_RUNTIME_FILE="${ROOT_DIR}/clients/typescript/src/runtime.ts"
 TS_PACKAGE_FILE="${ROOT_DIR}/clients/typescript/package.json"
 GO_UTILS_FILE="${ROOT_DIR}/clients/go/utils.go"
 GO_DOCS_DIR="${ROOT_DIR}/clients/go/docs"
+GO_TEST_DIR="${ROOT_DIR}/clients/go/test"
 
 cp "${TS_TEMPLATE}" "${TS_README}"
 cp "${GO_TEMPLATE}" "${GO_README}"
@@ -54,6 +55,10 @@ fi
 
 if [ -d "${GO_DOCS_DIR}" ]; then
   perl -0pi -e 's|github.com/sepurux/sepurux-platform"|github.com/sepurux/sepurux-platform/clients/go"|g' "${GO_DOCS_DIR}"/*.md
+fi
+
+if [ -d "${GO_TEST_DIR}" ]; then
+  perl -0pi -e 's|github.com/sepurux/sepurux-platform"|github.com/sepurux/sepurux-platform/clients/go"|g' "${GO_TEST_DIR}"/*.go
 fi
 
 if [ -f "${GO_MOD_FILE}" ]; then

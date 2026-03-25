@@ -13,6 +13,7 @@ export * from './DemoApi';
 export * from './HealthApi';
 export * from './MembersApi';
 export * from './MutationPacksApi';
+export * from './NotificationsApi';
 export * from './PolicyPacksApi';
 export * from './ProjectsApi';
 export * from './RunsApi';

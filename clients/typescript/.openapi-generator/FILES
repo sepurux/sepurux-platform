@@ -15,6 +15,7 @@ src/apis/DemoApi.ts
 src/apis/HealthApi.ts
 src/apis/MembersApi.ts
 src/apis/MutationPacksApi.ts
+src/apis/NotificationsApi.ts
 src/apis/PolicyPacksApi.ts
 src/apis/ProjectsApi.ts
 src/apis/RunsApi.ts
@@ -117,6 +118,9 @@ src/models/ToolRegistryZoneUpdateRequest.ts
 src/models/ToolUsageStatsItem.ts
 src/models/TraceMetadata.ts
 src/models/TraceTimelineStep.ts
+src/models/UserNotificationInboxResponse.ts
+src/models/UserNotificationItem.ts
+src/models/UserNotificationReadAllResponse.ts
 src/models/UserSubscriptionMetadata.ts
 src/models/ValidationError.ts
 src/models/ValidationErrorLocInner.ts
