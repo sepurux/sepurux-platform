@@ -252,7 +252,9 @@ def _ci_decision(
     if max_failures is not None and failures > max_failures:
         return "fail"
     mutation_category_set = {
-        item.strip().lower() for item in mutation_categories if isinstance(item, str) and item.strip()
+        item.strip().lower()
+        for item in mutation_categories
+        if isinstance(item, str) and item.strip()
     }
     min_mutation_categories_raw = thresholds.get("min_mutation_categories")
     if min_mutation_categories_raw is not None:
@@ -292,9 +294,7 @@ def _required_mutation_categories(thresholds: dict[str, Any]) -> set[str]:
     if not isinstance(raw_value, list):
         return set()
     return {
-        str(item).strip().lower()
-        for item in raw_value
-        if isinstance(item, str) and item.strip()
+        str(item).strip().lower() for item in raw_value if isinstance(item, str) and item.strip()
     }
 
 

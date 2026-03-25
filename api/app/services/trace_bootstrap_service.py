@@ -143,9 +143,7 @@ def _bootstrap_tool_zones(
 ) -> tuple[int, int]:
     existing = {
         record.name: record
-        for record in db.scalars(
-            select(ToolRegistry).where(ToolRegistry.project_id == project_id)
-        )
+        for record in db.scalars(select(ToolRegistry).where(ToolRegistry.project_id == project_id))
         if isinstance(record.name, str) and record.name
     }
     created_count = 0
@@ -329,4 +327,3 @@ def _looks_read_like(tool_name: str) -> bool:
 def _looks_write_like(tool_name: str) -> bool:
     lowered = tool_name.lower()
     return any(hint in lowered for hint in WRITE_TOOL_HINTS)
-
