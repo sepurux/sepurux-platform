@@ -1277,6 +1277,129 @@ paths:
       summary: Delete Mutation Pack By Id
       tags:
       - mutation-packs
+  /v1/notifications:
+    get:
+      operationId: get_notifications_v1_notifications_get
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: unread_only
+        required: false
+        schema:
+          default: false
+          title: Unread Only
+          type: boolean
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotificationInboxResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Notifications
+      tags:
+      - notifications
+  /v1/notifications/{notification_id}/read:
+    post:
+      operationId: post_mark_notification_read_v1_notifications__notification_id__read_post
+      parameters:
+      - explode: false
+        in: path
+        name: notification_id
+        required: true
+        schema:
+          format: uuid
+          title: Notification Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotificationItem'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Mark Notification Read
+      tags:
+      - notifications
+  /v1/notifications/read-all:
+    post:
+      operationId: post_mark_all_notifications_read_v1_notifications_read_all_post
+      parameters:
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotificationReadAllResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Mark All Notifications Read
+      tags:
+      - notifications
   /v1/policy-packs:
     get:
       operationId: get_policy_packs_v1_policy_packs_get
@@ -1596,6 +1719,24 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: status
+        required: false
+        schema:
+          nullable: true
+          type: string
         style: form
       - explode: false
         in: header
@@ -6118,6 +6259,130 @@ components:
       - step_type
       - trace_id
       title: TraceTimelineStep
+    UserNotificationInboxResponse:
+      example:
+        unread_count: 0
+        items:
+        - tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          severity: info
+          metadata:
+            key: ""
+          event_type: event_type
+          project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          link_url: link_url
+          read_at: 2000-01-23T04:56:07.000+00:00
+          created_at: 2000-01-23T04:56:07.000+00:00
+          notification_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          title: title
+          message: message
+        - tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          severity: info
+          metadata:
+            key: ""
+          event_type: event_type
+          project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          link_url: link_url
+          read_at: 2000-01-23T04:56:07.000+00:00
+          created_at: 2000-01-23T04:56:07.000+00:00
+          notification_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          title: title
+          message: message
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/UserNotificationItem'
+          type: array
+        unread_count:
+          title: Unread Count
+          type: integer
+      required:
+      - items
+      - unread_count
+      title: UserNotificationInboxResponse
+    UserNotificationItem:
+      example:
+        tenant_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        severity: info
+        metadata:
+          key: ""
+        event_type: event_type
+        project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        user_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        link_url: link_url
+        read_at: 2000-01-23T04:56:07.000+00:00
+        created_at: 2000-01-23T04:56:07.000+00:00
+        notification_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        title: title
+        message: message
+      properties:
+        notification_id:
+          format: uuid
+          title: Notification Id
+          type: string
+        tenant_id:
+          format: uuid
+          title: Tenant Id
+          type: string
+        project_id:
+          format: uuid
+          title: Project Id
+          type: string
+        user_id:
+          format: uuid
+          nullable: true
+          type: string
+        event_type:
+          title: Event Type
+          type: string
+        severity:
+          enum:
+          - info
+          - warning
+          - critical
+          title: Severity
+          type: string
+        title:
+          title: Title
+          type: string
+        message:
+          title: Message
+          type: string
+        link_url:
+          nullable: true
+          type: string
+        metadata:
+          additionalProperties: {}
+          title: Metadata
+        read_at:
+          format: date-time
+          nullable: true
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+      required:
+      - created_at
+      - event_type
+      - message
+      - notification_id
+      - project_id
+      - severity
+      - tenant_id
+      - title
+      title: UserNotificationItem
+    UserNotificationReadAllResponse:
+      example:
+        updated: 0
+      properties:
+        updated:
+          title: Updated
+          type: integer
+      required:
+      - updated
+      title: UserNotificationReadAllResponse
     UserSubscriptionMetadata:
       example:
         subscription_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
