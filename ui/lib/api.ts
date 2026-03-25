@@ -1256,7 +1256,19 @@ export const api = {
     ),
   listPolicyPackVersions: (policyPackId: string) =>
     requestJson<PolicyPackVersionMetadata[]>(`/v1/policy-packs/${policyPackId}/versions`),
-  listRuns: (limit = 50) => requestJson<RunMetadata[]>("/v1/runs", { limit }),
+  listRuns: (options?: number | { limit?: number; offset?: number; status?: string }) => {
+    if (typeof options === "number") {
+      return requestJson<RunMetadata[]>("/v1/runs", {
+        limit: clampLimit(options, 50),
+        offset: 0,
+      });
+    }
+    return requestJson<RunMetadata[]>("/v1/runs", {
+      limit: clampLimit(options?.limit, 50),
+      offset: options?.offset ?? 0,
+      status: options?.status,
+    });
+  },
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
   listRunPolicyEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
