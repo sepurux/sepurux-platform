@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Filter, RefreshCcw } from "lucide-react";
 
 import { api, type RunMetadata } from "@/lib/api";
@@ -21,30 +21,32 @@ const PAGE_SIZE = 12;
 
 export function RunsListView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [hasNext, setHasNext] = useState(false);
 
   async function load() {
     setState({ status: "loading" });
     try {
-      const runs = await api.listRuns(100);
+      const runs = await api.listRuns({
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+        status: statusFilter === "all" ? undefined : statusFilter,
+      });
       setState({ status: "ready", runs });
+      setHasNext(runs.length === PAGE_SIZE);
     } catch (error) {
-      setState({ status: "error", message: error instanceof Error ? error.message : "Failed to load runs" });
+      setState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Failed to load runs",
+      });
+      setHasNext(false);
     }
   }
 
   useEffect(() => {
     void load();
-  }, []);
-
-  const filteredRuns = useMemo(() => {
-    if (state.status !== "ready") return [];
-    return state.runs.filter((run) => (statusFilter === "all" ? true : run.status.toLowerCase() === statusFilter));
-  }, [state, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredRuns.length / PAGE_SIZE));
-  const pagedRuns = filteredRuns.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  }, [page, statusFilter]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -63,7 +65,7 @@ export function RunsListView() {
               value={statusFilter}
               onChange={(event) => {
                 setStatusFilter(event.target.value);
-                setPage(1);
+                setPage(0);
               }}
             >
               <option value="all">All statuses</option>
@@ -82,7 +84,7 @@ export function RunsListView() {
       <Card>
         <CardHeader>
           <CardTitle>Run Catalog</CardTitle>
-          <CardDescription>Client-side pagination and status filtering over the latest 100 runs.</CardDescription>
+          <CardDescription>Server-paginated runs for the active project and filter.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {state.status === "loading" ? (
@@ -103,12 +105,12 @@ export function RunsListView() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pagedRuns.length === 0 ? (
+                  {state.runs.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">No runs match this filter.</TableCell>
                     </TableRow>
                   ) : (
-                    pagedRuns.map((run) => {
+                    state.runs.map((run) => {
                       const summary = (run.summary ?? {}) as Record<string, unknown>;
                       const attemptCount = typeof summary.attempt_count === "number" ? summary.attempt_count : null;
                       const passRate =
@@ -136,14 +138,26 @@ export function RunsListView() {
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Showing {filteredRuns.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredRuns.length)} of {filteredRuns.length}
+                  Showing {state.runs.length === 0 ? 0 : page * PAGE_SIZE + 1}–{page * PAGE_SIZE + state.runs.length}
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 0}
+                    onClick={() => setPage((currentValue) => Math.max(0, currentValue - 1))}
+                  >
                     <ChevronLeft className="h-4 w-4" /> Prev
                   </Button>
-                  <div className="rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground">Page {page} / {totalPages}</div>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  <div className="rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground">
+                    Page {page + 1}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!hasNext}
+                    onClick={() => setPage((currentValue) => currentValue + 1)}
+                  >
                     Next <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
