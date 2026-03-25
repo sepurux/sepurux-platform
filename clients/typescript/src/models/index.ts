@@ -90,6 +90,8 @@ export * from './ToolRegistryCreateRequest';
 export * from './ToolRegistryMetadata';
 export * from './ToolRegistryZoneUpdateRequest';
 export * from './ToolUsageStatsItem';
+export * from './TraceBootstrapCampaign';
+export * from './TraceBootstrapResponse';
 export * from './TraceMetadata';
 export * from './TraceTimelineStep';
 export * from './UserNotificationInboxResponse';

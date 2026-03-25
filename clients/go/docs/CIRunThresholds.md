@@ -8,6 +8,8 @@ Name | Type | Description | Notes
 **MaxUnsafe** | **int32** |  | 
 **MaxFailures** | Pointer to **NullableInt32** |  | [optional] 
 **MinReliabilityScore** | Pointer to **NullableFloat32** |  | [optional] 
+**MinMutationCategories** | Pointer to **NullableInt32** |  | [optional] 
+**RequiredMutationCategories** | Pointer to **[]string** |  | [optional] 
 
 ## Methods
 
@@ -138,6 +140,76 @@ HasMinReliabilityScore returns a boolean if a field has been set.
 `func (o *CIRunThresholds) UnsetMinReliabilityScore()`
 
 UnsetMinReliabilityScore ensures that no value is present for MinReliabilityScore, not even an explicit nil
+### GetMinMutationCategories
+
+`func (o *CIRunThresholds) GetMinMutationCategories() int32`
+
+GetMinMutationCategories returns the MinMutationCategories field if non-nil, zero value otherwise.
+
+### GetMinMutationCategoriesOk
+
+`func (o *CIRunThresholds) GetMinMutationCategoriesOk() (*int32, bool)`
+
+GetMinMutationCategoriesOk returns a tuple with the MinMutationCategories field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMinMutationCategories
+
+`func (o *CIRunThresholds) SetMinMutationCategories(v int32)`
+
+SetMinMutationCategories sets MinMutationCategories field to given value.
+
+### HasMinMutationCategories
+
+`func (o *CIRunThresholds) HasMinMutationCategories() bool`
+
+HasMinMutationCategories returns a boolean if a field has been set.
+
+### SetMinMutationCategoriesNil
+
+`func (o *CIRunThresholds) SetMinMutationCategoriesNil(b bool)`
+
+ SetMinMutationCategoriesNil sets the value for MinMutationCategories to be an explicit nil
+
+### UnsetMinMutationCategories
+`func (o *CIRunThresholds) UnsetMinMutationCategories()`
+
+UnsetMinMutationCategories ensures that no value is present for MinMutationCategories, not even an explicit nil
+### GetRequiredMutationCategories
+
+`func (o *CIRunThresholds) GetRequiredMutationCategories() []string`
+
+GetRequiredMutationCategories returns the RequiredMutationCategories field if non-nil, zero value otherwise.
+
+### GetRequiredMutationCategoriesOk
+
+`func (o *CIRunThresholds) GetRequiredMutationCategoriesOk() (*[]string, bool)`
+
+GetRequiredMutationCategoriesOk returns a tuple with the RequiredMutationCategories field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRequiredMutationCategories
+
+`func (o *CIRunThresholds) SetRequiredMutationCategories(v []string)`
+
+SetRequiredMutationCategories sets RequiredMutationCategories field to given value.
+
+### HasRequiredMutationCategories
+
+`func (o *CIRunThresholds) HasRequiredMutationCategories() bool`
+
+HasRequiredMutationCategories returns a boolean if a field has been set.
+
+### SetRequiredMutationCategoriesNil
+
+`func (o *CIRunThresholds) SetRequiredMutationCategoriesNil(b bool)`
+
+ SetRequiredMutationCategoriesNil sets the value for RequiredMutationCategories to be an explicit nil
+
+### UnsetRequiredMutationCategories
+`func (o *CIRunThresholds) UnsetRequiredMutationCategories()`
+
+UnsetRequiredMutationCategories ensures that no value is present for RequiredMutationCategories, not even an explicit nil
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

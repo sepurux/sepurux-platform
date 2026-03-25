@@ -28,6 +28,8 @@ type CIRunStatusResponse struct {
 	UnsafeAttempts int32 `json:"unsafe_attempts"`
 	Failures int32 `json:"failures"`
 	TopFailingTools []ToolCount `json:"top_failing_tools"`
+	MutationCategories []string `json:"mutation_categories,omitempty"`
+	MutationCoverageScore NullableInt32 `json:"mutation_coverage_score,omitempty"`
 	DashboardUrl string `json:"dashboard_url"`
 }
 
@@ -226,6 +228,80 @@ func (o *CIRunStatusResponse) SetTopFailingTools(v []ToolCount) {
 	o.TopFailingTools = v
 }
 
+// GetMutationCategories returns the MutationCategories field value if set, zero value otherwise.
+func (o *CIRunStatusResponse) GetMutationCategories() []string {
+	if o == nil || IsNil(o.MutationCategories) {
+		var ret []string
+		return ret
+	}
+	return o.MutationCategories
+}
+
+// GetMutationCategoriesOk returns a tuple with the MutationCategories field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *CIRunStatusResponse) GetMutationCategoriesOk() ([]string, bool) {
+	if o == nil || IsNil(o.MutationCategories) {
+		return nil, false
+	}
+	return o.MutationCategories, true
+}
+
+// HasMutationCategories returns a boolean if a field has been set.
+func (o *CIRunStatusResponse) HasMutationCategories() bool {
+	if o != nil && !IsNil(o.MutationCategories) {
+		return true
+	}
+
+	return false
+}
+
+// SetMutationCategories gets a reference to the given []string and assigns it to the MutationCategories field.
+func (o *CIRunStatusResponse) SetMutationCategories(v []string) {
+	o.MutationCategories = v
+}
+
+// GetMutationCoverageScore returns the MutationCoverageScore field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *CIRunStatusResponse) GetMutationCoverageScore() int32 {
+	if o == nil || IsNil(o.MutationCoverageScore.Get()) {
+		var ret int32
+		return ret
+	}
+	return *o.MutationCoverageScore.Get()
+}
+
+// GetMutationCoverageScoreOk returns a tuple with the MutationCoverageScore field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *CIRunStatusResponse) GetMutationCoverageScoreOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.MutationCoverageScore.Get(), o.MutationCoverageScore.IsSet()
+}
+
+// HasMutationCoverageScore returns a boolean if a field has been set.
+func (o *CIRunStatusResponse) HasMutationCoverageScore() bool {
+	if o != nil && o.MutationCoverageScore.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetMutationCoverageScore gets a reference to the given NullableInt32 and assigns it to the MutationCoverageScore field.
+func (o *CIRunStatusResponse) SetMutationCoverageScore(v int32) {
+	o.MutationCoverageScore.Set(&v)
+}
+// SetMutationCoverageScoreNil sets the value for MutationCoverageScore to be an explicit nil
+func (o *CIRunStatusResponse) SetMutationCoverageScoreNil() {
+	o.MutationCoverageScore.Set(nil)
+}
+
+// UnsetMutationCoverageScore ensures that no value is present for MutationCoverageScore, not even an explicit nil
+func (o *CIRunStatusResponse) UnsetMutationCoverageScore() {
+	o.MutationCoverageScore.Unset()
+}
+
 // GetDashboardUrl returns the DashboardUrl field value
 func (o *CIRunStatusResponse) GetDashboardUrl() string {
 	if o == nil {
@@ -267,6 +343,12 @@ func (o CIRunStatusResponse) ToMap() (map[string]interface{}, error) {
 	toSerialize["unsafe_attempts"] = o.UnsafeAttempts
 	toSerialize["failures"] = o.Failures
 	toSerialize["top_failing_tools"] = o.TopFailingTools
+	if !IsNil(o.MutationCategories) {
+		toSerialize["mutation_categories"] = o.MutationCategories
+	}
+	if o.MutationCoverageScore.IsSet() {
+		toSerialize["mutation_coverage_score"] = o.MutationCoverageScore.Get()
+	}
 	toSerialize["dashboard_url"] = o.DashboardUrl
 	return toSerialize, nil
 }
