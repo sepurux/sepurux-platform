@@ -10,6 +10,7 @@ api_auth.go
 api_billing.go
 api_campaigns.go
 api_ci.go
+api_compliance.go
 api_counterfactuals.go
 api_demo.go
 api_health.go
@@ -56,6 +57,8 @@ docs/CampaignRunPackRequest.md
 docs/CampaignRunPackResponse.md
 docs/CampaignsAPI.md
 docs/CiAPI.md
+docs/ComplianceAPI.md
+docs/ComplianceSummaryResponse.md
 docs/CounterfactualListItem.md
 docs/CounterfactualMetadata.md
 docs/CounterfactualsAPI.md
@@ -176,6 +179,7 @@ model_ci_run_create_request.go
 model_ci_run_create_response.go
 model_ci_run_status_response.go
 model_ci_run_thresholds.go
+model_compliance_summary_response.go
 model_counterfactual_list_item.go
 model_counterfactual_metadata.go
 model_credit_transaction_metadata.go
@@ -258,4 +262,5 @@ model_webhook_metadata.go
 model_webhook_rotate_secret_response.go
 model_webhook_update_request.go
 response.go
+test/api_compliance_test.go
 utils.go

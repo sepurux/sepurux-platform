@@ -10,6 +10,7 @@ src/apis/AuthApi.ts
 src/apis/BillingApi.ts
 src/apis/CampaignsApi.ts
 src/apis/CiApi.ts
+src/apis/ComplianceApi.ts
 src/apis/CounterfactualsApi.ts
 src/apis/DemoApi.ts
 src/apis/HealthApi.ts
@@ -48,6 +49,7 @@ src/models/CampaignMetadata.ts
 src/models/CampaignReliabilityResponse.ts
 src/models/CampaignRunPackRequest.ts
 src/models/CampaignRunPackResponse.ts
+src/models/ComplianceSummaryResponse.ts
 src/models/CounterfactualListItem.ts
 src/models/CounterfactualMetadata.ts
 src/models/CreditTransactionMetadata.ts

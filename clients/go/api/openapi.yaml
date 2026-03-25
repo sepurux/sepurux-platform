@@ -928,6 +928,56 @@ paths:
       summary: Get Ci Run
       tags:
       - ci
+  /v1/compliance/summary:
+    get:
+      operationId: get_compliance_summary_v1_compliance_summary_get
+      parameters:
+      - explode: true
+        in: query
+        name: window_days
+        required: false
+        schema:
+          default: 30
+          maximum: 365
+          minimum: 1
+          title: Window Days
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: top_n
+        required: false
+        schema:
+          default: 5
+          maximum: 20
+          minimum: 1
+          title: Top N
+          type: integer
+        style: form
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceSummaryResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Compliance Summary
+      tags:
+      - compliance
   /v1/attempts/{attempt_id}/counterfactuals:
     get:
       operationId: get_attempt_counterfactuals_v1_attempts__attempt_id__counterfactuals_get
@@ -3951,6 +4001,70 @@ components:
       - status
       - trace_id
       title: CampaignRunPackResponse
+    ComplianceSummaryResponse:
+      example:
+        security_blocks: 2
+        top_policy_tools:
+        - count: 5
+          tool: tool
+        - count: 5
+          tool: tool
+        security_sanitizations: 7
+        generated_at: 2000-01-23T04:56:07.000+00:00
+        policy_denies: 5
+        top_security_tools:
+        - count: 5
+          tool: tool
+        - count: 5
+          tool: tool
+        audit_events_total: 6
+        policy_events_total: 1
+        window_days: 0
+        security_events_total: 5
+      properties:
+        window_days:
+          title: Window Days
+          type: integer
+        generated_at:
+          format: date-time
+          title: Generated At
+          type: string
+        audit_events_total:
+          title: Audit Events Total
+          type: integer
+        policy_events_total:
+          title: Policy Events Total
+          type: integer
+        security_events_total:
+          title: Security Events Total
+          type: integer
+        policy_denies:
+          title: Policy Denies
+          type: integer
+        security_blocks:
+          title: Security Blocks
+          type: integer
+        security_sanitizations:
+          title: Security Sanitizations
+          type: integer
+        top_policy_tools:
+          items:
+            $ref: '#/components/schemas/ToolCount'
+          type: array
+        top_security_tools:
+          items:
+            $ref: '#/components/schemas/ToolCount'
+          type: array
+      required:
+      - audit_events_total
+      - generated_at
+      - policy_denies
+      - policy_events_total
+      - security_blocks
+      - security_events_total
+      - security_sanitizations
+      - window_days
+      title: ComplianceSummaryResponse
     CounterfactualListItem:
       example:
         result: result
