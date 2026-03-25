@@ -134,7 +134,9 @@ def post_campaign(
             metadata={
                 "campaign_id": str(campaign.campaign_id),
                 "mutation_pack_id": (
-                    str(campaign.mutation_pack_id) if campaign.mutation_pack_id is not None else None
+                    str(campaign.mutation_pack_id)
+                    if campaign.mutation_pack_id is not None
+                    else None
                 ),
             },
         )

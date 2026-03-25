@@ -29,14 +29,16 @@ const valuePoints = [
       "Paid plans ship with monthly credit grants. Free includes a one-time signup credit grant, and top-ups stay separate from monthly allowances.",
   },
   {
-    icon: Gauge,
-    title: "Priority execution",
-    description: "Free workspaces stay on the normal queue. Paid plans move critical replay jobs to priority execution.",
+    icon: Layers3,
+    title: "Plan-based controls",
+    description:
+      "Pro unlocks policy and security controls, Team adds webhooks, and Enterprise adds audit visibility for governance.",
   },
   {
-    icon: Layers3,
+    icon: Gauge,
     title: "Collaboration gating",
-    description: "Member invites are available on Team and Enterprise plans.",
+    description:
+      "Free and Pro are single-workspace oriented. Team and Enterprise unlock member invites and workspace expansion.",
   },
 ];
 

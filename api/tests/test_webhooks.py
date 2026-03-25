@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, Project, Trace
+from app.models import Base, Campaign, Project, Tenant, Trace
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -110,6 +110,36 @@ def test_webhook_crud_and_rotate_secret(
     assert rotated["secret"] != first_secret
 
 
+def test_webhooks_endpoint_requires_webhooks_section_access(
+    webhook_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, testing_session_local, project_id, _ = webhook_test_context
+    with testing_session_local() as db:
+        project = db.execute(select(Project).where(Project.project_id == project_id)).scalar_one()
+        tenant = db.execute(select(Tenant).where(Tenant.tenant_id == project.tenant_id)).scalar_one()
+        tenant.pricing_tier = "starter"
+        db.add(tenant)
+        db.commit()
+
+    response = client.get("/v1/webhooks")
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "webhooks access is not available for this workspace membership"
+    }
+
+
+def test_audit_events_endpoint_requires_enterprise_access(
+    webhook_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = webhook_test_context
+
+    response = client.get("/v1/audit-events?limit=10&offset=0")
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "audit access is not available for this workspace membership"
+    }
+
+
 def test_audit_events_endpoint_lists_and_filters(
     webhook_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
 ) -> None:
@@ -122,6 +152,11 @@ def test_audit_events_endpoint_lists_and_filters(
         current_project = db.execute(
             select(Project).where(Project.project_id == project_id)
         ).scalar_one()
+        tenant = db.execute(
+            select(Tenant).where(Tenant.tenant_id == current_project.tenant_id)
+        ).scalar_one()
+        tenant.pricing_tier = "enterprise"
+        db.add(tenant)
         db.add(
             Project(
                 project_id=sibling_project_id,
