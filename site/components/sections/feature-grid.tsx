@@ -1,29 +1,55 @@
 // site/components/sections/feature-grid.tsx
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Gauge, Orbit, WandSparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const features = [
+type VideoFeature = {
+  title: string;
+  description: string;
+  mediaType: "video";
+  src: string;
+  icon: LucideIcon;
+};
+
+type ImageFeature = {
+  title: string;
+  description: string;
+  mediaType: "image";
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  icon: LucideIcon;
+};
+
+type Feature = VideoFeature | ImageFeature;
+
+const features: Feature[] = [
   {
     title: "Mutation Testing",
     description: "Stress your agent with schema drift, timeouts, rate limits, and poisoning before release.",
-    mediaType: "video" as const,
+    mediaType: "video",
     src: "/videos/mutation.mp4",
     icon: WandSparkles,
   },
   {
     title: "Trace Replay",
     description: "Rewind the exact agent execution and inspect the prompt, tool call, and break point.",
-    mediaType: "video" as const,
+    mediaType: "video",
     src: "/videos/replay.mp4",
     icon: Orbit,
   },
   {
     title: "Reliability Score",
     description: "Turn failures into a report and a score that teams can understand at a glance.",
-    mediaType: "image" as const,
+    mediaType: "image",
     src: "/images/reliability.png",
+    alt: "Sepurux reliability score showing agent failure breakdown",
+    width: 1861,
+    height: 959,
     icon: Gauge,
   },
 ];
@@ -72,9 +98,12 @@ export function FeatureGrid() {
                       <source src={feature.src} type="video/mp4" />
                     </video>
                   ) : (
-                    <img
+                    <Image
                       src={feature.src}
-                      alt={feature.title}
+                      alt={feature.alt}
+                      width={feature.width}
+                      height={feature.height}
+                      priority
                       className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                     />
                   )}

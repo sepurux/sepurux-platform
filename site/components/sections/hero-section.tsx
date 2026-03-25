@@ -22,6 +22,7 @@ export function HeroSection() {
         loop
         playsInline
         preload="auto"
+        poster="/images/hero-poster.png"
       >
         <source src="/videos/hero.mp4" type="video/mp4" />
       </video>
