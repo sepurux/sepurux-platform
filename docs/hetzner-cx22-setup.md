@@ -180,6 +180,79 @@ https://sepurux.com
 https://app.sepurux.dev
 ```
 
+## 10. Enable CI/CD (Auto Deploy On Merge To `main`)
+
+This repository includes:
+
+- [.github/workflows/deploy-hetzner.yml](../.github/workflows/deploy-hetzner.yml)
+- [infra/scripts/deploy_hetzner.sh](../infra/scripts/deploy_hetzner.sh)
+
+Deploy flow:
+
+1. You merge PR to `main`.
+2. GitHub Actions SSHes into your Hetzner server.
+3. It checks out the merged commit and runs:
+   - `./infra/scripts/deploy_hetzner.sh`
+4. Docker Compose rebuilds and restarts the stack.
+
+### 10.1 Required GitHub Secrets
+
+Add these repository secrets:
+
+- `HETZNER_SSH_HOST` (example: `123.123.123.123`)
+- `HETZNER_SSH_USER` (example: `deploy`)
+- `HETZNER_SSH_PRIVATE_KEY` (private key GitHub Actions uses to SSH to Hetzner)
+- `HETZNER_SSH_KNOWN_HOSTS` (`ssh-keyscan -H <host>` output)
+- `HETZNER_DEPLOY_PATH` (absolute path of the cloned repo on server, example: `/opt/sepurux`)
+
+### 10.2 One-Time Server Prep
+
+Use a dedicated deploy user:
+
+```bash
+sudo adduser --disabled-password --gecos "" deploy
+sudo usermod -aG docker deploy
+sudo mkdir -p /home/deploy/.ssh
+sudo chmod 700 /home/deploy/.ssh
+```
+
+Add the GitHub Actions public key to:
+
+- `/home/deploy/.ssh/authorized_keys`
+
+Then clone repo as `deploy`:
+
+```bash
+sudo -u deploy -H bash -lc '
+  cd /opt
+  git clone git@github.com:sepurux/sepurux-platform.git sepurux
+'
+```
+
+Create env file on server once:
+
+```bash
+sudo -u deploy -H bash -lc '
+  cd /opt/sepurux
+  cp infra/.env.hetzner.example infra/.env.hetzner
+  nano infra/.env.hetzner
+'
+```
+
+Important:
+
+- Do not edit app code directly in `/opt/sepurux`; CI/CD will overwrite checked-out revision on deploy.
+- Keep secrets only in `infra/.env.hetzner`, not in git.
+
+### 10.3 Add Production Environment (Recommended)
+
+In GitHub:
+
+- Settings -> Environments -> `production`
+- Add required reviewers if you want manual approval before deploy.
+
+The workflow already targets `environment: production`.
+
 ## CX22 Note
 
 The CX22 can run this stack for testing and low traffic, but it is tight for production because one box is carrying:
