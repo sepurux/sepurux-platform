@@ -72,7 +72,11 @@ def list_campaigns(
     stmt = select(Campaign).where(Campaign.project_id == project_id)
     if not include_archived:
         stmt = stmt.where(Campaign.status != "archived")
-    stmt = stmt.order_by(Campaign.created_at.desc(), Campaign.campaign_id.desc()).offset(offset).limit(limit)
+    stmt = (
+        stmt.order_by(Campaign.created_at.desc(), Campaign.campaign_id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     return list(db.scalars(stmt))
 
 

@@ -4,6 +4,7 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**DeleteCampaignV1CampaignsCampaignIdDelete**](CampaignsAPI.md#DeleteCampaignV1CampaignsCampaignIdDelete) | **Delete** /v1/campaigns/{campaign_id} | Delete Campaign
 [**GetCampaignFailuresV1CampaignsCampaignIdFailuresGet**](CampaignsAPI.md#GetCampaignFailuresV1CampaignsCampaignIdFailuresGet) | **Get** /v1/campaigns/{campaign_id}/failures | Get Campaign Failures
 [**GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGet**](CampaignsAPI.md#GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGet) | **Get** /v1/campaigns/{campaign_id}/reliability | Get Campaign Reliability
 [**GetCampaignV1CampaignsCampaignIdGet**](CampaignsAPI.md#GetCampaignV1CampaignsCampaignIdGet) | **Get** /v1/campaigns/{campaign_id} | Get Campaign
@@ -11,6 +12,74 @@ Method | HTTP request | Description
 [**PostCampaignRunPackV1CampaignsCampaignIdRunPackPost**](CampaignsAPI.md#PostCampaignRunPackV1CampaignsCampaignIdRunPackPost) | **Post** /v1/campaigns/{campaign_id}/run-pack | Post Campaign Run Pack
 [**PostCampaignV1CampaignsPost**](CampaignsAPI.md#PostCampaignV1CampaignsPost) | **Post** /v1/campaigns | Post Campaign
 
+
+
+## DeleteCampaignV1CampaignsCampaignIdDelete
+
+> DeleteCampaignV1CampaignsCampaignIdDelete(ctx, campaignId).XProjectId(xProjectId).Execute()
+
+Delete Campaign
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/sepurux/sepurux-platform/clients/go"
+)
+
+func main() {
+	campaignId := "38400000-8cf0-11bd-b23e-10b96e4ef00d" // string | 
+	xProjectId := "xProjectId_example" // string |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	r, err := apiClient.CampaignsAPI.DeleteCampaignV1CampaignsCampaignIdDelete(context.Background(), campaignId).XProjectId(xProjectId).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `CampaignsAPI.DeleteCampaignV1CampaignsCampaignIdDelete``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**campaignId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiDeleteCampaignV1CampaignsCampaignIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **xProjectId** | **string** |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
 
 
 ## GetCampaignFailuresV1CampaignsCampaignIdFailuresGet
@@ -163,7 +232,7 @@ No authorization required
 
 ## GetCampaignV1CampaignsCampaignIdGet
 
-> CampaignMetadata GetCampaignV1CampaignsCampaignIdGet(ctx, campaignId).XProjectId(xProjectId).Execute()
+> CampaignMetadata GetCampaignV1CampaignsCampaignIdGet(ctx, campaignId).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
 
 Get Campaign
 
@@ -181,11 +250,12 @@ import (
 
 func main() {
 	campaignId := "38400000-8cf0-11bd-b23e-10b96e4ef00d" // string | 
+	includeArchived := true // bool |  (optional) (default to false)
 	xProjectId := "xProjectId_example" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.CampaignsAPI.GetCampaignV1CampaignsCampaignIdGet(context.Background(), campaignId).XProjectId(xProjectId).Execute()
+	resp, r, err := apiClient.CampaignsAPI.GetCampaignV1CampaignsCampaignIdGet(context.Background(), campaignId).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `CampaignsAPI.GetCampaignV1CampaignsCampaignIdGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -211,6 +281,7 @@ Other parameters are passed through a pointer to a apiGetCampaignV1CampaignsCamp
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
+ **includeArchived** | **bool** |  | [default to false]
  **xProjectId** | **string** |  | 
 
 ### Return type
@@ -233,7 +304,7 @@ No authorization required
 
 ## GetCampaignsV1CampaignsGet
 
-> []CampaignMetadata GetCampaignsV1CampaignsGet(ctx).Limit(limit).Offset(offset).XProjectId(xProjectId).Execute()
+> []CampaignMetadata GetCampaignsV1CampaignsGet(ctx).Limit(limit).Offset(offset).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
 
 Get Campaigns
 
@@ -252,11 +323,12 @@ import (
 func main() {
 	limit := int32(56) // int32 |  (optional) (default to 50)
 	offset := int32(56) // int32 |  (optional) (default to 0)
+	includeArchived := true // bool |  (optional) (default to false)
 	xProjectId := "xProjectId_example" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.CampaignsAPI.GetCampaignsV1CampaignsGet(context.Background()).Limit(limit).Offset(offset).XProjectId(xProjectId).Execute()
+	resp, r, err := apiClient.CampaignsAPI.GetCampaignsV1CampaignsGet(context.Background()).Limit(limit).Offset(offset).IncludeArchived(includeArchived).XProjectId(xProjectId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `CampaignsAPI.GetCampaignsV1CampaignsGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -279,6 +351,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **limit** | **int32** |  | [default to 50]
  **offset** | **int32** |  | [default to 0]
+ **includeArchived** | **bool** |  | [default to false]
  **xProjectId** | **string** |  | 
 
 ### Return type

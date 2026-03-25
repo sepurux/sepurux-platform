@@ -27,6 +27,7 @@ type PolicyPackMetadata struct {
 	Name string `json:"name"`
 	Engine string `json:"engine"`
 	Policy interface{} `json:"policy"`
+	IsArchived *bool `json:"is_archived,omitempty"`
 	ActiveVersionId NullableString `json:"active_version_id,omitempty"`
 	ActiveVersionNumber NullableInt32 `json:"active_version_number,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
@@ -45,6 +46,8 @@ func NewPolicyPackMetadata(policyPackId string, projectId string, name string, e
 	this.Name = name
 	this.Engine = engine
 	this.Policy = policy
+	var isArchived bool = false
+	this.IsArchived = &isArchived
 	this.CreatedAt = createdAt
 	return &this
 }
@@ -54,6 +57,8 @@ func NewPolicyPackMetadata(policyPackId string, projectId string, name string, e
 // but it doesn't guarantee that properties required by API are set
 func NewPolicyPackMetadataWithDefaults() *PolicyPackMetadata {
 	this := PolicyPackMetadata{}
+	var isArchived bool = false
+	this.IsArchived = &isArchived
 	return &this
 }
 
@@ -177,6 +182,38 @@ func (o *PolicyPackMetadata) GetPolicyOk() (*interface{}, bool) {
 // SetPolicy sets field value
 func (o *PolicyPackMetadata) SetPolicy(v interface{}) {
 	o.Policy = v
+}
+
+// GetIsArchived returns the IsArchived field value if set, zero value otherwise.
+func (o *PolicyPackMetadata) GetIsArchived() bool {
+	if o == nil || IsNil(o.IsArchived) {
+		var ret bool
+		return ret
+	}
+	return *o.IsArchived
+}
+
+// GetIsArchivedOk returns a tuple with the IsArchived field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PolicyPackMetadata) GetIsArchivedOk() (*bool, bool) {
+	if o == nil || IsNil(o.IsArchived) {
+		return nil, false
+	}
+	return o.IsArchived, true
+}
+
+// HasIsArchived returns a boolean if a field has been set.
+func (o *PolicyPackMetadata) HasIsArchived() bool {
+	if o != nil && !IsNil(o.IsArchived) {
+		return true
+	}
+
+	return false
+}
+
+// SetIsArchived gets a reference to the given bool and assigns it to the IsArchived field.
+func (o *PolicyPackMetadata) SetIsArchived(v bool) {
+	o.IsArchived = &v
 }
 
 // GetActiveVersionId returns the ActiveVersionId field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -303,6 +340,9 @@ func (o PolicyPackMetadata) ToMap() (map[string]interface{}, error) {
 	toSerialize["engine"] = o.Engine
 	if o.Policy != nil {
 		toSerialize["policy"] = o.Policy
+	}
+	if !IsNil(o.IsArchived) {
+		toSerialize["is_archived"] = o.IsArchived
 	}
 	if o.ActiveVersionId.IsSet() {
 		toSerialize["active_version_id"] = o.ActiveVersionId.Get()

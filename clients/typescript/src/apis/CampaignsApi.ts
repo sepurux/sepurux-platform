@@ -40,6 +40,11 @@ import {
     HTTPValidationErrorToJSON,
 } from '../models/index';
 
+export interface DeleteCampaignV1CampaignsCampaignIdDeleteRequest {
+    campaignId: string;
+    xProjectId?: string | null;
+}
+
 export interface GetCampaignFailuresV1CampaignsCampaignIdFailuresGetRequest {
     campaignId: string;
     runId?: string | null;
@@ -56,12 +61,14 @@ export interface GetCampaignReliabilityV1CampaignsCampaignIdReliabilityGetReques
 
 export interface GetCampaignV1CampaignsCampaignIdGetRequest {
     campaignId: string;
+    includeArchived?: boolean;
     xProjectId?: string | null;
 }
 
 export interface GetCampaignsV1CampaignsGetRequest {
     limit?: number;
     offset?: number;
+    includeArchived?: boolean;
     xProjectId?: string | null;
 }
 
@@ -80,6 +87,42 @@ export interface PostCampaignV1CampaignsPostRequest {
  * 
  */
 export class CampaignsApi extends runtime.BaseAPI {
+
+    /**
+     * Delete Campaign
+     */
+    async deleteCampaignV1CampaignsCampaignIdDeleteRaw(requestParameters: DeleteCampaignV1CampaignsCampaignIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['campaignId'] == null) {
+            throw new runtime.RequiredError(
+                'campaignId',
+                'Required parameter "campaignId" was null or undefined when calling deleteCampaignV1CampaignsCampaignIdDelete().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/campaigns/{campaign_id}`.replace(`{${"campaign_id"}}`, encodeURIComponent(String(requestParameters['campaignId']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete Campaign
+     */
+    async deleteCampaignV1CampaignsCampaignIdDelete(requestParameters: DeleteCampaignV1CampaignsCampaignIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deleteCampaignV1CampaignsCampaignIdDeleteRaw(requestParameters, initOverrides);
+    }
 
     /**
      * Get Campaign Failures
@@ -184,6 +227,10 @@ export class CampaignsApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
+        if (requestParameters['includeArchived'] != null) {
+            queryParameters['include_archived'] = requestParameters['includeArchived'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (requestParameters['xProjectId'] != null) {
@@ -220,6 +267,10 @@ export class CampaignsApi extends runtime.BaseAPI {
 
         if (requestParameters['offset'] != null) {
             queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        if (requestParameters['includeArchived'] != null) {
+            queryParameters['include_archived'] = requestParameters['includeArchived'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
