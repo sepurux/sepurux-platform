@@ -70,6 +70,18 @@ export interface CIRunStatusResponse {
     top_failing_tools: Array<ToolCount>;
     /**
      * 
+     * @type {Array<string>}
+     * @memberof CIRunStatusResponse
+     */
+    mutation_categories?: Array<string>;
+    /**
+     * 
+     * @type {number}
+     * @memberof CIRunStatusResponse
+     */
+    mutation_coverage_score?: number | null;
+    /**
+     * 
      * @type {string}
      * @memberof CIRunStatusResponse
      */
@@ -120,6 +132,8 @@ export function CIRunStatusResponseFromJSONTyped(json: any, ignoreDiscriminator:
         'unsafe_attempts': json['unsafe_attempts'],
         'failures': json['failures'],
         'top_failing_tools': ((json['top_failing_tools'] as Array<any>).map(ToolCountFromJSON)),
+        'mutation_categories': json['mutation_categories'] == null ? undefined : json['mutation_categories'],
+        'mutation_coverage_score': json['mutation_coverage_score'] == null ? undefined : json['mutation_coverage_score'],
         'dashboard_url': json['dashboard_url'],
     };
 }
@@ -137,6 +151,8 @@ export function CIRunStatusResponseToJSON(value?: CIRunStatusResponse | null): a
         'unsafe_attempts': value['unsafe_attempts'],
         'failures': value['failures'],
         'top_failing_tools': ((value['top_failing_tools'] as Array<any>).map(ToolCountToJSON)),
+        'mutation_categories': value['mutation_categories'],
+        'mutation_coverage_score': value['mutation_coverage_score'],
         'dashboard_url': value['dashboard_url'],
     };
 }
