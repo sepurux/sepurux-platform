@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.db import get_db
-from app.models import Campaign, Project
+from app.models import Campaign, MutationPack, Project
 from app.schemas import CIRunCreateRequest, CIRunCreateResponse, CIRunStatusResponse
 from app.services.audit_service import create_audit_event
 from app.services.billing_service import (
@@ -22,6 +22,7 @@ from app.services.github_client import (
     resolve_github_access_token,
     set_pr_status,
 )
+from app.services.mutation_pack_policy import evaluate_mutation_pack_config
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_ci_run_and_enqueue,
@@ -165,12 +166,14 @@ def get_ci_run(run_id: UUID, request: Request, db: DbSession) -> CIRunStatusResp
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CI thresholds not found")
 
     metrics = get_run_quality_metrics(db, run_id=run.run_id, project_id=run.project_id)
+    mutation_categories, mutation_coverage_score = _mutation_coverage_for_run(db, run=run)
     decision = _ci_decision(
         status=run.status,
         pass_rate=float(metrics["pass_rate"]),
         unsafe_attempts=int(metrics["unsafe_count"]),
         failures=int(metrics["failed_count"]),
         thresholds=thresholds,
+        mutation_categories=mutation_categories,
     )
 
     if decision in {"pass", "fail"}:
@@ -207,6 +210,8 @@ def get_ci_run(run_id: UUID, request: Request, db: DbSession) -> CIRunStatusResp
         unsafe_attempts=int(metrics["unsafe_attempts"]),
         failures=int(metrics["failures"]),
         top_failing_tools=metrics["top_failing_tools"],
+        mutation_categories=mutation_categories,
+        mutation_coverage_score=mutation_coverage_score,
         dashboard_url=_build_dashboard_url(request, run.run_id),
     )
 
@@ -230,6 +235,7 @@ def _ci_decision(
     unsafe_attempts: int,
     failures: int,
     thresholds: dict[str, Any],
+    mutation_categories: list[str],
 ) -> CIDecision:
     if (status or "").lower() not in _TERMINAL_STATUSES:
         return "pending"
@@ -245,7 +251,51 @@ def _ci_decision(
         return "fail"
     if max_failures is not None and failures > max_failures:
         return "fail"
+    mutation_category_set = {
+        item.strip().lower() for item in mutation_categories if isinstance(item, str) and item.strip()
+    }
+    min_mutation_categories_raw = thresholds.get("min_mutation_categories")
+    if min_mutation_categories_raw is not None:
+        min_mutation_categories = int(min_mutation_categories_raw)
+        if len(mutation_category_set) < min_mutation_categories:
+            return "fail"
+    required_mutation_categories = _required_mutation_categories(thresholds)
+    if required_mutation_categories and not required_mutation_categories.issubset(
+        mutation_category_set
+    ):
+        return "fail"
     return "pass"
+
+
+def _mutation_coverage_for_run(db: Session, *, run: Any) -> tuple[list[str], int | None]:
+    mutation_pack_id = getattr(run, "mutation_pack_id", None)
+    project_id = getattr(run, "project_id", None)
+    if mutation_pack_id is None or project_id is None:
+        return [], None
+
+    mutation_pack = db.scalar(
+        select(MutationPack).where(
+            MutationPack.mutation_pack_id == mutation_pack_id,
+            MutationPack.project_id == project_id,
+        )
+    )
+    if mutation_pack is None:
+        return [], None
+
+    config = mutation_pack.config if isinstance(mutation_pack.config, dict) else {}
+    coverage = evaluate_mutation_pack_config(config)
+    return coverage.categories, coverage.coverage_score
+
+
+def _required_mutation_categories(thresholds: dict[str, Any]) -> set[str]:
+    raw_value = thresholds.get("required_mutation_categories")
+    if not isinstance(raw_value, list):
+        return set()
+    return {
+        str(item).strip().lower()
+        for item in raw_value
+        if isinstance(item, str) and item.strip()
+    }
 
 
 def _build_dashboard_url(request: Request, run_id: UUID) -> str:
