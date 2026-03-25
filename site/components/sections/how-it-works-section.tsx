@@ -2,13 +2,24 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 
 const steps = [
-  { title: "Prompt", description: "Capture the agent task and real execution context." },
-  { title: "Agent Execution", description: "Replay the exact tool sequence step by step." },
-  { title: "Mutation Injection", description: "Inject failures and drift into the same workflow." },
-  { title: "Failure Detection", description: "Classify the break point and why it failed." },
-  { title: "Reliability Score", description: "Summarize the run into a score your team can act on." },
+  {
+    title: "Capture a real trace",
+    description:
+      "Record production-like workflows with real tool calls so tests run against behavior that actually matters.",
+  },
+  {
+    title: "Apply a mutation pack",
+    description:
+      "Inject schema drift, timeouts, and tool faults to expose brittle logic before users hit it in production.",
+  },
+  {
+    title: "Gate release in CI",
+    description:
+      "Run the reliability gate in pull requests and block deploys when pass rate, safety, or score thresholds fail.",
+  },
 ];
 
 const containerVariants = {
@@ -32,37 +43,30 @@ export function HowItWorksSection() {
         <div className="mx-auto mb-16 max-w-3xl text-center">
           <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">How it works</p>
           <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
-            From trace capture to reliability score in five steps.
+            Capture, mutate, and gate in three steps.
           </h2>
           <p className="mt-4 text-base leading-8 text-neutral-400">
-            A simple, visible workflow from trace capture to reliability decision.
+            A clean flow your engineering team can adopt without changing your whole stack.
           </p>
         </div>
 
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.15 }}
             variants={containerVariants}
-            className="relative"
+            className="grid gap-4 lg:grid-cols-3"
           >
-            {/* vertical teal connecting line */}
-            <div
-              className="absolute left-[13px] top-10 -bottom-2 w-px"
-              style={{ background: "linear-gradient(to bottom, rgba(0,229,204,0.5), rgba(0,229,204,0.05))" }}
-            />
-
             {steps.map((step, index) => (
               <motion.div
                 key={step.title}
                 variants={itemVariants}
-                className="relative flex gap-8 py-8"
+                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition-all duration-300 hover:border-[rgba(0,229,204,0.28)] hover:bg-white/[0.05]"
               >
-                {/* step number with teal accent */}
-                <div className="relative z-10 shrink-0">
+                <div className="mb-4 flex items-center justify-between">
                   <div
-                    className="flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-bold tabular-nums"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold tabular-nums"
                     style={{
                       borderColor: "rgba(0,229,204,0.35)",
                       background: "rgba(0,229,204,0.08)",
@@ -71,12 +75,13 @@ export function HowItWorksSection() {
                   >
                     {String(index + 1).padStart(2, "0")}
                   </div>
+                  {index < steps.length - 1 ? (
+                    <ArrowRight className="h-4 w-4 text-white/30 group-hover:text-[var(--accent-teal)]" />
+                  ) : null}
                 </div>
 
-                <div className="border-b border-white/8 pb-8 last:border-0 flex-1">
-                  <h3 className="font-display text-lg font-semibold text-white">{step.title}</h3>
-                  <p className="mt-2 text-base leading-7 text-neutral-400">{step.description}</p>
-                </div>
+                <h3 className="font-display text-xl font-semibold text-white">{step.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-neutral-300">{step.description}</p>
               </motion.div>
             ))}
           </motion.div>
