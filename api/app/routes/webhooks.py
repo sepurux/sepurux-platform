@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from app.auth import ProjectScope, require_project_scope
+from app.auth import ProjectScope, require_project_scope, require_visible_section
 from app.db import get_db
 from app.schemas import (
     WebhookCreateRequest,
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/v1/webhooks", tags=["webhooks"])
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
+WebhookAccessDep = Annotated[ProjectScope, Depends(require_visible_section("webhooks"))]
 
 
 def _events_list(value: object) -> list[str]:
@@ -56,6 +57,7 @@ def post_webhook(
     payload: WebhookCreateRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    _webhook_access: WebhookAccessDep,
 ) -> WebhookCreateResponse:
     try:
         record, secret = create_webhook(
@@ -73,7 +75,11 @@ def post_webhook(
 
 
 @router.get("", response_model=list[WebhookMetadata])
-def get_webhooks(db: DbSession, project_scope: ProjectScopeDep) -> list[WebhookMetadata]:
+def get_webhooks(
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    _webhook_access: WebhookAccessDep,
+) -> list[WebhookMetadata]:
     records = list_webhooks(db, project_id=project_scope.project_id)
     return [_to_webhook_metadata(record) for record in records]
 
@@ -84,6 +90,7 @@ def patch_webhook(
     payload: WebhookUpdateRequest,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    _webhook_access: WebhookAccessDep,
 ) -> WebhookMetadata:
     try:
         record = update_webhook(
@@ -106,6 +113,7 @@ def post_rotate_webhook_secret(
     webhook_id: UUID,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    _webhook_access: WebhookAccessDep,
 ) -> WebhookRotateSecretResponse:
     rotated = rotate_webhook_secret(
         db,
@@ -123,6 +131,7 @@ def get_webhook_by_id(
     webhook_id: UUID,
     db: DbSession,
     project_scope: ProjectScopeDep,
+    _webhook_access: WebhookAccessDep,
 ) -> WebhookMetadata:
     record = get_webhook(db, project_id=project_scope.project_id, webhook_id=webhook_id)
     if record is None:
