@@ -28,6 +28,10 @@ from app.services.run_service import (
     get_run_quality_metrics,
     get_run_unscoped,
 )
+from app.services.tenant_control_service import (
+    TenantControlViolationError,
+    assert_project_runs_allowed,
+)
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -50,6 +54,11 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
     # so that a 402 is returned before any run record is written.
     campaign = db.scalar(select(Campaign).where(Campaign.campaign_id == payload.campaign_id))
     if campaign is not None:
+        try:
+            assert_project_runs_allowed(db, project_id=campaign.project_id)
+        except TenantControlViolationError as exc:
+            raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
+
         try:
             charged_amount, charged_reason = operation_cost_for_campaign_record(campaign)
             charged_project_id = campaign.project_id
@@ -110,6 +119,22 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
             except Exception:
                 logger.exception("Failed to refund credits after CI validation failure")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except TenantControlViolationError as exc:
+        if (
+            charged_amount is not None
+            and charged_reason is not None
+            and charged_project_id is not None
+        ):
+            try:
+                refund_credits_for_project_owner(
+                    db,
+                    project_id=charged_project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:tenant_runs_paused",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after tenant CI run lock")
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
     except Exception:
         if (
             charged_amount is not None

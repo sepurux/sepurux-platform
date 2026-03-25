@@ -7,7 +7,17 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import AuditEvent, Base, Campaign, Project, ReplayAttempt, Run, Trace, UserNotification
+from app.models import (
+    AuditEvent,
+    Base,
+    Campaign,
+    Project,
+    ReplayAttempt,
+    Run,
+    TenantControl,
+    Trace,
+    UserNotification,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -134,6 +144,33 @@ def test_post_run_queues_job_and_persists_queued_status(
     assert audit_events[0].event_metadata["run_id"] == str(run_id)
     assert len(notifications) == 1
     assert notifications[0].title == "Run queued"
+
+
+def test_post_run_returns_423_when_tenant_runs_paused(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, fake_queue, project_id = run_test_context
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = seed_trace_and_campaign(db, project_id=project_id)
+        project = db.scalar(select(Project).where(Project.project_id == project_id))
+        assert isinstance(project, Project)
+        db.add(
+            TenantControl(
+                tenant_id=project.tenant_id,
+                runs_paused=True,
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/runs",
+        json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)},
+    )
+
+    assert response.status_code == 423
+    assert response.json() == {"detail": "Run creation is paused for this tenant."}
+    assert fake_queue.calls == []
 
 
 def test_get_run_and_list_runs(

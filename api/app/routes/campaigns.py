@@ -39,6 +39,10 @@ from app.services.failure_service import (
 from app.services.mutation_pack_service import ensure_registered_mutation_pack, get_mutation_pack
 from app.services.notification_service import create_notification
 from app.services.run_service import create_run_pack_and_enqueue
+from app.services.tenant_control_service import (
+    TenantControlViolationError,
+    assert_tenant_runs_allowed,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
@@ -237,6 +241,12 @@ def post_campaign_run_pack(
 ) -> CampaignRunPackResponse:
     charged_amount: int | None = None
     charged_reason: str | None = None
+
+    try:
+        assert_tenant_runs_allowed(db, tenant_id=project_scope.tenant_id)
+    except TenantControlViolationError as exc:
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
+
     campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -315,6 +325,19 @@ def post_campaign_run_pack(
             queue_priority=queue_priority,
             actor=actor_from_request(request),
         )
+    except TenantControlViolationError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:tenant_runs_paused",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after tenant run lock")
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
     except Exception:
         if charged_amount is not None and charged_reason is not None:
             try:
