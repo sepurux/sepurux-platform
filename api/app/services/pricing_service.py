@@ -42,6 +42,26 @@ ADVANCED_SECTIONS = [
     "audit",
 ]
 
+PRO_SECTIONS = CORE_SECTIONS + [
+    "policies",
+    "security",
+]
+
+TEAM_SECTIONS = CORE_SECTIONS + [
+    "policies",
+    "security",
+    "webhooks",
+]
+
+ENTERPRISE_SECTIONS = CORE_SECTIONS + ADVANCED_SECTIONS
+
+PLAN_VISIBLE_SECTIONS: dict[BillingPlanName, list[str]] = {
+    "free": list(CORE_SECTIONS),
+    "pro": list(PRO_SECTIONS),
+    "team": list(TEAM_SECTIONS),
+    "enterprise": list(ENTERPRISE_SECTIONS),
+}
+
 PLAN_LABELS: dict[PricingTier, str] = {
     "starter": "Starter",
     "team": "Team",
@@ -86,9 +106,7 @@ def _default_billing_plan_for_pricing_tier(pricing_tier: str | None) -> BillingP
 
 
 def _visible_sections_for_plan(plan: BillingPlanName) -> list[str]:
-    if plan in {"free", "pro"}:
-        return list(CORE_SECTIONS)
-    return list(CORE_SECTIONS + ADVANCED_SECTIONS)
+    return list(PLAN_VISIBLE_SECTIONS[plan])
 
 
 def build_auth_permissions(
@@ -101,7 +119,7 @@ def build_auth_permissions(
     resolved_plan = _normalize_billing_plan_name(
         billing_plan_name
     ) or _default_billing_plan_for_pricing_tier(pricing_tier)
-    advanced_enabled = resolved_plan in {"team", "enterprise"}
+    policy_and_security_enabled = resolved_plan in {"pro", "team", "enterprise"}
     workspace_management_enabled = (
         resolved_plan in {"team", "enterprise"} and normalized_role in {"admin", "super_admin"}
     )
@@ -111,8 +129,8 @@ def build_auth_permissions(
         can_create_campaigns=True,
         can_run_campaigns=True,
         can_manage_mutation_packs=True,
-        can_manage_policy_packs=advanced_enabled,
-        can_manage_security_config=advanced_enabled,
+        can_manage_policy_packs=policy_and_security_enabled,
+        can_manage_security_config=policy_and_security_enabled,
         can_manage_workspace=workspace_management_enabled,
         can_manage_api_keys=True,
         can_manage_billing=True,

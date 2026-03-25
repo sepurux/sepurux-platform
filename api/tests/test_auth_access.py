@@ -20,6 +20,7 @@ from app.models import (
     UserIdentity,
 )
 from app.services.auth_service import hash_password, verify_password
+from app.services.billing_service import PRO_PLAN_ID, subscribe_user
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -204,7 +205,62 @@ def test_login_returns_project_scoped_session_for_existing_user(
     assert payload["permissions"]["can_manage_api_keys"] is True
     assert payload["permissions"]["can_manage_billing"] is True
     assert "campaigns" in payload["permissions"]["visible_sections"]
-    assert "audit" in payload["permissions"]["visible_sections"]
+    assert "webhooks" in payload["permissions"]["visible_sections"]
+    assert "audit" not in payload["permissions"]["visible_sections"]
+
+
+def test_login_with_pro_subscription_gets_policy_security_without_team_sections(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = auth_test_context
+    tenant_id = uuid4()
+    user_id = uuid4()
+    project_id = uuid4()
+    role_id = uuid4()
+
+    with session_factory() as db:
+        db.add(Tenant(tenant_id=tenant_id, name="Pro Tenant", pricing_tier="team"))
+        db.add(Role(role_id=role_id, name="admin"))
+        db.add(
+            User(
+                user_id=user_id,
+                email="pro-user@example.com",
+                name="Pro User",
+                password_hash=hash_password("pro-secret-123"),
+            )
+        )
+        db.add(
+            Project(
+                project_id=project_id,
+                tenant_id=tenant_id,
+                owner_id=user_id,
+                name="Pro Project",
+            )
+        )
+        db.add(ProjectMembership(user_id=user_id, project_id=project_id, role_id=role_id))
+        db.flush()
+        subscribe_user(
+            db,
+            user_id=user_id,
+            plan_id=PRO_PLAN_ID,
+            tenant_id=tenant_id,
+        )
+        db.commit()
+
+    response = client.post(
+        "/auth/login",
+        json={"email": "pro-user@example.com", "password": "pro-secret-123"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["plan_name"] == "Pro"
+    assert payload["permissions"]["can_manage_policy_packs"] is True
+    assert payload["permissions"]["can_manage_security_config"] is True
+    assert payload["permissions"]["can_manage_workspace"] is False
+    assert "policies" in payload["permissions"]["visible_sections"]
+    assert "security" in payload["permissions"]["visible_sections"]
+    assert "webhooks" not in payload["permissions"]["visible_sections"]
+    assert "audit" not in payload["permissions"]["visible_sections"]
 
 
 def test_viewer_login_still_gets_full_workspace_access(
