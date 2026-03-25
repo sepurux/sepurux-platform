@@ -67,6 +67,7 @@ def post_trace(
     if isinstance(sdk_meta, str):
         sdk_meta = sdk_meta.strip() or None
 
+    actor = actor_from_request(request)
     trace = create_trace(
         db=db,
         project_id=project_scope.project_id,
@@ -76,7 +77,12 @@ def post_trace(
         sdk_meta=sdk_meta,
         validation_status="valid",
         normalized_payload=normalized_payload,
-        actor=actor_from_request(request),
+        actor=actor,
+    )
+    bootstrap_project_from_trace(
+        db,
+        trace=trace,
+        actor=actor,
     )
     return TraceMetadata(**trace_metadata(trace))
 
