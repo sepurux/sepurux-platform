@@ -44,7 +44,7 @@ def compliance_test_context() -> Generator[
             seed_project_membership_api_key(
                 db,
                 role_name="admin",
-                pricing_tier="team",
+                pricing_tier="enterprise",
                 tenant_name="Compliance Tenant",
                 project_name="Compliance Project",
             )
