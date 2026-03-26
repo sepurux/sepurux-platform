@@ -197,9 +197,9 @@ def _max_mutations_per_attempt(mutation_pack_config: Any) -> int:
     config_obj = mutation_pack_config if isinstance(mutation_pack_config, dict) else {}
     raw = config_obj.get("max_mutations_per_attempt")
     if isinstance(raw, int):
-        return max(0, raw)
+        return max(0, min(raw, 20))
     if isinstance(raw, float):
-        return max(0, int(raw))
+        return max(0, min(int(raw), 20))
     return 1
 
 

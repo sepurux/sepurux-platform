@@ -713,9 +713,9 @@ def _campaign_attempt_repeats(campaign: Campaign) -> int:
     if isinstance(raw_attempts, bool):
         return 1
     if isinstance(raw_attempts, int):
-        return max(1, raw_attempts)
+        return max(1, min(raw_attempts, 50))
     if isinstance(raw_attempts, float):
-        return max(1, int(raw_attempts))
+        return max(1, min(int(raw_attempts), 50))
     return 1
 
 
@@ -1447,7 +1447,7 @@ def execute_run(run_id: str) -> None:
                     mutation_trace = mutation_result.mutation_trace
                     timeline_artifact = mutation_result.timeline_artifact
 
-                    if mutation_result.forced_failure_reason is not None:
+                    if result == "passed" and mutation_result.forced_failure_reason is not None:
                         result = "failed"
                         failure_reason = mutation_result.forced_failure_reason
                         first_failure_event_index = mutation_result.first_failure_event_index
@@ -1468,7 +1468,7 @@ def execute_run(run_id: str) -> None:
                 injection_blocks += attempt_injection_blocks
                 injection_sanitizations += attempt_injection_sanitizations
 
-                if injection_failure_reason is not None:
+                if result == "passed" and injection_failure_reason is not None:
                     result = "failed"
                     failure_reason = injection_failure_reason
                     first_failure_event_index = injection_failure_event_index
