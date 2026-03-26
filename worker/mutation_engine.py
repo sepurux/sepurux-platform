@@ -266,6 +266,14 @@ def _apply_single_mutation(
             error_type="RateLimitError",
             default_error_message="simulated rate limit from mutation pack",
         )
+    if mutation_type == "fault.auth_failure":
+        return _apply_fault(
+            definition,
+            events,
+            failure_reason="auth_failed",
+            error_type="AuthError",
+            default_error_message="simulated auth failure from mutation pack",
+        )
     return None, None
 
 

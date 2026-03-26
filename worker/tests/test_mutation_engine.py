@@ -371,3 +371,115 @@ def test_fault_timeout_skips_internal_trace_load_events() -> None:
     ]
     assert events[-1]["type"] == "error"
     assert events[-1]["tool"] == "jira.create_issue"
+
+
+def test_fault_auth_failure_injects_auth_error_event() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "auth-fail",
+                "type": "fault.auth_failure",
+                "target": {"tool": "jira.*"},
+                "probability": 1.0,
+                "weight": 1.0,
+            }
+        ],
+    }
+    outcome = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=0,
+        timeline_artifact=copy.deepcopy(_timeline_fixture()),
+        seed=1,
+    )
+
+    events = outcome.timeline_artifact["events"]
+    error_events = [e for e in events if e.get("type") == "error"]
+    assert len(error_events) == 1
+    err = error_events[0]["error"]
+    assert err["type"] == "AuthError"
+
+
+def test_fault_auth_failure_sets_forced_failure_reason() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "auth-fail",
+                "type": "fault.auth_failure",
+                "target": {"tool": "jira.*"},
+                "probability": 1.0,
+                "weight": 1.0,
+            }
+        ],
+    }
+    outcome = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=0,
+        timeline_artifact=copy.deepcopy(_timeline_fixture()),
+        seed=1,
+    )
+
+    assert outcome.forced_failure_reason == "auth_failed"
+    assert outcome.first_failure_tool == "jira.create_issue"
+
+
+def test_fault_auth_failure_custom_error_message() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "auth-fail",
+                "type": "fault.auth_failure",
+                "target": {"tool": "jira.*"},
+                "params": {"error_message": "401 Unauthorized: token expired"},
+                "probability": 1.0,
+                "weight": 1.0,
+            }
+        ],
+    }
+    outcome = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=0,
+        timeline_artifact=copy.deepcopy(_timeline_fixture()),
+        seed=1,
+    )
+
+    events = outcome.timeline_artifact["events"]
+    error_events = [e for e in events if e.get("type") == "error"]
+    assert error_events[0]["error"]["message"] == "401 Unauthorized: token expired"
+
+
+def test_fault_auth_failure_does_not_target_bootstrap_tools() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "auth-fail",
+                "type": "fault.auth_failure",
+                "target": {"tool": "*"},
+                "probability": 1.0,
+                "weight": 1.0,
+            }
+        ],
+    }
+    outcome = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=0,
+        timeline_artifact=copy.deepcopy(_timeline_with_bootstrap_fixture()),
+        seed=1,
+    )
+
+    events = outcome.timeline_artifact["events"]
+    error_events = [e for e in events if e.get("type") == "error"]
+    # Must not inject an error on trace.load — only on jira.create_issue
+    assert all(e.get("tool") != "trace.load" for e in error_events)
+    assert outcome.forced_failure_reason == "auth_failed"
