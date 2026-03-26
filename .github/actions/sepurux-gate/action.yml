@@ -6,14 +6,23 @@ inputs:
     description: Sepurux API base URL
     required: true
   token:
-    description: CI token for X-Sepurux-Token
+    description: CI token (X-Sepurux-Token). Also used as X-API-Key when uploading trace_file.
     required: true
+  project_id:
+    description: Project UUID (required when uploading trace_file; optional otherwise)
+    required: false
   trace_id:
-    description: Trace UUID to replay
-    required: true
+    description: Trace UUID to replay (mutually exclusive with trace_file)
+    required: false
+  trace_file:
+    description: Path to a trace JSON file to upload; the resulting trace_id is used automatically (mutually exclusive with trace_id)
+    required: false
   campaign_id:
-    description: Campaign UUID to execute
-    required: true
+    description: Campaign UUID to execute (mutually exclusive with campaign_name)
+    required: false
+  campaign_name:
+    description: Human-readable campaign name; the action looks up the UUID automatically (mutually exclusive with campaign_id)
+    required: false
   min_pass_rate:
     description: Minimum pass rate threshold (0-1)
     required: false
@@ -38,6 +47,12 @@ outputs:
   run_id:
     description: Sepurux run UUID
     value: ${{ steps.gate.outputs.run_id }}
+  trace_id:
+    description: Trace UUID used for this run (useful when trace_file was uploaded)
+    value: ${{ steps.gate.outputs.trace_id }}
+  campaign_id:
+    description: Campaign UUID used for this run (useful when campaign_name was resolved)
+    value: ${{ steps.gate.outputs.campaign_id }}
   decision:
     description: Gate decision (pass|fail|pending)
     value: ${{ steps.gate.outputs.decision }}
@@ -54,8 +69,11 @@ runs:
       env:
         INPUT_BASE_URL: ${{ inputs.base_url }}
         INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_PROJECT_ID: ${{ inputs.project_id }}
         INPUT_TRACE_ID: ${{ inputs.trace_id }}
+        INPUT_TRACE_FILE: ${{ inputs.trace_file }}
         INPUT_CAMPAIGN_ID: ${{ inputs.campaign_id }}
+        INPUT_CAMPAIGN_NAME: ${{ inputs.campaign_name }}
         INPUT_MIN_PASS_RATE: ${{ inputs.min_pass_rate }}
         INPUT_MAX_UNSAFE: ${{ inputs.max_unsafe }}
         INPUT_MAX_FAILURES: ${{ inputs.max_failures }}
@@ -68,14 +86,106 @@ runs:
         poll_seconds="${INPUT_POLL_SECONDS}"
         timeout_seconds="${INPUT_TIMEOUT_SECONDS}"
 
+        # ------------------------------------------------------------------
+        # Resolve trace_id
+        # ------------------------------------------------------------------
+        trace_id="${INPUT_TRACE_ID:-}"
+        trace_file="${INPUT_TRACE_FILE:-}"
+
+        if [[ -z "${trace_id}" && -z "${trace_file}" ]]; then
+          echo "::error::Either trace_id or trace_file must be provided."
+          exit 1
+        fi
+        if [[ -n "${trace_id}" && -n "${trace_file}" ]]; then
+          echo "::error::Provide either trace_id or trace_file, not both."
+          exit 1
+        fi
+
+        if [[ -n "${trace_file}" ]]; then
+          echo "Uploading trace file: ${trace_file}"
+          upload_body_file="$(mktemp)"
+          upload_headers=(-H "X-API-Key: ${INPUT_TOKEN}")
+          if [[ -n "${INPUT_PROJECT_ID:-}" ]]; then
+            upload_headers+=(-H "X-Project-Id: ${INPUT_PROJECT_ID}")
+          fi
+          upload_status="$(
+            curl -sS -o "${upload_body_file}" -w "%{http_code}" \
+              -X POST "${base_url}/v1/traces" \
+              -H "Content-Type: application/json" \
+              "${upload_headers[@]}" \
+              --data-binary "@${trace_file}"
+          )"
+          if [[ "${upload_status}" -lt 200 || "${upload_status}" -ge 300 ]]; then
+            echo "::error::Trace upload failed (HTTP ${upload_status})"
+            cat "${upload_body_file}"
+            exit 1
+          fi
+          trace_id="$(python3 - <<'PY' <"${upload_body_file}"
+        import json, sys
+        print(json.load(sys.stdin)["trace_id"])
+        PY
+          )"
+          echo "Uploaded trace: ${trace_id}"
+        fi
+
+        echo "trace_id=${trace_id}" >> "${GITHUB_OUTPUT}"
+
+        # ------------------------------------------------------------------
+        # Resolve campaign_id
+        # ------------------------------------------------------------------
+        campaign_id="${INPUT_CAMPAIGN_ID:-}"
+        campaign_name="${INPUT_CAMPAIGN_NAME:-}"
+
+        if [[ -z "${campaign_id}" && -z "${campaign_name}" ]]; then
+          echo "::error::Either campaign_id or campaign_name must be provided."
+          exit 1
+        fi
+        if [[ -n "${campaign_id}" && -n "${campaign_name}" ]]; then
+          echo "::error::Provide either campaign_id or campaign_name, not both."
+          exit 1
+        fi
+
+        if [[ -n "${campaign_name}" ]]; then
+          echo "Resolving campaign name: ${campaign_name}"
+          list_body_file="$(mktemp)"
+          list_status="$(
+            curl -sS -o "${list_body_file}" -w "%{http_code}" \
+              "${base_url}/v1/campaigns" \
+              -H "X-Sepurux-Token: ${INPUT_TOKEN}"
+          )"
+          if [[ "${list_status}" -lt 200 || "${list_status}" -ge 300 ]]; then
+            echo "::error::Campaign list failed (HTTP ${list_status})"
+            cat "${list_body_file}"
+            exit 1
+          fi
+          campaign_id="$(python3 - <<'PY' <"${list_body_file}"
+        import json, os, sys
+        name = os.environ["INPUT_CAMPAIGN_NAME"]
+        campaigns = json.load(sys.stdin)
+        match = next((c for c in campaigns if c.get("name") == name), None)
+        if match is None:
+            names = [c.get("name") for c in campaigns]
+            print(f"Campaign '{name}' not found. Available: {names}", file=sys.stderr)
+            sys.exit(1)
+        print(match["campaign_id"])
+        PY
+          )"
+          echo "Resolved campaign '${campaign_name}' -> ${campaign_id}"
+        fi
+
+        echo "campaign_id=${campaign_id}" >> "${GITHUB_OUTPUT}"
+
+        # ------------------------------------------------------------------
+        # Start CI run
+        # ------------------------------------------------------------------
         post_payload="$(python3 - <<'PY'
         import json
         import os
 
         max_failures_raw = (os.environ.get("INPUT_MAX_FAILURES") or "").strip()
         payload = {
-            "trace_id": os.environ["INPUT_TRACE_ID"],
-            "campaign_id": os.environ["INPUT_CAMPAIGN_ID"],
+            "trace_id": os.environ["RESOLVED_TRACE_ID"],
+            "campaign_id": os.environ["RESOLVED_CAMPAIGN_ID"],
             "thresholds": {
                 "min_pass_rate": float(os.environ["INPUT_MIN_PASS_RATE"]),
                 "max_unsafe": int(os.environ["INPUT_MAX_UNSAFE"]),
@@ -84,7 +194,7 @@ runs:
         }
         print(json.dumps(payload))
         PY
-        )"
+        )" RESOLVED_TRACE_ID="${trace_id}" RESOLVED_CAMPAIGN_ID="${campaign_id}"
 
         post_body_file="$(mktemp)"
         post_status="$(
@@ -96,7 +206,7 @@ runs:
         )"
 
         if [[ "${post_status}" -lt 200 || "${post_status}" -ge 300 ]]; then
-          echo "Sepurux gate start failed (HTTP ${post_status})"
+          echo "::error::Sepurux gate start failed (HTTP ${post_status})"
           cat "${post_body_file}"
           exit 1
         fi
@@ -112,6 +222,9 @@ runs:
         echo "Started Sepurux CI run: ${run_id}"
         echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
 
+        # ------------------------------------------------------------------
+        # Poll until decision
+        # ------------------------------------------------------------------
         start_epoch="$(date +%s)"
         decision="pending"
         status_value=""
@@ -125,7 +238,7 @@ runs:
           now_epoch="$(date +%s)"
           elapsed="$((now_epoch - start_epoch))"
           if (( elapsed > timeout_seconds )); then
-            echo "Sepurux gate timed out after ${timeout_seconds}s (run_id=${run_id})"
+            echo "::error::Sepurux gate timed out after ${timeout_seconds}s (run_id=${run_id})"
             exit 1
           fi
 
@@ -136,7 +249,7 @@ runs:
               -H "X-Sepurux-Token: ${INPUT_TOKEN}"
           )"
           if [[ "${get_status}" -lt 200 || "${get_status}" -ge 300 ]]; then
-            echo "Sepurux gate poll failed (HTTP ${get_status})"
+            echo "::error::Sepurux gate poll failed (HTTP ${get_status})"
             cat "${get_body_file}"
             exit 1
           fi
