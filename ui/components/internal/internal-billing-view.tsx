@@ -177,9 +177,11 @@ export function InternalBillingView() {
           <tbody>
             {wallets.length ? (
               wallets.map((wallet) => (
-                <tr key={wallet.wallet_id} className="border-t border-border/70 text-muted-foreground">
+                <tr key={wallet.wallet_id} className={`border-t border-border/70 text-muted-foreground ${wallet.balance <= 0 ? "bg-red-950/20" : ""}`}>
                   <td className="px-4 py-3 text-foreground">{wallet.email ?? wallet.user_id}</td>
-                  <td className="px-4 py-3">{wallet.balance}</td>
+                  <td className={`px-4 py-3 font-medium ${wallet.balance <= 0 ? "text-red-400" : wallet.balance < 20 ? "text-amber-400" : "text-emerald-400"}`}>
+                    {wallet.balance}
+                  </td>
                   <td className="px-4 py-3">{wallet.monthly_credits}</td>
                   <td className="px-4 py-3">{wallet.topup_credits}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -220,7 +222,9 @@ export function InternalBillingView() {
                     {new Date(transaction.created_at).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-foreground">{transaction.email ?? transaction.user_id}</td>
-                  <td className="px-4 py-3">{transaction.amount}</td>
+                  <td className={`px-4 py-3 font-medium tabular-nums ${transaction.amount > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {transaction.amount > 0 ? "+" : ""}{transaction.amount}
+                  </td>
                   <td className="px-4 py-3">{transaction.type}</td>
                   <td className="px-4 py-3">{transaction.reason}</td>
                 </tr>

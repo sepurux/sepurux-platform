@@ -1,10 +1,27 @@
 "use client";
 
 import type { ReactNode } from "react";
+import React from "react";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart2,
+  Bell,
+  CreditCard,
+  FolderOpen,
+  Layers,
+  ListChecks,
+  LogOut,
+  ScrollText,
+  Settings,
+  Shield,
+  Users,
+  Workflow,
+  Zap,
+} from "lucide-react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { clearStoredAuthSession } from "@/lib/auth-session";
@@ -14,21 +31,22 @@ import { cn } from "@/lib/utils";
 type InternalNavItem = {
   href: string;
   label: string;
+  icon: React.ComponentType<{ className?: string }>;
 };
 
 const navItems: InternalNavItem[] = [
-  { href: "/internal/dashboard", label: "Overview" },
-  { href: "/internal/users", label: "Users" },
-  { href: "/internal/projects", label: "Projects" },
-  { href: "/internal/campaigns", label: "Campaigns" },
-  { href: "/internal/failures", label: "Failures" },
-  { href: "/internal/billing", label: "Billing" },
-  { href: "/internal/queues", label: "Queues" },
-  { href: "/internal/analytics", label: "Analytics" },
-  { href: "/internal/audit-logs", label: "Audit Logs" },
-  { href: "/internal/alerts", label: "Alerts" },
-  { href: "/internal/system", label: "System" },
-  { href: "/internal/settings", label: "Settings" },
+  { href: "/internal/dashboard", label: "Overview", icon: Activity },
+  { href: "/internal/users", label: "Users", icon: Users },
+  { href: "/internal/projects", label: "Projects", icon: FolderOpen },
+  { href: "/internal/campaigns", label: "Campaigns", icon: Layers },
+  { href: "/internal/failures", label: "Failures", icon: Zap },
+  { href: "/internal/billing", label: "Billing", icon: CreditCard },
+  { href: "/internal/queues", label: "Queues", icon: Workflow },
+  { href: "/internal/analytics", label: "Analytics", icon: BarChart2 },
+  { href: "/internal/audit-logs", label: "Audit Logs", icon: ScrollText },
+  { href: "/internal/alerts", label: "Alerts", icon: Bell },
+  { href: "/internal/system", label: "System", icon: Shield },
+  { href: "/internal/settings", label: "Settings", icon: Settings },
 ];
 
 export function InternalShell({ children }: { children: ReactNode }) {
@@ -60,20 +78,22 @@ export function InternalShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-1 px-1 py-3">
+        <nav className="flex-1 space-y-0.5 px-1 py-3">
           {navItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group block rounded-md border-l-2 border-l-transparent border-transparent px-3 py-2 text-sm transition",
+                  "group flex items-center gap-2.5 rounded-md border-l-2 border-l-transparent px-3 py-2 text-sm transition",
                   active
                     ? "border-l-primary bg-muted/45 text-primary shadow-insetSoft"
                     : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground"
                 )}
               >
+                <Icon className="h-4 w-4 shrink-0 opacity-70" />
                 {item.label}
               </Link>
             );

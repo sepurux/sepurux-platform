@@ -121,7 +121,21 @@ export function InternalDashboardView() {
             </article>
             <article className={cardBase}>
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Failures (24h)</p>
-              <p className="mt-2 text-3xl font-semibold text-primary">{overview.failures_last_24h.toLocaleString()}</p>
+              <p className={`mt-2 text-3xl font-semibold ${overview.failures_last_24h > 0 ? "text-amber-400" : "text-primary"}`}>
+                {overview.failures_last_24h.toLocaleString()}
+              </p>
+            </article>
+            <article className={cardBase}>
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Security Blocks (24h)</p>
+              <p className={`mt-2 text-3xl font-semibold ${overview.security_blocks_24h > 0 ? "text-red-400" : "text-primary"}`}>
+                {overview.security_blocks_24h.toLocaleString()}
+              </p>
+            </article>
+            <article className={cardBase}>
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Policy Denies (24h)</p>
+              <p className={`mt-2 text-3xl font-semibold ${overview.policy_denies_24h > 0 ? "text-amber-400" : "text-primary"}`}>
+                {overview.policy_denies_24h.toLocaleString()}
+              </p>
             </article>
             <article className={cardBase}>
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Credits Used</p>
@@ -129,7 +143,9 @@ export function InternalDashboardView() {
             </article>
             <article className={cardBase}>
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">System Health</p>
-              <p className="mt-2 text-2xl font-semibold text-primary capitalize">{overview.system_health.status}</p>
+              <p className={`mt-2 text-2xl font-semibold capitalize ${overview.system_health.status === "healthy" ? "text-emerald-400" : overview.system_health.status === "degraded" ? "text-amber-400" : "text-red-400"}`}>
+                {overview.system_health.status}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">Workers: {overview.system_health.worker_status}</p>
               <p className="text-sm text-muted-foreground">Queue backlog: {overview.system_health.queue_backlog}</p>
             </article>
