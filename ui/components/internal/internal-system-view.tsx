@@ -169,7 +169,7 @@ export function InternalSystemView() {
             </article>
             <article className="rounded-lg border border-border/70 bg-card/70 p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Worker Status</p>
-              <p className={`mt-2 text-2xl font-semibold capitalize ${data.worker_status === "idle" || data.worker_status === "busy" ? "text-emerald-400" : data.worker_status === "degraded" ? "text-amber-400" : "text-red-400"}`}>
+              <p className={`mt-2 text-2xl font-semibold capitalize ${data.worker_status === "online" ? "text-emerald-400" : data.worker_status === "unknown" ? "text-amber-400" : "text-red-400"}`}>
                 {data.worker_status}
               </p>
             </article>
