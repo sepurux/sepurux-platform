@@ -1,6 +1,10 @@
 # Sepurux Python SDK
 
-Python SDK for recording Sepurux traces and uploading them to a Sepurux API.
+[![PyPI](https://img.shields.io/pypi/v/sepurux)](https://pypi.org/project/sepurux/)
+[![Python](https://img.shields.io/pypi/pyversions/sepurux)](https://pypi.org/project/sepurux/)
+[![CI](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml)
+
+Record agent traces, run reliability campaigns, and instrument OpenAI or LangChain workflows — all from Python.
 
 ## Install
 
