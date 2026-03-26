@@ -12,6 +12,7 @@ const navItems = [
   { href: "/product", label: "Product" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
+  { href: "/sandbox", label: "Sandbox" },
   { href: buildAppAuthHref({ mode: "access", intent: "login" }), label: "Login", external: true },
 ];
 
