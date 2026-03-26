@@ -382,7 +382,7 @@ def _apply_latency_delay(
     if max_ms_value < min_ms_value:
         max_ms_value = min_ms_value
 
-    injected_delay_ms = max_ms_value
+    injected_delay_ms = random.randint(min_ms_value, max_ms_value)
 
     for event in _iter_matching_events(
         events, event_type="tool_result", tool_pattern=definition.target_tool_pattern
