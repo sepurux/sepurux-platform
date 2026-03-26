@@ -201,7 +201,42 @@ def test_post_campaign_rejects_pack_definition_mutation_set_when_pack_attached(
     assert response.status_code == 422
     assert response.json() == {
         "detail": (
-            "Campaign mutation_set must contain replay mutations, not mutation-pack "
-            "definitions"
+            "Campaign mutation_set must contain replay mutations, not mutation-pack " "definitions"
         )
     }
+
+
+def test_campaign_create_rejects_non_list_mutation_set(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    """mutation_set must be a list; non-list values should be rejected with 422."""
+    client, _ = campaign_test_context
+
+    for bad_mutation_set in [None, "baseline", 42, {"mutation_id": "baseline"}]:
+        response = client.post(
+            "/v1/campaigns",
+            json={
+                "name": "Bad Mutation Set",
+                "mutation_set": bad_mutation_set,
+                "eval_set": {"checks": ["status"]},
+            },
+        )
+        assert response.status_code == 422, f"Expected 422 for mutation_set={bad_mutation_set!r}"
+
+
+def test_campaign_create_rejects_non_dict_eval_set(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    """eval_set must be a dict; non-dict values should be rejected with 422."""
+    client, _ = campaign_test_context
+
+    for bad_eval_set in [None, "status", 42, ["status"]]:
+        response = client.post(
+            "/v1/campaigns",
+            json={
+                "name": "Bad Eval Set",
+                "mutation_set": [{"mutation_id": "baseline"}],
+                "eval_set": bad_eval_set,
+            },
+        )
+        assert response.status_code == 422, f"Expected 422 for eval_set={bad_eval_set!r}"

@@ -57,8 +57,8 @@ class TraceBootstrapResponse(BaseModel):
 
 class CampaignCreateRequest(BaseModel):
     name: str
-    mutation_set: Any
-    eval_set: Any
+    mutation_set: list[Any]
+    eval_set: dict[str, Any]
     mutation_pack_id: UUID | None = None
 
 
