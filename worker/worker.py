@@ -1664,11 +1664,21 @@ def execute_run(run_id: str) -> None:
                     )
                     failure_type_counts[classification.failure_type] += 1
                     severity_counts[classification.severity] += 1
+                    policy_irreversible_tools: frozenset[str] | None = None
+                    if isinstance(policy_document, dict):
+                        irreversible_obj = policy_document.get("irreversible")
+                        if isinstance(irreversible_obj, dict):
+                            raw_tools = irreversible_obj.get("tools")
+                            if isinstance(raw_tools, list):
+                                policy_irreversible_tools = frozenset(
+                                    t for t in raw_tools if isinstance(t, str) and t.strip()
+                                )
                     for counterfactual in run_counterfactual_replays(
                         run_id=run.run_id,
                         attempt=attempt_record,
                         mutation=counterfactual_mutation,
                         trace_s3_key=trace.s3_key,
+                        policy_irreversible_tools=policy_irreversible_tools,
                     ):
                         db.add(
                             Counterfactual(
