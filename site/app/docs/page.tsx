@@ -39,6 +39,11 @@ const docTracks = [
     href: "/docs/integrations",
   },
   {
+    title: "Webhooks",
+    description: "Receive signed HTTP notifications for run.completed, trace.created, ci.decision, and more.",
+    href: "/docs/webhooks",
+  },
+  {
     title: "FAQ & Support",
     description: "Find quick answers and the right channel for product, integration, and onboarding questions.",
     href: "/docs/faq",
