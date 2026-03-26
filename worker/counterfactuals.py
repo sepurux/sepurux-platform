@@ -38,9 +38,14 @@ def run_counterfactual_replays(
     attempt: ReplayAttempt,
     mutation: Any,
     trace_s3_key: str,
+    policy_irreversible_tools: frozenset[str] | None = None,
 ) -> list[CounterfactualReplayResult]:
     if (attempt.result or "").lower() not in {"fail", "failed"}:
         return []
+
+    effective_irreversible_tools = (
+        policy_irreversible_tools if policy_irreversible_tools is not None else IRREVERSIBLE_TOOLS
+    )
 
     return [
         _run_schema_adapter_v1(
@@ -50,7 +55,11 @@ def run_counterfactual_replays(
             run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key
         ),
         _run_policy_gate_v1(
-            run_id=run_id, attempt=attempt, mutation=mutation, trace_s3_key=trace_s3_key
+            run_id=run_id,
+            attempt=attempt,
+            mutation=mutation,
+            trace_s3_key=trace_s3_key,
+            irreversible_tools=effective_irreversible_tools,
         ),
     ]
 
@@ -140,10 +149,15 @@ def _run_retry_cap_v1(
 
 
 def _run_policy_gate_v1(
-    *, run_id: UUID, attempt: ReplayAttempt, mutation: Any, trace_s3_key: str
+    *,
+    run_id: UUID,
+    attempt: ReplayAttempt,
+    mutation: Any,
+    trace_s3_key: str,
+    irreversible_tools: frozenset[str] = IRREVERSIBLE_TOOLS,
 ) -> CounterfactualReplayResult:
     policy_gate = PolicyGateConfig(
-        irreversible_tools=IRREVERSIBLE_TOOLS, require_confirmation_token=True
+        irreversible_tools=irreversible_tools, require_confirmation_token=True
     )
     outcome = build_attempt_replay_outcome(
         run_id=run_id,
