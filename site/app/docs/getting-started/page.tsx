@@ -61,6 +61,7 @@ print(trace.trace_id)`,
 
 const client = SepuruxClient.fromEnv();
 
+// Callback pattern — trace uploads automatically on exit
 const recorder = await client.trace(
   "customer_refund_flow",
   { ticketId: "t-101" },
@@ -71,7 +72,15 @@ const recorder = await client.trace(
   },
 );
 
-console.log(recorder.traceId);`,
+console.log(recorder.traceId);
+
+// Imperative pattern — useful for middleware or streaming handlers
+const rec = client.startTrace("customer_refund_flow", { ticketId: "t-101" });
+rec.modelStep("classify_ticket", { ticketId: "t-101" });
+rec.toolCall("payments.refund", { paymentId: "pay_123", amount: 4200 });
+rec.toolResult("payments.refund", { refundId: "rf_123", status: "queued" });
+const { traceId } = await rec.flush();
+console.log(traceId);`,
   },
   {
     lang: "go",
