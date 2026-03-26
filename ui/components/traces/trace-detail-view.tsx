@@ -197,29 +197,53 @@ function TraceTimelinePanel({ timeline }: { timeline: TraceTimelineStep[] }) {
               const runId = typeof step.metadata?.run_id === "string" ? step.metadata.run_id : null;
               const attemptId = typeof step.metadata?.attempt_id === "string" ? step.metadata.attempt_id : null;
               const dotClass = stepDotClass(step.status);
+              const hasPayload = step.input_payload != null || step.output_payload != null;
               return (
                 <div key={step.id} className="relative">
                   <div className={cn("absolute -left-[1.625rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 bg-background", dotClass)} />
-                  <div className="rounded-lg border border-border bg-muted/20 p-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
+                  <div className="rounded-lg border border-border bg-muted/20">
+                    {/* Header row */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-foreground">{step.step_name}</span>
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          {step.step_type.replace(/_/g, " ")}
+                        </Badge>
+                        {step.mutation_name ? (
+                          <Badge variant="warning" className="shrink-0 text-[10px]">{step.mutation_name}</Badge>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {step.latency_ms != null ? (
+                          <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {formatDurationMs(step.latency_ms)}
+                          </span>
+                        ) : null}
                         <Badge variant={variantForStatus(step.status)}>{step.status}</Badge>
-                        <Badge variant="outline">{step.step_type.replace(/_/g, " ")}</Badge>
-                        {step.mutation_name ? <Badge variant="warning">{step.mutation_name}</Badge> : null}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span>{formatRelativeDate(step.started_at)}</span>
-                        {step.latency_ms != null ? <span>{formatDurationMs(step.latency_ms)}</span> : null}
-                        {source ? <span>{source}</span> : null}
-                        {runId ? <span>run {shortId(runId, 8)}</span> : null}
-                        {attemptId ? <span>attempt {shortId(attemptId, 8)}</span> : null}
                       </div>
                     </div>
-                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                      <PayloadPanel label="Input" value={step.input_payload} />
-                      <PayloadPanel label="Output" value={step.output_payload} />
+                    {/* Meta row */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 border-t border-border/40 px-4 py-2 text-[11px] text-muted-foreground">
+                      <span>{formatRelativeDate(step.started_at)}</span>
+                      {source ? <span className="font-mono">{source}</span> : null}
+                      {runId ? <span>run <span className="font-mono">{shortId(runId, 8)}</span></span> : null}
+                      {attemptId ? <span>attempt <span className="font-mono">{shortId(attemptId, 8)}</span></span> : null}
                     </div>
+                    {/* Collapsible payload */}
+                    {hasPayload ? (
+                      <details className="group border-t border-border/40">
+                        <summary className="flex cursor-pointer select-none items-center gap-1.5 px-4 py-2 text-[11px] text-muted-foreground hover:text-foreground">
+                          <svg className="h-3 w-3 rotate-[-90deg] transition-transform group-open:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          Payload
+                        </summary>
+                        <div className="grid gap-3 px-4 pb-4 pt-2 lg:grid-cols-2">
+                          <PayloadPanel label="Input" value={step.input_payload} />
+                          <PayloadPanel label="Output" value={step.output_payload} />
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
                 </div>
               );
