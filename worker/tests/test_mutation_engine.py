@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import random
+from typing import Any
 from uuid import uuid4
 
 from mutation_engine import _apply_latency_delay, _MutationDefinition, apply_mutation_pack
@@ -499,9 +500,11 @@ def test_latency_delay_samples_within_range_not_always_max() -> None:
     timeline = _timeline_fixture()
 
     seen: set[int] = set()
+    raw_events = timeline["events"]
+    assert isinstance(raw_events, list)
     for seed in range(50):
         random.seed(seed)
-        events = copy.deepcopy(timeline["events"])
+        events: list[dict[str, Any]] = copy.deepcopy(raw_events)
         result = _apply_latency_delay(definition, events)
         assert result is not None
         delay = result["details"]["latency_ms"]
