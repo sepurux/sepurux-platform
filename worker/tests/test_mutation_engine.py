@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import copy
+import random
+from typing import Any
 from uuid import uuid4
 
-from mutation_engine import apply_mutation_pack
+from mutation_engine import _apply_latency_delay, _MutationDefinition, apply_mutation_pack
 
 
 def _timeline_fixture() -> dict[str, object]:
@@ -483,3 +485,30 @@ def test_fault_auth_failure_does_not_target_bootstrap_tools() -> None:
     # Must not inject an error on trace.load — only on jira.create_issue
     assert all(e.get("tool") != "trace.load" for e in error_events)
     assert outcome.forced_failure_reason == "auth_failed"
+
+
+def test_latency_delay_samples_within_range_not_always_max() -> None:
+    """latency_delay must sample randomly between min_ms and max_ms, not always use max."""
+    definition = _MutationDefinition(
+        mutation_id="latency-test",
+        mutation_type="latency_delay",
+        target_tool_pattern="jira.*",
+        probability=1.0,
+        weight=1.0,
+        params={"min_ms": 100, "max_ms": 500},
+    )
+    timeline = _timeline_fixture()
+
+    seen: set[int] = set()
+    raw_events = timeline["events"]
+    assert isinstance(raw_events, list)
+    for seed in range(50):
+        random.seed(seed)
+        events: list[dict[str, Any]] = copy.deepcopy(raw_events)
+        result = _apply_latency_delay(definition, events)
+        assert result is not None
+        delay = result["details"]["latency_ms"]
+        assert 100 <= delay <= 500, f"delay {delay} out of range"
+        seen.add(delay)
+
+    assert len(seen) > 1, "latency_delay always returned the same value — still using max"
