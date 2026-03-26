@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { DocsCodeBlock, DocsSection, DocsShell } from "@/components/docs/docs-shell";
+import { DocsCodeTabs } from "@/components/docs/docs-code-tabs";
 import { buildPageMetadata, siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -16,20 +17,139 @@ const headersSnippet = `X-API-Key: <project_api_key>
 X-Project-Id: <project_uuid>
 Content-Type: application/json`;
 
-const traceSnippet = `curl -X POST ${baseUrl}/v1/traces \\
+const createTraceTabs = [
+  {
+    lang: "python",
+    label: "Python",
+    code: `from sepurux import SepuruxClient
+
+client = SepuruxClient.from_env()
+
+with client.trace("refund_flow", {"ticket_id": "t-101"}) as trace:
+    trace.model_step("triage", {"text": "process refund"})
+    trace.tool_call("payments.refund", {"amount": 4200})
+    trace.tool_result("payments.refund", {"status": "queued"})
+
+print(trace.trace_id)`,
+  },
+  {
+    lang: "typescript",
+    label: "TypeScript",
+    code: `import { SepuruxClient } from "@sepurux/recorder";
+
+const client = SepuruxClient.fromEnv();
+
+const recorder = await client.trace(
+  "refund_flow",
+  { ticketId: "t-101" },
+  async (trace) => {
+    trace.modelStep("triage", { text: "process refund" });
+    trace.toolCall("payments.refund", { amount: 4200 });
+    trace.toolResult("payments.refund", { status: "queued" });
+  },
+);
+
+console.log(recorder.traceId);`,
+  },
+  {
+    lang: "go",
+    label: "Go",
+    code: `client, _ := sepuruxrecorder.NewClientFromEnv()
+
+recorder, _ := client.Trace(
+  ctx, "refund_flow",
+  map[string]any{"ticketId": "t-101"},
+  sepuruxrecorder.TraceOptions{},
+  func(trace *sepuruxrecorder.ManagedRecorder) error {
+    trace.ModelStep("triage", map[string]any{"text": "process refund"}, nil)
+    trace.ToolCall("payments.refund", map[string]any{"amount": 4200})
+    trace.ToolResult("payments.refund", map[string]any{"status": "queued"})
+    return nil
+  },
+)`,
+  },
+  {
+    lang: "curl",
+    label: "curl",
+    code: `curl -X POST ${baseUrl}/v1/traces \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: $SEPURUX_API_KEY" \\
   -H "X-Project-Id: $SEPURUX_PROJECT_ID" \\
-  -d '{"trace_version":"0.1","task":{"name":"refund_flow"},"events":[]}'`;
+  -d '{"trace_version":"0.1","task":{"name":"refund_flow"},"events":[]}'`,
+  },
+];
 
-const runSnippet = `curl -X POST ${baseUrl}/v1/runs \\
+const startRunTabs = [
+  {
+    lang: "python",
+    label: "Python",
+    code: `import time
+from sepurux import SepuruxClient
+
+client = SepuruxClient.from_env()
+
+run_id = client.start_run(
+    trace_id="<trace_uuid>",
+    campaign_id="<campaign_uuid>",
+)
+
+# Poll until terminal
+while True:
+    run = client.get_run(run_id)
+    if run["status"] in {"completed", "failed"}:
+        break
+    time.sleep(5)
+
+print(run["status"], run.get("summary", {}).get("pass_rate"))`,
+  },
+  {
+    lang: "typescript",
+    label: "TypeScript",
+    code: `import { SepuruxClient } from "@sepurux/recorder";
+
+const client = SepuruxClient.fromEnv();
+
+// Pass campaignId in trace() options to auto-start a run:
+const recorder = await client.trace(
+  "refund_flow",
+  { ticketId: "t-101" },
+  async (trace) => { /* ... */ },
+  { campaignId: process.env.SEPURUX_CAMPAIGN_ID },
+);
+
+console.log(recorder.runId);`,
+  },
+  {
+    lang: "go",
+    label: "Go",
+    code: `// Pass CampaignID in TraceOptions to auto-start a run:
+recorder, _ := client.Trace(
+  ctx, "refund_flow",
+  map[string]any{"ticketId": "t-101"},
+  sepuruxrecorder.TraceOptions{
+    CampaignID: os.Getenv("SEPURUX_CAMPAIGN_ID"),
+  },
+  func(trace *sepuruxrecorder.ManagedRecorder) error {
+    // ...
+    return nil
+  },
+)
+
+fmt.Println(recorder.RunID)`,
+  },
+  {
+    lang: "curl",
+    label: "curl",
+    code: `curl -X POST ${baseUrl}/v1/runs \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: $SEPURUX_API_KEY" \\
   -H "X-Project-Id: $SEPURUX_PROJECT_ID" \\
   -d '{
     "trace_id": "<trace_uuid>",
     "campaign_id": "<campaign_uuid>"
-  }'`;
+  }'`,
+  },
+];
 
 const endpoints = [
   ["POST /v1/traces", "Upload trace payloads from SDK or custom instrumentation."],
@@ -100,8 +220,10 @@ export default function APIReferencePage() {
         title="Request Examples"
         description="Start from these examples and expand payloads based on your workflow semantics."
       >
-        <DocsCodeBlock code={traceSnippet} label="create trace" />
-        <DocsCodeBlock code={runSnippet} label="start run" />
+        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Create trace</p>
+        <DocsCodeTabs tabs={createTraceTabs} />
+        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Start run</p>
+        <DocsCodeTabs tabs={startRunTabs} />
       </DocsSection>
 
       <DocsSection
