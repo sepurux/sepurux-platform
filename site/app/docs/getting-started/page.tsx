@@ -237,6 +237,7 @@ export default function GettingStartedPage() {
         { href: "#install", label: "Install" },
         { href: "#environment", label: "Environment Setup" },
         { href: "#first-trace", label: "First Trace" },
+        { href: "#langchain", label: "LangChain" },
         { href: "#basic-builder", label: "Basic Builder" },
         { href: "#first-run", label: "First Run" },
       ]}
@@ -286,6 +287,41 @@ export default function GettingStartedPage() {
         description="Instrument one agent workflow and confirm the trace appears in the Sepurux dashboard."
       >
         <DocsCodeTabs tabs={firstTraceTabs} />
+      </DocsSection>
+
+      <DocsSection
+        id="langchain"
+        title="LangChain Integration"
+        description="SepuruxCallbackHandler records LLM calls, tool calls, and agent outputs from any LangChain chain or agent automatically — no manual instrumentation."
+      >
+        <DocsCodeBlock
+          label="python"
+          code={`from sepurux.integrations.langchain import SepuruxCallbackHandler
+
+handler = SepuruxCallbackHandler(
+    "customer_refund_flow",
+    {"ticket_id": "t-101"},
+    campaign_id=os.environ["SEPURUX_CAMPAIGN_ID"],
+)
+
+# Pass to any LangChain chain, agent, or LLM
+result = agent_executor.invoke(
+    {"input": "Process refund for ticket t-101"},
+    config={"callbacks": [handler]},
+)
+
+# Upload trace and start reliability run
+handler.finish()
+print(handler.trace_id)
+print(handler.run_id)
+
+# Or use as a context manager — finish() is called automatically
+with SepuruxCallbackHandler("refund_flow", campaign_id="...") as handler:
+    result = chain.invoke(inputs, config={"callbacks": [handler]})`}
+        />
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-300">
+          Requires <code className="text-white">pip install langchain-core</code>. Records LLM calls with latency, tool call/result pairs, and final agent output.
+        </div>
       </DocsSection>
 
       <DocsSection

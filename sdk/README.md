@@ -155,6 +155,58 @@ print([failure["type"] for failure in result["failures"]])
 ```
 
 
+## Integrations
+
+### LangChain
+
+`SepuruxCallbackHandler` automatically records LLM calls, tool calls, and agent
+outputs from any LangChain chain or agent. Requires `langchain-core`:
+
+```bash
+pip install sepurux langchain-core
+```
+
+```python
+import os
+from langchain_openai import ChatOpenAI
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+from sepurux.integrations.langchain import SepuruxCallbackHandler
+
+handler = SepuruxCallbackHandler(
+    "customer_refund_flow",
+    {"ticket_id": "t-101"},
+    campaign_id=os.environ["SEPURUX_CAMPAIGN_ID"],
+)
+
+# Works with chains, agents, or any LangChain runnable
+result = agent_executor.invoke(
+    {"input": "Process refund for ticket t-101"},
+    config={"callbacks": [handler]},
+)
+
+# Upload trace + start reliability run
+handler.finish()
+print(handler.trace_id)
+print(handler.run_id)
+```
+
+Or use it as a context manager — `finish()` is called automatically on exit:
+
+```python
+with SepuruxCallbackHandler("refund_flow", campaign_id="...") as handler:
+    result = chain.invoke(inputs, config={"callbacks": [handler]})
+
+print(handler.trace_id)
+```
+
+**What gets recorded automatically:**
+- LLM calls with model name, prompt input, generated output, and latency
+- Tool calls with name and parsed arguments
+- Tool results
+- Agent final output
+
+
 Optional environment variables:
 - `SEPURUX_API_BASE_URL` (default `http://localhost:8000`)
 - `SEPURUX_UI_BASE_URL` (default `http://localhost:3000`)
