@@ -396,6 +396,14 @@ export async function trace(
   return getClient().trace(taskName, taskInput, handler, options);
 }
 
+export function startTrace(
+  taskName: string,
+  taskInput: Record<string, unknown> = {},
+  options: TraceRunOptions = {},
+): ManagedTraceRecorder {
+  return getClient().startTrace(taskName, taskInput, options);
+}
+
 function defaultEnv(): Record<string, string | undefined> {
   const processLike = globalThis as typeof globalThis & {
     process?: { env?: Record<string, string | undefined> };
