@@ -237,6 +237,7 @@ export default function GettingStartedPage() {
         { href: "#install", label: "Install" },
         { href: "#environment", label: "Environment Setup" },
         { href: "#first-trace", label: "First Trace" },
+        { href: "#openai", label: "OpenAI" },
         { href: "#langchain", label: "LangChain" },
         { href: "#basic-builder", label: "Basic Builder" },
         { href: "#first-run", label: "First Run" },
@@ -287,6 +288,39 @@ export default function GettingStartedPage() {
         description="Instrument one agent workflow and confirm the trace appears in the Sepurux dashboard."
       >
         <DocsCodeTabs tabs={firstTraceTabs} />
+      </DocsSection>
+
+      <DocsSection
+        id="openai"
+        title="OpenAI Integration"
+        description="instrument_openai wraps any openai.OpenAI client and records every chat.completions.create call automatically — no manual trace.model_step() needed."
+      >
+        <DocsCodeBlock
+          label="python"
+          code={`import openai
+from sepurux import SepuruxClient
+from sepurux.integrations.openai import instrument_openai
+
+client = SepuruxClient.from_env()
+openai_client = openai.OpenAI()
+
+with client.trace(
+    "customer_refund_flow",
+    {"ticket_id": "t-101"},
+    campaign_id=os.environ["SEPURUX_CAMPAIGN_ID"],
+) as trace:
+    ai = instrument_openai(openai_client, recorder=trace)
+    response = ai.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Classify this support ticket"}],
+    )
+
+print(trace.trace_id)
+print(trace.run_id)`}
+        />
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-300">
+          Requires <code className="text-white">pip install openai</code>. Records <code className="text-white">llm_call</code> with model, messages, output, and latency. Tool calls returned by the model are automatically recorded as <code className="text-white">tool_call</code> events.
+        </div>
       </DocsSection>
 
       <DocsSection

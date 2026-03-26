@@ -157,6 +157,48 @@ print([failure["type"] for failure in result["failures"]])
 
 ## Integrations
 
+### OpenAI
+
+`instrument_openai` wraps any `openai.OpenAI` (or `AsyncOpenAI`) client and
+automatically records every `chat.completions.create` call as an `llm_call`
+event. Tool calls present in the response are also recorded. No manual
+instrumentation required.
+
+```bash
+pip install sepurux openai
+```
+
+```python
+import openai
+from sepurux import SepuruxClient
+from sepurux.integrations.openai import instrument_openai
+
+client = SepuruxClient.from_env()
+openai_client = openai.OpenAI()
+
+with client.trace(
+    "customer_refund_flow",
+    {"ticket_id": "t-101"},
+    campaign_id=os.environ["SEPURUX_CAMPAIGN_ID"],
+) as trace:
+    ai = instrument_openai(openai_client, recorder=trace)
+    response = ai.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Classify this support ticket"}],
+    )
+
+print(trace.trace_id)
+print(trace.run_id)
+```
+
+**What gets recorded automatically:**
+- `llm_call` event with model name, messages input, full response output, and latency
+- `tool_call` events for any function calls returned by the model
+- `failure` event if the API call raises an exception
+
+For async usage, call `await ai.chat.completions.acreate(...)` — the wrapper
+detects the async path automatically.
+
 ### LangChain
 
 `SepuruxCallbackHandler` automatically records LLM calls, tool calls, and agent
