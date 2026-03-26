@@ -22,8 +22,8 @@ var _ MappedNullable = &CampaignCreateRequest{}
 // CampaignCreateRequest struct for CampaignCreateRequest
 type CampaignCreateRequest struct {
 	Name string `json:"name"`
-	MutationSet interface{} `json:"mutation_set"`
-	EvalSet interface{} `json:"eval_set"`
+	MutationSet []interface{} `json:"mutation_set"`
+	EvalSet map[string]interface{} `json:"eval_set"`
 	MutationPackId NullableString `json:"mutation_pack_id,omitempty"`
 }
 
@@ -33,7 +33,7 @@ type _CampaignCreateRequest CampaignCreateRequest
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCampaignCreateRequest(name string, mutationSet interface{}, evalSet interface{}) *CampaignCreateRequest {
+func NewCampaignCreateRequest(name string, mutationSet []interface{}, evalSet map[string]interface{}) *CampaignCreateRequest {
 	this := CampaignCreateRequest{}
 	this.Name = name
 	this.MutationSet = mutationSet
@@ -74,10 +74,9 @@ func (o *CampaignCreateRequest) SetName(v string) {
 }
 
 // GetMutationSet returns the MutationSet field value
-// If the value is explicit nil, the zero value for interface{} will be returned
-func (o *CampaignCreateRequest) GetMutationSet() interface{} {
+func (o *CampaignCreateRequest) GetMutationSet() []interface{} {
 	if o == nil {
-		var ret interface{}
+		var ret []interface{}
 		return ret
 	}
 
@@ -86,24 +85,22 @@ func (o *CampaignCreateRequest) GetMutationSet() interface{} {
 
 // GetMutationSetOk returns a tuple with the MutationSet field value
 // and a boolean to check if the value has been set.
-// NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *CampaignCreateRequest) GetMutationSetOk() (*interface{}, bool) {
-	if o == nil || IsNil(o.MutationSet) {
+func (o *CampaignCreateRequest) GetMutationSetOk() ([]interface{}, bool) {
+	if o == nil {
 		return nil, false
 	}
-	return &o.MutationSet, true
+	return o.MutationSet, true
 }
 
 // SetMutationSet sets field value
-func (o *CampaignCreateRequest) SetMutationSet(v interface{}) {
+func (o *CampaignCreateRequest) SetMutationSet(v []interface{}) {
 	o.MutationSet = v
 }
 
 // GetEvalSet returns the EvalSet field value
-// If the value is explicit nil, the zero value for interface{} will be returned
-func (o *CampaignCreateRequest) GetEvalSet() interface{} {
+func (o *CampaignCreateRequest) GetEvalSet() map[string]interface{} {
 	if o == nil {
-		var ret interface{}
+		var ret map[string]interface{}
 		return ret
 	}
 
@@ -112,16 +109,15 @@ func (o *CampaignCreateRequest) GetEvalSet() interface{} {
 
 // GetEvalSetOk returns a tuple with the EvalSet field value
 // and a boolean to check if the value has been set.
-// NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *CampaignCreateRequest) GetEvalSetOk() (*interface{}, bool) {
-	if o == nil || IsNil(o.EvalSet) {
-		return nil, false
+func (o *CampaignCreateRequest) GetEvalSetOk() (map[string]interface{}, bool) {
+	if o == nil {
+		return map[string]interface{}{}, false
 	}
-	return &o.EvalSet, true
+	return o.EvalSet, true
 }
 
 // SetEvalSet sets field value
-func (o *CampaignCreateRequest) SetEvalSet(v interface{}) {
+func (o *CampaignCreateRequest) SetEvalSet(v map[string]interface{}) {
 	o.EvalSet = v
 }
 
@@ -178,12 +174,8 @@ func (o CampaignCreateRequest) MarshalJSON() ([]byte, error) {
 func (o CampaignCreateRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	toSerialize["name"] = o.Name
-	if o.MutationSet != nil {
-		toSerialize["mutation_set"] = o.MutationSet
-	}
-	if o.EvalSet != nil {
-		toSerialize["eval_set"] = o.EvalSet
-	}
+	toSerialize["mutation_set"] = o.MutationSet
+	toSerialize["eval_set"] = o.EvalSet
 	if o.MutationPackId.IsSet() {
 		toSerialize["mutation_pack_id"] = o.MutationPackId.Get()
 	}

@@ -463,7 +463,7 @@ import (
 )
 
 func main() {
-	campaignCreateRequest := *openapiclient.NewCampaignCreateRequest("Name_example", interface{}(123), interface{}(123)) // CampaignCreateRequest | 
+	campaignCreateRequest := *openapiclient.NewCampaignCreateRequest("Name_example", []interface{}{nil}, map[string]interface{}{"key": interface{}(123)}) // CampaignCreateRequest | 
 	xProjectId := "xProjectId_example" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
