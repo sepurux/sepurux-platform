@@ -1,8 +1,6 @@
 """Unit tests for _evaluate_attempt_checks — the three new checks plus legacy behaviour."""
 from __future__ import annotations
 
-import pytest
-
 from worker import _evaluate_attempt_checks
 
 
