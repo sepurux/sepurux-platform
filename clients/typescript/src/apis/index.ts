@@ -8,7 +8,6 @@ export * from './AuthApi';
 export * from './BillingApi';
 export * from './CampaignsApi';
 export * from './CiApi';
-export * from './ComplianceApi';
 export * from './CounterfactualsApi';
 export * from './DemoApi';
 export * from './HealthApi';

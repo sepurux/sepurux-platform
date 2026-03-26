@@ -22,7 +22,6 @@ export * from './CampaignMetadata';
 export * from './CampaignReliabilityResponse';
 export * from './CampaignRunPackRequest';
 export * from './CampaignRunPackResponse';
-export * from './ComplianceSummaryResponse';
 export * from './CounterfactualListItem';
 export * from './CounterfactualMetadata';
 export * from './CreditTransactionMetadata';
