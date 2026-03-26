@@ -6,7 +6,17 @@ from uuid import UUID
 
 from app.auth import TenantAuthContext, require_super_admin
 from app.db import get_db
-from app.models import AuditLog, Campaign, CreditTransaction, Failure, Project, Run, User
+from app.models import (
+    AuditLog,
+    Campaign,
+    CreditTransaction,
+    Failure,
+    PolicyEvent,
+    Project,
+    Run,
+    SecurityEvent,
+    User,
+)
 from app.schemas import (
     InternalAlertItem,
     InternalAlertNotificationResponse,
@@ -158,6 +168,28 @@ def get_internal_dashboard_overview(
         )
     )
 
+    security_blocks_24h = _coerce_int(
+        db.scalar(
+            select(func.count())
+            .select_from(SecurityEvent)
+            .where(
+                SecurityEvent.action == "block",
+                SecurityEvent.created_at >= failures_since,
+            )
+        )
+    )
+
+    policy_denies_24h = _coerce_int(
+        db.scalar(
+            select(func.count())
+            .select_from(PolicyEvent)
+            .where(
+                PolicyEvent.decision == "deny",
+                PolicyEvent.created_at >= failures_since,
+            )
+        )
+    )
+
     credits_used_raw = _coerce_int(
         db.scalar(
             select(func.coalesce(func.sum(CreditTransaction.amount), 0)).where(
@@ -173,6 +205,8 @@ def get_internal_dashboard_overview(
         failures_last_24h=failures_last_24h,
         credits_used=abs(credits_used_raw),
         system_health=_system_health_snapshot(),
+        security_blocks_24h=security_blocks_24h,
+        policy_denies_24h=policy_denies_24h,
     )
     create_audit_log(
         db,

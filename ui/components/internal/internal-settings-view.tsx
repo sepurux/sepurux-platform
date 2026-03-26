@@ -107,33 +107,40 @@ export function InternalSettingsView() {
       ) : null}
 
       {!loading && !error && flags ? (
-        <div className="space-y-4 rounded-lg border border-border/70 bg-card/70 p-4">
-          {toggleRows.map((item) => (
-            <label
-              key={item.key}
-              className="flex items-start justify-between gap-3 rounded-md border border-border/70 bg-background/40 px-3 py-3"
-            >
-              <div>
-                <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
+        <div className="space-y-3 rounded-lg border border-border/70 bg-card/70 p-4">
+          {toggleRows.map((item) => {
+            const enabled = Boolean(flags[item.key]);
+            return (
+              <div
+                key={item.key}
+                className="flex items-center justify-between gap-4 rounded-md border border-border/70 bg-background/40 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={enabled}
+                  onClick={() =>
+                    setFlags((current) =>
+                      current ? { ...current, [item.key]: !current[item.key] } : current
+                    )
+                  }
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                    enabled ? "bg-primary" : "bg-muted"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition-transform ${
+                      enabled ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
               </div>
-              <input
-                type="checkbox"
-                checked={Boolean(flags[item.key])}
-                onChange={(event) =>
-                  setFlags((current) =>
-                    current
-                      ? {
-                          ...current,
-                          [item.key]: event.target.checked,
-                        }
-                      : current
-                  )
-                }
-                className="mt-1 h-4 w-4 rounded border-border/70 bg-card accent-primary focus:ring-primary"
-              />
-            </label>
-          ))}
+            );
+          })}
 
           <div className="flex items-center gap-3">
             <button

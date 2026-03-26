@@ -109,9 +109,19 @@ export function InternalQueuesView() {
 
   return (
     <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="border-b border-border/70 pb-4">
-        <h1 className="text-2xl font-semibold text-primary">Queues</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Monitor running jobs, failed jobs, backlog, and worker health.</p>
+      <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-primary">Queues</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Monitor running jobs, failed jobs, backlog, and worker health.</p>
+        </div>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => { void loadQueues(); }}
+          className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/35 disabled:opacity-60"
+        >
+          Refresh
+        </button>
       </div>
 
       {loading ? <p className="text-sm text-muted-foreground">Loading queue state...</p> : null}
