@@ -39,7 +39,7 @@ from models import (
     Webhook,
 )
 from mutation_engine import apply_mutation_pack
-from policy.opa_client import OPAUnavailableError, evaluate_policy_with_opa
+from policy.opa_client import OPAResponseError, OPAUnavailableError, evaluate_policy_with_opa
 from policy_engine import (
     approval_token_field,
     evaluate_policy,
@@ -1160,7 +1160,8 @@ def _enforce_injection_firewall(
 
         raw_tool = event.get("tool")
         tool_name: str = raw_tool if isinstance(raw_tool, str) else "unknown"
-        zone = tool_zones.get(tool_name, "untrusted")
+        raw_zone = tool_zones.get(tool_name, "untrusted")
+        zone = raw_zone if raw_zone == "trusted" else "untrusted"
         text_blob = "\n".join(text_fields.values())
         detection = detect_prompt_injection(text_blob)
 
@@ -1423,6 +1424,13 @@ def execute_run(run_id: str) -> None:
                             blocked_failure_reason = "opa_unavailable"
                             blocked_error_type = "OPAUnavailableError"
                             blocked_error_message = "OPA policy decision service unavailable"
+                        except OPAResponseError as exc:
+                            policy_denies += 1
+                            event_decision = "deny"
+                            event_reason = f"opa response error: {exc}"
+                            blocked_failure_reason = "opa_response_error"
+                            blocked_error_type = "OPAResponseError"
+                            blocked_error_message = "OPA returned an invalid response"
                         else:
                             event_decision = opa_evaluation.decision
                             event_reason = opa_evaluation.reason
@@ -1453,11 +1461,15 @@ def execute_run(run_id: str) -> None:
                                 if not event_reason:
                                     event_reason = "allowed by OPA policy"
                     else:
-                        event_decision = "allow"
+                        policy_denies += 1
+                        event_decision = "deny"
                         event_reason = (
-                            f"policy engine '{policy_engine_name}' not recognized in worker; "
-                            "defaulting to allow"
+                            f"policy engine '{policy_engine_name}' not recognized; "
+                            "failing closed"
                         )
+                        blocked_failure_reason = "policy_engine_unknown"
+                        blocked_error_type = "PolicyEngineError"
+                        blocked_error_message = f"Unknown policy engine '{policy_engine_name}'"
 
                     pending_policy_events.append(
                         {

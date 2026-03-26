@@ -13,6 +13,8 @@ from app.models import (
     Campaign,
     GitHubIntegration,
     MutationPack,
+    PolicyPack,
+    PolicyPackVersion,
     Project,
     ReplayAttempt,
     Run,
@@ -718,3 +720,84 @@ def test_get_ci_run_posts_github_report_once_with_warning_and_failure_status(
         assert isinstance(reporting, dict)
         assert reporting.get("comment_posted") is True
         assert reporting.get("status_set") is True
+
+
+def test_ci_run_auto_applies_bootstrap_policy(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CI runs must auto-apply the default bootstrap policy pack when present."""
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    pack_id = uuid4()
+    version_id = uuid4()
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = _seed_trace_and_campaign(db, project_id=project_id)
+        pack = PolicyPack(
+            policy_pack_id=pack_id,
+            project_id=project_id,
+            name="trace.bootstrap.default",
+            engine="builtin",
+            policy={"rules": []},
+        )
+        db.add(pack)
+        db.flush()
+        version = PolicyPackVersion(
+            version_id=version_id,
+            policy_pack_id=pack_id,
+            version_number=1,
+            policy={"rules": []},
+        )
+        db.add(version)
+        db.flush()
+        pack.active_version_id = version_id
+        db.add(pack)
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+    with testing_session_local() as db:
+        row = db.scalar(select(Run).where(Run.run_id == run_id))
+        assert isinstance(row, Run)
+        assert row.policy_pack_id == pack_id
+        assert row.effective_policy_pack_version_id == version_id
+
+
+def test_ci_run_no_bootstrap_policy_leaves_policy_unset(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CI runs without a bootstrap policy pack leave policy fields null."""
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = _seed_trace_and_campaign(db, project_id=project_id)
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+    with testing_session_local() as db:
+        row = db.scalar(select(Run).where(Run.run_id == run_id))
+        assert isinstance(row, Run)
+        assert row.policy_pack_id is None
+        assert row.effective_policy_pack_version_id is None

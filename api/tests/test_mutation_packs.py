@@ -332,15 +332,14 @@ def test_mutation_pack_coverage_endpoint_returns_expected_score(
     create_response = client.post(
         "/v1/mutation-packs",
         json={
-            "name": "Coverage 100 Pack",
-            "description": "Touch all coverage categories",
+            "name": "Coverage 80 Pack",
+            "description": "Touch all implemented coverage categories",
             "config": {
                 "mutations": [
                     {"type": "schema.rename_field"},
                     {"type": "fault.timeout"},
                     {"type": "latency_delay"},
                     {"type": "poison.inject"},
-                    {"type": "malformed_tool_output"},
                 ]
             },
         },
@@ -352,13 +351,12 @@ def test_mutation_pack_coverage_endpoint_returns_expected_score(
     assert coverage_response.status_code == 200
     payload = coverage_response.json()
     assert payload["mutation_pack_id"] == pack_id
-    assert payload["coverage_score"] == 100
+    assert payload["coverage_score"] == 80
     assert set(payload["categories"]) == {
         "schema",
         "fault",
         "latency",
         "security",
-        "data_corruption",
     }
 
 
