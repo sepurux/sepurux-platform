@@ -1,8 +1,48 @@
 # Sepurux
 
-Reliability infrastructure for AI agents.
+[![CI](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/sepurux)](https://pypi.org/project/sepurux/)
+[![npm](https://img.shields.io/npm/v/@sepurux/recorder)](https://www.npmjs.com/package/@sepurux/recorder)
+[![License](https://img.shields.io/github/license/sepurux/sepurux-platform)](LICENSE)
 
-Sepurux replays agent workflows, injects failures, enforces safety policies, and blocks regressions before production.
+**Reliability infrastructure for AI agents.**
+
+Sepurux records agent traces, replays them under controlled fault injection, enforces safety policies, and gates deployments — so regressions are caught before they reach production.
+
+```python
+pip install sepurux
+```
+
+```python
+from sepurux import SepuruxClient
+from sepurux.integrations.openai import instrument_openai
+import openai
+
+client = SepuruxClient.from_env()
+
+with client.trace("refund_flow", {"ticket_id": "t-101"}, campaign_id="...") as trace:
+    ai = instrument_openai(openai.OpenAI(), recorder=trace)
+    response = ai.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Process refund for ticket t-101"}],
+    )
+
+print(trace.trace_id)   # upload trace
+print(trace.run_id)     # reliability run enqueued
+```
+
+### What it does
+
+| Feature | Description |
+|---|---|
+| **Trace recording** | Instrument any agent with the Python, TypeScript, or Go SDK in minutes |
+| **Mutation injection** | Replay traces under 10+ fault types (timeouts, schema renames, value corruptions) |
+| **Policy gates** | Block unsafe tool calls, enforce approval tokens, zone irreversible actions |
+| **CI/CD integration** | GitHub Action gates PRs on pass rate, unsafe count, and failure thresholds |
+| **Webhooks** | Receive signed HTTP notifications for `run.completed`, `ci.decision.*`, and more |
+| **Framework integrations** | Auto-instrument OpenAI and LangChain — no manual `model_step()` calls |
+
+---
 
 ## Architecture
 
