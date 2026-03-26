@@ -974,6 +974,19 @@ class AuditEventListItem(BaseModel):
     created_at: datetime
 
 
+class ComplianceSummaryResponse(BaseModel):
+    window_days: int
+    generated_at: datetime
+    audit_events_total: int
+    policy_events_total: int
+    security_events_total: int
+    policy_denies: int
+    security_blocks: int
+    security_sanitizations: int
+    top_policy_tools: list[ToolCount] = Field(default_factory=list)
+    top_security_tools: list[ToolCount] = Field(default_factory=list)
+
+
 class UserNotificationItem(BaseModel):
     notification_id: UUID
     tenant_id: UUID
