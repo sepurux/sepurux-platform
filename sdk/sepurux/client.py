@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import functools
 import os
 import time
 import warnings
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Coroutine, Iterator
 from contextlib import contextmanager
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, ParamSpec, TypeVar
@@ -404,6 +405,61 @@ class SepuruxClient:
             raise ValueError("campaign_id is required when mutation_pack is provided")
 
         def decorator(func: Callable[P, R]) -> Callable[P, R]:
+            if asyncio.iscoroutinefunction(func):
+                @functools.wraps(func)
+                async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+                    task_name = name or func.__name__
+                    task_input = {
+                        "function": func.__name__,
+                        "args": safe_json_value(list(args)),
+                        "kwargs": safe_json_value(dict(kwargs)),
+                    }
+                    recorder = ManagedTraceRecorder(
+                        task_name=task_name,
+                        task_input=task_input,
+                        source=source,
+                    )
+                    recorder.prompt(safe_json_value(task_input), name=task_name)
+                    recorder.model_step(
+                        "function.call",
+                        {"qualname": getattr(func, "__qualname__", func.__name__)},
+                    )
+                    try:
+                        result = await func(*args, **kwargs)  # type: ignore[misc]
+                    except Exception as exc:
+                        recorder.error(tool=func.__name__, message=str(exc))
+                        try:
+                            await asyncio.to_thread(
+                                self._finalize_trace,
+                                recorder,
+                                campaign_id=campaign_id,
+                                mutation_pack=mutation_pack,
+                            )
+                        except Exception as finalize_exc:
+                            recorder.upload_error = finalize_exc
+                        raise
+                    else:
+                        recorder.model_step(
+                            "function.return",
+                            {"ok": True},
+                            output=safe_json_value(result),
+                        )
+                        recorder.agent_output(safe_json_value(result), name=task_name)
+                        try:
+                            await asyncio.to_thread(
+                                self._finalize_trace,
+                                recorder,
+                                campaign_id=campaign_id,
+                                mutation_pack=mutation_pack,
+                            )
+                        except Exception as finalize_exc:
+                            recorder.upload_error = finalize_exc
+                            if raise_on_error:
+                                raise
+                        return result  # type: ignore[return-value]
+
+                return async_wrapper  # type: ignore[return-value]
+
             @functools.wraps(func)
             def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 task_name = name or func.__name__
