@@ -765,24 +765,85 @@ def _evaluate_attempt_checks(
     if not checks:
         return None
 
-    tool_result_event = _last_replay_tool_result_event(timeline_artifact)
-    if not isinstance(tool_result_event, dict):
-        return (
-            "replay_contract_invalid_response",
-            "Eval checks require a replay tool_result event, but none was found.",
-        )
-    result_obj = tool_result_event.get("result")
-    if not isinstance(result_obj, dict):
-        return (
-            "replay_contract_invalid_response",
-            "Eval checks require an object tool_result payload.",
-        )
+    raw_events = timeline_artifact.get("events")
+    events: list[dict[str, Any]] = [
+        e for e in raw_events if isinstance(e, dict)
+    ] if isinstance(raw_events, list) else []
+
+    # Lazily resolved — only fetched when a check that needs it is encountered.
+    _tool_result_fetched = False
+    _tool_result_event: dict[str, Any] | None = None
+    _result_obj: dict[str, Any] | None = None
 
     for check in checks:
+        # ------------------------------------------------------------------
+        # Checks that operate on the full event list (no tool_result needed)
+        # ------------------------------------------------------------------
+        if check == "no_unexpected_failures":
+            error_events = [e for e in events if e.get("type") == "error"]
+            if error_events:
+                first = error_events[0]
+                tool = first.get("tool") or "unknown"
+                err = first.get("error")
+                msg = (err.get("message") if isinstance(err, dict) else None) or "unknown error"
+                return (
+                    "unexpected_failure",
+                    f"Eval check 'no_unexpected_failures' failed: error event for tool '{tool}': {msg}.",
+                )
+            continue
+
+        if check.startswith("tool_was_called:"):
+            tool_name = check[len("tool_was_called:"):]
+            if not tool_name:
+                continue
+            called_tools = {e.get("tool") for e in events if e.get("type") == "tool_call"}
+            if tool_name not in called_tools:
+                return (
+                    "missing_tool_call",
+                    f"Eval check 'tool_was_called:{tool_name}' failed: tool '{tool_name}' was not called.",
+                )
+            continue
+
+        # ------------------------------------------------------------------
+        # Checks that need the last tool_result payload — resolve lazily
+        # ------------------------------------------------------------------
+        if not _tool_result_fetched:
+            _tool_result_event = _last_replay_tool_result_event(timeline_artifact)
+            _result_obj = (
+                _tool_result_event.get("result")
+                if isinstance(_tool_result_event, dict)
+                else None
+            )
+            if not isinstance(_result_obj, dict):
+                _result_obj = None
+            _tool_result_fetched = True
+
+        if not isinstance(_tool_result_event, dict):
+            return (
+                "replay_contract_invalid_response",
+                "Eval checks require a replay tool_result event, but none was found.",
+            )
+        if _result_obj is None:
+            return (
+                "replay_contract_invalid_response",
+                "Eval checks require an object tool_result payload.",
+            )
+
+        if check.startswith("output_contains:"):
+            field_name = check[len("output_contains:"):]
+            if not field_name:
+                continue
+            if field_name not in _result_obj:
+                return (
+                    "missing_field",
+                    f"Eval check 'output_contains:{field_name}' failed: field '{field_name}' not found in last tool result.",
+                )
+            continue
+
         if check == "status":
-            if "status" not in result_obj:
+            if "status" not in _result_obj:
                 return ("missing_field", "Eval check 'status' failed: missing 'status'.")
-            status_value = result_obj.get("status")
+            status_value = _result_obj.get("status")
             if not isinstance(status_value, str):
                 return (
                     "type_mismatch",
@@ -800,9 +861,9 @@ def _evaluate_attempt_checks(
             continue
 
         if check == "ok":
-            if "ok" not in result_obj:
+            if "ok" not in _result_obj:
                 return ("missing_field", "Eval check 'ok' failed: missing 'ok'.")
-            ok_value = result_obj.get("ok")
+            ok_value = _result_obj.get("ok")
             if not isinstance(ok_value, bool):
                 return ("type_mismatch", "Eval check 'ok' failed: ok must be boolean.")
             if ok_value is not True:

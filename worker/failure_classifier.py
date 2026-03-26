@@ -8,6 +8,7 @@ FAILURE_TYPES = frozenset(
         "prompt_injection",
         "tool_schema_error",
         "tool_timeout",
+        "auth_error",
         "json_parse_error",
         "policy_violation",
         "retry_loop",
@@ -24,6 +25,7 @@ SCHEMA_FAILURE_REASONS = frozenset(
 POLICY_FAILURE_REASONS = frozenset(
     {"policy_blocked", "policy_denied", "policy_requires_approval", "opa_unavailable"}
 )
+AUTH_FAILURE_REASONS = frozenset({"auth_failed", "auth_failure", "unauthorized"})
 JSON_FAILURE_REASONS = frozenset(
     {"json_decode_error", "json_parse_error", "replay_contract_invalid_response"}
 )
@@ -135,6 +137,14 @@ def classify_failure(
             failure_type="policy_violation",
             severity="high",
             description="A policy gate denied or blocked the replayed action.",
+            metadata=_base_metadata(step, result, latency_ms=latency_ms),
+        )
+
+    if failure_reason in AUTH_FAILURE_REASONS:
+        return FailureClassification(
+            failure_type="auth_error",
+            severity="high",
+            description="The workflow failed because a tool returned an authentication or authorization error.",
             metadata=_base_metadata(step, result, latency_ms=latency_ms),
         )
 
