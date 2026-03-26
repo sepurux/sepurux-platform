@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -453,6 +454,70 @@ def test_global_configure_and_traceable_use_default_client() -> None:
         recorder.model_step("classify", {"label": "bug"})
 
     assert capture.requests[-1].url.path == "/v1/traces"
+
+
+def test_async_traceable_decorator_records_and_uploads() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    @client.traceable(campaign_id="demo_campaign")
+    async def async_multiply(x: int, y: int) -> int:
+        await asyncio.sleep(0)
+        return x * y
+
+    result = asyncio.run(async_multiply(3, 4))
+
+    assert result == 12
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/traces",
+        "/v1/campaigns",
+        "/v1/runs",
+    ]
+    uploaded_trace = json.loads(capture.requests[0].content.decode())
+    assert uploaded_trace["events"][0]["type"] == "prompt"
+    assert uploaded_trace["events"][-1]["type"] == "agent_output"
+
+
+def test_async_traceable_records_error_on_exception() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    @client.traceable()
+    async def failing_task() -> str:
+        raise ValueError("something went wrong")
+
+    with pytest.raises(ValueError, match="something went wrong"):
+        asyncio.run(failing_task())
+
+    assert len(capture.requests) == 1
+    uploaded_trace = json.loads(capture.requests[0].content.decode())
+    failure_events = [e for e in uploaded_trace["events"] if e["type"] == "failure"]
+    assert len(failure_events) == 1
+    assert "something went wrong" in failure_events[0]["error"]["message"]
 
 
 def test_run_campaign_prefers_server_side_run_pack_when_requested() -> None:

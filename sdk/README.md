@@ -58,16 +58,27 @@ print(trace.run_id)
 
 ### `@traceable` decorator
 
+Works with both sync and `async def` functions:
+
 ```python
 from sepurux import SepuruxClient
 
 client = SepuruxClient.from_env()
 
+# Sync function
 @client.traceable(campaign_id="refund_reliability")
 def score_refund_risk(amount: int, currency: str) -> dict:
     return {"risk": "medium", "approve": amount < 10000, "currency": currency}
 
 result = score_refund_risk(4200, "usd")
+
+# Async function — same decorator, awaitable result
+@client.traceable(campaign_id="refund_reliability")
+async def fetch_risk_score(payment_id: str) -> dict:
+    data = await some_async_api(payment_id)
+    return {"risk": data["score"]}
+
+result = await fetch_risk_score("pay_123")
 ```
 
 ### Global configuration
