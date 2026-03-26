@@ -1453,11 +1453,15 @@ def execute_run(run_id: str) -> None:
                                 if not event_reason:
                                     event_reason = "allowed by OPA policy"
                     else:
-                        event_decision = "allow"
+                        policy_denies += 1
+                        event_decision = "deny"
                         event_reason = (
-                            f"policy engine '{policy_engine_name}' not recognized in worker; "
-                            "defaulting to allow"
+                            f"policy engine '{policy_engine_name}' not recognized; "
+                            "failing closed"
                         )
+                        blocked_failure_reason = "policy_engine_unknown"
+                        blocked_error_type = "PolicyEngineError"
+                        blocked_error_message = f"Unknown policy engine '{policy_engine_name}'"
 
                     pending_policy_events.append(
                         {
