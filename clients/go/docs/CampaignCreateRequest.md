@@ -5,15 +5,15 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Name** | **string** |  | 
-**MutationSet** | **interface{}** |  | 
-**EvalSet** | **interface{}** |  | 
+**MutationSet** | **[]interface{}** |  | 
+**EvalSet** | **map[string]interface{}** |  | 
 **MutationPackId** | Pointer to **NullableString** |  | [optional] 
 
 ## Methods
 
 ### NewCampaignCreateRequest
 
-`func NewCampaignCreateRequest(name string, mutationSet interface{}, evalSet interface{}, ) *CampaignCreateRequest`
+`func NewCampaignCreateRequest(name string, mutationSet []interface{}, evalSet map[string]interface{}, ) *CampaignCreateRequest`
 
 NewCampaignCreateRequest instantiates a new CampaignCreateRequest object
 This constructor will assign default values to properties that have it defined,
@@ -50,64 +50,44 @@ SetName sets Name field to given value.
 
 ### GetMutationSet
 
-`func (o *CampaignCreateRequest) GetMutationSet() interface{}`
+`func (o *CampaignCreateRequest) GetMutationSet() []interface{}`
 
 GetMutationSet returns the MutationSet field if non-nil, zero value otherwise.
 
 ### GetMutationSetOk
 
-`func (o *CampaignCreateRequest) GetMutationSetOk() (*interface{}, bool)`
+`func (o *CampaignCreateRequest) GetMutationSetOk() (*[]interface{}, bool)`
 
 GetMutationSetOk returns a tuple with the MutationSet field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetMutationSet
 
-`func (o *CampaignCreateRequest) SetMutationSet(v interface{})`
+`func (o *CampaignCreateRequest) SetMutationSet(v []interface{})`
 
 SetMutationSet sets MutationSet field to given value.
 
 
-### SetMutationSetNil
-
-`func (o *CampaignCreateRequest) SetMutationSetNil(b bool)`
-
- SetMutationSetNil sets the value for MutationSet to be an explicit nil
-
-### UnsetMutationSet
-`func (o *CampaignCreateRequest) UnsetMutationSet()`
-
-UnsetMutationSet ensures that no value is present for MutationSet, not even an explicit nil
 ### GetEvalSet
 
-`func (o *CampaignCreateRequest) GetEvalSet() interface{}`
+`func (o *CampaignCreateRequest) GetEvalSet() map[string]interface{}`
 
 GetEvalSet returns the EvalSet field if non-nil, zero value otherwise.
 
 ### GetEvalSetOk
 
-`func (o *CampaignCreateRequest) GetEvalSetOk() (*interface{}, bool)`
+`func (o *CampaignCreateRequest) GetEvalSetOk() (*map[string]interface{}, bool)`
 
 GetEvalSetOk returns a tuple with the EvalSet field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetEvalSet
 
-`func (o *CampaignCreateRequest) SetEvalSet(v interface{})`
+`func (o *CampaignCreateRequest) SetEvalSet(v map[string]interface{})`
 
 SetEvalSet sets EvalSet field to given value.
 
 
-### SetEvalSetNil
-
-`func (o *CampaignCreateRequest) SetEvalSetNil(b bool)`
-
- SetEvalSetNil sets the value for EvalSet to be an explicit nil
-
-### UnsetEvalSet
-`func (o *CampaignCreateRequest) UnsetEvalSet()`
-
-UnsetEvalSet ensures that no value is present for EvalSet, not even an explicit nil
 ### GetMutationPackId
 
 `func (o *CampaignCreateRequest) GetMutationPackId() string`

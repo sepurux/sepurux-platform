@@ -3942,15 +3942,22 @@ components:
     CampaignCreateRequest:
       example:
         mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
-        eval_set: ""
-        mutation_set: ""
+        eval_set:
+          key: ""
+        mutation_set:
+        - ""
+        - ""
         name: name
       properties:
         name:
           title: Name
           type: string
-        mutation_set: {}
-        eval_set: {}
+        mutation_set:
+          items: {}
+          type: array
+        eval_set:
+          additionalProperties: {}
+          title: Eval Set
         mutation_pack_id:
           format: uuid
           nullable: true

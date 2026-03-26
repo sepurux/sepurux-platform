@@ -27,16 +27,16 @@ export interface CampaignCreateRequest {
     name: string;
     /**
      * 
-     * @type {any}
+     * @type {Array<any>}
      * @memberof CampaignCreateRequest
      */
-    mutation_set: any | null;
+    mutation_set: Array<any>;
     /**
      * 
-     * @type {any}
+     * @type {{ [key: string]: any; }}
      * @memberof CampaignCreateRequest
      */
-    eval_set: any | null;
+    eval_set: { [key: string]: any; };
     /**
      * 
      * @type {string}
