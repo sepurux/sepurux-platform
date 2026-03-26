@@ -766,9 +766,9 @@ def _evaluate_attempt_checks(
         return None
 
     raw_events = timeline_artifact.get("events")
-    events: list[dict[str, Any]] = [
-        e for e in raw_events if isinstance(e, dict)
-    ] if isinstance(raw_events, list) else []
+    events: list[dict[str, Any]] = (
+        [e for e in raw_events if isinstance(e, dict)] if isinstance(raw_events, list) else []
+    )
 
     # Lazily resolved — only fetched when a check that needs it is encountered.
     _tool_result_fetched = False
@@ -793,7 +793,7 @@ def _evaluate_attempt_checks(
             continue
 
         if check.startswith("tool_was_called:"):
-            tool_name = check[len("tool_was_called:"):]
+            tool_name = check[len("tool_was_called:") :]
             if not tool_name:
                 continue
             called_tools = {e.get("tool") for e in events if e.get("type") == "tool_call"}
@@ -810,9 +810,7 @@ def _evaluate_attempt_checks(
         if not _tool_result_fetched:
             _tool_result_event = _last_replay_tool_result_event(timeline_artifact)
             _result_obj = (
-                _tool_result_event.get("result")
-                if isinstance(_tool_result_event, dict)
-                else None
+                _tool_result_event.get("result") if isinstance(_tool_result_event, dict) else None
             )
             if not isinstance(_result_obj, dict):
                 _result_obj = None
@@ -830,7 +828,7 @@ def _evaluate_attempt_checks(
             )
 
         if check.startswith("output_contains:"):
-            field_name = check[len("output_contains:"):]
+            field_name = check[len("output_contains:") :]
             if not field_name:
                 continue
             if field_name not in _result_obj:
