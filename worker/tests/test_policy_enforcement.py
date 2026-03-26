@@ -1068,3 +1068,86 @@ def test_unknown_policy_engine_fails_closed_and_records_deny_event(
     assert attempt.failure_reason == "policy_engine_unknown"
     assert policy_event.decision == "deny"
     assert "not_a_real_engine" in (policy_event.reason or "")
+
+
+def test_opa_4xx_response_fails_closed_and_records_policy_event(
+    worker_db_context: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OPA 4xx responses (OPAResponseError) must deny, not crash the run."""
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    policy_pack_id = uuid4()
+    run_id = uuid4()
+
+    def fake_opa_post(url: str, *, json: object, timeout: float) -> _FakeOPAResponse:
+        return _FakeOPAResponse(400, {"error": "bad request"})
+
+    monkeypatch.setattr("policy.opa_client.httpx.post", fake_opa_post)
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="OPA 4xx Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund-with-opa-4xx",
+                        "tool": "payments.refund",
+                        "args": {"order_id": "ord-400"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            PolicyPack(
+                policy_pack_id=policy_pack_id,
+                project_id=project_id,
+                name="OPA 4xx Pack",
+                engine="opa",
+                policy={
+                    "version": "0.1",
+                    "defaults": {"unknown_tools": "allow"},
+                    "approval": {"token_field": "confirmation_token"},
+                    "irreversible": {"tools": []},
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                policy_pack_id=policy_pack_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "failed"
+    assert attempt.failure_reason == "opa_response_error"
+    assert policy_event.decision == "deny"
+    assert "opa response error" in (policy_event.reason or "")
