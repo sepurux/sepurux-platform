@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, RefreshCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bot, Hammer, RefreshCcw, Wrench, Zap } from "lucide-react";
 
 import { api, type TraceMetadata, type TraceTimelineStep } from "@/lib/api";
 import { formatDurationMs, formatRelativeDate, shortId } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { resolveTraceSdkLabel } from "@/lib/trace-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -176,6 +175,51 @@ function ValidationStatusBadge({ status }: { status: string }) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
+// ---------------------------------------------------------------------------
+// Timeline
+// ---------------------------------------------------------------------------
+
+const STEP_TYPE_CONFIG: Record<string, { iconColor: string; dotBg: string; dotBorder: string; accentBorder: string }> = {
+  llm_call:     { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
+  model:        { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
+  agent_output: { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
+  tool_call:    { iconColor: "text-blue-400",        dotBg: "bg-blue-400/10",   dotBorder: "border-blue-400/40",   accentBorder: "border-l-blue-400/60" },
+  tool_result:  { iconColor: "text-teal-400",        dotBg: "bg-teal-400/10",   dotBorder: "border-teal-400/40",   accentBorder: "border-l-teal-400/60" },
+  mutation:     { iconColor: "text-amber-400",       dotBg: "bg-amber-400/10",  dotBorder: "border-amber-400/40",  accentBorder: "border-l-amber-400/60" },
+  failure:      { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },
+  error:        { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },
+  retry:        { iconColor: "text-orange-400",      dotBg: "bg-orange-400/10", dotBorder: "border-orange-400/40", accentBorder: "border-l-orange-400/60" },
+  prompt:       { iconColor: "text-muted-foreground", dotBg: "bg-muted/60",     dotBorder: "border-border/70",     accentBorder: "border-l-border/60" },
+};
+
+const DEFAULT_STEP_CONFIG = {
+  iconColor: "text-muted-foreground",
+  dotBg: "bg-muted/60",
+  dotBorder: "border-border/70",
+  accentBorder: "border-l-border/60",
+};
+
+function iconForStep(stepType: string) {
+  switch (stepType) {
+    case "llm_call":
+    case "model":
+    case "agent_output":
+    case "prompt":
+      return Bot;
+    case "tool_call":
+      return Hammer;
+    case "tool_result":
+      return Wrench;
+    case "mutation":
+      return Zap;
+    case "failure":
+    case "error":
+      return AlertTriangle;
+    default:
+      return Bot;
+  }
+}
+
 function TraceTimelinePanel({ timeline }: { timeline: TraceTimelineStep[] }) {
   return (
     <Card>
@@ -191,17 +235,25 @@ function TraceTimelinePanel({ timeline }: { timeline: TraceTimelineStep[] }) {
             No trace steps recorded yet.
           </div>
         ) : (
-          <div className="relative border-l-2 border-primary/20 pl-5 space-y-4">
-            {timeline.map((step) => {
+          <div className="space-y-3">
+            {timeline.map((step, index) => {
+              const Icon = iconForStep(step.step_type);
+              const cfg = STEP_TYPE_CONFIG[step.step_type] ?? DEFAULT_STEP_CONFIG;
               const source = typeof step.metadata?.source === "string" ? step.metadata.source : null;
               const runId = typeof step.metadata?.run_id === "string" ? step.metadata.run_id : null;
               const attemptId = typeof step.metadata?.attempt_id === "string" ? step.metadata.attempt_id : null;
-              const dotClass = stepDotClass(step.status);
               const hasPayload = step.input_payload != null || step.output_payload != null;
               return (
-                <div key={step.id} className="relative">
-                  <div className={cn("absolute -left-[1.625rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 bg-background", dotClass)} />
-                  <div className="rounded-lg border border-border bg-muted/20">
+                <div key={step.id} className="relative pl-10">
+                  {index < timeline.length - 1 ? (
+                    <div className="absolute left-[1.1rem] top-9 h-[calc(100%+0.25rem)] w-0.5 bg-border/50" />
+                  ) : null}
+                  {/* Step dot */}
+                  <div className={`absolute left-0 top-2 grid h-8 w-8 place-items-center rounded-full border ${cfg.dotBg} ${cfg.dotBorder} shadow-sm`}>
+                    <Icon className={`h-3.5 w-3.5 ${cfg.iconColor}`} />
+                  </div>
+                  {/* Step card */}
+                  <div className={`rounded-lg border border-border/60 border-l-2 ${cfg.accentBorder} bg-card/60`}>
                     {/* Header row */}
                     <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -288,11 +340,4 @@ function variantForStatus(status: string): "default" | "success" | "warning" | "
   if (normalized === "retry") return "warning";
   if (normalized === "error" || normalized === "timeout") return "danger";
   return "outline";
-}
-
-function stepDotClass(status: string) {
-  const normalized = status.toLowerCase();
-  if (normalized === "success") return "border-primary bg-primary/20";
-  if (normalized === "error" || normalized === "timeout" || normalized === "failure") return "border-rose-400 bg-rose-400/20";
-  return "border-border bg-muted/50";
 }
