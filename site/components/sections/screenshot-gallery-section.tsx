@@ -1,12 +1,31 @@
 // site/components/sections/screenshot-gallery-section.tsx
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 const screenshots = [
-  { title: "Dashboard", src: "/images/dashboard.png" },
-  { title: "Trace", src: "/images/trace.png" },
-  { title: "Report", src: "/images/report.png" },
+  {
+    title: "Dashboard",
+    src: "/images/dashboard.png",
+    alt: "Sepurux dashboard showing agent trace replay and mutation timeline",
+    width: 1859,
+    height: 964,
+  },
+  {
+    title: "Trace",
+    src: "/images/trace.png",
+    alt: "Sepurux trace view with prompt, tool call, and breakpoint inspection",
+    width: 3016,
+    height: 1620,
+  },
+  {
+    title: "Report",
+    src: "/images/report.png",
+    alt: "Sepurux reliability score report summarizing agent failure analysis",
+    width: 3022,
+    height: 1618,
+  },
 ];
 
 export function ScreenshotGallerySection() {
@@ -32,7 +51,13 @@ export function ScreenshotGallerySection() {
             className="overflow-hidden rounded-[28px] bg-black ring-1 ring-white/[0.06]"
             style={{ boxShadow: "0 30px 80px rgba(0,0,0,0.3)" }}
           >
-            <img src={screenshots[0].src} alt={screenshots[0].title} className="h-full w-full object-cover" />
+            <Image
+              src={screenshots[0].src}
+              alt={screenshots[0].alt}
+              width={screenshots[0].width}
+              height={screenshots[0].height}
+              className="h-full w-full object-cover"
+            />
           </motion.div>
 
           <div className="grid gap-5">
@@ -46,7 +71,13 @@ export function ScreenshotGallerySection() {
                 className="overflow-hidden rounded-[28px] bg-black ring-1 ring-white/[0.06]"
                 style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.24)" }}
               >
-                <img src={shot.src} alt={shot.title} className="h-full w-full object-cover" />
+                <Image
+                  src={shot.src}
+                  alt={shot.alt}
+                  width={shot.width}
+                  height={shot.height}
+                  className="h-full w-full object-cover"
+                />
               </motion.div>
             ))}
           </div>

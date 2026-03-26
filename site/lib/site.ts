@@ -11,10 +11,10 @@ export type PricingTier = "starter" | "team" | "enterprise";
 export const siteConfig = {
   name: "Sepurux",
   description:
-    "Reliability infrastructure for AI agents. Replay workflows, inject failures, enforce policies, and block regressions before production.",
+    "Sepurux is the chaos engineering platform for AI agents. Inject failures, replay traces, and enforce reliability policies before your agents hit production.",
   url: process.env.NEXT_PUBLIC_SITE_URL || defaultSiteUrl,
   appUrl: process.env.NEXT_PUBLIC_APP_URL || defaultAppUrl,
-  founderEmail: process.env.NEXT_PUBLIC_FOUNDER_EMAIL || "felix.sarpong@supurux.com",
+  founderEmail: process.env.NEXT_PUBLIC_FOUNDER_EMAIL || "felix.sarpong@sepurux.com",
   founderPhone: process.env.NEXT_PUBLIC_FOUNDER_PHONE || "+16055853783",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@sepurux.com",
   linkedinUrl: process.env.NEXT_PUBLIC_LINKEDIN_URL || "https://www.linkedin.com/company/sepurux/",
@@ -23,7 +23,7 @@ export const siteConfig = {
   twitterUrl: process.env.NEXT_PUBLIC_TWITTER_URL || "https://x.com/sepurux",
   twitterHandle: process.env.NEXT_PUBLIC_TWITTER_HANDLE || "@sepurux",
   logo: `/logo.png?v=${siteAssetVersion}`,
-  ogImage: `/logo.png?v=${siteAssetVersion}`,
+  ogImage: `/og-image.png`,
 };
 
 export function buildAppAuthHref({

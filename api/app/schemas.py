@@ -36,6 +36,25 @@ class TraceTimelineStep(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class TraceBootstrapCampaign(BaseModel):
+    campaign_id: UUID
+    name: str
+    mutation_pack_id: UUID
+    mutation_pack_name: str
+    created: bool = False
+
+
+class TraceBootstrapResponse(BaseModel):
+    trace_id: UUID
+    tools_discovered: list[str] = Field(default_factory=list)
+    tool_zones_created: int = 0
+    tool_zones_updated: int = 0
+    policy_pack_id: UUID | None = None
+    policy_pack_name: str | None = None
+    policy_pack_created: bool = False
+    campaigns: list[TraceBootstrapCampaign] = Field(default_factory=list)
+
+
 class CampaignCreateRequest(BaseModel):
     name: str
     mutation_set: Any
@@ -193,6 +212,8 @@ class CIRunThresholds(BaseModel):
     max_unsafe: int = Field(ge=0)
     max_failures: int | None = Field(default=None, ge=0)
     min_reliability_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    min_mutation_categories: int | None = Field(default=None, ge=1, le=5)
+    required_mutation_categories: list[str] | None = None
 
 
 class CIRunCreateRequest(BaseModel):
@@ -215,6 +236,8 @@ class CIRunStatusResponse(BaseModel):
     unsafe_attempts: int
     failures: int
     top_failing_tools: list[ToolCount]
+    mutation_categories: list[str] = Field(default_factory=list)
+    mutation_coverage_score: int | None = None
     dashboard_url: str
 
 
@@ -719,6 +742,59 @@ class InternalFeatureFlagsUpdate(BaseModel):
     enable_billing: bool
 
 
+class InternalTenantControls(BaseModel):
+    tenant_id: UUID
+    runs_paused: bool
+    workspace_creation_locked: bool
+    updated_by: str | None = None
+    reason: str | None = None
+    updated_at: datetime
+
+
+class InternalTenantControlsUpdateRequest(BaseModel):
+    runs_paused: bool | None = None
+    workspace_creation_locked: bool | None = None
+    reason: str | None = Field(default=None, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+    @field_validator("workspace_creation_locked", mode="before")
+    @classmethod
+    def require_at_least_one_toggle(cls, value: bool | None, info) -> bool | None:
+        data = info.data if hasattr(info, "data") and isinstance(info.data, dict) else {}
+        runs_paused = data.get("runs_paused")
+        if runs_paused is None and value is None:
+            raise ValueError(
+                "At least one control value must be provided "
+                "(runs_paused or workspace_creation_locked)."
+            )
+        return value
+
+
+class InternalTenantApiKeyRevokeRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+
+class InternalTenantApiKeyRevokeResponse(BaseModel):
+    tenant_id: UUID
+    revoked_count: int
+    controls: InternalTenantControls
+
+
 class SubscriptionPlanMetadata(BaseModel):
     plan_id: UUID
     name: str
@@ -812,6 +888,7 @@ class PolicyPackMetadata(BaseModel):
     name: str
     engine: str
     policy: Any
+    is_archived: bool = False
     active_version_id: UUID | None = None
     active_version_number: int | None = None
     created_at: datetime

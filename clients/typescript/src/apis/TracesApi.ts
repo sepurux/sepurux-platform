@@ -16,12 +16,15 @@
 import * as runtime from '../runtime';
 import type {
   HTTPValidationError,
+  TraceBootstrapResponse,
   TraceMetadata,
   TraceTimelineStep,
 } from '../models/index';
 import {
     HTTPValidationErrorFromJSON,
     HTTPValidationErrorToJSON,
+    TraceBootstrapResponseFromJSON,
+    TraceBootstrapResponseToJSON,
     TraceMetadataFromJSON,
     TraceMetadataToJSON,
     TraceTimelineStepFromJSON,
@@ -42,6 +45,11 @@ export interface GetTraceTimelineV1TracesTraceIdTimelineGetRequest {
 export interface GetTracesV1TracesGetRequest {
     limit?: number;
     offset?: number;
+    xProjectId?: string | null;
+}
+
+export interface PostTraceBootstrapV1TracesTraceIdBootstrapPostRequest {
+    traceId: string;
     xProjectId?: string | null;
 }
 
@@ -168,6 +176,43 @@ export class TracesApi extends runtime.BaseAPI {
      */
     async getTracesV1TracesGet(requestParameters: GetTracesV1TracesGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<TraceMetadata>> {
         const response = await this.getTracesV1TracesGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Post Trace Bootstrap
+     */
+    async postTraceBootstrapV1TracesTraceIdBootstrapPostRaw(requestParameters: PostTraceBootstrapV1TracesTraceIdBootstrapPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TraceBootstrapResponse>> {
+        if (requestParameters['traceId'] == null) {
+            throw new runtime.RequiredError(
+                'traceId',
+                'Required parameter "traceId" was null or undefined when calling postTraceBootstrapV1TracesTraceIdBootstrapPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xProjectId'] != null) {
+            headerParameters['X-Project-Id'] = String(requestParameters['xProjectId']);
+        }
+
+        const response = await this.request({
+            path: `/v1/traces/{trace_id}/bootstrap`.replace(`{${"trace_id"}}`, encodeURIComponent(String(requestParameters['traceId']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TraceBootstrapResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Post Trace Bootstrap
+     */
+    async postTraceBootstrapV1TracesTraceIdBootstrapPost(requestParameters: PostTraceBootstrapV1TracesTraceIdBootstrapPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TraceBootstrapResponse> {
+        const response = await this.postTraceBootstrapV1TracesTraceIdBootstrapPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

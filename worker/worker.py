@@ -269,6 +269,132 @@ def _extract_policy_inputs(mutation: Any) -> tuple[str, dict[str, Any], int | No
     return tool_name, merged_args, index
 
 
+def _template_auto_confirmation_enabled(config: dict[str, Any]) -> bool:
+    explicit = config.get("auto_provide_confirmation_token")
+    if isinstance(explicit, bool):
+        return explicit
+    if isinstance(explicit, str):
+        normalized = explicit.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+
+    # Backward compatibility for templates created before explicit flag support.
+    target_tool = config.get("target_tool")
+    source_attempt_id = config.get("source_attempt_id")
+    policy_obj = config.get("policy")
+    return (
+        isinstance(target_tool, str)
+        and bool(target_tool.strip())
+        and isinstance(source_attempt_id, str)
+        and bool(source_attempt_id.strip())
+        and isinstance(policy_obj, dict)
+        and isinstance(policy_obj.get("approval"), dict)
+    )
+
+
+def _collect_template_confirmation_overrides(
+    templates: list[HardeningTemplate],
+) -> list[tuple[str, str, str]]:
+    overrides: list[tuple[str, str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for template in templates:
+        if template.type != "policy_pack":
+            continue
+        config = _template_config_dict(template)
+        if not _template_auto_confirmation_enabled(config):
+            continue
+
+        policy_obj = config.get("policy")
+        token_field = "confirmation_token"
+        if isinstance(policy_obj, dict):
+            approval_obj = policy_obj.get("approval")
+            if isinstance(approval_obj, dict):
+                candidate_field = approval_obj.get("token_field")
+                if isinstance(candidate_field, str) and candidate_field.strip():
+                    token_field = candidate_field.strip()
+
+        token_value_obj = config.get("confirmation_token_value")
+        token_value = (
+            token_value_obj.strip()
+            if isinstance(token_value_obj, str) and token_value_obj.strip()
+            else "template-auto-confirmation-token"
+        )
+
+        tools: list[str] = []
+        target_tool_obj = config.get("target_tool")
+        if isinstance(target_tool_obj, str) and target_tool_obj.strip():
+            tools.append(target_tool_obj.strip())
+        if isinstance(policy_obj, dict):
+            irreversible_obj = policy_obj.get("irreversible")
+            if isinstance(irreversible_obj, dict):
+                tools_obj = irreversible_obj.get("tools")
+                if isinstance(tools_obj, list):
+                    for tool_obj in tools_obj:
+                        if isinstance(tool_obj, str) and tool_obj.strip():
+                            tools.append(tool_obj.strip())
+
+        for tool_name in tools:
+            dedupe_key = (tool_name, token_field)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            overrides.append((tool_name, token_field, token_value))
+
+    return overrides
+
+
+def _apply_template_confirmation_overrides(
+    mutation: Any,
+    *,
+    overrides: list[tuple[str, str, str]],
+) -> Any:
+    if not overrides or not isinstance(mutation, dict):
+        return mutation
+
+    tool_name = _mutation_tool_name(mutation)
+    relevant = [entry for entry in overrides if entry[0] == tool_name]
+    if not relevant:
+        return mutation
+
+    mutation_obj = dict(mutation)
+    merged_args = dict(_mutation_tool_args(mutation_obj))
+    event_obj = mutation_obj.get("event")
+    event_copy = dict(event_obj) if isinstance(event_obj, dict) else None
+    event_args_copy: dict[str, Any] | None = None
+    if event_copy is not None:
+        event_args_obj = event_copy.get("args")
+        if isinstance(event_args_obj, dict):
+            event_args_copy = dict(event_args_obj)
+
+    changed = False
+    for _, token_field, token_value in relevant:
+        if not token_field:
+            continue
+        if token_field not in merged_args or not merged_args[token_field]:
+            merged_args[token_field] = token_value
+            changed = True
+        if token_field not in mutation_obj or not mutation_obj[token_field]:
+            mutation_obj[token_field] = token_value
+            changed = True
+        if event_args_copy is not None and (
+            token_field not in event_args_copy or not event_args_copy[token_field]
+        ):
+            event_args_copy[token_field] = token_value
+            changed = True
+
+    if not changed:
+        return mutation
+
+    mutation_obj["args"] = merged_args
+    if event_copy is not None and event_args_copy is not None:
+        event_copy["args"] = event_args_copy
+        mutation_obj["event"] = event_copy
+    return mutation_obj
+
+
 def _build_policy_event_input(
     *,
     tool_name: str,
@@ -587,10 +713,240 @@ def _campaign_attempt_repeats(campaign: Campaign) -> int:
     if isinstance(raw_attempts, bool):
         return 1
     if isinstance(raw_attempts, int):
-        return max(1, raw_attempts)
+        return max(1, min(raw_attempts, 50))
     if isinstance(raw_attempts, float):
-        return max(1, int(raw_attempts))
+        return max(1, min(int(raw_attempts), 50))
     return 1
+
+
+def _campaign_eval_checks(campaign: Campaign) -> list[str]:
+    eval_set = campaign.eval_set if isinstance(campaign.eval_set, dict) else {}
+    raw_checks = eval_set.get("checks")
+    if not isinstance(raw_checks, list):
+        return []
+    checks: list[str] = []
+    for item in raw_checks:
+        if not isinstance(item, str):
+            continue
+        normalized = item.strip()
+        if normalized:
+            checks.append(normalized)
+    return checks
+
+
+def _last_replay_tool_result_event(
+    timeline_artifact: dict[str, Any],
+) -> dict[str, Any] | None:
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        return None
+    for event in reversed(events):
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "tool_result":
+            continue
+        tool_name = event.get("tool")
+        if not isinstance(tool_name, str):
+            continue
+        if tool_name in {"trace.load", "campaign.load"}:
+            continue
+        result_obj = event.get("result")
+        if not isinstance(result_obj, dict):
+            continue
+        return event
+    return None
+
+
+def _evaluate_attempt_checks(
+    *,
+    checks: list[str],
+    timeline_artifact: dict[str, Any],
+) -> tuple[str, str] | None:
+    if not checks:
+        return None
+
+    raw_events = timeline_artifact.get("events")
+    events: list[dict[str, Any]] = (
+        [e for e in raw_events if isinstance(e, dict)] if isinstance(raw_events, list) else []
+    )
+
+    # Lazily resolved — only fetched when a check that needs it is encountered.
+    _tool_result_fetched = False
+    _tool_result_event: dict[str, Any] | None = None
+    _result_obj: dict[str, Any] | None = None
+
+    for check in checks:
+        # ------------------------------------------------------------------
+        # Checks that operate on the full event list (no tool_result needed)
+        # ------------------------------------------------------------------
+        if check == "no_unexpected_failures":
+            error_events = [e for e in events if e.get("type") == "error"]
+            if error_events:
+                first = error_events[0]
+                tool = first.get("tool") or "unknown"
+                err = first.get("error")
+                msg = (err.get("message") if isinstance(err, dict) else None) or "unknown error"
+                return (
+                    "unexpected_failure",
+                    f"Eval check 'no_unexpected_failures' failed: error event for tool '{tool}': {msg}.",
+                )
+            continue
+
+        if check.startswith("tool_was_called:"):
+            tool_name = check[len("tool_was_called:") :]
+            if not tool_name:
+                continue
+            called_tools = {e.get("tool") for e in events if e.get("type") == "tool_call"}
+            if tool_name not in called_tools:
+                return (
+                    "missing_tool_call",
+                    f"Eval check 'tool_was_called:{tool_name}' failed: tool '{tool_name}' was not called.",
+                )
+            continue
+
+        # ------------------------------------------------------------------
+        # Checks that need the last tool_result payload — resolve lazily
+        # ------------------------------------------------------------------
+        if not _tool_result_fetched:
+            _tool_result_event = _last_replay_tool_result_event(timeline_artifact)
+            _result_obj = (
+                _tool_result_event.get("result") if isinstance(_tool_result_event, dict) else None
+            )
+            if not isinstance(_result_obj, dict):
+                _result_obj = None
+            _tool_result_fetched = True
+
+        if not isinstance(_tool_result_event, dict):
+            return (
+                "replay_contract_invalid_response",
+                "Eval checks require a replay tool_result event, but none was found.",
+            )
+        if _result_obj is None:
+            return (
+                "replay_contract_invalid_response",
+                "Eval checks require an object tool_result payload.",
+            )
+
+        if check.startswith("output_contains:"):
+            field_name = check[len("output_contains:") :]
+            if not field_name:
+                continue
+            if field_name not in _result_obj:
+                return (
+                    "missing_field",
+                    f"Eval check 'output_contains:{field_name}' failed: field '{field_name}' not found in last tool result.",
+                )
+            continue
+
+        if check == "status":
+            if "status" not in _result_obj:
+                return ("missing_field", "Eval check 'status' failed: missing 'status'.")
+            status_value = _result_obj.get("status")
+            if not isinstance(status_value, str):
+                return (
+                    "type_mismatch",
+                    "Eval check 'status' failed: status must be a string.",
+                )
+            if status_value != "replayed":
+                return (
+                    "schema_mismatch",
+                    (
+                        "Eval check 'status' failed: expected "
+                        "'replayed' but received "
+                        f"'{status_value}'."
+                    ),
+                )
+            continue
+
+        if check == "ok":
+            if "ok" not in _result_obj:
+                return ("missing_field", "Eval check 'ok' failed: missing 'ok'.")
+            ok_value = _result_obj.get("ok")
+            if not isinstance(ok_value, bool):
+                return ("type_mismatch", "Eval check 'ok' failed: ok must be boolean.")
+            if ok_value is not True:
+                return ("schema_mismatch", "Eval check 'ok' failed: expected ok=true.")
+            continue
+
+    return None
+
+
+def _apply_eval_checks_to_attempt(
+    *,
+    checks: list[str],
+    result: str,
+    failure_reason: str | None,
+    first_failure_event_index: int | None,
+    first_failure_tool: str | None,
+    timeline_artifact: dict[str, Any],
+) -> tuple[str, str | None, int | None, str | None, dict[str, Any]]:
+    if result != "passed":
+        return (
+            result,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+            timeline_artifact,
+        )
+    check_failure = _evaluate_attempt_checks(
+        checks=checks,
+        timeline_artifact=timeline_artifact,
+    )
+    if check_failure is None:
+        return (
+            result,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+            timeline_artifact,
+        )
+
+    failed_reason, failed_message = check_failure
+    tool_result_event = _last_replay_tool_result_event(timeline_artifact)
+    failure_tool = "replay.execute"
+    failure_event_index: int | None = None
+    if isinstance(tool_result_event, dict):
+        tool_name = tool_result_event.get("tool")
+        if isinstance(tool_name, str) and tool_name:
+            failure_tool = tool_name
+        event_index = tool_result_event.get("index")
+        if isinstance(event_index, int):
+            failure_event_index = event_index
+
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        events = []
+        timeline_artifact["events"] = events
+    max_index = _max_timeline_event_index(events)
+    error_event_index = max_index + 1 if max_index >= 0 else 0
+    events.append(
+        {
+            "index": error_event_index,
+            "type": "error",
+            "tool": failure_tool,
+            "error": {
+                "type": "EvalCheckFailedError",
+                "code": failed_reason,
+                "message": failed_message,
+            },
+        }
+    )
+
+    timeline_artifact["first_failure"] = {
+        "event_index": (
+            failure_event_index if failure_event_index is not None else error_event_index
+        ),
+        "tool": failure_tool,
+        "reason": failed_reason,
+    }
+
+    return (
+        "failed",
+        failed_reason,
+        failure_event_index if failure_event_index is not None else error_event_index,
+        failure_tool,
+        timeline_artifact,
+    )
 
 
 def _select_applied_mutation(
@@ -945,6 +1301,7 @@ def execute_run(run_id: str) -> None:
                     policy_pack = policy_override
                     policy_pack_version = policy_override_version
 
+        template_confirmation_overrides = _collect_template_confirmation_overrides(templates)
         policy_document: dict[str, Any] | None = None
         policy_engine_name = "builtin"
         if policy_pack is not None and isinstance(policy_pack_version, PolicyPackVersion):
@@ -975,6 +1332,7 @@ def execute_run(run_id: str) -> None:
 
         baseline_mutations = iter_mutations(campaign.mutation_set)
         attempt_repeats = _campaign_attempt_repeats(campaign)
+        eval_checks = _campaign_eval_checks(campaign)
         total_attempts = len(baseline_mutations) * attempt_repeats
         passed_count = 0
         failed_count = 0
@@ -992,10 +1350,15 @@ def execute_run(run_id: str) -> None:
         for baseline_index, mutation in enumerate(baseline_mutations):
             for repeat_index in range(attempt_repeats):
                 attempt_id = uuid4()
-                mutation_for_replay = mutation
+                mutation_for_replay = _apply_template_confirmation_overrides(
+                    mutation,
+                    overrides=template_confirmation_overrides,
+                )
                 pending_policy_events: list[dict[str, Any]] = []
                 if isinstance(policy_document, dict):
-                    tool_name, policy_args, event_index = _extract_policy_inputs(mutation)
+                    tool_name, policy_args, event_index = _extract_policy_inputs(
+                        mutation_for_replay
+                    )
                     _, commit_like = normalize_action(tool_name, policy_args)
                     policy_input = _build_policy_event_input(
                         tool_name=tool_name,
@@ -1108,7 +1471,7 @@ def execute_run(run_id: str) -> None:
                     )
                     if blocked_failure_reason is not None:
                         mutation_for_replay = _policy_blocked_mutation(
-                            mutation,
+                            mutation_for_replay,
                             failure_reason=blocked_failure_reason,
                             error_type=blocked_error_type,
                             error_message=blocked_error_message,
@@ -1143,7 +1506,7 @@ def execute_run(run_id: str) -> None:
                     mutation_trace = mutation_result.mutation_trace
                     timeline_artifact = mutation_result.timeline_artifact
 
-                    if mutation_result.forced_failure_reason is not None:
+                    if result == "passed" and mutation_result.forced_failure_reason is not None:
                         result = "failed"
                         failure_reason = mutation_result.forced_failure_reason
                         first_failure_event_index = mutation_result.first_failure_event_index
@@ -1164,7 +1527,7 @@ def execute_run(run_id: str) -> None:
                 injection_blocks += attempt_injection_blocks
                 injection_sanitizations += attempt_injection_sanitizations
 
-                if injection_failure_reason is not None:
+                if result == "passed" and injection_failure_reason is not None:
                     result = "failed"
                     failure_reason = injection_failure_reason
                     first_failure_event_index = injection_failure_event_index
@@ -1173,6 +1536,20 @@ def execute_run(run_id: str) -> None:
                 timeline_artifact = _apply_sanitizer_to_timeline(
                     timeline_artifact,
                     sanitizer_config,
+                )
+                (
+                    result,
+                    failure_reason,
+                    first_failure_event_index,
+                    first_failure_tool,
+                    timeline_artifact,
+                ) = _apply_eval_checks_to_attempt(
+                    checks=eval_checks,
+                    result=result,
+                    failure_reason=failure_reason,
+                    first_failure_event_index=first_failure_event_index,
+                    first_failure_tool=first_failure_tool,
+                    timeline_artifact=timeline_artifact,
                 )
 
                 artifact_key = f"runs/{run.run_id}/attempts/{attempt_id}.timeline.json"

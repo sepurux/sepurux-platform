@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bot, RefreshCcw, RotateCcw, Sparkles, Wrench, ShieldAlert, MessageSquareText, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bot, Hammer, RefreshCcw, Wrench, Zap } from "lucide-react";
 
 import { api, type TraceMetadata, type TraceTimelineStep } from "@/lib/api";
 import { formatDurationMs, formatRelativeDate, shortId } from "@/lib/format";
@@ -86,20 +86,25 @@ export function TraceDetailView({ traceId }: { traceId: string }) {
               <CardTitle>Metadata</CardTitle>
               <CardDescription>Trace identity, source, and storage reference.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <MetadataRow label="Trace ID" value={state.trace.trace_id} mono />
-              <MetadataRow label="Task / Agent" value={state.trace.task_name ?? "--"} />
-              <MetadataRow label="Source" value={state.trace.source} />
-              <MetadataRow label="Trace Version" value={state.trace.trace_version} />
-              <MetadataRow label="SDK Metadata" value={resolveTraceSdkLabel(state.trace)} mono />
-              <div className="grid gap-1 sm:grid-cols-[12rem_1fr] sm:items-start">
-                <span className="text-muted-foreground">Validation</span>
-                <div>
-                  <ValidationStatusBadge status={state.trace.validation_status} />
-                </div>
-              </div>
-              <MetadataRow label="S3 Key" value={state.trace.s3_key} mono />
-              <MetadataRow label="Created" value={formatRelativeDate(state.trace.created_at)} />
+            <CardContent>
+              <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2.5 text-sm">
+                <dt className="text-muted-foreground">Trace ID</dt>
+                <dd className="font-mono text-xs text-foreground">{state.trace.trace_id}</dd>
+                <dt className="text-muted-foreground">Task / Agent</dt>
+                <dd className="text-teal">{state.trace.task_name ?? "--"}</dd>
+                <dt className="text-muted-foreground">Source</dt>
+                <dd className="text-foreground">{state.trace.source}</dd>
+                <dt className="text-muted-foreground">Trace Version</dt>
+                <dd className="text-foreground">{state.trace.trace_version}</dd>
+                <dt className="text-muted-foreground">SDK Metadata</dt>
+                <dd className="font-mono text-xs text-foreground">{resolveTraceSdkLabel(state.trace)}</dd>
+                <dt className="text-muted-foreground">Validation</dt>
+                <dd><ValidationStatusBadge status={state.trace.validation_status} /></dd>
+                <dt className="text-muted-foreground">S3 Key</dt>
+                <dd className="font-mono text-xs text-foreground">{state.trace.s3_key}</dd>
+                <dt className="text-muted-foreground">Created</dt>
+                <dd className="text-foreground">{formatRelativeDate(state.trace.created_at)}</dd>
+              </dl>
             </CardContent>
           </Card>
 
@@ -170,21 +175,49 @@ function ValidationStatusBadge({ status }: { status: string }) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
-function MetadataRow({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="grid gap-1 sm:grid-cols-[12rem_1fr] sm:items-start">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={mono ? "font-mono text-xs text-foreground" : "text-foreground"}>{value}</span>
-    </div>
-  );
+// ---------------------------------------------------------------------------
+// Timeline
+// ---------------------------------------------------------------------------
+
+const STEP_TYPE_CONFIG: Record<string, { iconColor: string; dotBg: string; dotBorder: string; accentBorder: string }> = {
+  llm_call:     { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
+  model:        { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
+  agent_output: { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
+  tool_call:    { iconColor: "text-blue-400",        dotBg: "bg-blue-400/10",   dotBorder: "border-blue-400/40",   accentBorder: "border-l-blue-400/60" },
+  tool_result:  { iconColor: "text-teal-400",        dotBg: "bg-teal-400/10",   dotBorder: "border-teal-400/40",   accentBorder: "border-l-teal-400/60" },
+  mutation:     { iconColor: "text-amber-400",       dotBg: "bg-amber-400/10",  dotBorder: "border-amber-400/40",  accentBorder: "border-l-amber-400/60" },
+  failure:      { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },
+  error:        { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },
+  retry:        { iconColor: "text-orange-400",      dotBg: "bg-orange-400/10", dotBorder: "border-orange-400/40", accentBorder: "border-l-orange-400/60" },
+  prompt:       { iconColor: "text-muted-foreground", dotBg: "bg-muted/60",     dotBorder: "border-border/70",     accentBorder: "border-l-border/60" },
+};
+
+const DEFAULT_STEP_CONFIG = {
+  iconColor: "text-muted-foreground",
+  dotBg: "bg-muted/60",
+  dotBorder: "border-border/70",
+  accentBorder: "border-l-border/60",
+};
+
+function iconForStep(stepType: string) {
+  switch (stepType) {
+    case "llm_call":
+    case "model":
+    case "agent_output":
+    case "prompt":
+      return Bot;
+    case "tool_call":
+      return Hammer;
+    case "tool_result":
+      return Wrench;
+    case "mutation":
+      return Zap;
+    case "failure":
+    case "error":
+      return AlertTriangle;
+    default:
+      return Bot;
+  }
 }
 
 function TraceTimelinePanel({ timeline }: { timeline: TraceTimelineStep[] }) {
@@ -202,42 +235,67 @@ function TraceTimelinePanel({ timeline }: { timeline: TraceTimelineStep[] }) {
             No trace steps recorded yet.
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {timeline.map((step, index) => {
               const Icon = iconForStep(step.step_type);
+              const cfg = STEP_TYPE_CONFIG[step.step_type] ?? DEFAULT_STEP_CONFIG;
               const source = typeof step.metadata?.source === "string" ? step.metadata.source : null;
               const runId = typeof step.metadata?.run_id === "string" ? step.metadata.run_id : null;
               const attemptId = typeof step.metadata?.attempt_id === "string" ? step.metadata.attempt_id : null;
+              const hasPayload = step.input_payload != null || step.output_payload != null;
               return (
-                <div key={step.id} className="relative pl-8">
+                <div key={step.id} className="relative pl-10">
                   {index < timeline.length - 1 ? (
-                    <div className="absolute left-[0.8rem] top-8 h-[calc(100%+0.5rem)] w-px bg-border/70" />
+                    <div className="absolute left-[1.1rem] top-9 h-[calc(100%+0.25rem)] w-0.5 bg-border/50" />
                   ) : null}
-                  <div className="absolute left-0 top-1 grid h-6 w-6 place-items-center rounded-full border border-border/70 bg-background shadow-sm">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  {/* Step dot */}
+                  <div className={`absolute left-0 top-2 grid h-8 w-8 place-items-center rounded-full border ${cfg.dotBg} ${cfg.dotBorder} shadow-sm`}>
+                    <Icon className={`h-3.5 w-3.5 ${cfg.iconColor}`} />
                   </div>
-                  <div className="rounded-lg border border-border/70 bg-card/60 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-foreground">{step.step_name}</span>
-                          <Badge variant={variantForStatus(step.status)}>{step.status}</Badge>
-                          <Badge variant="outline">{step.step_type.replace(/_/g, " ")}</Badge>
-                          {step.mutation_name ? <Badge variant="warning">{step.mutation_name}</Badge> : null}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span>{formatRelativeDate(step.started_at)}</span>
-                          {step.latency_ms != null ? <span>{formatDurationMs(step.latency_ms)}</span> : null}
-                          {source ? <span>{source}</span> : null}
-                          {runId ? <span>run {shortId(runId, 8)}</span> : null}
-                          {attemptId ? <span>attempt {shortId(attemptId, 8)}</span> : null}
-                        </div>
+                  {/* Step card */}
+                  <div className={`rounded-lg border border-border/60 border-l-2 ${cfg.accentBorder} bg-card/60`}>
+                    {/* Header row */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">{step.step_name}</span>
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          {step.step_type.replace(/_/g, " ")}
+                        </Badge>
+                        {step.mutation_name ? (
+                          <Badge variant="warning" className="shrink-0 text-[10px]">{step.mutation_name}</Badge>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {step.latency_ms != null ? (
+                          <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {formatDurationMs(step.latency_ms)}
+                          </span>
+                        ) : null}
+                        <Badge variant={variantForStatus(step.status)}>{step.status}</Badge>
                       </div>
                     </div>
-                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                      <PayloadPanel label="Input" value={step.input_payload} />
-                      <PayloadPanel label="Output" value={step.output_payload} />
+                    {/* Meta row */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 border-t border-border/40 px-4 py-2 text-[11px] text-muted-foreground">
+                      <span>{formatRelativeDate(step.started_at)}</span>
+                      {source ? <span className="font-mono">{source}</span> : null}
+                      {runId ? <span>run <span className="font-mono">{shortId(runId, 8)}</span></span> : null}
+                      {attemptId ? <span>attempt <span className="font-mono">{shortId(attemptId, 8)}</span></span> : null}
                     </div>
+                    {/* Collapsible payload */}
+                    {hasPayload ? (
+                      <details className="group border-t border-border/40">
+                        <summary className="flex cursor-pointer select-none items-center gap-1.5 px-4 py-2 text-[11px] text-muted-foreground hover:text-foreground">
+                          <svg className="h-3 w-3 rotate-[-90deg] transition-transform group-open:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          Payload
+                        </summary>
+                        <div className="grid gap-3 px-4 pb-4 pt-2 lg:grid-cols-2">
+                          <PayloadPanel label="Input" value={step.input_payload} />
+                          <PayloadPanel label="Output" value={step.output_payload} />
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -273,27 +331,6 @@ function toPreview(value: unknown) {
     return text.length > 1200 ? `${text.slice(0, 1200)}\n…` : text;
   } catch {
     return String(value);
-  }
-}
-
-function iconForStep(stepType: string) {
-  switch (stepType) {
-    case "prompt":
-      return MessageSquareText;
-    case "llm_call":
-      return Bot;
-    case "tool_call":
-      return Wrench;
-    case "mutation":
-      return Sparkles;
-    case "retry":
-      return RotateCcw;
-    case "failure":
-      return ShieldAlert;
-    case "agent_output":
-      return CheckCircle2;
-    default:
-      return Bot;
   }
 }
 

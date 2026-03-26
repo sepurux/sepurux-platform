@@ -114,6 +114,40 @@ def test_list_campaigns_returns_records(
     assert "Campaign Two" in names
 
 
+def test_delete_campaign_archives_and_hides_by_default(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _ = campaign_test_context
+    create_response = client.post(
+        "/v1/campaigns",
+        json={
+            "name": "Archive Candidate",
+            "mutation_set": [{"mutation_id": "archive-me"}],
+            "eval_set": {"checks": ["status"]},
+        },
+    )
+    assert create_response.status_code == 201
+    campaign_id = create_response.json()["campaign_id"]
+
+    delete_response = client.delete(f"/v1/campaigns/{campaign_id}")
+    assert delete_response.status_code == 204
+
+    hidden_get = client.get(f"/v1/campaigns/{campaign_id}")
+    assert hidden_get.status_code == 404
+
+    hidden_list = client.get("/v1/campaigns?limit=10&offset=0")
+    assert hidden_list.status_code == 200
+    assert campaign_id not in {item["campaign_id"] for item in hidden_list.json()}
+
+    visible_get = client.get(f"/v1/campaigns/{campaign_id}?include_archived=true")
+    assert visible_get.status_code == 200
+    assert visible_get.json()["status"] == "archived"
+
+    visible_list = client.get("/v1/campaigns?limit=10&offset=0&include_archived=true")
+    assert visible_list.status_code == 200
+    assert campaign_id in {item["campaign_id"] for item in visible_list.json()}
+
+
 def test_post_campaign_rejects_pack_definition_mutation_set_when_pack_attached(
     campaign_test_context: tuple[TestClient, sessionmaker[Session]],
 ) -> None:

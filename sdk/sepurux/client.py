@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import functools
 import os
 import time
 import warnings
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Coroutine, Iterator
 from contextlib import contextmanager
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, ParamSpec, TypeVar
@@ -14,10 +15,13 @@ import httpx
 
 from .recorder import TraceRecorder, safe_json_value
 from .types import (
+    CIRunStatus,
+    CIRunThresholds,
     CampaignReliability,
     CampaignRunResult,
     FailureRecord,
     RunStatus,
+    TraceBootstrapResponse,
     TraceMetadata,
     TracePayload,
     TraceTimelineStep,
@@ -150,6 +154,19 @@ class SepuruxClient:
         payload = _parse_json_list_response(response)
         return [item for item in payload if isinstance(item, dict)]
 
+    def bootstrap_trace(self, trace_id: str) -> TraceBootstrapResponse:
+        response = self._client.post(
+            f"/v1/traces/{trace_id}/bootstrap",
+            headers=self._request_headers(),
+        )
+        response.raise_for_status()
+        payload = _parse_json_response(response)
+        if not isinstance(payload.get("tools_discovered"), list):
+            payload["tools_discovered"] = []
+        if not isinstance(payload.get("campaigns"), list):
+            payload["campaigns"] = []
+        return payload
+
     def create_campaign(
         self,
         *,
@@ -185,7 +202,7 @@ class SepuruxClient:
         trace_id: str,
         campaign_id: str,
         mutation_pack_id: str | None = None,
-        thresholds: dict[str, Any] | None = None,
+        thresholds: dict[str, Any] | CIRunThresholds | None = None,
         preflight: bool = False,
     ) -> str:
         if preflight:
@@ -236,6 +253,54 @@ class SepuruxClient:
         if not isinstance(run_id, str) or not run_id:
             raise ValueError("Run creation succeeded but run_id was missing")
         return run_id
+
+    def get_ci_run(self, run_id: str) -> CIRunStatus:
+        response = self._client.get(
+            f"/v1/ci/runs/{run_id}",
+            headers=self._request_headers(),
+        )
+        response.raise_for_status()
+        payload = _parse_json_response(response)
+
+        top_failing_tools = payload.get("top_failing_tools")
+        mutation_categories_raw = payload.get("mutation_categories")
+        mutation_categories = (
+            [item for item in mutation_categories_raw if isinstance(item, str)]
+            if isinstance(mutation_categories_raw, list)
+            else []
+        )
+        mutation_coverage_raw = payload.get("mutation_coverage_score")
+        mutation_coverage = (
+            int(mutation_coverage_raw) if isinstance(mutation_coverage_raw, int | float) else None
+        )
+        return {
+            "run_id": str(payload.get("run_id") or run_id),
+            "status": str(payload.get("status") or "unknown"),
+            "decision": str(payload.get("decision") or "pending"),
+            "pass_rate": (
+                float(payload.get("pass_rate"))
+                if isinstance(payload.get("pass_rate"), int | float)
+                else 0.0
+            ),
+            "unsafe_attempts": (
+                int(payload.get("unsafe_attempts"))
+                if isinstance(payload.get("unsafe_attempts"), int | float)
+                else 0
+            ),
+            "failures": (
+                int(payload.get("failures"))
+                if isinstance(payload.get("failures"), int | float)
+                else 0
+            ),
+            "top_failing_tools": (
+                [item for item in top_failing_tools if isinstance(item, dict)]
+                if isinstance(top_failing_tools, list)
+                else []
+            ),
+            "mutation_categories": mutation_categories,
+            "mutation_coverage_score": mutation_coverage,
+            "dashboard_url": str(payload.get("dashboard_url") or ""),
+        }
 
     def preflight_run_inputs(self, *, trace_id: str, campaign_id: str) -> None:
         self._assert_resource_exists(
@@ -340,6 +405,61 @@ class SepuruxClient:
             raise ValueError("campaign_id is required when mutation_pack is provided")
 
         def decorator(func: Callable[P, R]) -> Callable[P, R]:
+            if asyncio.iscoroutinefunction(func):
+                @functools.wraps(func)
+                async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+                    task_name = name or func.__name__
+                    task_input = {
+                        "function": func.__name__,
+                        "args": safe_json_value(list(args)),
+                        "kwargs": safe_json_value(dict(kwargs)),
+                    }
+                    recorder = ManagedTraceRecorder(
+                        task_name=task_name,
+                        task_input=task_input,
+                        source=source,
+                    )
+                    recorder.prompt(safe_json_value(task_input), name=task_name)
+                    recorder.model_step(
+                        "function.call",
+                        {"qualname": getattr(func, "__qualname__", func.__name__)},
+                    )
+                    try:
+                        result = await func(*args, **kwargs)  # type: ignore[misc]
+                    except Exception as exc:
+                        recorder.error(tool=func.__name__, message=str(exc))
+                        try:
+                            await asyncio.to_thread(
+                                self._finalize_trace,
+                                recorder,
+                                campaign_id=campaign_id,
+                                mutation_pack=mutation_pack,
+                            )
+                        except Exception as finalize_exc:
+                            recorder.upload_error = finalize_exc
+                        raise
+                    else:
+                        recorder.model_step(
+                            "function.return",
+                            {"ok": True},
+                            output=safe_json_value(result),
+                        )
+                        recorder.agent_output(safe_json_value(result), name=task_name)
+                        try:
+                            await asyncio.to_thread(
+                                self._finalize_trace,
+                                recorder,
+                                campaign_id=campaign_id,
+                                mutation_pack=mutation_pack,
+                            )
+                        except Exception as finalize_exc:
+                            recorder.upload_error = finalize_exc
+                            if raise_on_error:
+                                raise
+                        return result  # type: ignore[return-value]
+
+                return async_wrapper  # type: ignore[return-value]
+
             @functools.wraps(func)
             def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 task_name = name or func.__name__

@@ -8,7 +8,7 @@ import pytest
 from app.auth import hash_api_key
 from app.db import get_db
 from app.main import app
-from app.models import ApiKey, Base, Project, Tenant
+from app.models import ApiKey, Base, Project, Tenant, TenantControl
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -131,6 +131,28 @@ def test_create_project_requires_team_or_enterprise_plan(
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Upgrade to Team or Enterprise to add workspaces."}
+
+
+def test_create_project_returns_423_when_workspace_creation_is_locked(
+    auth_test_context: tuple[TestClient, sessionmaker[Session], UUID, str],
+) -> None:
+    client, testing_session_local, project_id, _ = auth_test_context
+
+    with testing_session_local() as db:
+        project = db.scalar(select(Project).where(Project.project_id == project_id))
+        assert isinstance(project, Project)
+        db.add(
+            TenantControl(
+                tenant_id=project.tenant_id,
+                workspace_creation_locked=True,
+            )
+        )
+        db.commit()
+
+    response = client.post("/v1/projects", json={"name": "Blocked Project"})
+
+    assert response.status_code == 423
+    assert response.json() == {"detail": "Workspace creation is locked for this tenant."}
 
 
 def test_project_scoped_api_key_only_sees_its_bound_project(

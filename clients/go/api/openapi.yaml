@@ -620,6 +620,15 @@ paths:
           title: Offset
           type: integer
         style: form
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -680,6 +689,38 @@ paths:
       tags:
       - campaigns
   /v1/campaigns/{campaign_id}:
+    delete:
+      operationId: delete_campaign_v1_campaigns__campaign_id__delete
+      parameters:
+      - explode: false
+        in: path
+        name: campaign_id
+        required: true
+        schema:
+          format: uuid
+          title: Campaign Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Campaign
+      tags:
+      - campaigns
     get:
       operationId: get_campaign_v1_campaigns__campaign_id__get
       parameters:
@@ -692,6 +733,15 @@ paths:
           title: Campaign Id
           type: string
         style: simple
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -1404,6 +1454,15 @@ paths:
     get:
       operationId: get_policy_packs_v1_policy_packs_get
       parameters:
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -1464,6 +1523,38 @@ paths:
       tags:
       - policy-packs
   /v1/policy-packs/{policy_pack_id}:
+    delete:
+      operationId: delete_policy_pack_v1_policy_packs__policy_pack_id__delete
+      parameters:
+      - explode: false
+        in: path
+        name: policy_pack_id
+        required: true
+        schema:
+          format: uuid
+          title: Policy Pack Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Policy Pack
+      tags:
+      - policy-packs
     get:
       operationId: get_policy_pack_by_id_v1_policy_packs__policy_pack_id__get
       parameters:
@@ -1476,6 +1567,15 @@ paths:
           title: Policy Pack Id
           type: string
         style: simple
+      - explode: true
+        in: query
+        name: include_archived
+        required: false
+        schema:
+          default: false
+          title: Include Archived
+          type: boolean
+        style: form
       - explode: false
         in: header
         name: X-Project-Id
@@ -2552,6 +2652,43 @@ paths:
       summary: Post Trace
       tags:
       - traces
+  /v1/traces/{trace_id}/bootstrap:
+    post:
+      operationId: post_trace_bootstrap_v1_traces__trace_id__bootstrap_post
+      parameters:
+      - explode: false
+        in: path
+        name: trace_id
+        required: true
+        schema:
+          format: uuid
+          title: Trace Id
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-Project-Id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceBootstrapResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Trace Bootstrap
+      tags:
+      - traces
   /v1/traces/{trace_id}:
     get:
       operationId: get_trace_by_id_v1_traces__trace_id__get
@@ -3599,7 +3736,11 @@ components:
       example:
         trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         thresholds:
+          required_mutation_categories:
+          - required_mutation_categories
+          - required_mutation_categories
           max_failures: 0
+          min_mutation_categories: 3
           min_pass_rate: 0.08008281904610115
           max_unsafe: 0
           min_reliability_score: 59.621339166831824
@@ -3642,11 +3783,15 @@ components:
       title: CIRunCreateResponse
     CIRunStatusResponse:
       example:
+        mutation_categories:
+        - mutation_categories
+        - mutation_categories
         pass_rate: 0.8008281904610115
         run_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         failures: 1
         decision: pass
         unsafe_attempts: 6
+        mutation_coverage_score: 5
         dashboard_url: dashboard_url
         status: status
         top_failing_tools:
@@ -3682,6 +3827,13 @@ components:
           items:
             $ref: '#/components/schemas/ToolCount'
           type: array
+        mutation_categories:
+          items:
+            type: string
+          type: array
+        mutation_coverage_score:
+          nullable: true
+          type: integer
         dashboard_url:
           title: Dashboard Url
           type: string
@@ -3697,7 +3849,11 @@ components:
       title: CIRunStatusResponse
     CIRunThresholds:
       example:
+        required_mutation_categories:
+        - required_mutation_categories
+        - required_mutation_categories
         max_failures: 0
+        min_mutation_categories: 3
         min_pass_rate: 0.08008281904610115
         max_unsafe: 0
         min_reliability_score: 59.621339166831824
@@ -3720,6 +3876,15 @@ components:
           minimum: 0.0
           nullable: true
           type: number
+        min_mutation_categories:
+          maximum: 5.0
+          minimum: 1.0
+          nullable: true
+          type: integer
+        required_mutation_categories:
+          items:
+            type: string
+          nullable: true
       required:
       - max_unsafe
       - min_pass_rate
@@ -4939,6 +5104,7 @@ components:
       title: PolicyPackCreateRequest
     PolicyPackMetadata:
       example:
+        is_archived: false
         project_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         engine: engine
         active_version_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -4963,6 +5129,10 @@ components:
           title: Engine
           type: string
         policy: {}
+        is_archived:
+          default: false
+          title: Is Archived
+          type: boolean
         active_version_id:
           format: uuid
           nullable: true
@@ -6131,6 +6301,95 @@ components:
       - calls
       - tool
       title: ToolUsageStatsItem
+    TraceBootstrapCampaign:
+      example:
+        mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        created: false
+        name: name
+        campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        mutation_pack_name: mutation_pack_name
+      properties:
+        campaign_id:
+          format: uuid
+          title: Campaign Id
+          type: string
+        name:
+          title: Name
+          type: string
+        mutation_pack_id:
+          format: uuid
+          title: Mutation Pack Id
+          type: string
+        mutation_pack_name:
+          title: Mutation Pack Name
+          type: string
+        created:
+          default: false
+          title: Created
+          type: boolean
+      required:
+      - campaign_id
+      - mutation_pack_id
+      - mutation_pack_name
+      - name
+      title: TraceBootstrapCampaign
+    TraceBootstrapResponse:
+      example:
+        trace_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        campaigns:
+        - mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          created: false
+          name: name
+          campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          mutation_pack_name: mutation_pack_name
+        - mutation_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          created: false
+          name: name
+          campaign_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          mutation_pack_name: mutation_pack_name
+        tool_zones_updated: 6
+        tool_zones_created: 0
+        policy_pack_created: false
+        policy_pack_name: policy_pack_name
+        tools_discovered:
+        - tools_discovered
+        - tools_discovered
+        policy_pack_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+      properties:
+        trace_id:
+          format: uuid
+          title: Trace Id
+          type: string
+        tools_discovered:
+          items:
+            type: string
+          type: array
+        tool_zones_created:
+          default: 0
+          title: Tool Zones Created
+          type: integer
+        tool_zones_updated:
+          default: 0
+          title: Tool Zones Updated
+          type: integer
+        policy_pack_id:
+          format: uuid
+          nullable: true
+          type: string
+        policy_pack_name:
+          nullable: true
+          type: string
+        policy_pack_created:
+          default: false
+          title: Policy Pack Created
+          type: boolean
+        campaigns:
+          items:
+            $ref: '#/components/schemas/TraceBootstrapCampaign'
+          type: array
+      required:
+      - trace_id
+      title: TraceBootstrapResponse
     TraceMetadata:
       example:
         task_name: task_name

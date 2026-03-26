@@ -1,6 +1,10 @@
 # Sepurux Python SDK
 
-Python SDK for recording Sepurux traces and uploading them to a Sepurux API.
+[![PyPI](https://img.shields.io/pypi/v/sepurux)](https://pypi.org/project/sepurux/)
+[![Python](https://img.shields.io/pypi/pyversions/sepurux)](https://pypi.org/project/sepurux/)
+[![CI](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml)
+
+Record agent traces, run reliability campaigns, and instrument OpenAI or LangChain workflows — all from Python.
 
 ## Install
 
@@ -58,16 +62,27 @@ print(trace.run_id)
 
 ### `@traceable` decorator
 
+Works with both sync and `async def` functions:
+
 ```python
 from sepurux import SepuruxClient
 
 client = SepuruxClient.from_env()
 
+# Sync function
 @client.traceable(campaign_id="refund_reliability")
 def score_refund_risk(amount: int, currency: str) -> dict:
     return {"risk": "medium", "approve": amount < 10000, "currency": currency}
 
 result = score_refund_risk(4200, "usd")
+
+# Async function — same decorator, awaitable result
+@client.traceable(campaign_id="refund_reliability")
+async def fetch_risk_score(payment_id: str) -> dict:
+    data = await some_async_api(payment_id)
+    return {"risk": data["score"]}
+
+result = await fetch_risk_score("pay_123")
 ```
 
 ### Global configuration
@@ -101,11 +116,16 @@ Methods:
 - `trace(task_name, task_input=None, campaign_id=None, mutation_pack=None) -> recorder`
 - `traceable(name=None, campaign_id=None, mutation_pack=None) -> decorator`
 - `upload_trace(trace: dict) -> str`
+- `list_traces(limit=50, offset=0) -> list[dict]`
+- `get_trace(trace_id, include_payload=False) -> dict`
+- `get_trace_timeline(trace_id) -> list[dict]`
+- `bootstrap_trace(trace_id) -> dict`
 - `create_campaign(name, mutation_set, eval_set, mutation_pack_id=None) -> str`
 - `preflight_run_inputs(trace_id, campaign_id) -> None`
 - `start_run(trace_id, campaign_id, thresholds=None, preflight=False) -> str`
 - `run_pack(campaign_id, mutation_pack) -> str`
 - `get_run(run_id) -> dict`
+- `get_ci_run(run_id) -> dict`
 - `get_campaign_failures(campaign_id, run_id=None) -> list[dict]`
 - `get_campaign_reliability(campaign_id, run_id=None) -> dict`
 
@@ -137,6 +157,100 @@ print(result["run_id"])
 print(result["reliability_score"])
 print([failure["type"] for failure in result["failures"]])
 ```
+
+
+## Integrations
+
+### OpenAI
+
+`instrument_openai` wraps any `openai.OpenAI` (or `AsyncOpenAI`) client and
+automatically records every `chat.completions.create` call as an `llm_call`
+event. Tool calls present in the response are also recorded. No manual
+instrumentation required.
+
+```bash
+pip install sepurux openai
+```
+
+```python
+import openai
+from sepurux import SepuruxClient
+from sepurux.integrations.openai import instrument_openai
+
+client = SepuruxClient.from_env()
+openai_client = openai.OpenAI()
+
+with client.trace(
+    "customer_refund_flow",
+    {"ticket_id": "t-101"},
+    campaign_id=os.environ["SEPURUX_CAMPAIGN_ID"],
+) as trace:
+    ai = instrument_openai(openai_client, recorder=trace)
+    response = ai.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Classify this support ticket"}],
+    )
+
+print(trace.trace_id)
+print(trace.run_id)
+```
+
+**What gets recorded automatically:**
+- `llm_call` event with model name, messages input, full response output, and latency
+- `tool_call` events for any function calls returned by the model
+- `failure` event if the API call raises an exception
+
+For async usage, call `await ai.chat.completions.acreate(...)` — the wrapper
+detects the async path automatically.
+
+### LangChain
+
+`SepuruxCallbackHandler` automatically records LLM calls, tool calls, and agent
+outputs from any LangChain chain or agent. Requires `langchain-core`:
+
+```bash
+pip install sepurux langchain-core
+```
+
+```python
+import os
+from langchain_openai import ChatOpenAI
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+from sepurux.integrations.langchain import SepuruxCallbackHandler
+
+handler = SepuruxCallbackHandler(
+    "customer_refund_flow",
+    {"ticket_id": "t-101"},
+    campaign_id=os.environ["SEPURUX_CAMPAIGN_ID"],
+)
+
+# Works with chains, agents, or any LangChain runnable
+result = agent_executor.invoke(
+    {"input": "Process refund for ticket t-101"},
+    config={"callbacks": [handler]},
+)
+
+# Upload trace + start reliability run
+handler.finish()
+print(handler.trace_id)
+print(handler.run_id)
+```
+
+Or use it as a context manager — `finish()` is called automatically on exit:
+
+```python
+with SepuruxCallbackHandler("refund_flow", campaign_id="...") as handler:
+    result = chain.invoke(inputs, config={"callbacks": [handler]})
+
+print(handler.trace_id)
+```
+
+**What gets recorded automatically:**
+- LLM calls with model name, prompt input, generated output, and latency
+- Tool calls with name and parsed arguments
+- Tool results
+- Agent final output
 
 
 Optional environment variables:

@@ -23,6 +23,8 @@ export function CampaignsView() {
   const authSession = useAuthSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [archivingCampaignId, setArchivingCampaignId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
 
@@ -76,6 +78,33 @@ export function CampaignsView() {
     }
   }
 
+  async function onArchiveCampaign(campaignId: string) {
+    const confirmed = window.confirm("Archive this campaign? It will be hidden from default views.");
+    if (!confirmed) {
+      return;
+    }
+    setArchiveError(null);
+    setArchivingCampaignId(campaignId);
+    try {
+      await api.deleteCampaign(campaignId);
+      setState((currentState) => {
+        if (currentState.status !== "ready") {
+          return currentState;
+        }
+        return {
+          status: "ready",
+          campaigns: currentState.campaigns.filter(
+            (campaign) => campaign.campaign_id !== campaignId
+          ),
+        };
+      });
+    } catch (error) {
+      setArchiveError(error instanceof Error ? error.message : "Failed to archive campaign");
+    } finally {
+      setArchivingCampaignId(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -97,6 +126,12 @@ export function CampaignsView() {
           <CardContent className="p-5 text-sm text-muted-foreground">
             Campaign creation follows your workspace membership bundle. This membership can review campaigns but cannot create or run them.
           </CardContent>
+        </Card>
+      ) : null}
+
+      {archiveError ? (
+        <Card className="border-rose-400/20">
+          <CardContent className="p-5 text-sm text-rose-100">{archiveError}</CardContent>
         </Card>
       ) : null}
 
@@ -124,14 +159,19 @@ export function CampaignsView() {
                 <TableRow>
                   <TableHead>Campaign ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Mutation Pack</TableHead>
+                  {canCreateCampaigns ? <TableHead className="text-right">Actions</TableHead> : null}
                   <TableHead className="text-right">Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {state.campaigns.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={canCreateCampaigns ? 6 : 5}
+                      className="py-10 text-center text-muted-foreground"
+                    >
                       No campaigns yet. Use the create page to add the first one.
                     </TableCell>
                   </TableRow>
@@ -152,9 +192,23 @@ export function CampaignsView() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium text-foreground">{campaign.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{campaign.status}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {campaign.mutation_pack_id ? shortId(campaign.mutation_pack_id, 16) : "--"}
                       </TableCell>
+                      {canCreateCampaigns ? (
+                        <TableCell className="text-right">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void onArchiveCampaign(campaign.campaign_id)}
+                            disabled={archivingCampaignId === campaign.campaign_id}
+                          >
+                            {archivingCampaignId === campaign.campaign_id ? "Archiving..." : "Archive"}
+                          </Button>
+                        </TableCell>
+                      ) : null}
                       <TableCell className="text-right text-muted-foreground">
                         {formatRelativeDate(campaign.created_at)}
                       </TableCell>

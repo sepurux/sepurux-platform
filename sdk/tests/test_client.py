@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -30,6 +31,28 @@ class _RequestCapture:
                     ],
                 )
             return httpx.Response(201, json={"trace_id": "trace-123"})
+        if request.url.path == "/v1/traces/trace-123/bootstrap":
+            return httpx.Response(
+                200,
+                json={
+                    "trace_id": "trace-123",
+                    "tools_discovered": ["search_docs", "create_ticket", "send_slack"],
+                    "tool_zones_created": 3,
+                    "tool_zones_updated": 0,
+                    "policy_pack_id": "policy-pack-123",
+                    "policy_pack_name": "trace.bootstrap.default",
+                    "policy_pack_created": True,
+                    "campaigns": [
+                        {
+                            "campaign_id": "campaign-a",
+                            "name": "Bootstrap · Tool Chaos",
+                            "mutation_pack_id": "pack-a",
+                            "mutation_pack_name": "tool-chaos",
+                            "created": True,
+                        }
+                    ],
+                },
+            )
         if request.url.path == "/v1/traces/trace-123":
             return httpx.Response(
                 200,
@@ -82,6 +105,22 @@ class _RequestCapture:
             return httpx.Response(
                 200,
                 json={"run_id": "run-123", "status": "completed", "summary": {"attempt_count": 5}},
+            )
+        if request.url.path == "/v1/ci/runs/run-ci-123":
+            return httpx.Response(
+                200,
+                json={
+                    "run_id": "run-ci-123",
+                    "status": "done",
+                    "decision": "pass",
+                    "pass_rate": 0.95,
+                    "unsafe_attempts": 0,
+                    "failures": 1,
+                    "top_failing_tools": [{"tool": "payments.refund", "count": 1}],
+                    "mutation_categories": ["schema", "fault", "latency"],
+                    "mutation_coverage_score": 60,
+                    "dashboard_url": "https://app.sepurux.com/runs/run-ci-123",
+                },
             )
         if request.url.path == "/v1/campaigns/campaign-123/run-pack":
             return httpx.Response(201, json={"run_id": "run-123"})
@@ -178,6 +217,57 @@ def test_trace_catalog_methods_use_trace_endpoints() -> None:
         "/v1/traces/trace-123",
         "/v1/traces/trace-123/timeline",
     ]
+
+
+def test_bootstrap_trace_calls_trace_bootstrap_endpoint() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    payload = client.bootstrap_trace("trace-123")
+
+    assert payload["trace_id"] == "trace-123"
+    assert payload["policy_pack_name"] == "trace.bootstrap.default"
+    assert payload["tools_discovered"] == ["search_docs", "create_ticket", "send_slack"]
+    assert payload["campaigns"][0]["name"] == "Bootstrap · Tool Chaos"
+    assert [request.url.path for request in capture.requests] == ["/v1/traces/trace-123/bootstrap"]
+
+
+def test_get_ci_run_returns_mutation_coverage_fields() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    ci_status = client.get_ci_run("run-ci-123")
+
+    assert ci_status["run_id"] == "run-ci-123"
+    assert ci_status["decision"] == "pass"
+    assert ci_status["mutation_categories"] == ["schema", "fault", "latency"]
+    assert ci_status["mutation_coverage_score"] == 60
+    assert ci_status["dashboard_url"] == "https://app.sepurux.com/runs/run-ci-123"
+    assert [request.url.path for request in capture.requests] == ["/v1/ci/runs/run-ci-123"]
 
 
 def test_upload_trace_uses_explicit_sdk_header_override() -> None:
@@ -364,6 +454,70 @@ def test_global_configure_and_traceable_use_default_client() -> None:
         recorder.model_step("classify", {"label": "bug"})
 
     assert capture.requests[-1].url.path == "/v1/traces"
+
+
+def test_async_traceable_decorator_records_and_uploads() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    @client.traceable(campaign_id="demo_campaign")
+    async def async_multiply(x: int, y: int) -> int:
+        await asyncio.sleep(0)
+        return x * y
+
+    result = asyncio.run(async_multiply(3, 4))
+
+    assert result == 12
+    assert [request.url.path for request in capture.requests] == [
+        "/v1/traces",
+        "/v1/campaigns",
+        "/v1/runs",
+    ]
+    uploaded_trace = json.loads(capture.requests[0].content.decode())
+    assert uploaded_trace["events"][0]["type"] == "prompt"
+    assert uploaded_trace["events"][-1]["type"] == "agent_output"
+
+
+def test_async_traceable_records_error_on_exception() -> None:
+    capture = _RequestCapture()
+    transport = httpx.MockTransport(capture)
+
+    client = SepuruxClient(
+        base_url="http://localhost:8000",
+        api_key="key-1",
+        project_id="project-1",
+    )
+    client._client = httpx.Client(
+        base_url=client.base_url,
+        transport=transport,
+        timeout=30,
+        headers={"Accept": "application/json", "X-Sepurux-SDK": client.sdk_header},
+    )
+
+    @client.traceable()
+    async def failing_task() -> str:
+        raise ValueError("something went wrong")
+
+    with pytest.raises(ValueError, match="something went wrong"):
+        asyncio.run(failing_task())
+
+    assert len(capture.requests) == 1
+    uploaded_trace = json.loads(capture.requests[0].content.decode())
+    failure_events = [e for e in uploaded_trace["events"] if e["type"] == "failure"]
+    assert len(failure_events) == 1
+    assert "something went wrong" in failure_events[0]["error"]["message"]
 
 
 def test_run_campaign_prefers_server_side_run_pack_when_requested() -> None:

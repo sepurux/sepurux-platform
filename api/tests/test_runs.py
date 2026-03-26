@@ -7,7 +7,19 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import AuditEvent, Base, Campaign, Project, ReplayAttempt, Run, Trace, UserNotification
+from app.models import (
+    AuditEvent,
+    Base,
+    Campaign,
+    PolicyPack,
+    PolicyPackVersion,
+    Project,
+    ReplayAttempt,
+    Run,
+    TenantControl,
+    Trace,
+    UserNotification,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -87,6 +99,41 @@ def seed_trace_and_campaign(db: Session, *, project_id: UUID) -> tuple[UUID, UUI
     return trace_id, campaign_id
 
 
+def seed_policy_pack(
+    db: Session,
+    *,
+    project_id: UUID,
+    name: str,
+) -> tuple[UUID, UUID]:
+    policy_pack_id = uuid4()
+    version_id = uuid4()
+    policy = {"defaults": {"unknown_tools": "deny"}, "version": "0.1"}
+    pack = PolicyPack(
+        policy_pack_id=policy_pack_id,
+        project_id=project_id,
+        name=name,
+        engine="builtin",
+        policy=policy,
+        active_version_id=None,
+    )
+    db.add(pack)
+    db.flush()
+    db.add(
+        PolicyPackVersion(
+            version_id=version_id,
+            policy_pack_id=policy_pack_id,
+            version_number=1,
+            policy=policy,
+            created_by="test",
+        )
+    )
+    db.flush()
+    pack.active_version_id = version_id
+    db.add(pack)
+    db.commit()
+    return policy_pack_id, version_id
+
+
 def test_post_run_queues_job_and_persists_queued_status(
     run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
 ) -> None:
@@ -134,6 +181,103 @@ def test_post_run_queues_job_and_persists_queued_status(
     assert audit_events[0].event_metadata["run_id"] == str(run_id)
     assert len(notifications) == 1
     assert notifications[0].title == "Run queued"
+
+
+def test_post_run_uses_bootstrap_policy_pack_by_default(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, _, project_id = run_test_context
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = seed_trace_and_campaign(db, project_id=project_id)
+        bootstrap_policy_pack_id, bootstrap_version_id = seed_policy_pack(
+            db,
+            project_id=project_id,
+            name="trace.bootstrap.default",
+        )
+
+    response = client.post(
+        "/v1/runs", json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)}
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    run_id = UUID(payload["run_id"])
+    assert payload["policy_pack_id"] == str(bootstrap_policy_pack_id)
+    assert payload["effective_policy_pack_version_id"] == str(bootstrap_version_id)
+
+    with testing_session_local() as db:
+        run = db.scalar(select(Run).where(Run.run_id == run_id))
+        assert isinstance(run, Run)
+        assert run.policy_pack_id == bootstrap_policy_pack_id
+        assert run.effective_policy_pack_version_id == bootstrap_version_id
+
+
+def test_post_run_prefers_explicit_policy_pack_over_bootstrap_default(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, _, project_id = run_test_context
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = seed_trace_and_campaign(db, project_id=project_id)
+        seed_policy_pack(
+            db,
+            project_id=project_id,
+            name="trace.bootstrap.default",
+        )
+        explicit_policy_pack_id, explicit_version_id = seed_policy_pack(
+            db,
+            project_id=project_id,
+            name="policy.custom.explicit",
+        )
+
+    response = client.post(
+        "/v1/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "policy_pack_id": str(explicit_policy_pack_id),
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    run_id = UUID(payload["run_id"])
+    assert payload["policy_pack_id"] == str(explicit_policy_pack_id)
+    assert payload["effective_policy_pack_version_id"] == str(explicit_version_id)
+
+    with testing_session_local() as db:
+        run = db.scalar(select(Run).where(Run.run_id == run_id))
+        assert isinstance(run, Run)
+        assert run.policy_pack_id == explicit_policy_pack_id
+        assert run.effective_policy_pack_version_id == explicit_version_id
+
+
+def test_post_run_returns_423_when_tenant_runs_paused(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, fake_queue, project_id = run_test_context
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = seed_trace_and_campaign(db, project_id=project_id)
+        project = db.scalar(select(Project).where(Project.project_id == project_id))
+        assert isinstance(project, Project)
+        db.add(
+            TenantControl(
+                tenant_id=project.tenant_id,
+                runs_paused=True,
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/runs",
+        json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)},
+    )
+
+    assert response.status_code == 423
+    assert response.json() == {"detail": "Run creation is paused for this tenant."}
+    assert fake_queue.calls == []
 
 
 def test_get_run_and_list_runs(

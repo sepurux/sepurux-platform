@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from uuid import UUID
 
 from app.auth import TenantAuthContext, require_super_admin
 from app.db import get_db
@@ -28,6 +29,10 @@ from app.schemas import (
     InternalSearchUserResult,
     InternalSystemHealth,
     InternalSystemOverview,
+    InternalTenantApiKeyRevokeRequest,
+    InternalTenantApiKeyRevokeResponse,
+    InternalTenantControls,
+    InternalTenantControlsUpdateRequest,
     InternalTimeSeriesMetrics,
 )
 from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
@@ -49,6 +54,11 @@ from app.services.internal_settings_service import (
 )
 from app.services.internal_system_service import build_internal_system_overview
 from app.services.internal_time_series_service import build_internal_time_series
+from app.services.tenant_control_service import (
+    get_or_create_tenant_controls,
+    revoke_tenant_api_keys,
+    update_tenant_controls,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -113,6 +123,17 @@ def _actor_label(db: Session, tenant_auth: TenantAuthContext) -> str:
     if isinstance(user, User):
         return user.email
     return str(tenant_auth.user_id)
+
+
+def _serialize_tenant_controls(controls) -> InternalTenantControls:
+    return InternalTenantControls(
+        tenant_id=controls.tenant_id,
+        runs_paused=bool(controls.runs_paused),
+        workspace_creation_locked=bool(controls.workspace_creation_locked),
+        updated_by=controls.updated_by,
+        reason=controls.reason,
+        updated_at=controls.updated_at,
+    )
 
 
 @router.get("/dashboard", response_model=InternalDashboardOverview)
@@ -563,6 +584,113 @@ def put_internal_settings(
         actor=_actor_label(db, super_admin),
         entity="internal.settings",
         metadata=payload.model_dump(),
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/tenants/{tenant_id}/controls", response_model=InternalTenantControls)
+def get_internal_tenant_controls(
+    tenant_id: UUID,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalTenantControls:
+    try:
+        controls = get_or_create_tenant_controls(db, tenant_id=tenant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    payload = _serialize_tenant_controls(controls)
+    create_audit_log(
+        db,
+        action="internal.tenants.controls.view",
+        actor=_actor_label(db, super_admin),
+        entity=f"tenant:{tenant_id}",
+        metadata=payload.model_dump(mode="json"),
+    )
+    db.commit()
+    return payload
+
+
+@router.patch("/tenants/{tenant_id}/controls", response_model=InternalTenantControls)
+def patch_internal_tenant_controls(
+    tenant_id: UUID,
+    body: InternalTenantControlsUpdateRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalTenantControls:
+    if body.runs_paused is None and body.workspace_creation_locked is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "At least one control value must be provided "
+                "(runs_paused or workspace_creation_locked)."
+            ),
+        )
+
+    try:
+        controls = update_tenant_controls(
+            db,
+            tenant_id=tenant_id,
+            runs_paused=body.runs_paused,
+            workspace_creation_locked=body.workspace_creation_locked,
+            updated_by=_actor_label(db, super_admin),
+            reason=body.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    payload = _serialize_tenant_controls(controls)
+    create_audit_log(
+        db,
+        action="internal.tenants.controls.update",
+        actor=_actor_label(db, super_admin),
+        entity=f"tenant:{tenant_id}",
+        metadata={
+            "runs_paused": payload.runs_paused,
+            "workspace_creation_locked": payload.workspace_creation_locked,
+            "reason": payload.reason,
+        },
+    )
+    db.commit()
+    return payload
+
+
+@router.post(
+    "/tenants/{tenant_id}/controls/revoke-api-keys",
+    response_model=InternalTenantApiKeyRevokeResponse,
+)
+def post_internal_tenant_revoke_api_keys(
+    tenant_id: UUID,
+    body: InternalTenantApiKeyRevokeRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalTenantApiKeyRevokeResponse:
+    try:
+        revoked_count = revoke_tenant_api_keys(db, tenant_id=tenant_id)
+        controls = update_tenant_controls(
+            db,
+            tenant_id=tenant_id,
+            updated_by=_actor_label(db, super_admin),
+            reason=body.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    payload = InternalTenantApiKeyRevokeResponse(
+        tenant_id=tenant_id,
+        revoked_count=revoked_count,
+        controls=_serialize_tenant_controls(controls),
+    )
+    create_audit_log(
+        db,
+        action="internal.tenants.api_keys.revoke",
+        actor=_actor_label(db, super_admin),
+        entity=f"tenant:{tenant_id}",
+        metadata={
+            "revoked_count": revoked_count,
+            "reason": body.reason,
+        },
     )
     db.commit()
     return payload

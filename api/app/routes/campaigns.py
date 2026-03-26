@@ -23,7 +23,7 @@ from app.services.billing_service import (
     operation_cost_for_pack_run,
     refund_credits_for_context,
 )
-from app.services.campaign_service import create_campaign
+from app.services.campaign_service import archive_campaign, create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.campaign_service import list_campaigns as list_campaign_records
 from app.services.demo_service import (
@@ -39,7 +39,11 @@ from app.services.failure_service import (
 from app.services.mutation_pack_service import ensure_registered_mutation_pack, get_mutation_pack
 from app.services.notification_service import create_notification
 from app.services.run_service import create_run_pack_and_enqueue
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from app.services.tenant_control_service import (
+    TenantControlViolationError,
+    assert_tenant_runs_allowed,
+)
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
@@ -134,7 +138,9 @@ def post_campaign(
             metadata={
                 "campaign_id": str(campaign.campaign_id),
                 "mutation_pack_id": (
-                    str(campaign.mutation_pack_id) if campaign.mutation_pack_id is not None else None
+                    str(campaign.mutation_pack_id)
+                    if campaign.mutation_pack_id is not None
+                    else None
                 ),
             },
         )
@@ -149,24 +155,54 @@ def get_campaigns(
     project_scope: ProjectScopeDep,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    include_archived: bool = Query(False),
 ) -> list[CampaignMetadata]:
     records = list_campaign_records(
         db,
         project_id=project_scope.project_id,
         limit=limit,
         offset=offset,
+        include_archived=include_archived,
     )
     return [_to_campaign_metadata(record) for record in records]
 
 
 @router.get("/{campaign_id}", response_model=CampaignMetadata)
 def get_campaign(
-    campaign_id: UUID, db: DbSession, project_scope: ProjectScopeDep
+    campaign_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    include_archived: bool = Query(False),
 ) -> CampaignMetadata:
-    campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
+    campaign = get_campaign_record(
+        db,
+        project_id=project_scope.project_id,
+        campaign_id=campaign_id,
+        include_archived=include_archived,
+    )
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
     return _to_campaign_metadata(campaign)
+
+
+@router.delete("/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_campaign(
+    campaign_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
+    request: Request,
+) -> Response:
+    del tenant_auth
+    archived = archive_campaign(
+        db,
+        project_id=project_scope.project_id,
+        campaign_id=campaign_id,
+        actor=actor_from_request(request),
+    )
+    if archived is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{campaign_id}/failures", response_model=list[CampaignFailureRecord])
@@ -235,6 +271,12 @@ def post_campaign_run_pack(
 ) -> CampaignRunPackResponse:
     charged_amount: int | None = None
     charged_reason: str | None = None
+
+    try:
+        assert_tenant_runs_allowed(db, tenant_id=project_scope.tenant_id)
+    except TenantControlViolationError as exc:
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
+
     campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
@@ -313,6 +355,19 @@ def post_campaign_run_pack(
             queue_priority=queue_priority,
             actor=actor_from_request(request),
         )
+    except TenantControlViolationError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:tenant_runs_paused",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after tenant run lock")
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
     except Exception:
         if charged_amount is not None and charged_reason is not None:
             try:

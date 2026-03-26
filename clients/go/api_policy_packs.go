@@ -23,11 +23,126 @@ import (
 // PolicyPacksAPIService PolicyPacksAPI service
 type PolicyPacksAPIService service
 
-type ApiGetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest struct {
+type ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest struct {
 	ctx context.Context
 	ApiService *PolicyPacksAPIService
 	policyPackId string
 	xProjectId *string
+}
+
+func (r ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest) XProjectId(xProjectId string) ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest {
+	r.xProjectId = &xProjectId
+	return r
+}
+
+func (r ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.DeletePolicyPackV1PolicyPacksPolicyPackIdDeleteExecute(r)
+}
+
+/*
+DeletePolicyPackV1PolicyPacksPolicyPackIdDelete Delete Policy Pack
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param policyPackId
+ @return ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest
+*/
+func (a *PolicyPacksAPIService) DeletePolicyPackV1PolicyPacksPolicyPackIdDelete(ctx context.Context, policyPackId string) ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest {
+	return ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest{
+		ApiService: a,
+		ctx: ctx,
+		policyPackId: policyPackId,
+	}
+}
+
+// Execute executes the request
+func (a *PolicyPacksAPIService) DeletePolicyPackV1PolicyPacksPolicyPackIdDeleteExecute(r ApiDeletePolicyPackV1PolicyPacksPolicyPackIdDeleteRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodDelete
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "PolicyPacksAPIService.DeletePolicyPackV1PolicyPacksPolicyPackIdDelete")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1/policy-packs/{policy_pack_id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"policy_pack_id"+"}", url.PathEscape(parameterValueToString(r.policyPackId, "policyPackId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.xProjectId != nil {
+		parameterAddToHeaderOrQuery(localVarHeaderParams, "X-Project-Id", r.xProjectId, "simple", "")
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiGetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest struct {
+	ctx context.Context
+	ApiService *PolicyPacksAPIService
+	policyPackId string
+	includeArchived *bool
+	xProjectId *string
+}
+
+func (r ApiGetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest) IncludeArchived(includeArchived bool) ApiGetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest {
+	r.includeArchived = &includeArchived
+	return r
 }
 
 func (r ApiGetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest) XProjectId(xProjectId string) ApiGetPolicyPackByIdV1PolicyPacksPolicyPackIdGetRequest {
@@ -76,6 +191,12 @@ func (a *PolicyPacksAPIService) GetPolicyPackByIdV1PolicyPacksPolicyPackIdGetExe
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.includeArchived != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "include_archived", r.includeArchived, "form", "")
+	} else {
+		var defaultValue bool = false
+		r.includeArchived = &defaultValue
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -266,7 +387,13 @@ func (a *PolicyPacksAPIService) GetPolicyPackVersionsV1PolicyPacksPolicyPackIdVe
 type ApiGetPolicyPacksV1PolicyPacksGetRequest struct {
 	ctx context.Context
 	ApiService *PolicyPacksAPIService
+	includeArchived *bool
 	xProjectId *string
+}
+
+func (r ApiGetPolicyPacksV1PolicyPacksGetRequest) IncludeArchived(includeArchived bool) ApiGetPolicyPacksV1PolicyPacksGetRequest {
+	r.includeArchived = &includeArchived
+	return r
 }
 
 func (r ApiGetPolicyPacksV1PolicyPacksGetRequest) XProjectId(xProjectId string) ApiGetPolicyPacksV1PolicyPacksGetRequest {
@@ -312,6 +439,12 @@ func (a *PolicyPacksAPIService) GetPolicyPacksV1PolicyPacksGetExecute(r ApiGetPo
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.includeArchived != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "include_archived", r.includeArchived, "form", "")
+	} else {
+		var defaultValue bool = false
+		r.includeArchived = &defaultValue
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 

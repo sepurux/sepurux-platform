@@ -14,6 +14,7 @@ from app.schemas import (
 )
 from app.services.audit_service import actor_from_request
 from app.services.policy_service import (
+    archive_policy_pack,
     create_policy_pack,
     get_policy_pack,
     get_policy_pack_active_version,
@@ -23,7 +24,7 @@ from app.services.policy_service import (
     rollback_policy_pack,
     update_policy_pack,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/policy-packs", tags=["policy-packs"])
@@ -49,6 +50,7 @@ def _to_policy_pack_metadata(db: Session, record) -> PolicyPackMetadata:
         name=record.name,
         engine=record.engine,
         policy=policy_payload,
+        is_archived=bool(record.is_archived),
         active_version_id=record.active_version_id,
         active_version_number=get_policy_pack_active_version_number(
             db,
@@ -78,8 +80,16 @@ def post_policy_pack(
 
 
 @router.get("", response_model=list[PolicyPackMetadata])
-def get_policy_packs(db: DbSession, project_scope: PolicyReadScope) -> list[PolicyPackMetadata]:
-    records = list_policy_packs(db, project_id=project_scope.project_id)
+def get_policy_packs(
+    db: DbSession,
+    project_scope: PolicyReadScope,
+    include_archived: bool = Query(False),
+) -> list[PolicyPackMetadata]:
+    records = list_policy_packs(
+        db,
+        project_id=project_scope.project_id,
+        include_archived=include_archived,
+    )
     return [_to_policy_pack_metadata(db, record) for record in records]
 
 
@@ -88,11 +98,13 @@ def get_policy_pack_by_id(
     policy_pack_id: UUID,
     db: DbSession,
     project_scope: PolicyReadScope,
+    include_archived: bool = Query(False),
 ) -> PolicyPackMetadata:
     record = get_policy_pack(
         db,
         project_id=project_scope.project_id,
         policy_pack_id=policy_pack_id,
+        include_archived=include_archived,
     )
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy pack not found")
@@ -183,3 +195,21 @@ def get_policy_pack_versions(
         _to_policy_pack_version_metadata(version, active_version_id=record.active_version_id)
         for version in versions
     ]
+
+
+@router.delete("/{policy_pack_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_policy_pack(
+    policy_pack_id: UUID,
+    db: DbSession,
+    project_scope: PolicyManageScope,
+    request: Request,
+) -> Response:
+    archived = archive_policy_pack(
+        db,
+        project_id=project_scope.project_id,
+        policy_pack_id=policy_pack_id,
+        actor=actor_from_request(request),
+    )
+    if archived is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy pack not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
