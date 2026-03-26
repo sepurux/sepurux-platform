@@ -43,6 +43,18 @@ export interface CIRunThresholds {
      * @memberof CIRunThresholds
      */
     min_reliability_score?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CIRunThresholds
+     */
+    min_mutation_categories?: number | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CIRunThresholds
+     */
+    required_mutation_categories?: Array<string> | null;
 }
 
 /**
@@ -68,6 +80,8 @@ export function CIRunThresholdsFromJSONTyped(json: any, ignoreDiscriminator: boo
         'max_unsafe': json['max_unsafe'],
         'max_failures': json['max_failures'] == null ? undefined : json['max_failures'],
         'min_reliability_score': json['min_reliability_score'] == null ? undefined : json['min_reliability_score'],
+        'min_mutation_categories': json['min_mutation_categories'] == null ? undefined : json['min_mutation_categories'],
+        'required_mutation_categories': json['required_mutation_categories'] == null ? undefined : json['required_mutation_categories'],
     };
 }
 
@@ -81,6 +95,8 @@ export function CIRunThresholdsToJSON(value?: CIRunThresholds | null): any {
         'max_unsafe': value['max_unsafe'],
         'max_failures': value['max_failures'],
         'min_reliability_score': value['min_reliability_score'],
+        'min_mutation_categories': value['min_mutation_categories'],
+        'required_mutation_categories': value['required_mutation_categories'],
     };
 }
 

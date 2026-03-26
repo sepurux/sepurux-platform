@@ -12,9 +12,11 @@ from app.models import (
     Base,
     Campaign,
     GitHubIntegration,
+    MutationPack,
     Project,
     ReplayAttempt,
     Run,
+    TenantControl,
     Trace,
     User,
 )
@@ -186,6 +188,39 @@ def test_ci_post_run_reads_repo_and_pr_number_from_env(
             "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
             "github_context": {"repo": "sepurux/sepurux-platform", "pull_request_number": 123},
         }
+
+
+def test_ci_post_run_returns_423_when_tenant_runs_paused(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = _seed_trace_and_campaign(db, project_id=project_id)
+        project = db.scalar(select(Project).where(Project.project_id == project_id))
+        assert isinstance(project, Project)
+        db.add(
+            TenantControl(
+                tenant_id=project.tenant_id,
+                runs_paused=True,
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 423
+    assert response.json() == {"detail": "Run creation is paused for this tenant."}
+    assert fake_queue.calls == []
 
 
 def test_ci_routes_require_ci_token_when_configured_but_not_api_key(
@@ -386,6 +421,149 @@ def test_get_ci_run_returns_pending_and_terminal_decisions_with_metrics(
     decision_types = {event.event_type for event in decision_events}
     assert "ci.decision.fail" in decision_types
     assert "ci.decision.pass" in decision_types
+
+
+def test_get_ci_run_enforces_mutation_category_thresholds(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.setenv("CI_TOKEN", "secret-token")
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_fail_id = uuid4()
+    run_pass_id = uuid4()
+    weak_pack_id = uuid4()
+    strong_pack_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="CI Coverage Campaign",
+                mutation_set=[],
+                eval_set=[],
+            )
+        )
+        db.add_all(
+            [
+                MutationPack(
+                    mutation_pack_id=weak_pack_id,
+                    project_id=project_id,
+                    name="weak-fault-only",
+                    config={
+                        "version": "0.1",
+                        "mutations": [
+                            {"type": "fault.timeout", "target": {"tool": "payments.refund"}}
+                        ],
+                    },
+                    coverage_score=20,
+                ),
+                MutationPack(
+                    mutation_pack_id=strong_pack_id,
+                    project_id=project_id,
+                    name="strong-three-families",
+                    config={
+                        "version": "0.1",
+                        "mutations": [
+                            {"type": "schema.drop_field", "target": {"tool": "payments.refund"}},
+                            {"type": "fault.timeout", "target": {"tool": "payments.refund"}},
+                            {"type": "latency_delay", "target": {"tool": "payments.refund"}},
+                        ],
+                    },
+                    coverage_score=60,
+                ),
+            ]
+        )
+        db.add_all(
+            [
+                Run(
+                    run_id=run_fail_id,
+                    project_id=project_id,
+                    trace_id=trace_id,
+                    campaign_id=campaign_id,
+                    mutation_pack_id=weak_pack_id,
+                    status="completed",
+                    summary={
+                        "ci_thresholds": {
+                            "min_pass_rate": 0.5,
+                            "max_unsafe": 0,
+                            "min_mutation_categories": 3,
+                            "required_mutation_categories": ["schema", "fault", "latency"],
+                        }
+                    },
+                ),
+                Run(
+                    run_id=run_pass_id,
+                    project_id=project_id,
+                    trace_id=trace_id,
+                    campaign_id=campaign_id,
+                    mutation_pack_id=strong_pack_id,
+                    status="completed",
+                    summary={
+                        "ci_thresholds": {
+                            "min_pass_rate": 0.5,
+                            "max_unsafe": 0,
+                            "min_mutation_categories": 3,
+                            "required_mutation_categories": ["schema", "fault", "latency"],
+                        }
+                    },
+                ),
+            ]
+        )
+        db.add_all(
+            [
+                ReplayAttempt(
+                    attempt_id=uuid4(),
+                    project_id=project_id,
+                    run_id=run_fail_id,
+                    mutation_id="weak-1",
+                    result="passed",
+                    failure_reason=None,
+                    first_failure_event_index=None,
+                    first_failure_tool=None,
+                    artifacts_s3_key=None,
+                ),
+                ReplayAttempt(
+                    attempt_id=uuid4(),
+                    project_id=project_id,
+                    run_id=run_pass_id,
+                    mutation_id="strong-1",
+                    result="passed",
+                    failure_reason=None,
+                    first_failure_event_index=None,
+                    first_failure_tool=None,
+                    artifacts_s3_key=None,
+                ),
+            ]
+        )
+        db.commit()
+
+    headers = {"X-Sepurux-Token": "secret-token"}
+
+    fail_response = client.get(f"/v1/ci/runs/{run_fail_id}", headers=headers)
+    assert fail_response.status_code == 200
+    fail_payload = fail_response.json()
+    assert fail_payload["decision"] == "fail"
+    assert fail_payload["mutation_categories"] == ["fault"]
+    assert fail_payload["mutation_coverage_score"] == 20
+
+    pass_response = client.get(f"/v1/ci/runs/{run_pass_id}", headers=headers)
+    assert pass_response.status_code == 200
+    pass_payload = pass_response.json()
+    assert pass_payload["decision"] == "pass"
+    assert set(pass_payload["mutation_categories"]) == {"schema", "fault", "latency"}
+    assert pass_payload["mutation_coverage_score"] == 60
 
 
 def test_get_ci_run_posts_github_report_once_with_warning_and_failure_status(

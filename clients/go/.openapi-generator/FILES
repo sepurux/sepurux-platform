@@ -139,6 +139,8 @@ docs/ToolRegistryMetadata.md
 docs/ToolRegistryZoneUpdateRequest.md
 docs/ToolUsageStatsItem.md
 docs/ToolsAPI.md
+docs/TraceBootstrapCampaign.md
+docs/TraceBootstrapResponse.md
 docs/TraceMetadata.md
 docs/TraceTimelineStep.md
 docs/TracesAPI.md
@@ -248,6 +250,8 @@ model_tool_registry_create_request.go
 model_tool_registry_metadata.go
 model_tool_registry_zone_update_request.go
 model_tool_usage_stats_item.go
+model_trace_bootstrap_campaign.go
+model_trace_bootstrap_response.go
 model_trace_metadata.go
 model_trace_timeline_step.go
 model_user_notification_inbox_response.go

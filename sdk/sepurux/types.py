@@ -47,10 +47,51 @@ class TraceTimelineStep(TypedDict, total=False):
     metadata: dict[str, Any] | None
 
 
+class TraceBootstrapCampaign(TypedDict, total=False):
+    campaign_id: str
+    name: str
+    mutation_pack_id: str
+    mutation_pack_name: str
+    created: bool
+
+
+class TraceBootstrapResponse(TypedDict, total=False):
+    trace_id: str
+    tools_discovered: list[str]
+    tool_zones_created: int
+    tool_zones_updated: int
+    policy_pack_id: str | None
+    policy_pack_name: str | None
+    policy_pack_created: bool
+    campaigns: list[TraceBootstrapCampaign]
+
+
 class RunStatus(TypedDict, total=False):
     run_id: str
     status: str
     summary: dict[str, Any] | None
+
+
+class CIRunThresholds(TypedDict, total=False):
+    min_pass_rate: float
+    max_unsafe: int
+    max_failures: int | None
+    min_reliability_score: float | None
+    min_mutation_categories: int | None
+    required_mutation_categories: list[str] | None
+
+
+class CIRunStatus(TypedDict, total=False):
+    run_id: str
+    status: str
+    decision: str
+    pass_rate: float
+    unsafe_attempts: int
+    failures: int
+    top_failing_tools: list[dict[str, Any]]
+    mutation_categories: list[str]
+    mutation_coverage_score: int | None
+    dashboard_url: str
 
 
 class FailureRecord(TypedDict, total=False):

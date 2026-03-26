@@ -176,11 +176,11 @@ function DashboardPanels({ data }: { data: DashboardData }) {
 
   return (
     <Tabs defaultValue="overview" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="taxonomy">Taxonomy</TabsTrigger>
-        <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
-        <TabsTrigger value="reliability">Reliability</TabsTrigger>
+      <TabsList className="inline-flex h-auto rounded-full border-0 bg-muted/70 p-1">
+        <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Overview</TabsTrigger>
+        <TabsTrigger value="taxonomy" className="rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Taxonomy</TabsTrigger>
+        <TabsTrigger value="diagnostics" className="rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Diagnostics</TabsTrigger>
+        <TabsTrigger value="reliability" className="rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Reliability</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -215,7 +215,7 @@ function DashboardPanels({ data }: { data: DashboardData }) {
           />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid gap-4 grid-cols-[1fr_360px]">
           <RecentRunsCard runs={dashboardRuns} statsById={data.runStatsById} />
           <PassRateTrendCard series={passRateTrend} />
         </div>
@@ -268,23 +268,23 @@ function KpiCard({
   icon: React.ComponentType<{ className?: string }>;
   accent?: "neutral" | "success" | "danger" | "info";
 }) {
-  const accentClasses: Record<string, string> = {
-    neutral: "text-neutral border-neutral/30 bg-neutral/10",
-    success: "text-success border-success/30 bg-success/10",
-    danger: "text-danger border-danger/30 bg-danger/10",
-    info: "text-info border-info/30 bg-info/10",
+  const iconClasses: Record<string, string> = {
+    neutral: "text-blue-400 border-blue-400/20 bg-blue-400/10",
+    success: "text-teal border-teal/20 bg-teal/10",
+    danger: "text-rose-400 border-rose-400/20 bg-rose-400/10",
+    info: "text-purple-400 border-purple-400/20 bg-purple-400/10",
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden rounded-2xl bg-muted/30">
       <CardContent className="p-0">
         <div className="flex items-start justify-between gap-4 p-5">
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{title}</p>
-            <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-foreground">{value}</p>
+            <p className="mt-2 text-5xl font-semibold leading-none tracking-tight text-foreground">{value}</p>
             <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
           </div>
-          <div className={cn("grid h-10 w-10 place-items-center rounded-md border", accentClasses[accent])}>
+          <div className={cn("grid h-10 w-10 place-items-center rounded-md border", iconClasses[accent])}>
             <Icon className="h-5 w-5" />
           </div>
         </div>
@@ -440,7 +440,7 @@ function TopFragileToolsCard({ fragility }: { fragility: ToolFragilityResponse }
                     color: "#e5e7eb",
                   }}
                 />
-                <Bar dataKey="failures" radius={[6, 6, 0, 0]} fill="#fb7185" />
+                <Bar dataKey="failures" radius={[6, 6, 0, 0]} fill={CHART_LINE} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -555,7 +555,7 @@ function FailureReasonsCard({ reasons }: { reasons: Array<{ reason: string; coun
                     color: "#e5e7eb",
                   }}
                 />
-                <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#f97316" />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]} fill={CHART_LINE} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -595,7 +595,7 @@ function FirstFailureStepCard({
                   }}
                   formatter={(value: number) => `${value} failures`}
                 />
-                <Bar dataKey="failures" radius={[6, 6, 0, 0]} fill="#f43f5e" />
+                <Bar dataKey="failures" radius={[6, 6, 0, 0]} fill={CHART_LINE} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -856,7 +856,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function statusColor(status: string, index: number) {
   const normalized = status.trim().toLowerCase();
-  if (normalized === "completed") return "#22C55E";
+  if (normalized === "completed") return "#00e5cc";
   if (normalized === "failed") return "#EF4444";
   if (normalized === "running") return "#3B82F6";
   if (normalized === "queued") return "#94A3B8";

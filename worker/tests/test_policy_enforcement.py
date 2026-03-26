@@ -13,11 +13,13 @@ import worker as worker_module
 from models import (
     Base,
     Campaign,
+    HardeningTemplate,
     PolicyEvent,
     PolicyPack,
     PolicyPackVersion,
     ReplayAttempt,
     Run,
+    RunTemplateLink,
     Trace,
 )
 
@@ -340,6 +342,190 @@ def test_policy_pack_allows_non_irreversible_tool(
     assert attempt.failure_reason is None
     assert policy_event.decision == "allow"
     assert policy_event.tool == "jira.create_issue"
+
+
+def test_policy_pack_template_auto_confirmation_token_allows_irreversible_tool(
+    worker_db_context: sessionmaker[Session],
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+    template_id = uuid4()
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Template Approval Auto Token",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund-without-token",
+                        "tool": "payments.refund",
+                        "args": {"order_id": "ord-123", "amount": 42},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            HardeningTemplate(
+                template_id=template_id,
+                project_id=project_id,
+                name="Template: Confirmation Gate for payments.refund",
+                type="policy_pack",
+                config={
+                    "source_attempt_id": str(uuid4()),
+                    "target_tool": "payments.refund",
+                    "auto_provide_confirmation_token": True,
+                    "confirmation_token_value": "template-auto-confirmation-token",
+                    "policy": {
+                        "version": "0.1",
+                        "defaults": {"unknown_tools": "allow"},
+                        "approval": {"token_field": "confirmation_token"},
+                        "irreversible": {"tools": ["payments.refund"]},
+                    },
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.add(
+            RunTemplateLink(
+                run_id=run_id,
+                template_id=template_id,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert attempt.result == "passed"
+    assert attempt.failure_reason is None
+    assert policy_event.decision == "allow"
+    assert isinstance(policy_event.input, dict)
+    assert (
+        policy_event.input["tool"]["args"]["confirmation_token"]
+        == "template-auto-confirmation-token"
+    )
+    summary = run.summary or {}
+    assert summary.get("policy_requires_approval") == 0
+    assert summary.get("policy_events_count") == 1
+
+
+def test_policy_pack_template_legacy_confirmation_gate_still_injects_token(
+    worker_db_context: sessionmaker[Session],
+) -> None:
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+    template_id = uuid4()
+
+    with worker_db_context() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Legacy Confirmation Gate Template",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund-without-token",
+                        "tool": "payments.refund",
+                        "args": {"order_id": "ord-legacy", "amount": 30},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            HardeningTemplate(
+                template_id=template_id,
+                project_id=project_id,
+                name="Template: Confirmation Gate for payments.refund",
+                type="policy_pack",
+                config={
+                    "source_attempt_id": str(uuid4()),
+                    "target_tool": "payments.refund",
+                    "policy": {
+                        "version": "0.1",
+                        "defaults": {"unknown_tools": "allow"},
+                        "approval": {"token_field": "confirmation_token"},
+                        "irreversible": {"tools": ["payments.refund"]},
+                    },
+                },
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.add(
+            RunTemplateLink(
+                run_id=run_id,
+                template_id=template_id,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with worker_db_context() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        policy_event = db.execute(
+            select(PolicyEvent).where(PolicyEvent.run_id == run_id)
+        ).scalar_one()
+
+    assert attempt.result == "passed"
+    assert attempt.failure_reason is None
+    assert policy_event.decision == "allow"
+    assert isinstance(policy_event.input, dict)
+    assert (
+        policy_event.input["tool"]["args"]["confirmation_token"]
+        == "template-auto-confirmation-token"
+    )
 
 
 def test_opa_policy_pack_requires_approval_without_token(

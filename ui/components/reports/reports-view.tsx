@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { Download } from "lucide-react";
+
 import { api, type CampaignMetadata, type RunMetadata } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -136,6 +138,7 @@ export function ReportsView() {
             <CardDescription>{rows.length} run(s) in this page.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <SummaryChips rows={rows} />
             <Table>
               <TableHeader>
                 <TableRow>
@@ -178,7 +181,9 @@ export function ReportsView() {
                           variant="outline"
                           onClick={() => void onExportJson(row.runId)}
                           disabled={exportingRunId === row.runId}
+                          className="gap-1.5"
                         >
+                          <Download className="h-3.5 w-3.5" />
                           {exportingRunId === row.runId ? "Exporting..." : "Export JSON"}
                         </Button>
                       </TableCell>
@@ -198,6 +203,27 @@ export function ReportsView() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function SummaryChips({ rows }: { rows: Array<{ passRate: number | null; policyViolations: number }> }) {
+  const totalRuns = rows.length;
+  const ratesWithValue = rows.map((r) => r.passRate).filter((r): r is number => r !== null);
+  const avgPassRate = ratesWithValue.length > 0 ? ratesWithValue.reduce((a, b) => a + b, 0) / ratesWithValue.length : null;
+  const totalPolicyViolations = rows.reduce((sum, r) => sum + r.policyViolations, 0);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+        <span className="font-medium text-white">{totalRuns}</span> Total runs
+      </span>
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+        <span className="font-medium text-teal">{avgPassRate === null ? "--" : formatPercent(avgPassRate, 0)}</span> Avg pass rate
+      </span>
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+        <span className={`font-medium ${totalPolicyViolations > 0 ? "text-amber-400" : "text-white"}`}>{totalPolicyViolations}</span> Total policy violations
+      </span>
     </div>
   );
 }

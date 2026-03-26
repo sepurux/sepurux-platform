@@ -16,6 +16,7 @@ SCHEMA_MUTATION_TYPES = {
 FAILURE_MUTATION_TYPES = {
     "fault.timeout",
     "fault.rate_limit",
+    "fault.auth_failure",
 }
 LATENCY_MUTATION_TYPES = {
     "latency_delay",
@@ -114,7 +115,9 @@ def evaluate_mutation_pack_config(config: Any) -> MutationPackValidationResult:
     if not mutation_type_set.intersection(SCHEMA_MUTATION_TYPES):
         issues.append("must contain at least one schema mutation")
     if not mutation_type_set.intersection(FAILURE_MUTATION_TYPES):
-        issues.append("must contain at least one failure mutation (timeout/rate_limit)")
+        issues.append(
+            "must contain at least one failure mutation (timeout/rate_limit/auth_failure)"
+        )
     if not mutation_type_set.intersection(LATENCY_MUTATION_TYPES):
         issues.append("must contain at least one latency mutation")
     if len(mutation_type_set) < 2:

@@ -185,6 +185,44 @@ def test_policy_pack_engine_validation_allows_opa_and_rejects_unknown(
     assert invalid_response.status_code == 422
 
 
+def test_delete_policy_pack_archives_and_hides_by_default(
+    policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = policy_test_context
+    create_response = client.post(
+        "/v1/policy-packs",
+        json={
+            "name": "Archive Policy Pack",
+            "engine": "builtin",
+            "policy": {
+                "version": "0.1",
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible": {"tools": []},
+            },
+        },
+    )
+    assert create_response.status_code == 201
+    policy_pack_id = create_response.json()["policy_pack_id"]
+
+    delete_response = client.delete(f"/v1/policy-packs/{policy_pack_id}")
+    assert delete_response.status_code == 204
+
+    hidden_get = client.get(f"/v1/policy-packs/{policy_pack_id}")
+    assert hidden_get.status_code == 404
+
+    hidden_list = client.get("/v1/policy-packs")
+    assert hidden_list.status_code == 200
+    assert policy_pack_id not in {item["policy_pack_id"] for item in hidden_list.json()}
+
+    visible_get = client.get(f"/v1/policy-packs/{policy_pack_id}?include_archived=true")
+    assert visible_get.status_code == 200
+    assert visible_get.json()["is_archived"] is True
+
+    visible_list = client.get("/v1/policy-packs?include_archived=true")
+    assert visible_list.status_code == 200
+    assert policy_pack_id in {item["policy_pack_id"] for item in visible_list.json()}
+
+
 def test_run_create_with_policy_pack_and_policy_event_listing(
     policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
 ) -> None:
@@ -372,6 +410,62 @@ def test_run_create_with_policy_pack_and_policy_event_listing(
     second_payload = second_page.json()
     assert len(second_payload) == 1
     assert second_payload[0]["tool"] == "jira.create_issue"
+
+
+def test_archived_policy_pack_cannot_be_used_for_new_runs(
+    policy_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, testing_session_local, project_id, fake_queue = policy_test_context
+    trace_id = uuid4()
+    campaign_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Archived Policy Campaign",
+                mutation_set=[{"mutation_id": "baseline"}],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.commit()
+
+    pack_response = client.post(
+        "/v1/policy-packs",
+        json={
+            "name": "Archive Me",
+            "engine": "builtin",
+            "policy": {
+                "version": "0.1",
+                "defaults": {"unknown_tools": "allow"},
+                "irreversible": {"tools": []},
+            },
+        },
+    )
+    assert pack_response.status_code == 201
+    policy_pack_id = pack_response.json()["policy_pack_id"]
+    assert client.delete(f"/v1/policy-packs/{policy_pack_id}").status_code == 204
+
+    run_response = client.post(
+        "/v1/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "policy_pack_id": policy_pack_id,
+        },
+    )
+    assert run_response.status_code == 404
+    assert run_response.json() == {"detail": "Policy pack not found"}
+    assert fake_queue.calls == []
 
 
 def test_policy_pack_update_creates_new_version_and_sets_active(

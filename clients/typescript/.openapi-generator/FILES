@@ -118,6 +118,8 @@ src/models/ToolRegistryCreateRequest.ts
 src/models/ToolRegistryMetadata.ts
 src/models/ToolRegistryZoneUpdateRequest.ts
 src/models/ToolUsageStatsItem.ts
+src/models/TraceBootstrapCampaign.ts
+src/models/TraceBootstrapResponse.ts
 src/models/TraceMetadata.ts
 src/models/TraceTimelineStep.ts
 src/models/UserNotificationInboxResponse.ts

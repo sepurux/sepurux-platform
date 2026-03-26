@@ -51,6 +51,12 @@ export interface PolicyPackMetadata {
     policy: any | null;
     /**
      * 
+     * @type {boolean}
+     * @memberof PolicyPackMetadata
+     */
+    is_archived?: boolean;
+    /**
+     * 
      * @type {string}
      * @memberof PolicyPackMetadata
      */
@@ -97,6 +103,7 @@ export function PolicyPackMetadataFromJSONTyped(json: any, ignoreDiscriminator: 
         'name': json['name'],
         'engine': json['engine'],
         'policy': json['policy'],
+        'is_archived': json['is_archived'] == null ? undefined : json['is_archived'],
         'active_version_id': json['active_version_id'] == null ? undefined : json['active_version_id'],
         'active_version_number': json['active_version_number'] == null ? undefined : json['active_version_number'],
         'created_at': (new Date(json['created_at'])),
@@ -114,6 +121,7 @@ export function PolicyPackMetadataToJSON(value?: PolicyPackMetadata | null): any
         'name': value['name'],
         'engine': value['engine'],
         'policy': value['policy'],
+        'is_archived': value['is_archived'],
         'active_version_id': value['active_version_id'],
         'active_version_number': value['active_version_number'],
         'created_at': ((value['created_at']).toISOString()),

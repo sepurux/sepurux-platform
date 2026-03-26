@@ -49,6 +49,7 @@ export type CampaignMetadata = {
   campaign_id: string;
   mutation_pack_id: string | null;
   name: string;
+  status: string;
   mutation_set: unknown;
   eval_set: unknown;
   created_at: string;
@@ -241,6 +242,7 @@ export type PolicyPackMetadata = {
   name: string;
   engine: string;
   policy: Record<string, unknown>;
+  is_archived: boolean;
   active_version_id: string | null;
   active_version_number: number | null;
   created_at: string;
@@ -632,6 +634,21 @@ export type InternalFeatureFlags = {
   enable_ci: boolean;
   enable_mutations: boolean;
   enable_billing: boolean;
+};
+
+export type InternalTenantControls = {
+  tenant_id: string;
+  runs_paused: boolean;
+  workspace_creation_locked: boolean;
+  updated_by: string | null;
+  reason: string | null;
+  updated_at: string;
+};
+
+export type InternalTenantApiKeyRevokeResponse = {
+  tenant_id: string;
+  revoked_count: number;
+  controls: InternalTenantControls;
 };
 
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
@@ -1134,6 +1151,30 @@ export const api = {
       },
       { requireProjectHeader: false }
     ),
+  getInternalTenantControls: (tenantId: string) =>
+    requestJson<InternalTenantControls>(
+      `/v1/internal/tenants/${encodeURIComponent(tenantId)}/controls`,
+      undefined,
+      { requireProjectHeader: false }
+    ),
+  updateInternalTenantControls: (
+    tenantId: string,
+    payload: { runs_paused?: boolean; workspace_creation_locked?: boolean; reason?: string | null }
+  ) =>
+    patchJson<InternalTenantControls, typeof payload>(
+      `/v1/internal/tenants/${encodeURIComponent(tenantId)}/controls`,
+      payload,
+      { requireProjectHeader: false }
+    ),
+  revokeInternalTenantApiKeys: (
+    tenantId: string,
+    payload: { reason?: string | null } = {}
+  ) =>
+    postJson<InternalTenantApiKeyRevokeResponse, typeof payload>(
+      `/v1/internal/tenants/${encodeURIComponent(tenantId)}/controls/revoke-api-keys`,
+      payload,
+      { requireProjectHeader: false }
+    ),
   listBillingPlans: () => requestJson<SubscriptionPlanMetadata[]>("/v1/billing/plans"),
   getBillingSubscription: () => requestJson<UserSubscriptionMetadata>("/v1/billing/subscription"),
   getBillingCredits: () => requestJson<CreditWalletMetadata>("/v1/billing/credits"),
@@ -1168,10 +1209,11 @@ export const api = {
     }),
   getTraceTimeline: (traceId: string) =>
     requestJson<TraceTimelineStep[]>(`/v1/traces/${traceId}/timeline`),
-  listCampaigns: (options?: { limit?: number; offset?: number }) =>
+  listCampaigns: (options?: { limit?: number; offset?: number; include_archived?: boolean }) =>
     requestJson<CampaignMetadata[]>("/v1/campaigns", {
       limit: options?.limit ?? 50,
       offset: options?.offset ?? 0,
+      include_archived: options?.include_archived ? "true" : undefined,
     }),
   listCampaignFailures: (
     campaignId: string,
@@ -1197,6 +1239,7 @@ export const api = {
     eval_set: unknown;
     mutation_pack_id?: string | null;
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
+  deleteCampaign: (campaignId: string) => deleteRequest(`/v1/campaigns/${campaignId}`),
   createRun: (payload: {
     trace_id: string;
     campaign_id: string;
@@ -1229,14 +1272,19 @@ export const api = {
       `/v1/runs/${runId}/apply-template/${templateId}`,
       {}
     ),
-  listPolicyPacks: () => requestJson<PolicyPackMetadata[]>("/v1/policy-packs"),
+  listPolicyPacks: (options?: { include_archived?: boolean }) =>
+    requestJson<PolicyPackMetadata[]>("/v1/policy-packs", {
+      include_archived: options?.include_archived ? "true" : undefined,
+    }),
   createPolicyPack: (payload: {
     name: string;
     engine?: "builtin" | "opa";
     policy: Record<string, unknown>;
   }) => postJson<PolicyPackMetadata, typeof payload>("/v1/policy-packs", payload),
-  getPolicyPack: (policyPackId: string) =>
-    requestJson<PolicyPackMetadata>(`/v1/policy-packs/${policyPackId}`),
+  getPolicyPack: (policyPackId: string, options?: { include_archived?: boolean }) =>
+    requestJson<PolicyPackMetadata>(`/v1/policy-packs/${policyPackId}`, {
+      include_archived: options?.include_archived ? "true" : undefined,
+    }),
   updatePolicyPack: (
     policyPackId: string,
     payload: {
@@ -1254,6 +1302,7 @@ export const api = {
       `/v1/policy-packs/${policyPackId}/rollback`,
       payload
     ),
+  deletePolicyPack: (policyPackId: string) => deleteRequest(`/v1/policy-packs/${policyPackId}`),
   listPolicyPackVersions: (policyPackId: string) =>
     requestJson<PolicyPackVersionMetadata[]>(`/v1/policy-packs/${policyPackId}/versions`),
   listRuns: (options?: number | { limit?: number; offset?: number; status?: string }) => {

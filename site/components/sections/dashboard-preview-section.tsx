@@ -30,7 +30,7 @@ export function DashboardPreviewSection() {
               "0 0 0 1px rgba(0,229,204,0.2), 0 40px 100px rgba(0,229,204,0.06)",
           }}
         >
-          <video className="aspect-video h-auto w-full object-cover" autoPlay muted loop playsInline preload="auto">
+          <video className="aspect-video h-auto w-full object-cover" autoPlay muted loop playsInline preload="auto" poster="/images/demo-poster.png">
             <source src="/videos/dashboard-demo.mp4" type="video/mp4" />
           </video>
         </motion.div>

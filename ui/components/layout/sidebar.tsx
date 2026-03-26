@@ -150,52 +150,20 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
   }, [groups, pathname]);
 
   return (
-    <aside className="relative z-30 hidden h-screen w-64 shrink-0 overflow-hidden border-r border-border bg-sidebar/95 p-4 backdrop-blur xl:flex xl:flex-col">
-      {/* workspace header */}
-      <div className="mb-4 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
-        <div
-          className="h-10 w-10 shrink-0 overflow-hidden rounded-md border"
-          style={{
-            borderColor: "rgba(0,229,204,0.2)",
-            background: "rgba(0,229,204,0.08)",
-          }}
-        >
-          <img src="/brand-icon.png" alt="Sepurux mark" className="h-full w-full object-cover" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Sepurux</p>
-          <p className="truncate text-sm font-semibold text-foreground">
-            {authSession?.project_name ?? "Control Plane"}
-          </p>
-          <p
-            className="mt-0.5 truncate text-[11px] uppercase tracking-[0.12em]"
-            style={{ color: "var(--accent-teal)" }}
-          >
-            Credits-enabled workspace
-          </p>
-        </div>
-      </div>
-
+    <aside className="relative z-30 hidden h-screen w-[220px] shrink-0 overflow-hidden border-r border-border bg-sidebar/95 px-2 py-3 backdrop-blur xl:flex xl:flex-col">
       <nav className="relative z-30 flex-1 space-y-0.5 overflow-y-auto pointer-events-auto">
         {dashboardItem ? (
           <Link
             href={dashboardItem.href}
             className={cn(
-              "relative z-30 group flex items-center gap-3 rounded-md border-l-2 border-l-transparent border-transparent px-3 py-2.5 text-sm transition",
+              "relative z-30 group flex h-10 items-center gap-2.5 rounded-md border-l-2 pl-3 pr-2 text-[14px] transition-colors duration-150",
               pathname === dashboardItem.href
-                ? "border-l-primary bg-muted/45 text-foreground shadow-insetSoft"
-                : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground",
+                ? "border-l-primary bg-accent text-foreground"
+                : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
-            <dashboardItem.icon
-              className={cn(
-                "h-4 w-4",
-                pathname === dashboardItem.href
-                  ? "text-primary"
-                  : "text-muted-foreground group-hover:text-foreground"
-              )}
-            />
-            <span className="flex-1">{dashboardItem.label}</span>
+            <dashboardItem.icon className={cn("h-4 w-4 shrink-0", pathname === dashboardItem.href ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+            <span className="flex-1 truncate">{dashboardItem.label}</span>
           </Link>
         ) : null}
 
@@ -203,7 +171,8 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
           const active = group.children.some(
             (child) => pathname === child.href || pathname.startsWith(child.href + "/")
           );
-          const expanded = expandedGroups[group.section] ?? active;
+          // default expanded = true
+          const expanded = expandedGroups[group.section] ?? true;
           const Icon = group.icon;
           const primaryChild = group.children[0];
 
@@ -211,22 +180,17 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
             <div key={group.section} className="space-y-0.5">
               <div
                 className={cn(
-                  "flex items-center rounded-md border-l-2 border-l-transparent border-transparent text-sm transition",
+                  "flex items-center rounded-md border-l-2 text-[14px] transition-colors duration-150",
                   active
-                    ? "border-l-primary bg-muted/45 text-foreground shadow-insetSoft"
-                    : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground",
+                    ? "border-l-primary bg-accent text-foreground"
+                    : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
                 <Link
                   href={primaryChild.href}
-                  className="group flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5"
+                  className="group flex min-w-0 flex-1 items-center gap-2.5 pl-3 py-2.5"
                 >
-                  <Icon
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                    )}
-                  />
+                  <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                   <span className="truncate text-left">{group.label}</span>
                 </Link>
                 <button
@@ -248,15 +212,15 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
                 >
                   <ChevronDown
                     className={cn(
-                      "h-4 w-4 transition-transform",
-                      expanded ? "rotate-180 text-foreground" : "text-muted-foreground"
+                      "h-3.5 w-3.5 transition-transform duration-150",
+                      expanded ? "rotate-180 text-muted-foreground" : "text-muted-foreground/50"
                     )}
                   />
                 </button>
               </div>
 
               {expanded ? (
-                <div className="relative z-30 space-y-0.5 pl-6">
+                <div className="relative z-30 space-y-0.5 pl-5">
                   {group.children.map((child) => {
                     const childActive =
                       pathname === child.href || pathname.startsWith(child.href + "/");
@@ -265,10 +229,10 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
                         key={child.href}
                         href={child.href}
                         className={cn(
-                          "relative z-30 block rounded-md px-3 py-2 text-sm transition",
+                          "relative z-30 block rounded-md px-3 py-2 text-[13px] transition-colors duration-150",
                           childActive
-                            ? "bg-muted/35 text-foreground shadow-insetSoft"
-                            : "text-muted-foreground hover:bg-accent/35 hover:text-foreground",
+                            ? "bg-accent text-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground",
                         )}
                       >
                         {child.label}
@@ -291,24 +255,21 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
               key={item.label}
               href={item.href}
               className={cn(
-                "relative z-30 group flex items-center gap-3 rounded-md border-l-2 border-l-transparent border-transparent px-3 py-2.5 text-sm transition",
+                "relative z-30 group flex h-10 items-center gap-2.5 rounded-md border-l-2 pl-3 pr-2 text-[14px] transition-colors duration-150",
                 active
-                  ? "border-l-primary bg-muted/45 text-foreground shadow-insetSoft"
-                  : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground",
+                  ? "border-l-primary bg-accent text-foreground"
+                  : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
-              <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-              <span className="flex-1">{item.label}</span>
+              <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+              <span className="flex-1 truncate">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* footer */}
-      <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
-        <p className="mb-1 font-medium text-foreground">All product surfaces are unlocked.</p>
-        <p>Credits are only consumed when you execute runs, replays, and other billable workflows.</p>
-      </div>
+      <p className="px-3 py-2 text-xs text-muted-foreground/60">Credits-enabled</p>
     </aside>
   );
 }

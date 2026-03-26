@@ -197,9 +197,9 @@ def _max_mutations_per_attempt(mutation_pack_config: Any) -> int:
     config_obj = mutation_pack_config if isinstance(mutation_pack_config, dict) else {}
     raw = config_obj.get("max_mutations_per_attempt")
     if isinstance(raw, int):
-        return max(0, raw)
+        return max(0, min(raw, 20))
     if isinstance(raw, float):
-        return max(0, int(raw))
+        return max(0, min(int(raw), 20))
     return 1
 
 
@@ -265,6 +265,14 @@ def _apply_single_mutation(
             failure_reason="rate_limited",
             error_type="RateLimitError",
             default_error_message="simulated rate limit from mutation pack",
+        )
+    if mutation_type == "fault.auth_failure":
+        return _apply_fault(
+            definition,
+            events,
+            failure_reason="auth_failed",
+            error_type="AuthError",
+            default_error_message="simulated auth failure from mutation pack",
         )
     return None, None
 

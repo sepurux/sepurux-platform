@@ -27,7 +27,9 @@ TenantAuth = Annotated[TenantAuthContext, Depends(require_role("viewer"))]
 
 def _to_notification_item(record) -> UserNotificationItem:
     severity = record.severity if record.severity in {"info", "warning", "critical"} else "info"
-    metadata = record.notification_metadata if isinstance(record.notification_metadata, dict) else {}
+    metadata = (
+        record.notification_metadata if isinstance(record.notification_metadata, dict) else {}
+    )
     return UserNotificationItem(
         notification_id=record.notification_id,
         tenant_id=record.tenant_id,

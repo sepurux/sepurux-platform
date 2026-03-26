@@ -11,6 +11,8 @@ Name | Type | Description | Notes
 **UnsafeAttempts** | **int32** |  | 
 **Failures** | **int32** |  | 
 **TopFailingTools** | [**[]ToolCount**](ToolCount.md) |  | 
+**MutationCategories** | Pointer to **[]string** |  | [optional] 
+**MutationCoverageScore** | Pointer to **NullableInt32** |  | [optional] 
 **DashboardUrl** | **string** |  | 
 
 ## Methods
@@ -172,6 +174,66 @@ and a boolean to check if the value has been set.
 SetTopFailingTools sets TopFailingTools field to given value.
 
 
+### GetMutationCategories
+
+`func (o *CIRunStatusResponse) GetMutationCategories() []string`
+
+GetMutationCategories returns the MutationCategories field if non-nil, zero value otherwise.
+
+### GetMutationCategoriesOk
+
+`func (o *CIRunStatusResponse) GetMutationCategoriesOk() (*[]string, bool)`
+
+GetMutationCategoriesOk returns a tuple with the MutationCategories field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMutationCategories
+
+`func (o *CIRunStatusResponse) SetMutationCategories(v []string)`
+
+SetMutationCategories sets MutationCategories field to given value.
+
+### HasMutationCategories
+
+`func (o *CIRunStatusResponse) HasMutationCategories() bool`
+
+HasMutationCategories returns a boolean if a field has been set.
+
+### GetMutationCoverageScore
+
+`func (o *CIRunStatusResponse) GetMutationCoverageScore() int32`
+
+GetMutationCoverageScore returns the MutationCoverageScore field if non-nil, zero value otherwise.
+
+### GetMutationCoverageScoreOk
+
+`func (o *CIRunStatusResponse) GetMutationCoverageScoreOk() (*int32, bool)`
+
+GetMutationCoverageScoreOk returns a tuple with the MutationCoverageScore field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMutationCoverageScore
+
+`func (o *CIRunStatusResponse) SetMutationCoverageScore(v int32)`
+
+SetMutationCoverageScore sets MutationCoverageScore field to given value.
+
+### HasMutationCoverageScore
+
+`func (o *CIRunStatusResponse) HasMutationCoverageScore() bool`
+
+HasMutationCoverageScore returns a boolean if a field has been set.
+
+### SetMutationCoverageScoreNil
+
+`func (o *CIRunStatusResponse) SetMutationCoverageScoreNil(b bool)`
+
+ SetMutationCoverageScoreNil sets the value for MutationCoverageScore to be an explicit nil
+
+### UnsetMutationCoverageScore
+`func (o *CIRunStatusResponse) UnsetMutationCoverageScore()`
+
+UnsetMutationCoverageScore ensures that no value is present for MutationCoverageScore, not even an explicit nil
 ### GetDashboardUrl
 
 `func (o *CIRunStatusResponse) GetDashboardUrl() string`

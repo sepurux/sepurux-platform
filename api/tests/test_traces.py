@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Trace, TraceStep
+from app.models import Base, Campaign, PolicyPack, ToolRegistry, Trace, TraceStep
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -308,3 +308,119 @@ def test_post_trace_captures_sdk_header(
     with testing_session_local() as db:
         row = db.execute(select(Trace).where(Trace.trace_id == trace_id)).scalar_one()
         assert row.sdk_meta == "py/0.4.0"
+
+
+def test_post_trace_auto_bootstraps_policy_security_and_campaign_bundle(
+    trace_test_context: tuple[TestClient, sessionmaker[Session], dict[str, object]],
+) -> None:
+    client, testing_session_local, _ = trace_test_context
+    payload = {
+        "trace_version": "0.2",
+        "source": "sdk",
+        "task": {"name": "incident_agent"},
+        "events": [
+            {"type": "tool_call", "tool": "search_docs", "args": {"query": "timeout"}},
+            {
+                "type": "tool_result",
+                "tool": "search_docs",
+                "result": {"hits": ["Runbook A", "Runbook B"]},
+            },
+            {
+                "type": "tool_call",
+                "tool": "create_ticket",
+                "args": {"title": "DB timeout incident"},
+            },
+            {
+                "type": "tool_result",
+                "tool": "create_ticket",
+                "result": {"ticket_id": "TCK-1001", "status": "created"},
+            },
+            {
+                "type": "tool_call",
+                "tool": "send_slack",
+                "args": {"channel": "#incident-room", "message": "ticket created"},
+            },
+            {
+                "type": "tool_result",
+                "tool": "send_slack",
+                "result": {"message_id": "MSG-101", "status": "sent"},
+            },
+        ],
+    }
+    create_response = client.post("/v1/traces", json=payload)
+    assert create_response.status_code == 201
+    trace_id = create_response.json()["trace_id"]
+
+    with testing_session_local() as db:
+        tools = list(db.scalars(select(ToolRegistry)))
+        assert len(tools) == 3
+        assert all(tool.zone == "untrusted" for tool in tools)
+        assert db.scalar(select(PolicyPack.policy_pack_id).where(PolicyPack.name == "trace.bootstrap.default"))
+        campaigns = list(
+            db.scalars(
+                select(Campaign).where(
+                    Campaign.name.in_(
+                        [
+                            "Bootstrap · Tool Chaos",
+                            "Bootstrap · Latency Chaos",
+                            "Bootstrap · Prompt Security",
+                        ]
+                    )
+                )
+            )
+        )
+        assert len(campaigns) == 3
+
+    bootstrap_response = client.post(f"/v1/traces/{trace_id}/bootstrap")
+    assert bootstrap_response.status_code == 200
+    data = bootstrap_response.json()
+    assert data["trace_id"] == trace_id
+    assert set(data["tools_discovered"]) == {"search_docs", "create_ticket", "send_slack"}
+    assert data["tool_zones_created"] == 0
+    assert data["tool_zones_updated"] == 0
+    assert data["policy_pack_name"] == "trace.bootstrap.default"
+    assert data["policy_pack_created"] is False
+    assert {item["name"] for item in data["campaigns"]} == {
+        "Bootstrap · Tool Chaos",
+        "Bootstrap · Latency Chaos",
+        "Bootstrap · Prompt Security",
+    }
+    assert all(item["created"] is False for item in data["campaigns"])
+
+    idempotent_response = client.post(f"/v1/traces/{trace_id}/bootstrap")
+    assert idempotent_response.status_code == 200
+    idempotent = idempotent_response.json()
+    assert idempotent["tool_zones_created"] == 0
+    assert idempotent["tool_zones_updated"] == 0
+    assert idempotent["policy_pack_created"] is False
+    assert all(item["created"] is False for item in idempotent["campaigns"])
+
+
+def test_auto_bootstrap_does_not_overwrite_existing_tool_zone(
+    trace_test_context: tuple[TestClient, sessionmaker[Session], dict[str, object]],
+) -> None:
+    client, testing_session_local, _ = trace_test_context
+    payload = {
+        "trace_version": "0.2",
+        "source": "sdk",
+        "task": {"name": "agent"},
+        "events": [
+            {"type": "tool_call", "tool": "search_docs", "args": {"query": "billing"}},
+            {"type": "tool_result", "tool": "search_docs", "result": {"hits": []}},
+        ],
+    }
+
+    first = client.post("/v1/traces", json=payload)
+    assert first.status_code == 201
+    with testing_session_local() as db:
+        tool = db.scalar(select(ToolRegistry).where(ToolRegistry.name == "search_docs"))
+        assert isinstance(tool, ToolRegistry)
+        tool.zone = "trusted"
+        db.commit()
+
+    second = client.post("/v1/traces", json=payload)
+    assert second.status_code == 201
+    with testing_session_local() as db:
+        tool = db.scalar(select(ToolRegistry).where(ToolRegistry.name == "search_docs"))
+        assert isinstance(tool, ToolRegistry)
+        assert tool.zone == "trusted"

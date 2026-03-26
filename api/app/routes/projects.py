@@ -10,6 +10,10 @@ from app.services.billing_service import get_billing_snapshot_for_context
 from app.services.internal_audit_service import create_audit_log
 from app.services.pricing_service import normalize_pricing_tier
 from app.services.project_service import create_project, list_projects_for_tenant
+from app.services.tenant_control_service import (
+    TenantControlViolationError,
+    assert_tenant_workspace_creation_allowed,
+)
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -57,6 +61,11 @@ def get_projects(db: DbSession, tenant_auth: TenantAuth) -> list[ProjectMetadata
 def post_project(
     payload: ProjectCreateRequest, db: DbSession, tenant_auth: AdminAuth
 ) -> ProjectMetadata:
+    try:
+        assert_tenant_workspace_creation_allowed(db, tenant_id=tenant_auth.tenant_id)
+    except TenantControlViolationError as exc:
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
+
     tenant_project = db.scalar(
         select(Project)
         .where(Project.tenant_id == tenant_auth.tenant_id)
