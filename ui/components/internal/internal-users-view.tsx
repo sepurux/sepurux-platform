@@ -132,10 +132,15 @@ export function InternalUsersView() {
               <tbody>
                 {filteredWallets.length ? (
                   filteredWallets.map((wallet) => (
-                    <tr key={wallet.wallet_id} className="border-t border-border/70 text-muted-foreground">
+                    <tr
+                      key={wallet.wallet_id}
+                      className={`border-t border-border/70 text-muted-foreground ${wallet.balance <= 0 ? "bg-red-950/20" : ""}`}
+                    >
                       <td className="px-4 py-3 text-foreground">{wallet.email ?? wallet.user_id}</td>
                       <td className="px-4 py-3">{wallet.name ?? "-"}</td>
-                      <td className="px-4 py-3">{wallet.balance}</td>
+                      <td className={`px-4 py-3 font-medium ${wallet.balance <= 0 ? "text-red-400" : wallet.balance < 20 ? "text-amber-400" : "text-foreground"}`}>
+                        {wallet.balance}
+                      </td>
                       <td className="px-4 py-3">{wallet.monthly_credits}</td>
                       <td className="px-4 py-3">{wallet.topup_credits}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">

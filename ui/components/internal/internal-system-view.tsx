@@ -169,11 +169,15 @@ export function InternalSystemView() {
             </article>
             <article className="rounded-lg border border-border/70 bg-card/70 p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Worker Status</p>
-              <p className="mt-2 text-2xl font-semibold capitalize text-primary">{data.worker_status}</p>
+              <p className={`mt-2 text-2xl font-semibold capitalize ${data.worker_status === "idle" || data.worker_status === "busy" ? "text-emerald-400" : data.worker_status === "degraded" ? "text-amber-400" : "text-red-400"}`}>
+                {data.worker_status}
+              </p>
             </article>
             <article className="rounded-lg border border-border/70 bg-card/70 p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Error Rate (24h)</p>
-              <p className="mt-2 text-3xl font-semibold text-primary">{data.error_rate_24h}%</p>
+              <p className={`mt-2 text-3xl font-semibold ${data.error_rate_24h > 10 ? "text-red-400" : data.error_rate_24h > 5 ? "text-amber-400" : "text-primary"}`}>
+                {data.error_rate_24h}%
+              </p>
             </article>
             <article className="rounded-lg border border-border/70 bg-card/70 p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Uptime</p>
@@ -195,9 +199,9 @@ export function InternalSystemView() {
 
           <div className="space-y-4 rounded-lg border border-border/70 bg-card/70 p-4">
             <div>
-              <h2 className="text-lg font-semibold text-primary">Tenant Kill Switch</h2>
+              <h2 className="text-lg font-semibold text-primary">Tenant Controls</h2>
               <p className="text-sm text-muted-foreground">
-                Pause run creation, lock workspace creation, or revoke tenant API keys.
+                Pause runs, lock workspace creation, or revoke API keys for a specific tenant.
               </p>
             </div>
 

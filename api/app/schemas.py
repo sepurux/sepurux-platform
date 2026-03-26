@@ -541,6 +541,8 @@ class InternalDashboardOverview(BaseModel):
     failures_last_24h: int
     credits_used: int
     system_health: InternalSystemHealth
+    security_blocks_24h: int = 0
+    policy_denies_24h: int = 0
 
 
 class InternalSearchUserResult(BaseModel):

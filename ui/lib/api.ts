@@ -458,6 +458,8 @@ export type InternalDashboardOverview = {
   failures_last_24h: number;
   credits_used: number;
   system_health: InternalSystemHealth;
+  security_blocks_24h: number;
+  policy_denies_24h: number;
 };
 
 export type InternalSearchUserResult = {
