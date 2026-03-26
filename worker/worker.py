@@ -680,11 +680,27 @@ def _load_tool_zones(db: Session, *, project_id: UUID) -> dict[str, str]:
     }
 
 
+_TEXT_FIELD_NAMES = frozenset(
+    {
+        "content",
+        "text",
+        "message",
+        "body",
+        "description",
+        "output",
+        "response",
+        "summary",
+        "title",
+        "detail",
+        "data",
+    }
+)
+
+
 def _extract_tool_result_text_fields(result: dict[str, Any]) -> dict[str, str]:
     text_fields: dict[str, str] = {}
-    for field in ("content", "text", "message"):
-        value = result.get(field)
-        if isinstance(value, str) and value:
+    for field, value in result.items():
+        if isinstance(value, str) and value and field in _TEXT_FIELD_NAMES:
             text_fields[field] = value
     return text_fields
 
