@@ -226,18 +226,38 @@ def create_ci_run_and_enqueue(
         raise ValueError("Trace and campaign must belong to the same project")
     assert_project_runs_allowed(db, project_id=campaign.project_id)
 
+    project_id = trace.project_id
+    effective_policy_pack_id: UUID | None = None
+    effective_policy_pack_version_id: UUID | None = None
+
+    bootstrap_pack = db.scalar(
+        select(PolicyPack)
+        .where(
+            PolicyPack.project_id == project_id,
+            PolicyPack.name == DEFAULT_BOOTSTRAP_POLICY_PACK_NAME,
+            PolicyPack.is_archived.is_(False),
+        )
+        .order_by(PolicyPack.created_at.desc(), PolicyPack.policy_pack_id.desc())
+        .limit(1)
+    )
+    if bootstrap_pack is not None:
+        effective_policy_pack_id = bootstrap_pack.policy_pack_id
+        active_version = get_policy_pack_active_version(db, policy_pack=bootstrap_pack)
+        if isinstance(active_version, PolicyPackVersion):
+            effective_policy_pack_version_id = active_version.version_id
+
     summary: dict[str, Any] = {"ci_thresholds": thresholds}
     if isinstance(github_context, dict):
         summary["github_context"] = github_context
 
     run = _create_run_record(
         db,
-        project_id=trace.project_id,
+        project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
         mutation_pack_id=campaign.mutation_pack_id,
-        policy_pack_id=None,
-        effective_policy_pack_version_id=None,
+        policy_pack_id=effective_policy_pack_id,
+        effective_policy_pack_version_id=effective_policy_pack_version_id,
         summary=summary,
         actor=actor,
     )
