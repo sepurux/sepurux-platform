@@ -7,6 +7,9 @@ import { DashboardPreviewSection } from "@/components/sections/dashboard-preview
 import { FeatureGrid } from "@/components/sections/feature-grid";
 import { IntegrationSection } from "@/components/sections/integration-section";
 import { HowItWorksSection } from "@/components/sections/how-it-works-section";
+import { CIGateSection } from "@/components/sections/ci-gate-section";
+import { EnterpriseReadinessSection } from "@/components/sections/enterprise-readiness-section";
+import { IncidentProofSection } from "@/components/sections/incident-proof-section";
 import { ScreenshotGallerySection } from "@/components/sections/screenshot-gallery-section";
 import { FinalCtaSection } from "@/components/sections/final-cta-section";
 import { buildPageMetadata } from "@/lib/site";
@@ -23,10 +26,13 @@ export default function HomePage() {
     <>
       <HeroSection />
       <SocialProofSection />
+      <HowItWorksSection />
       <DashboardPreviewSection />
       <FeatureGrid />
+      <CIGateSection />
+      <EnterpriseReadinessSection />
+      <IncidentProofSection />
       <IntegrationSection />
-      <HowItWorksSection />
       <ScreenshotGallerySection />
       <FinalCtaSection />
     </>
