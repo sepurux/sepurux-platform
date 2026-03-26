@@ -34,6 +34,11 @@ const docTracks = [
     href: "/docs/api-reference",
   },
   {
+    title: "Integrations",
+    description: "Drop-in OpenAI and LangChain integrations — auto-record traces without manual instrumentation.",
+    href: "/docs/integrations",
+  },
+  {
     title: "FAQ & Support",
     description: "Find quick answers and the right channel for product, integration, and onboarding questions.",
     href: "/docs/faq",
