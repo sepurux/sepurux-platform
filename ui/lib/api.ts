@@ -719,6 +719,7 @@ export type TimelineEvent = {
   args?: Record<string, unknown>;
   result?: Record<string, unknown>;
   error?: { type?: string; message?: string };
+  latency_ms?: number | null;
 };
 
 export type AttemptTimeline = {
