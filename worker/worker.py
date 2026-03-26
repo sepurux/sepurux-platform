@@ -1160,7 +1160,8 @@ def _enforce_injection_firewall(
 
         raw_tool = event.get("tool")
         tool_name: str = raw_tool if isinstance(raw_tool, str) else "unknown"
-        zone = tool_zones.get(tool_name, "untrusted")
+        raw_zone = tool_zones.get(tool_name, "untrusted")
+        zone = raw_zone if raw_zone == "trusted" else "untrusted"
         text_blob = "\n".join(text_fields.values())
         detection = detect_prompt_injection(text_blob)
 
