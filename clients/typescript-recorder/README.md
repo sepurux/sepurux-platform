@@ -1,5 +1,8 @@
 # Sepurux TypeScript Recorder
 
+[![npm](https://img.shields.io/npm/v/@sepurux/recorder)](https://www.npmjs.com/package/@sepurux/recorder)
+[![CI](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/sepurux/sepurux-platform/actions/workflows/ci.yml)
+
 `@sepurux/recorder` provides the recommended TypeScript integration path for Sepurux:
 env-aware client setup, managed trace upload, and optional campaign execution.
 
