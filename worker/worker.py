@@ -39,7 +39,7 @@ from models import (
     Webhook,
 )
 from mutation_engine import apply_mutation_pack
-from policy.opa_client import OPAUnavailableError, evaluate_policy_with_opa
+from policy.opa_client import OPAResponseError, OPAUnavailableError, evaluate_policy_with_opa
 from policy_engine import (
     approval_token_field,
     evaluate_policy,
@@ -1424,6 +1424,13 @@ def execute_run(run_id: str) -> None:
                             blocked_failure_reason = "opa_unavailable"
                             blocked_error_type = "OPAUnavailableError"
                             blocked_error_message = "OPA policy decision service unavailable"
+                        except OPAResponseError as exc:
+                            policy_denies += 1
+                            event_decision = "deny"
+                            event_reason = f"opa response error: {exc}"
+                            blocked_failure_reason = "opa_response_error"
+                            blocked_error_type = "OPAResponseError"
+                            blocked_error_message = "OPA returned an invalid response"
                         else:
                             event_decision = opa_evaluation.decision
                             event_reason = opa_evaluation.reason
