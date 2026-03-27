@@ -80,10 +80,13 @@ def _categorize_mutation_types(mutation_types: list[str]) -> list[str]:
     return sorted(categories)
 
 
+_POINTS_PER_CATEGORY = 25  # 4 categories × 25 = 100 max
+
+
 def coverage_score_for_config(config: Any) -> int:
     mutation_types = _extract_mutation_types(config)
     categories = _categorize_mutation_types(mutation_types)
-    return min(100, len(categories) * 20)
+    return min(100, len(categories) * _POINTS_PER_CATEGORY)
 
 
 def validation_warning_for_score(coverage_score: int) -> str | None:
@@ -95,7 +98,7 @@ def validation_warning_for_score(coverage_score: int) -> str | None:
 def evaluate_mutation_pack_config(config: Any) -> MutationPackValidationResult:
     mutation_types = _extract_mutation_types(config)
     categories = _categorize_mutation_types(mutation_types)
-    score = min(100, len(categories) * 20)
+    score = min(100, len(categories) * _POINTS_PER_CATEGORY)
 
     issues: list[str] = []
     mutation_type_set = set(mutation_types)

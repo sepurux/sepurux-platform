@@ -558,14 +558,14 @@ def test_get_ci_run_enforces_mutation_category_thresholds(
     fail_payload = fail_response.json()
     assert fail_payload["decision"] == "fail"
     assert fail_payload["mutation_categories"] == ["fault"]
-    assert fail_payload["mutation_coverage_score"] == 20
+    assert fail_payload["mutation_coverage_score"] == 25
 
     pass_response = client.get(f"/v1/ci/runs/{run_pass_id}", headers=headers)
     assert pass_response.status_code == 200
     pass_payload = pass_response.json()
     assert pass_payload["decision"] == "pass"
     assert set(pass_payload["mutation_categories"]) == {"schema", "fault", "latency"}
-    assert pass_payload["mutation_coverage_score"] == 60
+    assert pass_payload["mutation_coverage_score"] == 75
 
 
 def test_get_ci_run_posts_github_report_once_with_warning_and_failure_status(
@@ -801,3 +801,260 @@ def test_ci_run_no_bootstrap_policy_leaves_policy_unset(
         assert isinstance(row, Run)
         assert row.policy_pack_id is None
         assert row.effective_policy_pack_version_id is None
+
+
+def _seed_campaign_with_eval_traces(
+    db: Session,
+    *,
+    project_id: UUID,
+    trace_count: int = 2,
+    min_scenarios: int | None = None,
+) -> tuple[list[UUID], UUID]:
+    """Seed N traces and one campaign whose eval_set.trace_ids lists them all."""
+    trace_ids: list[UUID] = []
+    for _ in range(trace_count):
+        tid = uuid4()
+        db.add(
+            Trace(
+                trace_id=tid,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{tid}.json",
+            )
+        )
+        trace_ids.append(tid)
+
+    eval_set: dict = {"checks": ["status"], "trace_ids": [str(t) for t in trace_ids]}
+    if min_scenarios is not None:
+        eval_set["min_scenarios"] = min_scenarios
+
+    campaign_id = uuid4()
+    db.add(
+        Campaign(
+            campaign_id=campaign_id,
+            project_id=project_id,
+            name="Multi-Trace Campaign",
+            mutation_set=[{"type": "noop"}],
+            eval_set=eval_set,
+        )
+    )
+    db.commit()
+    return trace_ids, campaign_id
+
+
+def test_ci_post_run_uses_eval_set_trace_ids_batch(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When eval_set.trace_ids has multiple traces, POST /ci/runs creates one run per trace."""
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        trace_ids, campaign_id = _seed_campaign_with_eval_traces(
+            db, project_id=project_id, trace_count=3
+        )
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["trace_count"] == 3
+    assert len(payload["run_ids"]) == 3
+    assert payload["run_id"] == payload["run_ids"][0]
+    # 3 runs should have been enqueued
+    assert len(fake_queue.calls) == 3
+
+    # Each run should have a ci_batch_id in its summary
+    with testing_session_local() as db:
+        runs = db.scalars(select(Run)).all()
+        batch_ids = {r.summary.get("ci_batch_id") for r in runs if isinstance(r.summary, dict)}
+        assert len(batch_ids) == 1  # all share the same batch_id
+        batch_id = batch_ids.pop()
+        assert batch_id is not None
+        run_trace_ids = {str(r.trace_id) for r in runs}
+        assert run_trace_ids == {str(t) for t in trace_ids}
+
+
+def test_ci_post_run_rejects_when_below_min_scenarios(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /ci/runs returns 422 when eval_set trace count is below min_scenarios."""
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        # seed 1 trace but require 3 scenarios
+        _, campaign_id = _seed_campaign_with_eval_traces(
+            db, project_id=project_id, trace_count=1, min_scenarios=3
+        )
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 422
+    assert "min_scenarios" in response.json()["detail"] or "3 scenario" in response.json()["detail"]
+    assert fake_queue.calls == []
+
+
+def test_ci_post_run_passes_min_scenarios_when_enough_traces(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /ci/runs succeeds when eval_set has at least min_scenarios traces."""
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        _, campaign_id = _seed_campaign_with_eval_traces(
+            db, project_id=project_id, trace_count=3, min_scenarios=3
+        )
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["trace_count"] == 3
+    assert len(fake_queue.calls) == 3
+
+
+def test_ci_post_run_requires_trace_id_when_no_eval_set_traces(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When eval_set has no trace_ids, trace_id is required in the request."""
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    with testing_session_local() as db:
+        _, campaign_id = _seed_trace_and_campaign(db, project_id=project_id)
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+            # no trace_id and no eval_set.trace_ids
+        },
+    )
+
+    assert response.status_code == 422
+    assert fake_queue.calls == []
+
+
+def test_get_ci_batch_returns_aggregated_verdict(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /ci/batch/{batch_id} aggregates decisions from all runs in the batch."""
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.setenv("CI_TOKEN", "secret-token")
+
+    trace_id_a = uuid4()
+    trace_id_b = uuid4()
+    campaign_id = uuid4()
+    batch_id = uuid4()
+    run_a_id = uuid4()
+    run_b_id = uuid4()
+
+    with testing_session_local() as db:
+        for tid in (trace_id_a, trace_id_b):
+            db.add(Trace(trace_id=tid, project_id=project_id, source="test", s3_key=f"traces/{tid}.json"))
+        db.add(Campaign(campaign_id=campaign_id, project_id=project_id, name="Batch Campaign", mutation_set=[], eval_set={}))
+        db.add(Run(
+            run_id=run_a_id,
+            project_id=project_id,
+            trace_id=trace_id_a,
+            campaign_id=campaign_id,
+            status="completed",
+            summary={"ci_thresholds": {"min_pass_rate": 0.5, "max_unsafe": 0}, "ci_batch_id": str(batch_id)},
+            created_at=datetime(2026, 2, 26, 12, 0, tzinfo=UTC),
+        ))
+        db.add(Run(
+            run_id=run_b_id,
+            project_id=project_id,
+            trace_id=trace_id_b,
+            campaign_id=campaign_id,
+            status="completed",
+            summary={"ci_thresholds": {"min_pass_rate": 0.5, "max_unsafe": 0}, "ci_batch_id": str(batch_id)},
+            created_at=datetime(2026, 2, 26, 12, 1, tzinfo=UTC),
+        ))
+        db.add_all([
+            ReplayAttempt(attempt_id=uuid4(), project_id=project_id, run_id=run_a_id, mutation_id="m1", result="passed", failure_reason=None, first_failure_event_index=None, first_failure_tool=None, artifacts_s3_key=None),
+            ReplayAttempt(attempt_id=uuid4(), project_id=project_id, run_id=run_b_id, mutation_id="m1", result="passed", failure_reason=None, first_failure_event_index=None, first_failure_tool=None, artifacts_s3_key=None),
+        ])
+        db.commit()
+
+    headers = {"X-Sepurux-Token": "secret-token"}
+    response = client.get(f"/v1/ci/batch/{batch_id}", headers=headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["batch_id"] == str(batch_id)
+    assert payload["decision"] == "pass"
+    assert payload["trace_count"] == 2
+    assert payload["scenario_coverage_pct"] == 100.0
+    assert set(UUID(rid) for rid in payload["run_ids"]) == {run_a_id, run_b_id}
+
+
+def test_get_ci_batch_fails_when_any_run_fails(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /ci/batch/{batch_id} returns fail if any run in the batch fails."""
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.setenv("CI_TOKEN", "secret-token")
+
+    trace_id_a = uuid4()
+    trace_id_b = uuid4()
+    campaign_id = uuid4()
+    batch_id = uuid4()
+    run_a_id = uuid4()
+    run_b_id = uuid4()
+
+    with testing_session_local() as db:
+        for tid in (trace_id_a, trace_id_b):
+            db.add(Trace(trace_id=tid, project_id=project_id, source="test", s3_key=f"traces/{tid}.json"))
+        db.add(Campaign(campaign_id=campaign_id, project_id=project_id, name="Batch Fail Campaign", mutation_set=[], eval_set={}))
+        db.add(Run(
+            run_id=run_a_id,
+            project_id=project_id,
+            trace_id=trace_id_a,
+            campaign_id=campaign_id,
+            status="failed",
+            summary={"ci_thresholds": {"min_pass_rate": 0.9, "max_unsafe": 0}, "ci_batch_id": str(batch_id)},
+            created_at=datetime(2026, 2, 26, 12, 0, tzinfo=UTC),
+        ))
+        db.add(Run(
+            run_id=run_b_id,
+            project_id=project_id,
+            trace_id=trace_id_b,
+            campaign_id=campaign_id,
+            status="completed",
+            summary={"ci_thresholds": {"min_pass_rate": 0.5, "max_unsafe": 0}, "ci_batch_id": str(batch_id)},
+            created_at=datetime(2026, 2, 26, 12, 1, tzinfo=UTC),
+        ))
+        db.add(ReplayAttempt(attempt_id=uuid4(), project_id=project_id, run_id=run_b_id, mutation_id="m1", result="passed", failure_reason=None, first_failure_event_index=None, first_failure_tool=None, artifacts_s3_key=None))
+        db.commit()
+
+    headers = {"X-Sepurux-Token": "secret-token"}
+    response = client.get(f"/v1/ci/batch/{batch_id}", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["decision"] == "fail"
+    assert response.json()["trace_count"] == 2
