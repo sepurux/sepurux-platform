@@ -12,6 +12,7 @@ from app.models import (
     BillingWebhookEvent,
     Campaign,
     CreditWallet,
+    InternalFeatureFlag,
     Project,
     Tenant,
     Trace,
@@ -23,6 +24,7 @@ from app.services.billing_service import (
     grant_due_monthly_credits,
     subscribe_user,
 )
+from app.services.internal_settings_service import get_internal_feature_flags
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -159,6 +161,44 @@ def test_billing_endpoints_bootstrap_plans_and_wallet(
     assert wallet["balance"] == 0
     assert wallet["monthly_credits"] == 0
     assert wallet["topup_credits"] == 0
+
+
+def test_billing_endpoints_blocked_when_billing_flag_disabled(
+    billing_test_context: tuple[
+        TestClient, sessionmaker[Session], UUID, UUID, str, FakeQueue, FakeQueue
+    ],
+) -> None:
+    client, testing_session_local, _, _, _, _, _ = billing_test_context
+
+    with testing_session_local() as db:
+        get_internal_feature_flags(db)
+        flag = db.scalar(
+            select(InternalFeatureFlag).where(InternalFeatureFlag.key == "enable_billing")
+        )
+        assert isinstance(flag, InternalFeatureFlag)
+        flag.enabled = False
+        db.commit()
+
+    for method, path in [
+        ("get", "/v1/billing/plans"),
+        ("get", "/v1/billing/subscription"),
+        ("get", "/v1/billing/credits"),
+        ("get", "/v1/billing/transactions"),
+        ("post", "/v1/billing/subscribe"),
+        ("post", "/v1/billing/topup"),
+        ("post", "/v1/billing/portal"),
+    ]:
+        if method == "post" and path == "/v1/billing/subscribe":
+            response = client.post(path, json={"plan_id": str(PRO_PLAN_ID)})
+        elif method == "post" and path == "/v1/billing/topup":
+            response = client.post(path, json={"credits": 1000})
+        elif method == "post":
+            response = client.post(path)
+        else:
+            response = client.get(path)
+
+        assert response.status_code == 503
+        assert response.json() == {"detail": "Billing is currently disabled."}
 
 
 def test_billing_routes_return_redirect_sessions_without_local_mutation(
