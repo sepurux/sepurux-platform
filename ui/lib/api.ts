@@ -946,6 +946,40 @@ async function postJson<TResponse, TBody>(
   return payload as TResponse;
 }
 
+async function putJson<TResponse, TBody>(
+  path: string,
+  body: TBody,
+  options?: { requireProjectHeader?: boolean; includeAuth?: boolean; baseUrl?: string }
+): Promise<TResponse> {
+  const headers = await buildHeaders(options);
+  headers["Content-Type"] = "application/json";
+
+  const response = await fetch(buildUrl(path, undefined, { baseUrl: options?.baseUrl }), {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+
+  const text = await response.text();
+  let payload: unknown = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = text;
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      messageFromErrorPayload(payload, `Request failed: ${response.status}`),
+      response.status,
+      payload
+    );
+  }
+
+  return payload as TResponse;
+}
+
 async function patchJson<TResponse, TBody>(
   path: string,
   body: TBody,
@@ -1150,12 +1184,9 @@ export const api = {
       requireProjectHeader: false,
     }),
   updateInternalFeatureFlags: (payload: InternalFeatureFlags) =>
-    requestJson<InternalFeatureFlags>(
+    putJson<InternalFeatureFlags, InternalFeatureFlags>(
       "/v1/internal/settings",
-      {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      },
+      payload,
       { requireProjectHeader: false }
     ),
   getInternalTenantControls: (tenantId: string) =>
