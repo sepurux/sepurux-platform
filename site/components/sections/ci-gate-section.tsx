@@ -15,21 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: sepurux/sepurux-platform/.github/actions/sepurux-gate@main
         with:
-          python-version: "3.11"
-      - run: python -m pip install sepurux
-      - env:
-          SEPURUX_API_BASE_URL: ${siteConfig.appUrl}/api/backend
-          SEPURUX_API_KEY: \${{ secrets.SEPURUX_API_KEY }}
-          SEPURUX_PROJECT_ID: \${{ secrets.SEPURUX_PROJECT_ID }}
-          SEPURUX_CAMPAIGN_ID: \${{ secrets.SEPURUX_CAMPAIGN_ID }}
-          SEPURUX_TRACE_ID: \${{ secrets.SEPURUX_TRACE_ID }}
-        run: python .github/scripts/sepurux_gate.py`;
+          base_url: \${{ secrets.SEPURUX_API_BASE_URL }}
+          token: \${{ secrets.SEPURUX_API_KEY }}
+          project_id: \${{ secrets.SEPURUX_PROJECT_ID }}
+          # When campaign has an eval-set, runs one CI job per registered
+          # scenario trace and gates on the aggregated verdict.
+          campaign_name: refund-reliability
+          min_pass_rate: "0.85"`;
 
 const bullets = [
-  "Use the live hosted API URL in CI, not localhost.",
-  "Pass trace_id from an earlier capture/upload step.",
+  "Register real-world traces as a scenario pool. Every CI submission replays all of them.",
+  "Batch verdict: pass only when every scenario run passes. scenario_coverage_pct confirms full evaluation.",
   "Set branch protection to require the reliability gate check.",
 ];
 

@@ -64,10 +64,10 @@ const modules = [
     icon: GitBranch,
     eyebrow: "Release control",
     description:
-      "Turn reliability findings into merge decisions with pass-rate thresholds and unsafe-run limits.",
-    bullets: ["Strict pass/fail decisions", "Threshold-aware polling", "GitHub Action integration"],
-    visualTitle: "Gate output",
-    visualRows: ["pass_rate >= 0.85", "unsafe_runs == 0", "mutation_coverage >= target", "status=blocked"],
+      "Gate merges and deploys on reliability evidence. Register a scenario pool and every CI run replays all traces — blocked only when the aggregated verdict fails.",
+    bullets: ["Batch scenario runs — one job per registered trace", "Scenario coverage enforcement via min_scenarios gate", "GitHub Action integration with aggregated pass/fail"],
+    visualTitle: "Batch gate output",
+    visualRows: ["scenario_coverage=100%", "pass_rate >= 0.85", "unsafe_runs == 0", "decision=pass"],
   },
 ];
 
@@ -197,8 +197,8 @@ export default function ProductPage() {
 
           <div className="mt-10 overflow-x-auto rounded-[32px] border border-white/8 bg-white/[0.03] p-6">
             <div className="min-w-[840px]">
-              <div className="grid grid-cols-6 gap-4">
-                {["trace", "run", "attempts", "policy_events", "analytics", "ci_decision"].map((item, index) => (
+              <div className="grid grid-cols-7 gap-4">
+                {["trace", "eval_set", "ci_batch", "attempts", "policy_events", "analytics", "ci_decision"].map((item, index) => (
                   <div key={item} className="rounded-[24px] border border-white/8 bg-black/50 px-4 py-5">
                     <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/30">0{index + 1}</p>
                     <p className="mt-2 font-mono text-sm text-white/80">{item}</p>
