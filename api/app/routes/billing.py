@@ -28,6 +28,7 @@ from app.services.billing_service import (
     serialize_credit_transaction,
     serialize_subscription_plan,
 )
+from app.services.internal_settings_service import get_internal_feature_flags
 from app.services.stripe_billing_service import (
     create_billing_portal_redirect,
     create_subscription_billing_redirect,
@@ -46,6 +47,12 @@ BillingManageScope = Annotated[
     ProjectScope,
     Depends(require_permission("can_manage_billing", section_name="billing")),
 ]
+
+
+def _require_billing_enabled(db: Session = Depends(get_db)) -> None:
+    flags = get_internal_feature_flags(db)
+    if not flags.enable_billing:
+        raise HTTPException(status_code=503, detail="Billing is currently disabled.")
 
 
 def _resolve_billable_user_or_404(
@@ -79,7 +86,7 @@ def _resolve_billable_user_or_404(
     return subscription, wallet, plan, billing_snapshot
 
 
-@router.get("/plans", response_model=list[SubscriptionPlanMetadata])
+@router.get("/plans", response_model=list[SubscriptionPlanMetadata], dependencies=[Depends(_require_billing_enabled)])
 def get_billing_plans(
     db: DbSession,
     project_scope: ProjectScopeDep,
@@ -137,7 +144,7 @@ def get_billing_transactions(
     return [CreditTransactionMetadata(**serialize_credit_transaction(record)) for record in records]
 
 
-@router.post("/subscribe", response_model=BillingRedirectSessionResponse)
+@router.post("/subscribe", response_model=BillingRedirectSessionResponse, dependencies=[Depends(_require_billing_enabled)])
 def post_billing_subscribe(
     payload: BillingSubscribeRequest,
     db: DbSession,
@@ -172,7 +179,7 @@ def post_billing_subscribe(
     return BillingRedirectSessionResponse(**redirect)
 
 
-@router.post("/topup", response_model=BillingRedirectSessionResponse)
+@router.post("/topup", response_model=BillingRedirectSessionResponse, dependencies=[Depends(_require_billing_enabled)])
 def post_billing_topup(
     payload: BillingTopupRequest,
     db: DbSession,
@@ -204,7 +211,7 @@ def post_billing_topup(
     return BillingRedirectSessionResponse(**redirect)
 
 
-@router.post("/portal", response_model=BillingRedirectSessionResponse)
+@router.post("/portal", response_model=BillingRedirectSessionResponse, dependencies=[Depends(_require_billing_enabled)])
 def post_billing_portal(
     db: DbSession,
     project_scope: BillingManageScope,
