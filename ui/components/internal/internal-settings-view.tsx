@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 
 import { ApiError, api, type InternalFeatureFlags } from "@/lib/api";
 
+const FLAG_DEFAULTS: InternalFeatureFlags = {
+  enable_ci: true,
+  enable_mutations: true,
+  enable_billing: true,
+  enable_registration: true,
+  enable_injection_scanning: true,
+  enable_opa_enforcement: true,
+  enable_counterfactuals: true,
+};
+
 const toggleRows: Array<{
   key: keyof InternalFeatureFlags;
   label: string;
@@ -60,7 +70,7 @@ export function InternalSettingsView() {
       try {
         const payload = await api.getInternalFeatureFlags();
         if (cancelled) return;
-        setFlags(payload);
+        setFlags({ ...FLAG_DEFAULTS, ...payload });
         setError(null);
       } catch (requestError) {
         if (cancelled) return;
@@ -91,7 +101,7 @@ export function InternalSettingsView() {
     setStatus(null);
     try {
       const updated = await api.updateInternalFeatureFlags(flags);
-      setFlags(updated);
+      setFlags((prev) => ({ ...(prev ?? FLAG_DEFAULTS), ...updated }));
       setError(null);
       setStatus("Internal settings updated.");
     } catch (requestError) {
