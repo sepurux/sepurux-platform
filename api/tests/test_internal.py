@@ -693,6 +693,10 @@ def test_internal_settings_get_and_update(
         "enable_ci": True,
         "enable_mutations": True,
         "enable_billing": True,
+        "enable_registration": True,
+        "enable_injection_scanning": True,
+        "enable_opa_enforcement": True,
+        "enable_counterfactuals": True,
     }
 
     update_response = client.put(
@@ -701,6 +705,10 @@ def test_internal_settings_get_and_update(
             "enable_ci": False,
             "enable_mutations": True,
             "enable_billing": False,
+            "enable_registration": True,
+            "enable_injection_scanning": False,
+            "enable_opa_enforcement": True,
+            "enable_counterfactuals": False,
         },
     )
     assert update_response.status_code == 200
@@ -708,6 +716,10 @@ def test_internal_settings_get_and_update(
         "enable_ci": False,
         "enable_mutations": True,
         "enable_billing": False,
+        "enable_registration": True,
+        "enable_injection_scanning": False,
+        "enable_opa_enforcement": True,
+        "enable_counterfactuals": False,
     }
 
     verify_response = client.get("/v1/internal/settings")
@@ -716,6 +728,10 @@ def test_internal_settings_get_and_update(
         "enable_ci": False,
         "enable_mutations": True,
         "enable_billing": False,
+        "enable_registration": True,
+        "enable_injection_scanning": False,
+        "enable_opa_enforcement": True,
+        "enable_counterfactuals": False,
     }
 
 

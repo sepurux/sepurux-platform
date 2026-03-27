@@ -202,6 +202,7 @@ export function InternalSystemView() {
               <h2 className="text-lg font-semibold text-primary">Tenant Controls</h2>
               <p className="text-sm text-muted-foreground">
                 Pause runs, lock workspace creation, or revoke API keys for a specific tenant.
+                Enter a tenant ID or user ID — both are accepted.
               </p>
             </div>
 
@@ -209,7 +210,7 @@ export function InternalSystemView() {
               <input
                 value={tenantIdInput}
                 onChange={(event) => setTenantIdInput(event.target.value)}
-                placeholder="Tenant ID"
+                placeholder="Tenant ID or User ID"
                 className="h-10 rounded border border-border/70 bg-background px-3 text-sm text-foreground"
               />
               <button

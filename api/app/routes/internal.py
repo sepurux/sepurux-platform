@@ -631,8 +631,17 @@ def get_internal_tenant_controls(
 ) -> InternalTenantControls:
     try:
         controls = get_or_create_tenant_controls(db, tenant_id=tenant_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError:
+        # Fall back: treat the ID as a user_id and resolve their primary tenant
+        resolved_tenant_id = db.scalar(
+            select(Project.tenant_id).where(Project.owner_id == tenant_id).limit(1)
+        )
+        if resolved_tenant_id is None:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        try:
+            controls = get_or_create_tenant_controls(db, tenant_id=resolved_tenant_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     payload = _serialize_tenant_controls(controls)
     create_audit_log(
