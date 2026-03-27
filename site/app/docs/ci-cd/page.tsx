@@ -181,6 +181,51 @@ curl -X POST ${siteConfig.appUrl}/api/backend/v1/ci/runs \\
 curl -X GET ${siteConfig.appUrl}/api/backend/v1/ci/runs/<run_uuid> \\
   -H "X-Sepurux-Token: $CI_TOKEN"`;
 
+const evalSetSnippet = `# Register real-world traces as the scenario pool for a campaign.
+# Run this once (or incrementally) before your first batch CI submission.
+curl -X PATCH ${siteConfig.appUrl}/api/backend/v1/campaigns/<campaign_uuid>/eval-set \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: $SEPURUX_API_KEY" \\
+  -H "X-Project-Id: $SEPURUX_PROJECT_ID" \\
+  -d '{
+    "add_trace_ids": ["<trace_uuid_1>", "<trace_uuid_2>", "<trace_uuid_3>"],
+    "min_scenarios": 3
+  }'`;
+
+const batchCiSnippet = `# POST /v1/ci/runs — when the campaign has eval-set traces, this creates
+# one CI run per registered trace and returns a shared ci_batch_id.
+curl -X POST ${siteConfig.appUrl}/api/backend/v1/ci/runs \\
+  -H "Content-Type: application/json" \\
+  -H "X-Sepurux-Token: $CI_TOKEN" \\
+  -d '{
+    "campaign_id": "<campaign_uuid>",
+    "thresholds": {
+      "min_pass_rate": 0.85,
+      "max_unsafe": 0,
+      "max_failures": 0
+    },
+    "repo": "sepurux/sepurux-platform",
+    "pull_request_number": 42
+  }'
+# → { "run_id": "...", "run_ids": [...], "trace_count": 3, "ci_batch_id": "<batch_uuid>" }
+
+# Poll the aggregated batch verdict — pass requires ALL scenario runs to pass.
+curl ${siteConfig.appUrl}/api/backend/v1/ci/batch/<batch_uuid> \\
+  -H "X-Sepurux-Token: $CI_TOKEN"`;
+
+const batchDecisionSnippet = `{
+  "batch_id": "...",
+  "status": "done",
+  "decision": "pass",
+  "pass_rate": 0.91,
+  "unsafe_attempts": 0,
+  "failures": 0,
+  "trace_count": 3,
+  "scenario_coverage_pct": 100.0,
+  "top_failing_tools": [],
+  "dashboard_url": "${siteConfig.appUrl}/runs/..."
+}`;
+
 const decisionSnippet = `{
   "run_id": "...",
   "status": "done",
@@ -188,6 +233,7 @@ const decisionSnippet = `{
   "pass_rate": 0.72,
   "unsafe_attempts": 1,
   "failures": 5,
+  "trace_count": 1,
   "top_failing_tools": [
     {"tool": "payments.refund", "count": 3}
   ],
@@ -204,6 +250,7 @@ export default function CICDPage() {
         { href: "#action", label: "GitHub Action" },
         { href: "#workflow", label: "Full Workflow" },
         { href: "#trace-id", label: "Trace Source" },
+        { href: "#scenario-coverage", label: "Scenario Coverage" },
         { href: "#ci-api", label: "CI API" },
         { href: "#decision", label: "Decision Model" },
         { href: "#rollout", label: "Rollout Tips" },
@@ -250,9 +297,34 @@ export default function CICDPage() {
       </DocsSection>
 
       <DocsSection
+        id="scenario-coverage"
+        title="Scenario Coverage & Batch Runs"
+        description="Register a pool of real-world traces against a campaign's eval-set. CI submissions against that campaign automatically run every registered trace in parallel and gate on an aggregated verdict."
+      >
+        <p className="text-xs uppercase tracking-[0.14em] text-white/50">1. Register scenario pool (one-time setup)</p>
+        <DocsCodeBlock code={evalSetSnippet} label="bash" />
+        <p className="text-xs uppercase tracking-[0.14em] text-white/50">2. Submit batch CI run + poll</p>
+        <DocsCodeBlock code={batchCiSnippet} label="bash" />
+        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Batch verdict response</p>
+        <DocsCodeBlock code={batchDecisionSnippet} label="json" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            ["min_scenarios gate", "If the registered scenario pool has fewer traces than min_scenarios, the CI submission is rejected with 422. This prevents gating against a trivially small sample."],
+            ["Batch verdict rule", "Decision is `pass` only when every scenario run passes. A single failing trace produces a `fail` verdict regardless of aggregate pass rate."],
+            ["scenario_coverage_pct", "Completed runs / total traces × 100. Use this field to confirm that all scenarios were actually evaluated before acting on the verdict."],
+          ].map(([title, body]) => (
+            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-sm font-semibold text-white">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            </div>
+          ))}
+        </div>
+      </DocsSection>
+
+      <DocsSection
         id="ci-api"
-        title="CI API Flow"
-        description="For custom CI systems, call the CI endpoints directly and decide pass/fail from the returned decision payload."
+        title="CI API Flow (Single Trace)"
+        description="For single-trace mode or custom CI systems not using eval-set, call the CI endpoints directly and decide pass/fail from the returned decision payload."
       >
         <DocsCodeBlock code={ciApiSnippet} label="bash" />
       </DocsSection>
@@ -260,7 +332,7 @@ export default function CICDPage() {
       <DocsSection
         id="decision"
         title="Decision Model"
-        description="A CI run returns `pass`, `fail`, or `pending`. You should block deploy on `fail` and continue polling while `pending`."
+        description="A CI run returns `pass`, `fail`, or `pending`. Block deploy on `fail`; poll while `pending`. Batch runs include `trace_count` and `scenario_coverage_pct`."
       >
         <DocsCodeBlock code={decisionSnippet} label="json" />
       </DocsSection>
