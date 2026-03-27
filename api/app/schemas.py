@@ -937,6 +937,13 @@ class MutationPackCreateRequest(BaseModel):
     credit_cost: int = 20
 
 
+class MutationPackUpdateRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    config: Any = None
+    credit_cost: int | None = None
+
+
 class MutationPackMetadata(BaseModel):
     mutation_pack_id: UUID
     project_id: UUID
