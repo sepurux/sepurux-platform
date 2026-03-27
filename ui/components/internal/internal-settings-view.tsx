@@ -10,6 +10,11 @@ const toggleRows: Array<{
   description: string;
 }> = [
   {
+    key: "enable_registration",
+    label: "Enable Registration",
+    description: "Allow new users to sign up. Disable to gate access during beta or incidents.",
+  },
+  {
     key: "enable_ci",
     label: "Enable CI",
     description: "Allow CI-triggered campaign workflows.",
@@ -23,6 +28,21 @@ const toggleRows: Array<{
     key: "enable_billing",
     label: "Enable Billing",
     description: "Allow billing and credit purchase flows.",
+  },
+  {
+    key: "enable_injection_scanning",
+    label: "Enable Injection Scanning",
+    description: "Run prompt injection firewall checks on all incoming LLM inputs.",
+  },
+  {
+    key: "enable_opa_enforcement",
+    label: "Enable OPA Enforcement",
+    description: "Enforce Open Policy Agent policy decisions on run execution.",
+  },
+  {
+    key: "enable_counterfactuals",
+    label: "Enable Counterfactuals",
+    description: "Run counterfactual replay pipelines after each completed run.",
   },
 ];
 
