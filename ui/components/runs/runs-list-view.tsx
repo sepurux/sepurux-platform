@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Filter, RefreshCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Filter, RefreshCcw, Search } from "lucide-react";
 
 import { api, type RunMetadata } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
@@ -23,6 +23,7 @@ export function RunsListView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [hasNext, setHasNext] = useState(false);
 
   async function load() {
@@ -48,6 +49,15 @@ export function RunsListView() {
     void load();
   }, [page, statusFilter]);
 
+  const filteredRuns = useMemo(() => {
+    if (state.status !== "ready") return [];
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return state.runs;
+    return state.runs.filter(
+      (run) => run.run_id.toLowerCase().includes(q) || run.campaign_id.toLowerCase().includes(q)
+    );
+  }, [state, searchQuery]);
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -55,7 +65,16 @@ export function RunsListView() {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Runs</h1>
           <p className="mt-1 text-sm text-muted-foreground">Filter and inspect recent runs from the Sepurux pipeline.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground">
+            <Search className="h-4 w-4 shrink-0" />
+            <input
+              className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-40"
+              placeholder="Search run or campaign ID"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <div className="flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground">
             <Filter className="h-4 w-4" />
             <label className="sr-only" htmlFor="run-status-filter">Status filter</label>
@@ -105,12 +124,14 @@ export function RunsListView() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {state.runs.length === 0 ? (
+                  {filteredRuns.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">No runs match this filter.</TableCell>
+                      <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                        {searchQuery ? "No runs match your search." : "No runs match this filter."}
+                      </TableCell>
                     </TableRow>
                   ) : (
-                    state.runs.map((run) => {
+                    filteredRuns.map((run) => {
                       const summary = (run.summary ?? {}) as Record<string, unknown>;
                       const attemptCount = typeof summary.attempt_count === "number" ? summary.attempt_count : null;
                       const passRate =
@@ -138,7 +159,9 @@ export function RunsListView() {
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Showing {state.runs.length === 0 ? 0 : page * PAGE_SIZE + 1}–{page * PAGE_SIZE + state.runs.length}
+                  {searchQuery
+                    ? `${filteredRuns.length} match${filteredRuns.length === 1 ? "" : "es"} on this page`
+                    : `Showing ${filteredRuns.length === 0 ? 0 : page * PAGE_SIZE + 1}–${page * PAGE_SIZE + filteredRuns.length}`}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button

@@ -23,6 +23,8 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; records: MutationPackMetadata[] };
 
+type DeleteState = { status: "idle" } | { status: "deleting"; id: string } | { status: "error"; message: string };
+
 type RunDependenciesState =
   | { status: "idle" }
   | { status: "loading" }
@@ -65,8 +67,29 @@ export function MutationPacksView() {
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [runState, setRunState] = useState<RunState>({ status: "idle" });
 
+  const [deleteState, setDeleteState] = useState<DeleteState>({ status: "idle" });
+
   const canManageMutationPacks = authSession?.permissions.can_manage_mutation_packs ?? false;
   const canRunCampaigns = authSession?.permissions.can_run_campaigns ?? false;
+
+  async function onDeletePack(packId: string, packName: string) {
+    if (!window.confirm(`Delete mutation pack "${packName}"? This cannot be undone.`)) return;
+    setDeleteState({ status: "deleting", id: packId });
+    try {
+      await api.deleteMutationPack(packId);
+      setState((prev) =>
+        prev.status === "ready"
+          ? { status: "ready", records: prev.records.filter((r) => r.mutation_pack_id !== packId) }
+          : prev
+      );
+      setDeleteState({ status: "idle" });
+    } catch (error) {
+      setDeleteState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Failed to delete mutation pack",
+      });
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -386,14 +409,14 @@ export function MutationPacksView() {
                   <TableHead>Mutations</TableHead>
                   <TableHead>Pack ID</TableHead>
                   <TableHead className="text-right">Created</TableHead>
-                  {canRunCampaigns ? <TableHead className="text-right">Actions</TableHead> : null}
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {records.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={canRunCampaigns ? 8 : 7}
+                      colSpan={8}
                       className="py-10 text-center text-muted-foreground"
                     >
                       No mutation packs found for this project.
@@ -433,19 +456,42 @@ export function MutationPacksView() {
                         <TableCell className="text-right text-muted-foreground">
                           {formatRelativeDate(record.created_at)}
                         </TableCell>
-                        {canRunCampaigns ? (
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={runControlsDisabled}
-                              onClick={() => void onRunMutationPack(record.mutation_pack_id)}
-                            >
-                              Run Now
-                            </Button>
-                          </TableCell>
-                        ) : null}
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {canRunCampaigns ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={runControlsDisabled}
+                                onClick={() => void onRunMutationPack(record.mutation_pack_id)}
+                              >
+                                Run Now
+                              </Button>
+                            ) : null}
+                            {canManageMutationPacks && !record.is_system ? (
+                              <>
+                                <Button asChild variant="ghost" size="sm">
+                                  <Link href={`/mutation-packs/${record.mutation_pack_id}/edit`}>
+                                    Edit
+                                  </Link>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-rose-400 hover:text-rose-300"
+                                  disabled={deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id}
+                                  onClick={() => void onDeletePack(record.mutation_pack_id, record.name)}
+                                >
+                                  {deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id
+                                    ? "Deleting..."
+                                    : "Delete"}
+                                </Button>
+                              </>
+                            ) : null}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -455,6 +501,12 @@ export function MutationPacksView() {
           </CardContent>
         </Card>
       )}
+
+      {deleteState.status === "error" ? (
+        <div className="rounded-md border border-rose-900/60 bg-rose-950/30 px-4 py-3">
+          <p className="text-sm text-rose-200">{deleteState.message}</p>
+        </div>
+      ) : null}
     </div>
   );
 }
