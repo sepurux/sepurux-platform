@@ -558,14 +558,14 @@ def test_get_ci_run_enforces_mutation_category_thresholds(
     fail_payload = fail_response.json()
     assert fail_payload["decision"] == "fail"
     assert fail_payload["mutation_categories"] == ["fault"]
-    assert fail_payload["mutation_coverage_score"] == 20
+    assert fail_payload["mutation_coverage_score"] == 25
 
     pass_response = client.get(f"/v1/ci/runs/{run_pass_id}", headers=headers)
     assert pass_response.status_code == 200
     pass_payload = pass_response.json()
     assert pass_payload["decision"] == "pass"
     assert set(pass_payload["mutation_categories"]) == {"schema", "fault", "latency"}
-    assert pass_payload["mutation_coverage_score"] == 60
+    assert pass_payload["mutation_coverage_score"] == 75
 
 
 def test_get_ci_run_posts_github_report_once_with_warning_and_failure_status(

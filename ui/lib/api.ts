@@ -266,6 +266,7 @@ export type MutationPackMetadata = {
   config: Record<string, unknown>;
   is_system: boolean;
   coverage_score: number;
+  credit_cost: number;
   created_at: string;
 };
 
@@ -1297,6 +1298,12 @@ export const api = {
     requestJson<MutationPackMetadata>(`/v1/mutation-packs/${mutationPackId}`),
   getMutationPackCoverage: (mutationPackId: string) =>
     requestJson<MutationPackCoverageResponse>(`/v1/mutation-packs/${mutationPackId}/coverage`),
+  updateMutationPack: (
+    mutationPackId: string,
+    payload: { name?: string; description?: string | null; config?: Record<string, unknown>; credit_cost?: number }
+  ) => patchJson<MutationPackCreateResponse, typeof payload>(`/v1/mutation-packs/${mutationPackId}`, payload),
+  deleteMutationPack: (mutationPackId: string) =>
+    deleteRequest(`/v1/mutation-packs/${mutationPackId}`),
   listTemplates: () => requestJson<HardeningTemplateMetadata[]>("/v1/templates"),
   getTemplate: (templateId: string) =>
     requestJson<HardeningTemplateMetadata>(`/v1/templates/${templateId}`),

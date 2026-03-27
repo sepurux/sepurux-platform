@@ -11,6 +11,7 @@ from app.schemas import (
     MutationPackCreateRequest,
     MutationPackCreateResponse,
     MutationPackMetadata,
+    MutationPackUpdateRequest,
 )
 from app.services.mutation_pack_policy import evaluate_mutation_pack_config
 from app.services.mutation_pack_service import (
@@ -21,6 +22,7 @@ from app.services.mutation_pack_service import (
     list_mutation_packs,
     mutation_pack_coverage,
     resolve_mutation_pack,
+    update_mutation_pack,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
@@ -151,6 +153,60 @@ def get_mutation_pack_coverage(
         coverage_score=coverage_score,
         categories=[str(item) for item in categories],
         warning=warning,
+    )
+
+
+@router.patch("/{mutation_pack_id}", response_model=MutationPackCreateResponse)
+def patch_mutation_pack(
+    mutation_pack_id: UUID,
+    payload: MutationPackUpdateRequest,
+    db: DbSession,
+    project_scope: MutationPackManageScope,
+    settings: SettingsDep,
+) -> MutationPackCreateResponse:
+    warning: str | None = None
+    validation_issues: list[str] = []
+
+    if payload.config is not None:
+        validation = evaluate_mutation_pack_config(payload.config)
+        validation_mode = (
+            str(getattr(settings, "mutation_pack_validation_mode", "warn")).strip().lower()
+        )
+        if validation_mode == "block" and validation.issues:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "weak_mutation_pack",
+                    "warning": validation.warning,
+                    "coverage_score": validation.coverage_score,
+                    "details": validation.issues,
+                },
+            )
+        warning = validation.warning
+        validation_issues = validation.issues
+
+    try:
+        record = update_mutation_pack(
+            db,
+            project_id=project_scope.project_id,
+            mutation_pack_id=mutation_pack_id,
+            name=payload.name,
+            description=payload.description,
+            config=payload.config,
+            credit_cost=payload.credit_cost,
+        )
+    except SystemMutationPackModificationError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mutation pack not found",
+        )
+    return MutationPackCreateResponse(
+        **_to_mutation_pack_metadata(record).model_dump(),
+        warning=warning,
+        validation_issues=validation_issues,
     )
 
 

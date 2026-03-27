@@ -191,6 +191,38 @@ def ensure_registered_mutation_pack(
     )
 
 
+def update_mutation_pack(
+    db: Session,
+    *,
+    project_id: UUID,
+    mutation_pack_id: UUID,
+    name: str | None = None,
+    description: str | None = None,
+    config: object = None,
+    credit_cost: int | None = None,
+) -> MutationPack | None:
+    record = get_mutation_pack(db, project_id=project_id, mutation_pack_id=mutation_pack_id)
+    if record is None:
+        return None
+    if record.is_system:
+        raise SystemMutationPackModificationError("System mutation packs cannot be modified")
+
+    if name is not None:
+        record.name = name
+    if description is not None:
+        record.description = description
+    if config is not None:
+        record.config = config
+        record.coverage_score = coverage_score_for_config(config)
+    if credit_cost is not None:
+        record.credit_cost = credit_cost
+
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
 def delete_mutation_pack(
     db: Session,
     *,
