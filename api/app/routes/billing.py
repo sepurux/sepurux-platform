@@ -98,7 +98,11 @@ def get_billing_plans(
     ]
 
 
-@router.get("/subscription", response_model=UserSubscriptionMetadata)
+@router.get(
+    "/subscription",
+    response_model=UserSubscriptionMetadata,
+    dependencies=[Depends(_require_billing_enabled)],
+)
 def get_billing_subscription(
     db: DbSession,
     project_scope: ProjectScopeDep,
@@ -112,7 +116,11 @@ def get_billing_subscription(
     return UserSubscriptionMetadata(**subscription)
 
 
-@router.get("/credits", response_model=CreditWalletMetadata)
+@router.get(
+    "/credits",
+    response_model=CreditWalletMetadata,
+    dependencies=[Depends(_require_billing_enabled)],
+)
 def get_billing_credits(
     db: DbSession,
     project_scope: ProjectScopeDep,
@@ -126,7 +134,11 @@ def get_billing_credits(
     return CreditWalletMetadata(**wallet)
 
 
-@router.get("/transactions", response_model=list[CreditTransactionMetadata])
+@router.get(
+    "/transactions",
+    response_model=list[CreditTransactionMetadata],
+    dependencies=[Depends(_require_billing_enabled)],
+)
 def get_billing_transactions(
     db: DbSession,
     project_scope: ProjectScopeDep,
