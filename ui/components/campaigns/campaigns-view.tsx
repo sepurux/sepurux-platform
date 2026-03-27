@@ -25,6 +25,7 @@ export function CampaignsView() {
   const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [archivingCampaignId, setArchivingCampaignId] = useState<string | null>(null);
+  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
 
@@ -79,11 +80,8 @@ export function CampaignsView() {
   }
 
   async function onArchiveCampaign(campaignId: string) {
-    const confirmed = window.confirm("Archive this campaign? It will be hidden from default views.");
-    if (!confirmed) {
-      return;
-    }
     setArchiveError(null);
+    setConfirmArchiveId(null);
     setArchivingCampaignId(campaignId);
     try {
       await api.deleteCampaign(campaignId);
@@ -176,7 +174,40 @@ export function CampaignsView() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  state.campaigns.map((campaign) => (
+                  state.campaigns.map((campaign) => {
+                    const isConfirming = confirmArchiveId === campaign.campaign_id;
+                    const isArchiving = archivingCampaignId === campaign.campaign_id;
+
+                    if (isConfirming) {
+                      return (
+                        <TableRow key={campaign.campaign_id} className="bg-amber-950/20">
+                          <TableCell colSpan={canCreateCampaigns ? 6 : 5} className="py-3">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-amber-200">
+                                Archive &ldquo;{campaign.name}&rdquo;? It will be hidden from default views.
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                disabled={isArchiving}
+                                onClick={() => void onArchiveCampaign(campaign.campaign_id)}
+                              >
+                                {isArchiving ? "Archiving..." : "Archive"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setConfirmArchiveId(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+
+                    return (
                     <TableRow key={campaign.campaign_id}>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -202,10 +233,10 @@ export function CampaignsView() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => void onArchiveCampaign(campaign.campaign_id)}
-                            disabled={archivingCampaignId === campaign.campaign_id}
+                            onClick={() => setConfirmArchiveId(campaign.campaign_id)}
+                            disabled={isArchiving}
                           >
-                            {archivingCampaignId === campaign.campaign_id ? "Archiving..." : "Archive"}
+                            Archive
                           </Button>
                         </TableCell>
                       ) : null}
@@ -213,7 +244,8 @@ export function CampaignsView() {
                         {formatRelativeDate(campaign.created_at)}
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
