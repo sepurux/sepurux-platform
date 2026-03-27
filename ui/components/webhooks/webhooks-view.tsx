@@ -15,6 +15,8 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; webhooks: WebhookMetadata[] };
 
+type EditState = { webhookId: string; url: string; events: string } | null;
+
 export function WebhooksView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [url, setUrl] = useState("");
@@ -23,6 +25,8 @@ export function WebhooksView() {
   const [busyWebhookId, setBusyWebhookId] = useState<string | null>(null);
   const [submitBusy, setSubmitBusy] = useState(false);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  const [editState, setEditState] = useState<EditState>(null);
+  const [rotateConfirmId, setRotateConfirmId] = useState<string | null>(null);
 
   async function load() {
     setState({ status: "loading" });
@@ -71,23 +75,13 @@ export function WebhooksView() {
     }
   }
 
-  async function onEditWebhook(webhook: WebhookMetadata) {
-    const nextUrl = window.prompt("Webhook URL", webhook.url);
-    if (nextUrl === null) {
-      return;
-    }
-    const nextEventsRaw = window.prompt(
-      "Subscribed events (comma-separated)",
-      webhook.events.join(", ")
-    );
-    if (nextEventsRaw === null) {
-      return;
-    }
+  async function onSaveEdit(webhookId: string, nextUrl: string, nextEvents: string) {
     try {
-      setBusyWebhookId(webhook.webhook_id);
-      await api.updateWebhook(webhook.webhook_id, {
+      setBusyWebhookId(webhookId);
+      setEditState(null);
+      await api.updateWebhook(webhookId, {
         url: nextUrl,
-        events: parseEvents(nextEventsRaw),
+        events: parseEvents(nextEvents),
       });
       await load();
     } finally {
@@ -95,16 +89,11 @@ export function WebhooksView() {
     }
   }
 
-  async function onRotateSecret(webhook: WebhookMetadata) {
-    const confirmed = window.confirm(
-      "Rotate this webhook secret? Existing signature verification will fail until consumer config is updated."
-    );
-    if (!confirmed) {
-      return;
-    }
+  async function onRotateSecret(webhookId: string) {
     try {
-      setBusyWebhookId(webhook.webhook_id);
-      const rotated = await api.rotateWebhookSecret(webhook.webhook_id);
+      setBusyWebhookId(webhookId);
+      setRotateConfirmId(null);
+      const rotated = await api.rotateWebhookSecret(webhookId);
       setRevealedSecret(rotated.secret);
       await load();
     } finally {
@@ -210,53 +199,134 @@ export function WebhooksView() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  state.webhooks.map((webhook) => (
-                    <TableRow key={webhook.webhook_id}>
-                      <TableCell>
-                        <Badge variant={webhook.is_enabled ? "default" : "outline"}>
-                          {webhook.is_enabled ? "Enabled" : "Disabled"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[300px] truncate text-foreground" title={webhook.url}>
-                        {webhook.url}
-                      </TableCell>
-                      <TableCell className="max-w-[280px] truncate text-muted-foreground" title={webhook.events.join(", ")}>
-                        {webhook.events.join(", ") || "--"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {webhook.last_success_at ? formatRelativeDate(webhook.last_success_at) : webhook.last_error ? "Last attempt failed" : "--"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {shortId(webhook.webhook_id, 12)}
-                      </TableCell>
-                      <TableCell className="space-x-2 text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyWebhookId === webhook.webhook_id}
-                          onClick={() => void onToggleEnabled(webhook)}
-                        >
-                          {webhook.is_enabled ? "Disable" : "Enable"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyWebhookId === webhook.webhook_id}
-                          onClick={() => void onEditWebhook(webhook)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyWebhookId === webhook.webhook_id}
-                          onClick={() => void onRotateSecret(webhook)}
-                        >
-                          Rotate Secret
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  state.webhooks.map((webhook) => {
+                    const isEditing = editState?.webhookId === webhook.webhook_id;
+                    const isConfirmingRotate = rotateConfirmId === webhook.webhook_id;
+                    const isBusy = busyWebhookId === webhook.webhook_id;
+
+                    if (isEditing && editState) {
+                      return (
+                        <TableRow key={webhook.webhook_id} className="bg-muted/30">
+                          <TableCell colSpan={6} className="py-3">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <input
+                                className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                                placeholder="URL"
+                                value={editState.url}
+                                onChange={(e) => setEditState({ ...editState, url: e.target.value })}
+                                autoFocus
+                              />
+                              <input
+                                className="w-48 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                                placeholder="Events (comma-separated)"
+                                value={editState.events}
+                                onChange={(e) => setEditState({ ...editState, events: e.target.value })}
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  disabled={isBusy}
+                                  onClick={() => void onSaveEdit(webhook.webhook_id, editState.url, editState.events)}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditState(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+
+                    if (isConfirmingRotate) {
+                      return (
+                        <TableRow key={webhook.webhook_id} className="bg-amber-950/20">
+                          <TableCell colSpan={6} className="py-3">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-amber-200">
+                                Rotate secret? Existing signature verification will fail until your consumer is updated.
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={isBusy}
+                                onClick={() => void onRotateSecret(webhook.webhook_id)}
+                              >
+                                {isBusy ? "Rotating..." : "Rotate"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setRotateConfirmId(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+
+                    return (
+                      <TableRow key={webhook.webhook_id}>
+                        <TableCell>
+                          <Badge variant={webhook.is_enabled ? "default" : "outline"}>
+                            {webhook.is_enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[300px] truncate text-foreground" title={webhook.url}>
+                          {webhook.url}
+                        </TableCell>
+                        <TableCell className="max-w-[280px] truncate text-muted-foreground" title={webhook.events.join(", ")}>
+                          {webhook.events.join(", ") || "--"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {webhook.last_success_at ? formatRelativeDate(webhook.last_success_at) : webhook.last_error ? "Last attempt failed" : "--"}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {shortId(webhook.webhook_id, 12)}
+                        </TableCell>
+                        <TableCell className="space-x-2 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() => void onToggleEnabled(webhook)}
+                          >
+                            {webhook.is_enabled ? "Disable" : "Enable"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() =>
+                              setEditState({
+                                webhookId: webhook.webhook_id,
+                                url: webhook.url,
+                                events: webhook.events.join(", "),
+                              })
+                            }
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() => setRotateConfirmId(webhook.webhook_id)}
+                          >
+                            Rotate Secret
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

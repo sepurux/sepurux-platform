@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 
 import { api, type TraceMetadata } from "@/lib/api";
 import { formatRelativeDate } from "@/lib/format";
@@ -24,6 +25,7 @@ export function TracesListView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -53,13 +55,35 @@ export function TracesListView() {
     };
   }, [page]);
 
+  const filteredTraces = useMemo(() => {
+    if (state.status !== "ready") return [];
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return state.traces;
+    return state.traces.filter(
+      (trace) =>
+        trace.trace_id.toLowerCase().includes(q) ||
+        (trace.task_name ?? "").toLowerCase().includes(q)
+    );
+  }, [state, searchQuery]);
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Traces</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Uploaded trace artifacts for the active project.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Traces</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Uploaded trace artifacts for the active project.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground">
+          <Search className="h-4 w-4 shrink-0" />
+          <input
+            className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-44"
+            placeholder="Search trace ID or task name"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       {state.status === "loading" ? (
@@ -77,7 +101,9 @@ export function TracesListView() {
           <CardHeader>
             <CardTitle>Trace Catalog</CardTitle>
             <CardDescription>
-              {state.traces.length} trace(s) in current project scope for this page.
+              {searchQuery
+                ? `${filteredTraces.length} match${filteredTraces.length === 1 ? "" : "es"} on this page`
+                : `${state.traces.length} trace(s) in current project scope for this page.`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -94,14 +120,14 @@ export function TracesListView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {state.traces.length === 0 ? (
+                {filteredTraces.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                      No traces yet - upload via SDK or curl.
+                      {searchQuery ? "No traces match your search." : "No traces yet - upload via SDK or curl."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  state.traces.map((trace) => (
+                  filteredTraces.map((trace) => (
                     <TableRow
                       key={trace.trace_id}
                       className="cursor-pointer"

@@ -209,7 +209,7 @@ function DashboardPanels({ data }: { data: DashboardData }) {
           <KpiCard
             title="Avg Duration"
             value={kpis.avgDurationLabel}
-            subtitle="Estimated from attempt volume (placeholder)"
+            subtitle="Estimated from attempt count in current window"
             icon={Clock3}
             accent="info"
           />
