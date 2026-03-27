@@ -9,6 +9,10 @@ DEFAULT_INTERNAL_FLAGS: dict[str, bool] = {
     "enable_ci": True,
     "enable_mutations": True,
     "enable_billing": True,
+    "enable_registration": True,
+    "enable_injection_scanning": True,
+    "enable_opa_enforcement": True,
+    "enable_counterfactuals": True,
 }
 
 
@@ -33,6 +37,10 @@ def _to_payload(flags_by_key: dict[str, InternalFeatureFlag]) -> InternalFeature
         enable_ci=bool(flags_by_key["enable_ci"].enabled),
         enable_mutations=bool(flags_by_key["enable_mutations"].enabled),
         enable_billing=bool(flags_by_key["enable_billing"].enabled),
+        enable_registration=bool(flags_by_key["enable_registration"].enabled),
+        enable_injection_scanning=bool(flags_by_key["enable_injection_scanning"].enabled),
+        enable_opa_enforcement=bool(flags_by_key["enable_opa_enforcement"].enabled),
+        enable_counterfactuals=bool(flags_by_key["enable_counterfactuals"].enabled),
     )
 
 

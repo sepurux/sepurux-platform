@@ -636,6 +636,10 @@ export type InternalFeatureFlags = {
   enable_ci: boolean;
   enable_mutations: boolean;
   enable_billing: boolean;
+  enable_registration: boolean;
+  enable_injection_scanning: boolean;
+  enable_opa_enforcement: boolean;
+  enable_counterfactuals: boolean;
 };
 
 export type InternalTenantControls = {
