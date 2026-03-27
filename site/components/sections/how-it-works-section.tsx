@@ -18,7 +18,7 @@ const steps = [
   {
     title: "Gate release in CI",
     description:
-      "Run the reliability gate in pull requests and block deploys when pass rate, safety, or score thresholds fail.",
+      "Register a scenario pool and run the reliability gate in pull requests. Every registered trace is replayed in parallel — block deploys when any scenario fails.",
   },
 ];
 
