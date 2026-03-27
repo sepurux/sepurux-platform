@@ -736,12 +736,20 @@ class InternalFeatureFlags(BaseModel):
     enable_ci: bool
     enable_mutations: bool
     enable_billing: bool
+    enable_registration: bool
+    enable_injection_scanning: bool
+    enable_opa_enforcement: bool
+    enable_counterfactuals: bool
 
 
 class InternalFeatureFlagsUpdate(BaseModel):
     enable_ci: bool
     enable_mutations: bool
     enable_billing: bool
+    enable_registration: bool
+    enable_injection_scanning: bool
+    enable_opa_enforcement: bool
+    enable_counterfactuals: bool
 
 
 class InternalTenantControls(BaseModel):
