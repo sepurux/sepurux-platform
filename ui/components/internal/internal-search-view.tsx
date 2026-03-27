@@ -121,6 +121,9 @@ export function InternalSearchView() {
                   <li key={item.user_id} className="rounded border border-border/70 bg-background px-3 py-2">
                     <p className="font-medium text-foreground">{item.email}</p>
                     <p className="text-xs text-muted-foreground">{item.name ?? "-"}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      ID: <span className="select-all font-mono">{item.user_id}</span>
+                    </p>
                   </li>
                 ))
               ) : (
@@ -136,7 +139,11 @@ export function InternalSearchView() {
                 results.projects.map((item) => (
                   <li key={item.project_id} className="rounded border border-border/70 bg-background px-3 py-2">
                     <p className="font-medium text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.project_id}</p>
+                    <p className="text-xs text-muted-foreground">Project: {item.project_id}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Tenant:{" "}
+                      <span className="select-all font-mono">{item.tenant_id}</span>
+                    </p>
                   </li>
                 ))
               ) : (
