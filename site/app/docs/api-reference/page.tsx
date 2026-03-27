@@ -151,15 +151,49 @@ fmt.Println(recorder.RunID)`,
   },
 ];
 
+const evalSetSnippet = `# Register real-world traces as the scenario pool for a campaign.
+# CI runs against this campaign will replay every registered trace.
+curl -X PATCH ${baseUrl}/v1/campaigns/<campaign_uuid>/eval-set \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: $SEPURUX_API_KEY" \\
+  -H "X-Project-Id: $SEPURUX_PROJECT_ID" \\
+  -d '{
+    "add_trace_ids": ["<trace_uuid_1>", "<trace_uuid_2>"],
+    "min_scenarios": 3
+  }'`;
+
+const batchSnippet = `# When the campaign has an eval-set, POST /v1/ci/runs creates one run
+# per registered trace and returns a shared batch_id.
+POST /v1/ci/runs
+{
+  "campaign_id": "<campaign_uuid>",
+  "thresholds": { "min_pass_rate": 0.85, "max_unsafe": 0, "max_failures": 0 }
+}
+# → { "run_id": "...", "run_ids": ["...", "..."], "trace_count": 3, "ci_batch_id": "..." }
+
+# Poll the aggregated verdict — pass only when ALL scenario runs pass.
+GET /v1/ci/batch/<batch_uuid>
+# → {
+#     "status": "done",
+#     "decision": "pass",
+#     "pass_rate": 0.91,
+#     "scenario_coverage_pct": 100.0,
+#     "trace_count": 3
+#   }`;
+
 const endpoints = [
   ["POST /v1/traces", "Upload trace payloads from SDK or custom instrumentation."],
   ["POST /v1/campaigns", "Create campaign definitions for replay and mutation execution."],
+  ["PATCH /v1/campaigns/{id}/eval-set", "Register real-world traces as the CI scenario pool and configure min_scenarios gate."],
   ["POST /v1/runs", "Queue run execution for a trace and campaign pair."],
   ["GET /v1/runs/{run_id}", "Fetch run status, summary, and scoring context."],
   ["GET /v1/runs/{run_id}/policy-events", "Inspect policy decisions recorded during execution."],
   ["GET /v1/runs/{run_id}/security-events", "Inspect security actions and risk context by attempt."],
-  ["POST /v1/ci/runs", "Create a CI evaluation run with threshold gating."],
-  ["GET /v1/ci/runs/{run_id}", "Poll CI pass/fail decision and dashboard URL."],
+  ["POST /v1/ci/runs", "Create a CI evaluation run (or batch when eval-set traces are registered)."],
+  ["GET /v1/ci/runs/{run_id}", "Poll single CI run pass/fail decision and dashboard URL."],
+  ["GET /v1/ci/batch/{batch_id}", "Aggregate pass/fail verdict across a batch of scenario runs."],
+  ["PATCH /v1/mutation-packs/{id}", "Update name, description, or config on a custom mutation pack."],
+  ["DELETE /v1/mutation-packs/{id}", "Delete a custom (non-system) mutation pack."],
 ];
 
 export default function APIReferencePage() {
@@ -172,6 +206,7 @@ export default function APIReferencePage() {
         { href: "#auth", label: "Base URL & Auth" },
         { href: "#endpoints", label: "Core Endpoints" },
         { href: "#examples", label: "Request Examples" },
+        { href: "#eval-set", label: "Eval-Set & Batch CI" },
         { href: "#schema", label: "Schema & Explorer" },
       ]}
       actions={[
@@ -224,6 +259,29 @@ export default function APIReferencePage() {
         <DocsCodeTabs tabs={createTraceTabs} />
         <p className="text-xs uppercase tracking-[0.14em] text-white/50">Start run</p>
         <DocsCodeTabs tabs={startRunTabs} />
+      </DocsSection>
+
+      <DocsSection
+        id="eval-set"
+        title="Eval-Set & Batch CI"
+        description="Register a pool of real-world traces against a campaign. CI runs then replay every registered trace in parallel and gate on the aggregated verdict."
+      >
+        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Register trace pool</p>
+        <DocsCodeBlock code={evalSetSnippet} label="bash" />
+        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Batch run + poll</p>
+        <DocsCodeBlock code={batchSnippet} label="bash" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            ["add_trace_ids / remove_trace_ids", "Incrementally build or trim the scenario pool. Accepts arrays of trace UUIDs."],
+            ["min_scenarios", "CI submission is rejected (422) if the registered pool falls below this count. Prevents gating against a trivially small scenario set."],
+            ["scenario_coverage_pct", "Returned by the batch endpoint: completed runs / total traces × 100. Use this to verify full coverage before acting on the verdict."],
+          ].map(([title, body]) => (
+            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-sm font-semibold text-white">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            </div>
+          ))}
+        </div>
       </DocsSection>
 
       <DocsSection
