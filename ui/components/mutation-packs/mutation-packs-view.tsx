@@ -483,7 +483,7 @@ export function MutationPacksView() {
                                       variant="ghost"
                                       size="sm"
                                       className="text-rose-400 hover:text-rose-300"
-                                      disabled={deleteState.status === "deleting"}
+                                      disabled={false}
                                       onClick={() => void onDeletePack(record.mutation_pack_id)}
                                     >
                                       Yes
