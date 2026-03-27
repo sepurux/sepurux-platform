@@ -62,6 +62,12 @@ class CampaignCreateRequest(BaseModel):
     mutation_pack_id: UUID | None = None
 
 
+class CampaignEvalSetPatch(BaseModel):
+    add_trace_ids: list[UUID] = Field(default_factory=list)
+    remove_trace_ids: list[UUID] = Field(default_factory=list)
+    min_scenarios: int | None = Field(default=None, ge=1)
+
+
 class CampaignMetadata(BaseModel):
     campaign_id: UUID
     mutation_pack_id: UUID | None = None
@@ -217,7 +223,7 @@ class CIRunThresholds(BaseModel):
 
 
 class CIRunCreateRequest(BaseModel):
-    trace_id: UUID
+    trace_id: UUID | None = None
     campaign_id: UUID
     thresholds: CIRunThresholds
     repo: str | None = None
@@ -226,6 +232,24 @@ class CIRunCreateRequest(BaseModel):
 
 class CIRunCreateResponse(BaseModel):
     run_id: UUID
+    run_ids: list[UUID] = Field(default_factory=list)
+    trace_count: int = 1
+
+
+class CIBatchStatusResponse(BaseModel):
+    batch_id: UUID
+    run_ids: list[UUID]
+    status: str
+    decision: Literal["pass", "fail", "pending"]
+    pass_rate: float
+    unsafe_attempts: int
+    failures: int
+    trace_count: int
+    scenario_coverage_pct: float
+    top_failing_tools: list[ToolCount]
+    mutation_categories: list[str] = Field(default_factory=list)
+    mutation_coverage_score: int | None = None
+    dashboard_url: str
 
 
 class CIRunStatusResponse(BaseModel):
@@ -239,6 +263,8 @@ class CIRunStatusResponse(BaseModel):
     mutation_categories: list[str] = Field(default_factory=list)
     mutation_coverage_score: int | None = None
     dashboard_url: str
+    trace_count: int = 1
+    scenario_coverage_pct: float | None = None
 
 
 class MutationCountPct(BaseModel):

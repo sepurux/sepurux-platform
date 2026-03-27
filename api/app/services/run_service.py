@@ -203,6 +203,28 @@ def create_run_and_enqueue(
     return run
 
 
+def _build_ci_policy_pack(
+    db: Session, *, project_id: UUID
+) -> tuple[UUID | None, UUID | None]:
+    bootstrap_pack = db.scalar(
+        select(PolicyPack)
+        .where(
+            PolicyPack.project_id == project_id,
+            PolicyPack.name == DEFAULT_BOOTSTRAP_POLICY_PACK_NAME,
+            PolicyPack.is_archived.is_(False),
+        )
+        .order_by(PolicyPack.created_at.desc(), PolicyPack.policy_pack_id.desc())
+        .limit(1)
+    )
+    if bootstrap_pack is None:
+        return None, None
+    active_version = get_policy_pack_active_version(db, policy_pack=bootstrap_pack)
+    version_id = (
+        active_version.version_id if isinstance(active_version, PolicyPackVersion) else None
+    )
+    return bootstrap_pack.policy_pack_id, version_id
+
+
 def create_ci_run_and_enqueue(
     db: Session,
     *,
@@ -210,6 +232,7 @@ def create_ci_run_and_enqueue(
     campaign_id: UUID,
     thresholds: dict[str, Any],
     github_context: dict[str, Any] | None = None,
+    batch_id: UUID | None = None,
     actor: str | None = "ci",
 ) -> Run:
     trace = db.scalar(select(Trace).where(Trace.trace_id == trace_id))
@@ -227,28 +250,15 @@ def create_ci_run_and_enqueue(
     assert_project_runs_allowed(db, project_id=campaign.project_id)
 
     project_id = trace.project_id
-    effective_policy_pack_id: UUID | None = None
-    effective_policy_pack_version_id: UUID | None = None
-
-    bootstrap_pack = db.scalar(
-        select(PolicyPack)
-        .where(
-            PolicyPack.project_id == project_id,
-            PolicyPack.name == DEFAULT_BOOTSTRAP_POLICY_PACK_NAME,
-            PolicyPack.is_archived.is_(False),
-        )
-        .order_by(PolicyPack.created_at.desc(), PolicyPack.policy_pack_id.desc())
-        .limit(1)
+    effective_policy_pack_id, effective_policy_pack_version_id = _build_ci_policy_pack(
+        db, project_id=project_id
     )
-    if bootstrap_pack is not None:
-        effective_policy_pack_id = bootstrap_pack.policy_pack_id
-        active_version = get_policy_pack_active_version(db, policy_pack=bootstrap_pack)
-        if isinstance(active_version, PolicyPackVersion):
-            effective_policy_pack_version_id = active_version.version_id
 
     summary: dict[str, Any] = {"ci_thresholds": thresholds}
     if isinstance(github_context, dict):
         summary["github_context"] = github_context
+    if batch_id is not None:
+        summary["ci_batch_id"] = str(batch_id)
 
     run = _create_run_record(
         db,
@@ -263,6 +273,62 @@ def create_ci_run_and_enqueue(
     )
     enqueue_execute_run(run, queue_priority="normal")
     return run
+
+
+def create_ci_batch_and_enqueue(
+    db: Session,
+    *,
+    trace_ids: list[UUID],
+    campaign_id: UUID,
+    thresholds: dict[str, Any],
+    batch_id: UUID,
+    github_context: dict[str, Any] | None = None,
+    actor: str | None = "ci",
+) -> list[Run]:
+    """Create one CI run per trace_id and tag them all with the same batch_id."""
+    campaign = db.scalar(select(Campaign).where(Campaign.campaign_id == campaign_id))
+    if campaign is None:
+        raise RelatedRecordNotFoundError("Campaign not found")
+    if campaign.status == "archived":
+        raise RelatedRecordNotFoundError("Campaign not found")
+
+    assert_project_runs_allowed(db, project_id=campaign.project_id)
+    project_id = campaign.project_id
+
+    effective_policy_pack_id, effective_policy_pack_version_id = _build_ci_policy_pack(
+        db, project_id=project_id
+    )
+
+    runs: list[Run] = []
+    for trace_id in trace_ids:
+        trace = db.scalar(select(Trace).where(Trace.trace_id == trace_id))
+        if trace is None:
+            raise RelatedRecordNotFoundError(f"Trace {trace_id} not found")
+        if trace.project_id != project_id:
+            raise ValueError(f"Trace {trace_id} does not belong to this project")
+
+        summary: dict[str, Any] = {
+            "ci_thresholds": thresholds,
+            "ci_batch_id": str(batch_id),
+        }
+        if isinstance(github_context, dict):
+            summary["github_context"] = github_context
+
+        run = _create_run_record(
+            db,
+            project_id=project_id,
+            trace_id=trace_id,
+            campaign_id=campaign_id,
+            mutation_pack_id=campaign.mutation_pack_id,
+            policy_pack_id=effective_policy_pack_id,
+            effective_policy_pack_version_id=effective_policy_pack_version_id,
+            summary=summary,
+            actor=actor,
+        )
+        enqueue_execute_run(run, queue_priority="normal")
+        runs.append(run)
+
+    return runs
 
 
 def get_run(db: Session, *, project_id: UUID, run_id: UUID) -> Run | None:

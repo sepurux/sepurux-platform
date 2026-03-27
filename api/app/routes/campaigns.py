@@ -8,6 +8,7 @@ from app.auth import ProjectScope, TenantAuthContext, require_project_scope, req
 from app.db import get_db
 from app.schemas import (
     CampaignCreateRequest,
+    CampaignEvalSetPatch,
     CampaignFailureBreakdownItem,
     CampaignFailureRecord,
     CampaignMetadata,
@@ -182,6 +183,43 @@ def get_campaign(
     )
     if campaign is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+    return _to_campaign_metadata(campaign)
+
+
+@router.patch("/{campaign_id}/eval-set", response_model=CampaignMetadata)
+def patch_campaign_eval_set(
+    campaign_id: UUID,
+    payload: CampaignEvalSetPatch,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
+) -> CampaignMetadata:
+    """Add/remove trace IDs and update min_scenarios in a campaign's eval set."""
+    del tenant_auth
+    campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    eval_set = dict(campaign.eval_set) if isinstance(campaign.eval_set, dict) else {}
+    existing_ids: list[str] = eval_set.get("trace_ids") or []
+    if not isinstance(existing_ids, list):
+        existing_ids = []
+
+    add_ids = {str(t) for t in payload.add_trace_ids}
+    remove_ids = {str(t) for t in payload.remove_trace_ids}
+    updated_ids = [t for t in existing_ids if t not in remove_ids]
+    for tid in add_ids:
+        if tid not in updated_ids:
+            updated_ids.append(tid)
+
+    eval_set["trace_ids"] = updated_ids
+    if payload.min_scenarios is not None:
+        eval_set["min_scenarios"] = payload.min_scenarios
+
+    campaign.eval_set = eval_set
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
     return _to_campaign_metadata(campaign)
 
 

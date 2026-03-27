@@ -3,11 +3,17 @@ from __future__ import annotations
 import logging
 import os
 from typing import Annotated, Any, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.db import get_db
-from app.models import Campaign, MutationPack, Project
-from app.schemas import CIRunCreateRequest, CIRunCreateResponse, CIRunStatusResponse
+from app.models import Campaign, MutationPack, Project, Run
+from app.schemas import (
+    CIBatchStatusResponse,
+    CIRunCreateRequest,
+    CIRunCreateResponse,
+    CIRunStatusResponse,
+    ToolCount,
+)
 from app.services.audit_service import create_audit_event
 from app.services.billing_service import (
     InsufficientCreditsError,
@@ -25,6 +31,7 @@ from app.services.github_client import (
 from app.services.mutation_pack_policy import evaluate_mutation_pack_config
 from app.services.run_service import (
     RelatedRecordNotFoundError,
+    create_ci_batch_and_enqueue,
     create_ci_run_and_enqueue,
     get_run_quality_metrics,
     get_run_unscoped,
@@ -43,6 +50,50 @@ DbSession = Annotated[Session, Depends(get_db)]
 _TERMINAL_STATUSES = {"completed", "done", "failed"}
 CIDecision = Literal["pass", "fail", "pending"]
 logger = logging.getLogger(__name__)
+
+
+def _resolve_ci_trace_ids(
+    payload: CIRunCreateRequest, campaign: Campaign
+) -> list[UUID]:
+    """Return the list of trace_ids to use for this CI run, checking min_scenarios."""
+    eval_set = campaign.eval_set if isinstance(campaign.eval_set, dict) else {}
+    eval_trace_ids_raw = eval_set.get("trace_ids")
+
+    # Collect trace IDs: prefer eval_set list, fall back to request trace_id
+    if isinstance(eval_trace_ids_raw, list) and eval_trace_ids_raw:
+        try:
+            trace_ids = [UUID(str(t)) for t in eval_trace_ids_raw]
+        except (ValueError, AttributeError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Campaign eval_set contains invalid trace_ids.",
+            ) from exc
+
+        min_scenarios_raw = eval_set.get("min_scenarios")
+        if isinstance(min_scenarios_raw, int) and min_scenarios_raw > 0:
+            if len(trace_ids) < min_scenarios_raw:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=(
+                        f"Campaign requires at least {min_scenarios_raw} scenario(s) in its "
+                        f"eval set before CI can run, but only {len(trace_ids)} trace(s) are "
+                        "registered. Add more traces via PATCH "
+                        f"/v1/campaigns/{campaign.campaign_id}/eval-set."
+                    ),
+                )
+        return trace_ids
+
+    # Single-trace mode (backward-compatible)
+    if payload.trace_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "trace_id is required when the campaign eval_set has no trace_ids. "
+                "Either supply trace_id in the request or add traces via "
+                f"PATCH /v1/campaigns/{campaign.campaign_id}/eval-set."
+            ),
+        )
+    return [payload.trace_id]
 
 
 @router.post("/runs", status_code=status.HTTP_201_CREATED, response_model=CIRunCreateResponse)
@@ -74,85 +125,71 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
                 detail="insufficient_credits",
             ) from exc
 
+    def _refund(reason_suffix: str) -> None:
+        if charged_amount is not None and charged_reason is not None and charged_project_id is not None:
+            try:
+                refund_credits_for_project_owner(
+                    db,
+                    project_id=charged_project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:{reason_suffix}",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after %s", reason_suffix)
+
     try:
+        if campaign is None:
+            raise RelatedRecordNotFoundError("Campaign not found")
+        trace_ids = _resolve_ci_trace_ids(payload, campaign)
         github_context = _build_github_context(payload)
         thresholds_payload = (
             payload.thresholds.model_dump(exclude_none=True)
             if hasattr(payload.thresholds, "model_dump")
             else payload.thresholds.dict(exclude_none=True)
         )
-        run = create_ci_run_and_enqueue(
+
+        if len(trace_ids) == 1:
+            run = create_ci_run_and_enqueue(
+                db,
+                trace_id=trace_ids[0],
+                campaign_id=payload.campaign_id,
+                thresholds=thresholds_payload,
+                github_context=github_context,
+            )
+            return CIRunCreateResponse(run_id=run.run_id, run_ids=[run.run_id], trace_count=1)
+
+        batch_id = uuid4()
+        runs = create_ci_batch_and_enqueue(
             db,
-            trace_id=payload.trace_id,
+            trace_ids=trace_ids,
             campaign_id=payload.campaign_id,
             thresholds=thresholds_payload,
+            batch_id=batch_id,
             github_context=github_context,
         )
+        first_run_id = runs[0].run_id
+        all_run_ids = [r.run_id for r in runs]
+        return CIRunCreateResponse(
+            run_id=first_run_id,
+            run_ids=all_run_ids,
+            trace_count=len(runs),
+        )
+
     except RelatedRecordNotFoundError as exc:
-        if (
-            charged_amount is not None
-            and charged_reason is not None
-            and charged_project_id is not None
-        ):
-            try:
-                refund_credits_for_project_owner(
-                    db,
-                    project_id=charged_project_id,
-                    amount=charged_amount,
-                    reason=f"refund:{charged_reason}:ci_run_creation_failed",
-                )
-            except Exception:
-                logger.exception("Failed to refund credits after CI run creation failure")
+        _refund("ci_run_creation_failed")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        if (
-            charged_amount is not None
-            and charged_reason is not None
-            and charged_project_id is not None
-        ):
-            try:
-                refund_credits_for_project_owner(
-                    db,
-                    project_id=charged_project_id,
-                    amount=charged_amount,
-                    reason=f"refund:{charged_reason}:ci_validation_failed",
-                )
-            except Exception:
-                logger.exception("Failed to refund credits after CI validation failure")
+        _refund("ci_validation_failed")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except TenantControlViolationError as exc:
-        if (
-            charged_amount is not None
-            and charged_reason is not None
-            and charged_project_id is not None
-        ):
-            try:
-                refund_credits_for_project_owner(
-                    db,
-                    project_id=charged_project_id,
-                    amount=charged_amount,
-                    reason=f"refund:{charged_reason}:tenant_runs_paused",
-                )
-            except Exception:
-                logger.exception("Failed to refund credits after tenant CI run lock")
+        _refund("tenant_runs_paused")
         raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
-    except Exception:
-        if (
-            charged_amount is not None
-            and charged_reason is not None
-            and charged_project_id is not None
-        ):
-            try:
-                refund_credits_for_project_owner(
-                    db,
-                    project_id=charged_project_id,
-                    amount=charged_amount,
-                    reason=f"refund:{charged_reason}:ci_enqueue_failed",
-                )
-            except Exception:
-                logger.exception("Failed to refund credits after CI enqueue failure")
+    except HTTPException:
+        _refund("ci_enqueue_failed")
         raise
-    return CIRunCreateResponse(run_id=run.run_id)
+    except Exception:
+        _refund("ci_enqueue_failed")
+        raise
 
 
 @router.get("/runs/{run_id}", response_model=CIRunStatusResponse)
@@ -202,6 +239,17 @@ def get_ci_run(run_id: UUID, request: Request, db: DbSession) -> CIRunStatusResp
             metrics=metrics,
         )
 
+    summary_dict = run.summary if isinstance(run.summary, dict) else {}
+    batch_id_str = summary_dict.get("ci_batch_id")
+    batch_trace_ids: list[str] = []
+    if isinstance(batch_id_str, str):
+        batch_trace_ids = _get_batch_trace_ids(db, batch_id=batch_id_str)
+    trace_count = max(len(batch_trace_ids), 1)
+    scenario_coverage_pct: float | None = None
+    if batch_trace_ids:
+        completed_in_batch = _count_completed_runs_in_batch(db, batch_id=batch_id_str)
+        scenario_coverage_pct = round(completed_in_batch / trace_count * 100, 1)
+
     return CIRunStatusResponse(
         run_id=run.run_id,
         status=_public_ci_status(run.status),
@@ -213,6 +261,125 @@ def get_ci_run(run_id: UUID, request: Request, db: DbSession) -> CIRunStatusResp
         mutation_categories=mutation_categories,
         mutation_coverage_score=mutation_coverage_score,
         dashboard_url=_build_dashboard_url(request, run.run_id),
+        trace_count=trace_count,
+        scenario_coverage_pct=scenario_coverage_pct,
+    )
+
+
+def _get_batch_trace_ids(db: Session, *, batch_id: str) -> list[str]:
+    """Return all run trace_ids for a given batch_id (reads from run summary JSONB)."""
+    runs = db.scalars(select(Run).where(Run.summary.isnot(None))).all()
+    result: list[str] = []
+    for run in runs:
+        s = run.summary if isinstance(run.summary, dict) else {}
+        if s.get("ci_batch_id") == batch_id:
+            result.append(str(run.trace_id))
+    return result
+
+
+def _count_completed_runs_in_batch(db: Session, *, batch_id: str) -> int:
+    runs = db.scalars(select(Run).where(Run.summary.isnot(None))).all()
+    return sum(
+        1
+        for run in runs
+        if isinstance(run.summary, dict)
+        and run.summary.get("ci_batch_id") == batch_id
+        and (run.status or "").lower() in _TERMINAL_STATUSES
+    )
+
+
+@router.get("/batch/{batch_id}", response_model=CIBatchStatusResponse)
+def get_ci_batch(batch_id: UUID, request: Request, db: DbSession) -> CIBatchStatusResponse:
+    batch_id_str = str(batch_id)
+    runs = db.scalars(select(Run).where(Run.summary.isnot(None))).all()
+    batch_runs = [
+        run
+        for run in runs
+        if isinstance(run.summary, dict) and run.summary.get("ci_batch_id") == batch_id_str
+    ]
+    if not batch_runs:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+
+    trace_count = len(batch_runs)
+    run_ids = [r.run_id for r in batch_runs]
+
+    all_decisions: list[str] = []
+    agg_pass_rates: list[float] = []
+    agg_unsafe: int = 0
+    agg_failures: int = 0
+    agg_mutation_categories: set[str] = set()
+    agg_mutation_coverage_scores: list[int] = []
+    tool_counts: dict[str, int] = {}
+    completed_count = 0
+
+    for run in batch_runs:
+        thresholds = _extract_ci_thresholds(run.summary)
+        if thresholds is None:
+            continue
+        metrics = get_run_quality_metrics(db, run_id=run.run_id, project_id=run.project_id)
+        mutation_categories, mutation_coverage_score = _mutation_coverage_for_run(db, run=run)
+        decision = _ci_decision(
+            status=run.status,
+            pass_rate=float(metrics["pass_rate"]),
+            unsafe_attempts=int(metrics["unsafe_count"]),
+            failures=int(metrics["failed_count"]),
+            thresholds=thresholds,
+            mutation_categories=mutation_categories,
+        )
+        all_decisions.append(decision)
+        agg_pass_rates.append(float(metrics["pass_rate"]))
+        agg_unsafe += int(metrics["unsafe_attempts"])
+        agg_failures += int(metrics["failures"])
+        agg_mutation_categories.update(mutation_categories)
+        if mutation_coverage_score is not None:
+            agg_mutation_coverage_scores.append(mutation_coverage_score)
+        for tool_item in metrics.get("top_failing_tools", []):
+            t = tool_item.get("tool") if isinstance(tool_item, dict) else getattr(tool_item, "tool", None)
+            c = tool_item.get("count", 0) if isinstance(tool_item, dict) else getattr(tool_item, "count", 0)
+            if t:
+                tool_counts[t] = tool_counts.get(t, 0) + c
+        if (run.status or "").lower() in _TERMINAL_STATUSES:
+            completed_count += 1
+
+    if not all_decisions:
+        batch_status = "pending"
+        batch_decision: CIDecision = "pending"
+    elif "pending" in all_decisions:
+        batch_status = "running"
+        batch_decision = "pending"
+    elif "fail" in all_decisions:
+        batch_status = "done"
+        batch_decision = "fail"
+    else:
+        batch_status = "done"
+        batch_decision = "pass"
+
+    avg_pass_rate = sum(agg_pass_rates) / len(agg_pass_rates) if agg_pass_rates else 0.0
+    scenario_coverage_pct = round(completed_count / trace_count * 100, 1)
+    agg_coverage_score = (
+        round(sum(agg_mutation_coverage_scores) / len(agg_mutation_coverage_scores))
+        if agg_mutation_coverage_scores
+        else None
+    )
+    top_tools = [
+        ToolCount(tool=t, count=c)
+        for t, c in sorted(tool_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    ]
+
+    return CIBatchStatusResponse(
+        batch_id=batch_id,
+        run_ids=run_ids,
+        status=batch_status,
+        decision=batch_decision,
+        pass_rate=avg_pass_rate,
+        unsafe_attempts=agg_unsafe,
+        failures=agg_failures,
+        trace_count=trace_count,
+        scenario_coverage_pct=scenario_coverage_pct,
+        top_failing_tools=top_tools,
+        mutation_categories=sorted(agg_mutation_categories),
+        mutation_coverage_score=agg_coverage_score,
+        dashboard_url=_build_dashboard_url(request, run_ids[0]),
     )
 
 
