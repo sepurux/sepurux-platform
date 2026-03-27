@@ -254,7 +254,7 @@ export function WebhooksView() {
                               </span>
                               <Button
                                 size="sm"
-                                variant="destructive"
+                                variant="danger"
                                 disabled={isBusy}
                                 onClick={() => void onRotateSecret(webhook.webhook_id)}
                               >
