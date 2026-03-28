@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, RefreshCcw, Search } from "lucide-react";
 
-import { api, type RunMetadata } from "@/lib/api";
+import { api, type CIBatchStatus, type RunMetadata } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,7 @@ export function RunsListView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNext, setHasNext] = useState(false);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [batchStatuses, setBatchStatuses] = useState<Record<string, CIBatchStatus>>({});
 
   async function load() {
     setState({ status: "loading" });
@@ -153,6 +154,12 @@ export function RunsListView() {
         next.delete(batchId);
       } else {
         next.add(batchId);
+        // Fetch batch status to get contract_report (if not already fetched)
+        if (!(batchId in batchStatuses)) {
+          void api.getCiBatch(batchId).then((s) => {
+            setBatchStatuses((prev) => ({ ...prev, [batchId]: s }));
+          }).catch(() => { /* non-critical */ });
+        }
       }
       return next;
     });
@@ -292,35 +299,61 @@ export function RunsListView() {
                         </TableRow>,
 
                         ...(isExpanded
-                          ? runs.map((run) => {
-                              const pr = runPassRate(run);
-                              const attempts = runAttemptCount(run);
-                              return (
-                                <TableRow key={run.run_id} className="bg-accent/20">
-                                  <TableCell />
-                                  <TableCell colSpan={2} className="pl-8">
-                                    <Link
-                                      href={`/runs/${run.run_id}`}
-                                      className="font-mono text-xs text-foreground hover:text-info"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {shortId(run.run_id, 12)}
-                                    </Link>
-                                  </TableCell>
-                                  <TableCell><RunStatusBadge status={run.status} /></TableCell>
-                                  <TableCell className="text-right text-foreground text-sm">
-                                    {pr === null ? "--" : formatPercent(pr, 0)}
-                                  </TableCell>
-                                  <TableCell className="text-right text-muted-foreground text-sm">
-                                    {attempts !== null ? `${attempts} attempts` : "--"}
-                                  </TableCell>
-                                  <TableCell />
-                                  <TableCell className="text-right text-muted-foreground text-sm">
-                                    {formatRelativeDate(run.created_at)}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })
+                          ? [
+                              // Contract violation banner (shown when batch has a failed contract)
+                              ...(batchId && batchStatuses[batchId]?.contract_report && !batchStatuses[batchId].contract_report!.passed
+                                ? [(
+                                    <TableRow key={`${batchId}-contract`} className="bg-rose-500/5">
+                                      <TableCell />
+                                      <TableCell colSpan={7} className="pl-8 py-2">
+                                        <div className="flex flex-wrap items-start gap-3">
+                                          <span className="shrink-0 rounded-full bg-rose-500/15 px-2 py-0.5 text-xs font-semibold text-rose-400">
+                                            contract failed
+                                          </span>
+                                          <div className="flex flex-wrap gap-2">
+                                            {batchStatuses[batchId].contract_report!.violations.map((v, i) => (
+                                              <span key={i} className="text-xs text-rose-300/80">
+                                                <span className="font-mono text-rose-400">{v.type}</span>
+                                                {" — "}{v.detail}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )]
+                                : []),
+                              // Individual run sub-rows
+                              ...runs.map((run) => {
+                                const pr = runPassRate(run);
+                                const attempts = runAttemptCount(run);
+                                return (
+                                  <TableRow key={run.run_id} className="bg-accent/20">
+                                    <TableCell />
+                                    <TableCell colSpan={2} className="pl-8">
+                                      <Link
+                                        href={`/runs/${run.run_id}`}
+                                        className="font-mono text-xs text-foreground hover:text-info"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {shortId(run.run_id, 12)}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell><RunStatusBadge status={run.status} /></TableCell>
+                                    <TableCell className="text-right text-foreground text-sm">
+                                      {pr === null ? "--" : formatPercent(pr, 0)}
+                                    </TableCell>
+                                    <TableCell className="text-right text-muted-foreground text-sm">
+                                      {attempts !== null ? `${attempts} attempts` : "--"}
+                                    </TableCell>
+                                    <TableCell />
+                                    <TableCell className="text-right text-muted-foreground text-sm">
+                                      {formatRelativeDate(run.created_at)}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              }),
+                            ]
                           : []),
                       ];
                     })

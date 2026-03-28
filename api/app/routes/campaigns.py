@@ -15,6 +15,14 @@ from app.schemas import (
     CampaignReliabilityResponse,
     CampaignRunPackRequest,
     CampaignRunPackResponse,
+    QualityContractResponse,
+    QualityContractUpsert,
+)
+from app.services.contract_service import (
+    delete_contract,
+    get_contract,
+    serialize_contract,
+    upsert_contract,
 )
 from app.services.audit_service import actor_from_request
 from app.services.billing_service import (
@@ -451,3 +459,63 @@ def post_campaign_run_pack(
         status=run.status,
         created_at=run.created_at,
     )
+
+
+# ─── Quality Contract ──────────────────────────────────────────────────────────
+
+
+@router.get("/{campaign_id}/contract", response_model=QualityContractResponse)
+def get_campaign_contract(
+    campaign_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+) -> QualityContractResponse:
+    contract = get_contract(db, campaign_id=campaign_id)
+    if contract is None or contract.project_id != project_scope.project_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No contract defined")
+    return serialize_contract(contract)
+
+
+@router.put("/{campaign_id}/contract", response_model=QualityContractResponse)
+def put_campaign_contract(
+    campaign_id: UUID,
+    payload: QualityContractUpsert,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+) -> QualityContractResponse:
+    from app.models import Campaign
+    from sqlalchemy import select as _select
+
+    campaign = db.scalar(
+        _select(Campaign).where(
+            Campaign.campaign_id == campaign_id,
+            Campaign.project_id == project_scope.project_id,
+        )
+    )
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    contract = upsert_contract(
+        db,
+        project_id=project_scope.project_id,
+        campaign_id=campaign_id,
+        required_pack_ids=payload.required_pack_ids,
+        required_tools=payload.required_tools,
+        min_attempts_per_pack=payload.min_attempts_per_pack,
+    )
+    db.commit()
+    db.refresh(contract)
+    return serialize_contract(contract)
+
+
+@router.delete("/{campaign_id}/contract", status_code=status.HTTP_204_NO_CONTENT)
+def delete_campaign_contract(
+    campaign_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+) -> None:
+    contract = get_contract(db, campaign_id=campaign_id)
+    if contract is None or contract.project_id != project_scope.project_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No contract defined")
+    delete_contract(db, campaign_id=campaign_id)
+    db.commit()

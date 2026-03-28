@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
 
-import { api, type CampaignMetadata, type TraceMetadata } from "@/lib/api";
+import { api, type CampaignMetadata, type MutationPackMetadata, type QualityContract, type TraceMetadata } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; campaign: CampaignMetadata };
 
-type Tab = "scenarios" | "overview";
+type Tab = "scenarios" | "contract" | "overview";
 
 export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -76,10 +76,12 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         <>
           {/* Tab bar */}
           <div className="flex gap-1 border-b border-border/60">
-            {(["scenarios", "overview"] as Tab[]).map((tab) => {
+            {(["scenarios", "contract", "overview"] as Tab[]).map((tab) => {
               const label =
                 tab === "scenarios"
                   ? `Scenarios${(state.campaign.eval_set?.trace_ids?.length ?? 0) > 0 ? ` (${state.campaign.eval_set!.trace_ids!.length})` : ""}`
+                  : tab === "contract"
+                  ? "Quality Contract"
                   : "Overview";
               return (
                 <button
@@ -99,6 +101,9 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
 
           {activeTab === "scenarios" && (
             <ScenariosTab campaign={state.campaign} onUpdated={onCampaignUpdated} />
+          )}
+          {activeTab === "contract" && (
+            <ContractTab campaignId={state.campaign.campaign_id} />
           )}
           {activeTab === "overview" && (
             <OverviewTab campaign={state.campaign} />
@@ -460,6 +465,269 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex items-center gap-4">
       <span className="w-32 shrink-0 text-muted-foreground">{label}</span>
       <span>{children}</span>
+    </div>
+  );
+}
+
+// ─── Contract Tab ──────────────────────────────────────────────────────────────
+
+function ContractTab({ campaignId }: { campaignId: string }) {
+  type ContractState =
+    | { status: "loading" }
+    | { status: "none" }
+    | { status: "ready"; contract: QualityContract }
+    | { status: "error"; message: string };
+
+  const [state, setState] = useState<ContractState>({ status: "loading" });
+  const [packs, setPacks] = useState<MutationPackMetadata[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Form state
+  const [selectedPackIds, setSelectedPackIds] = useState<string[]>([]);
+  const [requiredTools, setRequiredTools] = useState<string[]>([]);
+  const [toolInput, setToolInput] = useState("");
+  const [minAttempts, setMinAttempts] = useState(10);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.listMutationPacks({ include_system: true }).then((p) => {
+      if (!cancelled) setPacks(p);
+    });
+    void api.getContract(campaignId)
+      .then((c) => { if (!cancelled) { setState({ status: "ready", contract: c }); syncForm(c); } })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("404") || msg.toLowerCase().includes("no contract")) {
+          setState({ status: "none" });
+        } else {
+          setState({ status: "error", message: msg });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [campaignId]);
+
+  function syncForm(c: QualityContract) {
+    setSelectedPackIds(c.required_pack_ids ?? []);
+    setRequiredTools(c.required_tools ?? []);
+    setMinAttempts(c.min_attempts_per_pack ?? 10);
+  }
+
+  function togglePack(packId: string) {
+    setSelectedPackIds((prev) =>
+      prev.includes(packId) ? prev.filter((id) => id !== packId) : [...prev, packId]
+    );
+  }
+
+  function addTool() {
+    const t = toolInput.trim();
+    if (t && !requiredTools.includes(t)) {
+      setRequiredTools((prev) => [...prev, t]);
+    }
+    setToolInput("");
+  }
+
+  async function onSave() {
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const c = await api.upsertContract(campaignId, {
+        required_pack_ids: selectedPackIds,
+        required_tools: requiredTools,
+        min_attempts_per_pack: minAttempts,
+      });
+      setState({ status: "ready", contract: c });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save contract");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onDelete() {
+    setDeleting(true);
+    try {
+      await api.deleteContract(campaignId);
+      setState({ status: "none" });
+      setSelectedPackIds([]);
+      setRequiredTools([]);
+      setMinAttempts(10);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to delete contract");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (state.status === "loading") {
+    return <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>;
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className="rounded-md border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-100">
+        {state.message}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-info" />
+              Quality Contract
+            </CardTitle>
+            <CardDescription>
+              Define what must be tested before a CI batch is allowed to pass. Missing required
+              packs, tools, or insufficient attempts will fail the gate — regardless of pass rate.
+            </CardDescription>
+          </div>
+          {state.status === "ready" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={deleting}
+              onClick={() => void onDelete()}
+              className="text-muted-foreground hover:text-rose-400"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {saveError && (
+            <div className="rounded-md border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-100">
+              {saveError}
+            </div>
+          )}
+
+          {/* Required packs */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Required mutation packs
+            </p>
+            <p className="text-xs text-muted-foreground">
+              The pack used in the CI run must be one of these. Zero attempts with a required
+              pack = hard fail.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {packs.map((p) => {
+                const selected = selectedPackIds.includes(p.mutation_pack_id);
+                return (
+                  <button
+                    key={p.mutation_pack_id}
+                    onClick={() => togglePack(p.mutation_pack_id)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      selected
+                        ? "border-info bg-info/10 text-info"
+                        : "border-border/60 text-muted-foreground hover:border-info/50 hover:text-foreground"
+                    }`}
+                  >
+                    {p.name}
+                    {p.coverage_score != null && (
+                      <span className="ml-1.5 opacity-60">{p.coverage_score}%</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Required tools */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Required tool coverage
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Each tool listed must appear in at least one trace in the batch. If a tool is
+              never exercised, the gate fails with{" "}
+              <span className="font-mono text-foreground">untested_tool</span>.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {requiredTools.map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-0.5 text-xs font-mono text-foreground"
+                >
+                  {t}
+                  <button
+                    onClick={() => setRequiredTools((prev) => prev.filter((x) => x !== t))}
+                    className="text-muted-foreground hover:text-rose-400"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                className="w-64 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-info/60"
+                placeholder="payments.refund"
+                value={toolInput}
+                onChange={(e) => setToolInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTool(); } }}
+              />
+              <Button size="sm" variant="outline" onClick={addTool}>
+                <Plus className="h-3.5 w-3.5" /> Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Min attempts */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Minimum attempts
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Total mutation attempts across the batch must reach this threshold. Prevents a{" "}
+              <span className="font-mono text-foreground">pass</span> verdict from a trivially
+              small run.
+            </p>
+            <input
+              type="number"
+              min={1}
+              max={500}
+              className="w-28 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+              value={minAttempts}
+              onChange={(e) => setMinAttempts(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </div>
+
+          <div className="flex items-center justify-between border-t border-border/40 pt-4">
+            {state.status === "ready" && (
+              <p className="text-xs text-muted-foreground">
+                Contract v{state.contract.version} · updated{" "}
+                {formatRelativeDate(state.contract.updated_at)}
+              </p>
+            )}
+            {state.status === "none" && (
+              <p className="text-xs text-muted-foreground">No contract defined yet.</p>
+            )}
+            <Button onClick={() => void onSave()} disabled={saving}>
+              {saving ? "Saving…" : state.status === "ready" ? "Update Contract" : "Save Contract"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Violation legend */}
+      <div className="grid gap-3 md:grid-cols-3">
+        {([
+          ["wrong_pack", "Pack not in required list. Run was tested with an unapproved mutation pack — replace it with one of the required packs."],
+          ["untested_tool", "Required tool never exercised. No trace in the batch called this tool — add a scenario that covers it."],
+          ["insufficient_attempts", "Too few mutation attempts. Increase run budget or lower the minimum to match your credit allocation."],
+        ] as [string, string][]).map(([type, desc]) => (
+          <div key={type} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <p className="font-mono text-xs font-semibold text-rose-400">{type}</p>
+            <p className="mt-1.5 text-xs leading-5 text-neutral-400">{desc}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
