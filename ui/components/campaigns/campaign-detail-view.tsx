@@ -564,9 +564,30 @@ function TracePicker({
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 
 function OverviewTab({ campaign }: { campaign: CampaignMetadata }) {
-  const mutations = Array.isArray(campaign.mutation_set) ? campaign.mutation_set : [];
+  const [allPacks, setAllPacks] = useState<MutationPackMetadata[]>([]);
+  const [contract, setContract] = useState<QualityContract | null>(null);
+
+  useEffect(() => {
+    void api.listMutationPacks({ include_system: true }).then(setAllPacks);
+    void api.getContract(campaign.campaign_id)
+      .then((c) => setContract(c))
+      .catch(() => setContract(null));
+  }, [campaign.campaign_id]);
+
+  const packName = campaign.mutation_pack_id
+    ? (allPacks.find((p) => p.mutation_pack_id === campaign.mutation_pack_id)?.name ?? shortId(campaign.mutation_pack_id, 16))
+    : null;
+
+  const traceIds = campaign.eval_set?.trace_ids ?? [];
+  const attemptsCount = campaign.eval_set?.attempts_count ?? null;
+
+  const requiredPackNames = (contract?.required_pack_ids ?? []).map(
+    (id) => allPacks.find((p) => p.mutation_pack_id === id)?.name ?? shortId(id, 12)
+  );
+
   return (
     <div className="space-y-4">
+      {/* Campaign Info */}
       <Card>
         <CardHeader>
           <CardTitle>Campaign Info</CardTitle>
@@ -576,10 +597,22 @@ function OverviewTab({ campaign }: { campaign: CampaignMetadata }) {
             <Badge variant="neutral">{campaign.status}</Badge>
           </Row>
           <Row label="Mutation Pack">
-            {campaign.mutation_pack_id ? (
-              <span className="font-mono text-xs text-muted-foreground">
-                {shortId(campaign.mutation_pack_id, 16)}
-              </span>
+            {packName ? (
+              <span className="font-mono text-xs text-foreground">{packName}</span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </Row>
+          <Row label="Scenarios">
+            {traceIds.length > 0 ? (
+              <span className="text-foreground">{traceIds.length} registered</span>
+            ) : (
+              <span className="text-muted-foreground">None</span>
+            )}
+          </Row>
+          <Row label="Attempts">
+            {attemptsCount != null ? (
+              <span className="text-foreground">{attemptsCount}</span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
@@ -590,40 +623,70 @@ function OverviewTab({ campaign }: { campaign: CampaignMetadata }) {
         </CardContent>
       </Card>
 
+      {/* Quality Contract summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Mutation Set</CardTitle>
-          <CardDescription>{mutations.length} mutation(s) defined</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-info" />
+            Quality Contract
+          </CardTitle>
+          <CardDescription>
+            {contract
+              ? `v${contract.version} · updated ${formatRelativeDate(contract.updated_at)}`
+              : "No contract configured — CI batches will pass without gate checks."}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          {mutations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No mutations defined.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mutation ID</TableHead>
-                  <TableHead>Tool</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mutations.map((m: unknown, i: number) => {
-                  const mut = m as Record<string, unknown>;
-                  return (
-                    <TableRow key={i}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {String(mut.mutation_id ?? "—")}
-                      </TableCell>
-                      <TableCell className="text-sm text-foreground">
-                        {String(mut.tool ?? "—")}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
+        {contract && (
+          <CardContent className="space-y-5 text-sm">
+            {/* Required packs */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Required mutation packs
+              </p>
+              {requiredPackNames.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {requiredPackNames.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded-full border border-info/40 bg-info/10 px-3 py-1 text-xs font-medium text-info"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">None required.</p>
+              )}
+            </div>
+
+            {/* Required tools */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Required tool coverage
+              </p>
+              {(contract.required_tools ?? []).length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {contract.required_tools.map((tool) => (
+                    <span
+                      key={tool}
+                      className="rounded-full border border-border/60 px-3 py-1 font-mono text-xs text-muted-foreground"
+                    >
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No tools required.</p>
+              )}
+            </div>
+
+            {/* Min attempts */}
+            <div className="flex items-center gap-3 border-t border-border/40 pt-4">
+              <span className="text-muted-foreground">Minimum attempts</span>
+              <span className="font-medium text-foreground">{contract.min_attempts_per_pack}</span>
+            </div>
+          </CardContent>
+        )}
       </Card>
     </div>
   );
