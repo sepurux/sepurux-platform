@@ -106,6 +106,7 @@ export type QualityContract = {
   updated_at: string;
 };
 
+
 export type CIBatchStatus = {
   batch_id: string;
   run_ids: string[];

@@ -179,6 +179,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       )}
 
 
+
       {state.status === "loading" && (
         <Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
       )}
