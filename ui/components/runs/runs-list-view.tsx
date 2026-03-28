@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, RefreshCcw, Search } from "lucide-react";
 
@@ -100,6 +101,7 @@ function runAttemptCount(run: RunMetadata): number | null {
 }
 
 export function RunsListView() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -248,10 +250,16 @@ export function RunsListView() {
                         <TableRow
                           key={batchId ?? runs[0].run_id}
                           className="cursor-pointer hover:bg-accent/40"
-                          onClick={() => batchId && toggleBatch(batchId)}
+                          onClick={() => {
+                            if (runs.length === 1) {
+                              router.push(`/runs/${runs[0].run_id}`);
+                            } else if (batchId) {
+                              toggleBatch(batchId);
+                            }
+                          }}
                         >
                           <TableCell className="pr-0">
-                            {batchId ? (
+                            {batchId && runs.length > 1 ? (
                               <ChevronDown
                                 className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-150 ${isExpanded ? "" : "-rotate-90"}`}
                               />
