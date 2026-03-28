@@ -144,6 +144,8 @@ export class TraceRecorder {
 
 export class ManagedTraceRecorder extends TraceRecorder {
   traceId: string | null = null;
+  batchId: string | null = null;
+  /** @deprecated Use batchId — kept for backward compatibility. */
   runId: string | null = null;
   uploadError: Error | null = null;
 
@@ -166,23 +168,28 @@ export class ManagedTraceRecorder extends TraceRecorder {
     this.mutationPack = options.mutationPack;
   }
 
-  async flush(): Promise<{ traceId: string; runId?: string }> {
+  async flush(): Promise<{ traceId: string; batchId?: string; runId?: string }> {
     this.traceId = await this.client.uploadTrace(this.buildTrace());
     if (this.campaignId) {
-      this.runId = this.mutationPack
-        ? await this.client.runPack({
-            campaignId: this.campaignId,
-            mutationPack: this.mutationPack,
-          })
-        : await this.client.startRun({
-            traceId: this.traceId,
-            campaignId: this.campaignId,
-          });
+      if (this.mutationPack) {
+        this.runId = await this.client.runPack({
+          campaignId: this.campaignId,
+          mutationPack: this.mutationPack,
+        });
+      } else {
+        this.batchId = await this.client.startRun({
+          traceId: this.traceId,
+          campaignId: this.campaignId,
+        });
+        this.runId = this.batchId; // backward compat
+      }
     }
 
-    return this.runId
-      ? { traceId: this.traceId, runId: this.runId }
-      : { traceId: this.traceId };
+    return this.batchId
+      ? { traceId: this.traceId, batchId: this.batchId, runId: this.batchId }
+      : this.runId
+        ? { traceId: this.traceId, runId: this.runId }
+        : { traceId: this.traceId };
   }
 }
 
@@ -274,24 +281,47 @@ export class SepuruxClient {
     return traceId;
   }
 
+  /** Start a CI batch run. Returns the batch_id. */
   async startRun(input: {
     traceId: string;
     campaignId: string;
     mutationPackId?: string;
+    thresholds?: { min_pass_rate?: number; max_unsafe?: number; max_failures?: number };
   }): Promise<string> {
-    const payload = await this.request<{ run_id?: string }>("/v1/runs", {
+    const payload = await this.request<{ batch_id?: string; run_id?: string }>("/v1/ci/runs", {
       method: "POST",
       body: {
         trace_id: input.traceId,
         campaign_id: input.campaignId,
+        thresholds: input.thresholds ?? { min_pass_rate: 0.9, max_unsafe: 0 },
         ...(input.mutationPackId ? { mutation_pack_id: input.mutationPackId } : {}),
       },
     });
-    const runId = payload.run_id;
-    if (!runId) {
-      throw new Error("Run creation succeeded but run_id was missing");
+    const batchId = payload.batch_id ?? payload.run_id;
+    if (!batchId) {
+      throw new Error("Run creation succeeded but batch_id was missing");
     }
-    return runId;
+    return batchId;
+  }
+
+  /** Register traces in a campaign's eval-set for multi-scenario CI batches. */
+  async registerEvalTraces(input: {
+    campaignId: string;
+    addTraceIds: string[];
+    removeTraceIds?: string[];
+    minScenarios?: number;
+  }): Promise<void> {
+    await this.request<unknown>(
+      `/v1/campaigns/${encodeURIComponent(input.campaignId)}/eval-set`,
+      {
+        method: "PATCH",
+        body: {
+          add_trace_ids: input.addTraceIds,
+          remove_trace_ids: input.removeTraceIds ?? [],
+          ...(input.minScenarios !== undefined ? { min_scenarios: input.minScenarios } : {}),
+        },
+      },
+    );
   }
 
   async runPack(input: {

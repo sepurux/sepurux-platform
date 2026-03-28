@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import os
 import time
 import warnings
-from collections.abc import Callable, Coroutine, Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, ParamSpec, TypeVar
@@ -365,6 +366,32 @@ class SepuruxClient:
             raise ValueError(message)
         response.raise_for_status()
 
+    def register_eval_traces(
+        self,
+        campaign_id: str,
+        trace_ids: list[str],
+        *,
+        remove_trace_ids: list[str] | None = None,
+        min_scenarios: int | None = None,
+    ) -> None:
+        """Register traces in a campaign's eval-set for multi-scenario CI runs.
+
+        After calling this, POST /v1/ci/runs will automatically run all
+        registered traces as one batch — no need to pass trace_id per call.
+        """
+        payload: dict[str, Any] = {
+            "add_trace_ids": trace_ids,
+            "remove_trace_ids": remove_trace_ids or [],
+        }
+        if min_scenarios is not None:
+            payload["min_scenarios"] = min_scenarios
+        response = self._client.patch(
+            f"/v1/campaigns/{campaign_id}/eval-set",
+            headers=self._request_headers(),
+            json=payload,
+        )
+        response.raise_for_status()
+
     def run_pack(self, *, campaign_id: str, mutation_pack: str) -> str:
         response = self._client.post(
             f"/v1/campaigns/{campaign_id}/run-pack",
@@ -446,7 +473,7 @@ class SepuruxClient:
             raise ValueError("campaign_id is required when mutation_pack is provided")
 
         def decorator(func: Callable[P, R]) -> Callable[P, R]:
-            if asyncio.iscoroutinefunction(func):
+            if inspect.iscoroutinefunction(func):
                 @functools.wraps(func)
                 async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                     task_name = name or func.__name__
