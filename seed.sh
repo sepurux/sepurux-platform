@@ -421,7 +421,7 @@ curl_api PATCH "/v1/campaigns/$CHAOS_CAMPAIGN_ID/eval-set" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -H "X-Project-Id: $PROJECT_ID" \
-  -d "{\"trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
+  -d "{\"add_trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
 
 echo "[seed] creating policy campaign..."
 POLICY_CAMPAIGN_JSON="$(
@@ -475,7 +475,37 @@ curl_api PATCH "/v1/campaigns/$SECURITY_CAMPAIGN_ID/eval-set" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -H "X-Project-Id: $PROJECT_ID" \
-  -d "{\"trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
+  -d "{\"add_trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
+
+echo "[seed] attaching quality contracts..."
+
+# Chaos campaign contract: require the chaos pack, key tools from the mutation_set,
+# and enough attempts to exercise the full scenario pool.
+curl_api PUT "/v1/campaigns/$CHAOS_CAMPAIGN_ID/contract" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Id: $PROJECT_ID" \
+  -d @- <<JSON >/dev/null
+{
+  "required_pack_ids": ["$MUTATION_PACK_ID"],
+  "required_tools": ["payments.refund", "jira.create_issue", "slack.send_message"],
+  "min_attempts_per_pack": 10
+}
+JSON
+
+# Security campaign contract: require the security injection pack and the tools
+# it targets — a run with the wrong pack or missing tool coverage hard-fails.
+curl_api PUT "/v1/campaigns/$SECURITY_CAMPAIGN_ID/contract" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Id: $PROJECT_ID" \
+  -d @- <<JSON >/dev/null
+{
+  "required_pack_ids": ["$SECURITY_MUTATION_PACK_ID"],
+  "required_tools": ["jira.create_issue", "slack.send_message"],
+  "min_attempts_per_pack": 8
+}
+JSON
 
 echo "[seed] creating template demo campaign..."
 TEMPLATE_CAMPAIGN_JSON="$(
@@ -644,9 +674,9 @@ printf '  trace_ids=%s\n' "${TRACE_IDS[@]}"
 echo "  mutation_pack_id=$MUTATION_PACK_ID"
 echo "  security_mutation_pack_id=$SECURITY_MUTATION_PACK_ID"
 echo "  policy_pack_id=$POLICY_PACK_ID"
-echo "  chaos_campaign_id=$CHAOS_CAMPAIGN_ID"
+echo "  chaos_campaign_id=$CHAOS_CAMPAIGN_ID (contract: packs=1 tools=3 min_attempts=10)"
 echo "  policy_campaign_id=$POLICY_CAMPAIGN_ID"
-echo "  security_campaign_id=$SECURITY_CAMPAIGN_ID"
+echo "  security_campaign_id=$SECURITY_CAMPAIGN_ID (contract: packs=1 tools=2 min_attempts=8)"
 echo "  template_campaign_id=$TEMPLATE_CAMPAIGN_ID"
 echo "  template_baseline_run_id=$TEMPLATE_BASELINE_RUN_ID"
 if [ "${#TEMPLATE_IDS[@]}" -gt 0 ]; then
