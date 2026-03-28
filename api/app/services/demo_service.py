@@ -43,6 +43,13 @@ DEMO_TRACE_VERSION = "0.1"
 DEMO_SEEDED_TRACES_TARGET = 6
 DEMO_SEEDED_RUNS_TARGET = 6
 DEMO_SEEDED_ATTEMPTS_PER_RUN = 6
+# Two deterministic CI batch IDs for demo seeding — 3 runs per batch.
+# These are stable across re-seeds so existing runs stay in the same batch.
+DEMO_BATCH_IDS = [
+    UUID("d0000001-0000-0000-0000-000000000001"),
+    UUID("d0000001-0000-0000-0000-000000000002"),
+]
+DEMO_RUNS_PER_BATCH = 3  # DEMO_SEEDED_RUNS_TARGET // len(DEMO_BATCH_IDS)
 
 
 def demo_info_payload() -> dict[str, Any]:
@@ -407,11 +414,17 @@ def _ensure_demo_runs(
                 Run.campaign_id == campaign.campaign_id,
                 Trace.source == DEMO_TRACE_SOURCE,
             )
-            .order_by(Run.created_at.desc(), Run.run_id.desc())
+            .order_by(Run.created_at.asc(), Run.run_id.asc())
         )
     )
 
     for index, run in enumerate(records):
+        batch_id = DEMO_BATCH_IDS[(index // DEMO_RUNS_PER_BATCH) % len(DEMO_BATCH_IDS)]
+        summary = dict(run.summary or {})
+        if "ci_batch_id" not in summary:
+            summary["ci_batch_id"] = str(batch_id)
+            run.summary = summary
+            db.add(run)
         _ensure_demo_attempts_for_run(
             db,
             run=run,
@@ -421,6 +434,7 @@ def _ensure_demo_runs(
     missing = max(DEMO_SEEDED_RUNS_TARGET - len(records), 0)
     for i in range(missing):
         run_index = len(records) + i
+        batch_id = DEMO_BATCH_IDS[(run_index // DEMO_RUNS_PER_BATCH) % len(DEMO_BATCH_IDS)]
         trace = traces[run_index % len(traces)]
         attempts_total = DEMO_SEEDED_ATTEMPTS_PER_RUN
         failed_count = min(3, 1 + (run_index % 3))
@@ -451,6 +465,7 @@ def _ensure_demo_runs(
                 "security_events_count": 1 if unsafe_count > 0 else 0,
                 "injection_blocks": 1 if unsafe_count > 0 else 0,
                 "injection_sanitizations": 0,
+                "ci_batch_id": str(batch_id),
                 "demo_seed": True,
             },
             created_at=created_at,
