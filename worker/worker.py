@@ -59,6 +59,7 @@ from trace_steps import persist_attempt_trace_steps
 from webhooks import is_webhook_subscribed, send_signed_webhook
 
 logger = logging.getLogger(__name__)
+INTERNAL_REPLAY_TOOLS = frozenset({"trace.load", "campaign.load", "agent.run_agent"})
 
 
 def _summary_value_as_int(summary: dict[str, Any], key: str) -> int:
@@ -77,6 +78,60 @@ def _summary_value_as_float(summary: dict[str, Any], key: str) -> float:
     if isinstance(value, int | float):
         return float(value)
     return 0.0
+
+
+def _campaign_mutation_set_is_empty(mutation_set: Any) -> bool:
+    if mutation_set is None:
+        return True
+    if isinstance(mutation_set, list):
+        return len(mutation_set) == 0
+    if isinstance(mutation_set, dict):
+        nested = mutation_set.get("mutations")
+        if isinstance(nested, list):
+            return len(nested) == 0
+        return len(mutation_set) == 0
+    return False
+
+
+def _seed_baseline_mutations_from_trace(trace: Trace) -> list[dict[str, Any]]:
+    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return []
+
+    def _candidate_from_event(event: dict[str, Any]) -> dict[str, Any] | None:
+        tool = event.get("tool")
+        if not isinstance(tool, str):
+            return None
+        normalized_tool = tool.strip()
+        if not normalized_tool or normalized_tool in INTERNAL_REPLAY_TOOLS:
+            return None
+        args = event.get("args") if isinstance(event.get("args"), dict) else {}
+        return {
+            "mutation_id": "baseline.auto_seed",
+            "tool": normalized_tool,
+            "args": args,
+        }
+
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "tool_call":
+            continue
+        candidate = _candidate_from_event(event)
+        if candidate is not None:
+            return [candidate]
+
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "tool_result":
+            continue
+        candidate = _candidate_from_event(event)
+        if candidate is not None:
+            return [candidate]
+
+    return []
 
 
 def _record_run_completed_audit_event(db: Session, *, run: Run) -> AuditEvent:
@@ -1348,6 +1403,10 @@ def execute_run(run_id: str) -> None:
         db.commit()
 
         baseline_mutations = iter_mutations(campaign.mutation_set)
+        if _campaign_mutation_set_is_empty(campaign.mutation_set):
+            seeded_baseline = _seed_baseline_mutations_from_trace(trace)
+            if seeded_baseline:
+                baseline_mutations = seeded_baseline
         attempt_repeats = _campaign_attempt_repeats(campaign)
         eval_checks = _campaign_eval_checks(campaign)
         total_attempts = len(baseline_mutations) * attempt_repeats
@@ -1725,6 +1784,7 @@ def execute_run(run_id: str) -> None:
 
         prior_summary = run.summary if isinstance(run.summary, dict) else {}
         ci_thresholds = prior_summary.get("ci_thresholds")
+        ci_batch_id = prior_summary.get("ci_batch_id")
         github_context = prior_summary.get("github_context")
         github_reporting = prior_summary.get("github_reporting")
         reliability = calculate_reliability_score(
@@ -1779,6 +1839,8 @@ def execute_run(run_id: str) -> None:
         }
         if ci_thresholds is not None:
             run.summary["ci_thresholds"] = ci_thresholds
+        if isinstance(ci_batch_id, str) and ci_batch_id.strip():
+            run.summary["ci_batch_id"] = ci_batch_id
         if isinstance(github_context, dict):
             run.summary["github_context"] = github_context
         if isinstance(github_reporting, dict):

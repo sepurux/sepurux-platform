@@ -165,6 +165,79 @@ def test_execute_run_with_mutation_pack_persists_seed_and_trace(
     assert result.get("state") == "replayed"
 
 
+def test_execute_run_autoseeds_baseline_when_campaign_mutation_set_empty(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, artifacts = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "trace_version": "0.2",
+                    "source": "sdk",
+                    "events": [
+                        {"index": 1, "type": "tool_call", "tool": "stripe.get_payment_intent", "args": {"payment_intent_id": "pi_123"}},
+                        {"index": 2, "type": "tool_result", "tool": "stripe.get_payment_intent", "result": {"ok": True}},
+                    ],
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Autoseed Campaign",
+                mutation_set=[],
+                eval_set={"checks": ["ok"], "attempts_count": 1},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary=None,
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempts = list(db.scalars(select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)))
+        failures = list(db.scalars(select(Failure).where(Failure.run_id == run_id)))
+        run = db.scalar(select(Run).where(Run.run_id == run_id))
+
+    assert len(attempts) == 1
+    assert attempts[0].mutation_id == "baseline.auto_seed"
+    assert attempts[0].result == "passed"
+    assert attempts[0].failure_reason is None
+    assert len(failures) == 0
+    assert isinstance(run, Run)
+    assert isinstance(run.summary, dict)
+    assert run.summary.get("failed_count") == 0
+
+    assert artifacts
+    artifact_payload = next(iter(artifacts.values()))
+    events = artifact_payload.get("events")
+    assert isinstance(events, list)
+    seeded_tool_calls = [
+        event for event in events if event.get("type") == "tool_call" and event.get("tool") == "stripe.get_payment_intent"
+    ]
+    assert seeded_tool_calls
+
+
 def test_run_completion_records_audit_event_and_delivers_webhook(
     worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
     monkeypatch: pytest.MonkeyPatch,
@@ -551,6 +624,72 @@ def test_execute_run_repeats_attempts_from_eval_set_count(
     assert summary["passed_count"] == 3
     assert summary["pass_rate"] == 1.0
     assert len(artifacts) == 3
+
+
+def test_execute_run_preserves_ci_batch_metadata_in_summary(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+    ci_batch_id = str(uuid4())
+    ci_thresholds = {
+        "min_pass_rate": 0.8,
+        "max_unsafe": 0,
+        "max_failures": 5,
+    }
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="CI Summary Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"], "attempts_count": 1},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary={
+                    "ci_thresholds": ci_thresholds,
+                    "ci_batch_id": ci_batch_id,
+                },
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    summary = run.summary
+    assert isinstance(summary, dict)
+    assert summary["attempt_count"] == 1
+    assert summary["ci_thresholds"] == ci_thresholds
+    assert summary["ci_batch_id"] == ci_batch_id
 
 
 def test_execute_run_status_check_fails_on_schema_rename(

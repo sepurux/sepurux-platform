@@ -135,6 +135,16 @@ def _extract_tools_from_trace_payload(payload: dict[str, Any]) -> list[str]:
     return ordered
 
 
+def extract_tools_from_trace_payload(payload: dict[str, Any]) -> list[str]:
+    """Public helper for deriving replay tools from a normalized trace payload."""
+    return _extract_tools_from_trace_payload(payload)
+
+
+def build_bootstrap_policy_document(tools: list[str]) -> dict[str, Any]:
+    """Public helper for generating the default bootstrap policy from observed tools."""
+    return _build_policy_document(tools)
+
+
 def _bootstrap_tool_zones(
     db: Session,
     *,

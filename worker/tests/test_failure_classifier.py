@@ -84,3 +84,63 @@ def test_classify_latency_exceeded_from_mutation_trace() -> None:
 
     assert classification.failure_type == "latency_exceeded"
     assert classification.severity == "medium"
+
+
+def test_classify_replay_contract_invalid_tool_as_schema_error() -> None:
+    classification = classify_attempt_failure(
+        FailureClassificationInput(
+            failure_reason="replay_contract_invalid_tool",
+            first_failure_tool="replay.execute",
+            first_failure_event_index=3,
+            timeline_artifact={
+                "events": [
+                    {
+                        "index": 3,
+                        "type": "error",
+                        "tool": "replay.execute",
+                        "error": {
+                            "code": "replay_contract_invalid_tool",
+                            "message": "mutation.tool is required",
+                        },
+                    }
+                ]
+            },
+            mutation_trace=None,
+            policy_events=[],
+            security_events=[],
+            mutation_name="tool-chaos",
+        )
+    )
+
+    assert classification.failure_type == "tool_schema_error"
+    assert classification.severity == "high"
+
+
+def test_classify_replay_contract_invalid_args_as_schema_error() -> None:
+    classification = classify_attempt_failure(
+        FailureClassificationInput(
+            failure_reason="replay_contract_invalid_args",
+            first_failure_tool="replay.execute",
+            first_failure_event_index=3,
+            timeline_artifact={
+                "events": [
+                    {
+                        "index": 3,
+                        "type": "error",
+                        "tool": "replay.execute",
+                        "error": {
+                            "code": "replay_contract_invalid_args",
+                            "message": "mutation.args must be an object",
+                        },
+                    }
+                ]
+            },
+            mutation_trace=None,
+            policy_events=[],
+            security_events=[],
+            mutation_name="tool-chaos",
+        )
+    )
+
+    assert classification.failure_type == "tool_schema_error"
+    assert classification.severity == "high"
