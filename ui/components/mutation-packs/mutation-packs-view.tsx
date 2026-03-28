@@ -23,7 +23,7 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; records: MutationPackMetadata[] };
 
-type DeleteState = { status: "idle" } | { status: "deleting"; id: string } | { status: "error"; message: string };
+type DeleteState = { status: "idle" } | { status: "confirming"; id: string; name: string } | { status: "deleting"; id: string } | { status: "error"; message: string };
 
 type RunDependenciesState =
   | { status: "idle" }
@@ -72,8 +72,7 @@ export function MutationPacksView() {
   const canManageMutationPacks = authSession?.permissions.can_manage_mutation_packs ?? false;
   const canRunCampaigns = authSession?.permissions.can_run_campaigns ?? false;
 
-  async function onDeletePack(packId: string, packName: string) {
-    if (!window.confirm(`Delete mutation pack "${packName}"? This cannot be undone.`)) return;
+  async function onDeletePack(packId: string) {
     setDeleteState({ status: "deleting", id: packId });
     try {
       await api.deleteMutationPack(packId);
@@ -476,18 +475,40 @@ export function MutationPacksView() {
                                     Edit
                                   </Link>
                                 </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-rose-400 hover:text-rose-300"
-                                  disabled={deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id}
-                                  onClick={() => void onDeletePack(record.mutation_pack_id, record.name)}
-                                >
-                                  {deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id
-                                    ? "Deleting..."
-                                    : "Delete"}
-                                </Button>
+                                {deleteState.status === "confirming" && deleteState.id === record.mutation_pack_id ? (
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span className="text-xs text-rose-300">Delete?</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-rose-400 hover:text-rose-300"
+                                      disabled={false}
+                                      onClick={() => void onDeletePack(record.mutation_pack_id)}
+                                    >
+                                      Yes
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setDeleteState({ status: "idle" })}
+                                    >
+                                      No
+                                    </Button>
+                                  </span>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-rose-400 hover:text-rose-300"
+                                    disabled={deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id}
+                                    onClick={() => setDeleteState({ status: "confirming", id: record.mutation_pack_id, name: record.name })}
+                                  >
+                                    {deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id ? "Deleting..." : "Delete"}
+                                  </Button>
+                                )}
                               </>
                             ) : null}
                           </div>

@@ -188,7 +188,7 @@ export function SettingsView() {
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
                 value={apiKey}
                 onChange={(event) => setApiKey(event.target.value)}
-                placeholder="sepurux-dev-key"
+                placeholder="sk-..."
               />
             </label>
 

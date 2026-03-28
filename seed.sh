@@ -5,9 +5,13 @@ COMPOSE_FILE="${COMPOSE_FILE:-infra/docker-compose.yml}"
 API="${API:-http://localhost:8000}"
 API_KEY="${API_KEY:-sepurux-dev-key}"
 PROJECT_ID="${PROJECT_ID:-22222222-2222-2222-2222-222222222222}"
-RUNS_COUNT="${RUNS_COUNT:-20}"
-POLICY_RUNS_COUNT="${POLICY_RUNS_COUNT:-4}"
-SECURITY_RUNS_COUNT="${SECURITY_RUNS_COUNT:-4}"
+BATCH_COUNT="${BATCH_COUNT:-6}"
+POLICY_BATCH_COUNT="${POLICY_BATCH_COUNT:-2}"
+SECURITY_BATCH_COUNT="${SECURITY_BATCH_COUNT:-2}"
+# Legacy aliases so existing env overrides still work
+RUNS_COUNT="${RUNS_COUNT:-$BATCH_COUNT}"
+POLICY_RUNS_COUNT="${POLICY_RUNS_COUNT:-$POLICY_BATCH_COUNT}"
+SECURITY_RUNS_COUNT="${SECURITY_RUNS_COUNT:-$SECURITY_BATCH_COUNT}"
 WAIT_FOR_COMPLETION="${WAIT_FOR_COMPLETION:-1}"
 WAIT_TIMEOUT_SECONDS="${WAIT_TIMEOUT_SECONDS:-360}"
 WAIT_POLL_SECONDS="${WAIT_POLL_SECONDS:-5}"
@@ -346,41 +350,38 @@ POLICY_PACK_ID="$(
   printf '%s' "$POLICY_PACK_JSON" | json_extract "policy_pack_id"
 )"
 
-echo "[seed] creating trace..."
-TRACE_JSON="$(
-  curl_api POST "/v1/traces" \
-    -H "Content-Type: application/json" \
-    -H "X-API-Key: $API_KEY" \
-    -H "X-Project-Id: $PROJECT_ID" \
-    -d @- <<'JSON'
+echo "[seed] creating seed traces..."
+TRACE_IDS=()
+TRACE_SCENARIOS=("auth-flow" "payment-refund" "incident-triage")
+for scenario in "${TRACE_SCENARIOS[@]}"; do
+  T_JSON="$(
+    curl_api POST "/v1/traces" \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: $API_KEY" \
+      -H "X-Project-Id: $PROJECT_ID" \
+      -d @- <<JSON
 {
   "trace_version": "0.1",
   "source": "seed.sh",
   "task": {
     "name": "seed.trace",
-    "input": {
-      "scenario": "tenant-project-mutation-policy"
-    }
+    "input": { "scenario": "$scenario" }
   },
   "events": [
     {
       "type": "model",
       "name": "seed.bootstrap",
       "timestamp": "2026-03-09T00:00:00Z",
-      "input": {
-        "stage": "init"
-      },
-      "output": {
-        "status": "ok"
-      }
+      "input": { "stage": "init" },
+      "output": { "status": "ok" }
     }
   ]
 }
 JSON
-)"
-TRACE_ID="$(
-  printf '%s' "$TRACE_JSON" | json_extract "trace_id"
-)"
+  )"
+  TRACE_IDS+=("$(printf '%s' "$T_JSON" | json_extract "trace_id")")
+done
+TRACE_ID="${TRACE_IDS[0]}"
 
 echo "[seed] creating chaos campaign..."
 CHAOS_CAMPAIGN_JSON="$(
@@ -413,6 +414,14 @@ JSON
 CHAOS_CAMPAIGN_ID="$(
   printf '%s' "$CHAOS_CAMPAIGN_JSON" | json_extract "campaign_id"
 )"
+
+echo "[seed] registering traces in chaos campaign eval-set..."
+TRACE_IDS_JSON="$(printf '"%s",' "${TRACE_IDS[@]}" | sed 's/,$//')"
+curl_api PATCH "/v1/campaigns/$CHAOS_CAMPAIGN_ID/eval-set" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Id: $PROJECT_ID" \
+  -d "{\"trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
 
 echo "[seed] creating policy campaign..."
 POLICY_CAMPAIGN_JSON="$(
@@ -461,6 +470,13 @@ SECURITY_CAMPAIGN_ID="$(
   printf '%s' "$SECURITY_CAMPAIGN_JSON" | json_extract "campaign_id"
 )"
 
+echo "[seed] registering traces in security campaign eval-set..."
+curl_api PATCH "/v1/campaigns/$SECURITY_CAMPAIGN_ID/eval-set" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Id: $PROJECT_ID" \
+  -d "{\"trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
+
 echo "[seed] creating template demo campaign..."
 TEMPLATE_CAMPAIGN_JSON="$(
   curl_api POST "/v1/campaigns" \
@@ -482,57 +498,55 @@ TEMPLATE_CAMPAIGN_ID="$(
   printf '%s' "$TEMPLATE_CAMPAIGN_JSON" | json_extract "campaign_id"
 )"
 
-echo "[seed] creating $RUNS_COUNT chaos run(s)..."
+ci_batch_run_ids() {
+  # Usage: ci_batch_run_ids <campaign_id> [policy_pack_id]
+  local campaign="$1"
+  local ppid="${2:-}"
+  local payload="{\"campaign_id\":\"$campaign\",\"thresholds\":{\"min_pass_rate\":0.0,\"max_unsafe\":100}}"
+  local resp
+  resp="$(
+    curl_api POST "/v1/ci/runs" \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: $API_KEY" \
+      -H "X-Project-Id: $PROJECT_ID" \
+      -d "$payload"
+  )"
+  printf '%s' "$resp" | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(r) for r in d.get("run_ids") or [d["run_id"]]]'
+}
+
+echo "[seed] creating $RUNS_COUNT chaos CI batch(es) (${#TRACE_IDS[@]} traces each)..."
 RUN_IDS=()
 SECURITY_RUN_IDS=()
 for _ in $(seq 1 "$RUNS_COUNT"); do
-  RUN_JSON="$(
-    curl_api POST "/v1/runs" \
-      -H "Content-Type: application/json" \
-      -H "X-API-Key: $API_KEY" \
-      -H "X-Project-Id: $PROJECT_ID" \
-      -d "{\"trace_id\":\"$TRACE_ID\",\"campaign_id\":\"$CHAOS_CAMPAIGN_ID\"}"
-  )"
-  RUN_IDS+=("$(printf '%s' "$RUN_JSON" | json_extract "run_id")")
+  while IFS= read -r rid; do
+    [ -n "$rid" ] && RUN_IDS+=("$rid")
+  done < <(ci_batch_run_ids "$CHAOS_CAMPAIGN_ID")
 done
 
-echo "[seed] creating $POLICY_RUNS_COUNT policy run(s)..."
+echo "[seed] creating $POLICY_RUNS_COUNT policy CI batch(es)..."
 for _ in $(seq 1 "$POLICY_RUNS_COUNT"); do
-  RUN_JSON="$(
-    curl_api POST "/v1/runs" \
-      -H "Content-Type: application/json" \
-      -H "X-API-Key: $API_KEY" \
-      -H "X-Project-Id: $PROJECT_ID" \
-      -d "{\"trace_id\":\"$TRACE_ID\",\"campaign_id\":\"$POLICY_CAMPAIGN_ID\",\"policy_pack_id\":\"$POLICY_PACK_ID\"}"
-  )"
-  RUN_IDS+=("$(printf '%s' "$RUN_JSON" | json_extract "run_id")")
+  while IFS= read -r rid; do
+    [ -n "$rid" ] && RUN_IDS+=("$rid")
+  done < <(ci_batch_run_ids "$POLICY_CAMPAIGN_ID")
 done
 
-echo "[seed] creating $SECURITY_RUNS_COUNT security run(s)..."
+echo "[seed] creating $SECURITY_RUNS_COUNT security CI batch(es)..."
 for _ in $(seq 1 "$SECURITY_RUNS_COUNT"); do
-  RUN_JSON="$(
-    curl_api POST "/v1/runs" \
-      -H "Content-Type: application/json" \
-      -H "X-API-Key: $API_KEY" \
-      -H "X-Project-Id: $PROJECT_ID" \
-      -d "{\"trace_id\":\"$TRACE_ID\",\"campaign_id\":\"$SECURITY_CAMPAIGN_ID\"}"
-  )"
-  RUN_ID="$(printf '%s' "$RUN_JSON" | json_extract "run_id")"
-  RUN_IDS+=("$RUN_ID")
-  SECURITY_RUN_IDS+=("$RUN_ID")
+  while IFS= read -r rid; do
+    [ -n "$rid" ] && RUN_IDS+=("$rid")
+    SECURITY_RUN_IDS+=("$rid")
+  done < <(ci_batch_run_ids "$SECURITY_CAMPAIGN_ID")
 done
 
-echo "[seed] creating template baseline run..."
-TEMPLATE_BASELINE_RUN_JSON="$(
-  curl_api POST "/v1/runs" \
+echo "[seed] creating template baseline CI batch..."
+TEMPLATE_BASELINE_BATCH_JSON="$(
+  curl_api POST "/v1/ci/runs" \
     -H "Content-Type: application/json" \
     -H "X-API-Key: $API_KEY" \
     -H "X-Project-Id: $PROJECT_ID" \
-    -d "{\"trace_id\":\"$TRACE_ID\",\"campaign_id\":\"$TEMPLATE_CAMPAIGN_ID\"}"
+    -d "{\"campaign_id\":\"$TEMPLATE_CAMPAIGN_ID\",\"trace_id\":\"$TRACE_ID\",\"thresholds\":{\"min_pass_rate\":0.0,\"max_unsafe\":100}}"
 )"
-TEMPLATE_BASELINE_RUN_ID="$(
-  printf '%s' "$TEMPLATE_BASELINE_RUN_JSON" | json_extract "run_id"
-)"
+TEMPLATE_BASELINE_RUN_ID="$(printf '%s' "$TEMPLATE_BASELINE_BATCH_JSON" | json_extract "run_id")"
 RUN_IDS+=("$TEMPLATE_BASELINE_RUN_ID")
 
 if [ "$WAIT_FOR_COMPLETION" = "1" ]; then
@@ -626,7 +640,7 @@ fi
 
 echo "[seed] complete:"
 echo "  project_id=$PROJECT_ID"
-echo "  trace_id=$TRACE_ID"
+printf '  trace_ids=%s\n' "${TRACE_IDS[@]}"
 echo "  mutation_pack_id=$MUTATION_PACK_ID"
 echo "  security_mutation_pack_id=$SECURITY_MUTATION_PACK_ID"
 echo "  policy_pack_id=$POLICY_PACK_ID"

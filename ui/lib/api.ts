@@ -45,13 +45,20 @@ export type TraceTimelineStep = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type CampaignEvalSet = {
+  trace_ids?: string[];
+  checks?: string[];
+  attempts_count?: number;
+  min_scenarios?: number;
+};
+
 export type CampaignMetadata = {
   campaign_id: string;
   mutation_pack_id: string | null;
   name: string;
   status: string;
   mutation_set: unknown;
-  eval_set: unknown;
+  eval_set: CampaignEvalSet | null;
   created_at: string;
 };
 
@@ -67,6 +74,22 @@ export type RunMetadata = {
   pass_rate?: number | null;
   unsafe_count?: number | null;
   created_at: string;
+};
+
+export type CIBatchStatus = {
+  batch_id: string;
+  run_ids: string[];
+  status: string;
+  decision: "pass" | "fail" | "pending";
+  pass_rate: number;
+  unsafe_attempts: number;
+  failures: number;
+  trace_count: number;
+  scenario_coverage_pct: number;
+  top_failing_tools: Array<{ tool: string; count: number }>;
+  mutation_categories: string[];
+  mutation_coverage_score: number | null;
+  dashboard_url: string;
 };
 
 export type CampaignFailure = {
@@ -1272,12 +1295,18 @@ export const api = {
     }),
   getProjectReliability: () =>
     requestJson<ProjectReliabilitySummary>("/v1/analytics/reliability"),
+  getCampaign: (campaignId: string) =>
+    requestJson<CampaignMetadata>(`/v1/campaigns/${campaignId}`),
   createCampaign: (payload: {
     name: string;
     mutation_set: unknown;
     eval_set: unknown;
     mutation_pack_id?: string | null;
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
+  updateCampaignEvalSet: (
+    campaignId: string,
+    payload: { add_trace_ids?: string[]; remove_trace_ids?: string[]; min_scenarios?: number }
+  ) => patchJson<CampaignMetadata, typeof payload>(`/v1/campaigns/${campaignId}/eval-set`, payload),
   deleteCampaign: (campaignId: string) => deleteRequest(`/v1/campaigns/${campaignId}`),
   createRun: (payload: {
     trace_id: string;
@@ -1364,6 +1393,7 @@ export const api = {
     });
   },
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
+  getCiBatch: (batchId: string) => requestJson<CIBatchStatus>(`/v1/ci/batch/${batchId}`),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
   listRunPolicyEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
     requestJson<PolicyEventListItem[]>(`/v1/runs/${runId}/policy-events`, {

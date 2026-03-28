@@ -44,7 +44,8 @@ jobs:
           SEPURUX_PROJECT_ID: \${{ secrets.SEPURUX_PROJECT_ID }}
           SEPURUX_CAMPAIGN_ID: \${{ secrets.SEPURUX_CAMPAIGN_ID }}
           # Produced by earlier instrumentation/upload steps in your pipeline.
-          SEPURUX_TRACE_ID: \${{ secrets.SEPURUX_TRACE_ID }}
+          # Omit if the campaign already has an eval-set — batch runs all registered traces.
+          SEPURUX_TRACE_ID: \${{ steps.record.outputs.trace_id }}
         run: |
           python - <<'PY'
           import os
@@ -53,16 +54,13 @@ jobs:
 
           from sepurux import SepuruxClient
 
-          min_reliability = 80.0
+          min_pass_rate = 0.85
           timeout_seconds = 600
 
           campaign_id = (os.getenv("SEPURUX_CAMPAIGN_ID") or "").strip()
-          trace_id = (os.getenv("SEPURUX_TRACE_ID") or "").strip()
+          trace_id = (os.getenv("SEPURUX_TRACE_ID") or "").strip() or None
           if not campaign_id:
               print("Missing SEPURUX_CAMPAIGN_ID")
-              sys.exit(1)
-          if not trace_id:
-              print("Missing SEPURUX_TRACE_ID")
               sys.exit(1)
 
           client = SepuruxClient(
@@ -71,54 +69,44 @@ jobs:
               project_id=(os.getenv("SEPURUX_PROJECT_ID") or None),
           )
 
-          # Validate IDs first to fail fast with actionable errors.
-          client.preflight_run_inputs(trace_id=trace_id, campaign_id=campaign_id)
-          run_id = client.start_run(trace_id=trace_id, campaign_id=campaign_id)
-          print(f"Started Sepurux run: {run_id}")
+          # start_run always returns a batch_id. When the campaign has an eval-set,
+          # one run is created per registered trace. Otherwise uses the supplied trace_id.
+          batch_id = client.start_run(
+              trace_id=trace_id or "",
+              campaign_id=campaign_id,
+              thresholds={"min_pass_rate": min_pass_rate, "max_unsafe": 0},
+          )
+          print(f"Started Sepurux batch: {batch_id}")
 
-          terminal_success = {"completed", "success", "succeeded", "done", "pass", "passed"}
-          terminal_failure = {"failed", "error", "cancelled", "fail"}
+          terminal = {"completed", "done", "failed", "pass", "fail"}
           deadline = time.time() + timeout_seconds
-          latest = {"status": "unknown", "summary": {}}
+          latest = {}
 
           while time.time() < deadline:
-              latest = client.get_run(run_id)
+              latest = client.get_ci_batch(batch_id)
               status = str(latest.get("status", "")).lower()
-              print(f"Run status: {status}")
-              if status in terminal_success | terminal_failure:
+              coverage = latest.get("scenario_coverage_pct", 0)
+              print(f"Batch status: {status}  coverage: {coverage:.0f}%")
+              if status in terminal:
                   break
               time.sleep(5)
           else:
-              print(f"Run timed out after {timeout_seconds}s")
+              print(f"Batch timed out after {timeout_seconds}s")
               sys.exit(1)
 
-          status = str(latest.get("status", "")).lower()
-          if status in terminal_failure:
-              print(f"Run ended in failure state: {status}")
-              sys.exit(1)
-          if status not in terminal_success:
-              print(f"Run ended in unknown non-success state: {status}")
-              sys.exit(1)
+          decision = str(latest.get("decision", "")).lower()
+          pass_rate = float(latest.get("pass_rate") or 0)
+          unsafe = int(latest.get("unsafe_attempts") or 0)
+          print(f"Decision: {decision}  pass_rate: {pass_rate:.0%}  unsafe: {unsafe}")
 
-          summary = latest.get("summary") or {}
-          score = None
-          for key in ("reliability", "reliability_score", "score", "pass_rate"):
-              value = summary.get(key)
-              if isinstance(value, (int, float)):
-                  score = float(value)
-                  break
-
-          if score is None:
-              print("Could not find a numeric reliability score in run summary.")
-              print(f"Summary payload: {summary}")
+          if decision == "fail" or unsafe > 0:
+              print("Gate failed.")
+              sys.exit(1)
+          if decision != "pass":
+              print(f"Unexpected decision state: {decision}")
               sys.exit(1)
 
-          if score <= 1:
-              score *= 100.0
-
-          print(f"Reliability score: {score:.2f} (threshold: {min_reliability:.2f})")
-          if score < min_reliability:
-              sys.exit(1)
+          print("Gate passed.")
           PY`;
 
 const actionSnippet = `# Preferred: trace_file + campaign_name — no UUIDs in secrets

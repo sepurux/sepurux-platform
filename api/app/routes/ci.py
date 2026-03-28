@@ -32,7 +32,6 @@ from app.services.mutation_pack_policy import evaluate_mutation_pack_config
 from app.services.run_service import (
     RelatedRecordNotFoundError,
     create_ci_batch_and_enqueue,
-    create_ci_run_and_enqueue,
     get_run_quality_metrics,
     get_run_unscoped,
 )
@@ -148,16 +147,6 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
             else payload.thresholds.dict(exclude_none=True)
         )
 
-        if len(trace_ids) == 1:
-            run = create_ci_run_and_enqueue(
-                db,
-                trace_id=trace_ids[0],
-                campaign_id=payload.campaign_id,
-                thresholds=thresholds_payload,
-                github_context=github_context,
-            )
-            return CIRunCreateResponse(run_id=run.run_id, run_ids=[run.run_id], trace_count=1)
-
         batch_id = uuid4()
         runs = create_ci_batch_and_enqueue(
             db,
@@ -172,6 +161,7 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
         return CIRunCreateResponse(
             run_id=first_run_id,
             run_ids=all_run_ids,
+            batch_id=batch_id,
             trace_count=len(runs),
         )
 
