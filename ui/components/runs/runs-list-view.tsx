@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Filter, RefreshCcw, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, RefreshCcw, Search } from "lucide-react";
 
 import { api, type RunMetadata } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
@@ -17,14 +18,96 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; runs: RunMetadata[] };
 
+type BatchGroup = {
+  batchId: string | null;
+  runs: RunMetadata[];
+};
+
 const PAGE_SIZE = 12;
 
+function getBatchId(run: RunMetadata): string | null {
+  return (run.summary?.ci_batch_id as string | undefined) ?? null;
+}
+
+function groupByBatch(runs: RunMetadata[]): BatchGroup[] {
+  const map = new Map<string, RunMetadata[]>();
+  const standalone: RunMetadata[] = [];
+  for (const run of runs) {
+    const batchId = getBatchId(run);
+    if (batchId) {
+      const existing = map.get(batchId) ?? [];
+      existing.push(run);
+      map.set(batchId, existing);
+    } else {
+      standalone.push(run);
+    }
+  }
+  const groups: BatchGroup[] = [];
+  for (const [batchId, batchRuns] of map.entries()) {
+    groups.push({ batchId, runs: batchRuns });
+  }
+  for (const run of standalone) {
+    groups.push({ batchId: null, runs: [run] });
+  }
+  return groups;
+}
+
+function batchAggStatus(runs: RunMetadata[]): string {
+  if (runs.some((r) => r.status === "running")) return "running";
+  if (runs.some((r) => r.status === "queued")) return "queued";
+  if (runs.some((r) => r.status === "failed")) return "failed";
+  if (runs.every((r) => r.status === "completed")) return "completed";
+  return "pending";
+}
+
+function batchDecision(runs: RunMetadata[]): "pass" | "fail" | "pending" {
+  const aggStatus = batchAggStatus(runs);
+  if (["running", "queued", "pending"].includes(aggStatus)) return "pending";
+  for (const run of runs) {
+    const s = (run.summary ?? {}) as Record<string, unknown>;
+    if (typeof s.failed_count === "number" && s.failed_count > 0) return "fail";
+    if (typeof s.unsafe_count === "number" && s.unsafe_count > 0) return "fail";
+  }
+  return "pass";
+}
+
+function batchPassRate(runs: RunMetadata[]): number | null {
+  const rates: number[] = [];
+  for (const run of runs) {
+    const s = (run.summary ?? {}) as Record<string, unknown>;
+    const attempts = typeof s.attempt_count === "number" ? s.attempt_count : 0;
+    const passed = typeof s.passed_count === "number" ? s.passed_count : 0;
+    if (attempts > 0) rates.push(passed / attempts);
+  }
+  if (rates.length === 0) return null;
+  return rates.reduce((a, b) => a + b, 0) / rates.length;
+}
+
+function batchCoveragePct(runs: RunMetadata[]): number {
+  const done = runs.filter((r) => r.status === "completed" || r.status === "failed").length;
+  return runs.length > 0 ? Math.round((done / runs.length) * 100) : 0;
+}
+
+function runPassRate(run: RunMetadata): number | null {
+  const s = (run.summary ?? {}) as Record<string, unknown>;
+  const attempts = typeof s.attempt_count === "number" ? s.attempt_count : 0;
+  const passed = typeof s.passed_count === "number" ? s.passed_count : 0;
+  return attempts > 0 ? passed / attempts : null;
+}
+
+function runAttemptCount(run: RunMetadata): number | null {
+  const s = (run.summary ?? {}) as Record<string, unknown>;
+  return typeof s.attempt_count === "number" ? s.attempt_count : null;
+}
+
 export function RunsListView() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNext, setHasNext] = useState(false);
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
 
   async function load() {
     setState({ status: "loading" });
@@ -54,23 +137,40 @@ export function RunsListView() {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return state.runs;
     return state.runs.filter(
-      (run) => run.run_id.toLowerCase().includes(q) || run.campaign_id.toLowerCase().includes(q)
+      (run) =>
+        run.run_id.toLowerCase().includes(q) ||
+        run.campaign_id.toLowerCase().includes(q) ||
+        (getBatchId(run) ?? "").toLowerCase().includes(q)
     );
   }, [state, searchQuery]);
+
+  const batchGroups = useMemo(() => groupByBatch(filteredRuns), [filteredRuns]);
+
+  function toggleBatch(batchId: string) {
+    setExpandedBatches((prev) => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
+      }
+      return next;
+    });
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Runs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Filter and inspect recent runs from the Sepurux pipeline.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Batch runs grouped by scenario set. Expand a batch to inspect individual traces.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground">
             <Search className="h-4 w-4 shrink-0" />
             <input
-              className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-40"
-              placeholder="Search run or campaign ID"
+              className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-44"
+              placeholder="Search run, batch, or campaign"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -103,7 +203,7 @@ export function RunsListView() {
       <Card>
         <CardHeader>
           <CardTitle>Run Catalog</CardTitle>
-          <CardDescription>Server-paginated runs for the active project and filter.</CardDescription>
+          <CardDescription>Server-paginated runs grouped by CI batch for the active project.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {state.status === "loading" ? (
@@ -115,43 +215,114 @@ export function RunsListView() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Run</TableHead>
+                    <TableHead className="w-6" />
+                    <TableHead>Batch</TableHead>
                     <TableHead>Campaign</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Pass Rate</TableHead>
-                    <TableHead className="text-right">Attempts</TableHead>
+                    <TableHead className="text-right">Avg Pass Rate</TableHead>
+                    <TableHead className="text-right">Coverage</TableHead>
+                    <TableHead className="text-right">Decision</TableHead>
                     <TableHead className="text-right">Created</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRuns.length === 0 ? (
+                  {batchGroups.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                         {searchQuery ? "No runs match your search." : "No runs match this filter."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredRuns.map((run) => {
-                      const summary = (run.summary ?? {}) as Record<string, unknown>;
-                      const attemptCount = typeof summary.attempt_count === "number" ? summary.attempt_count : null;
-                      const passRate =
-                        attemptCount && typeof summary.passed_count === "number" && attemptCount > 0
-                          ? summary.passed_count / attemptCount
-                          : null;
-                      return (
-                        <TableRow key={run.run_id}>
-                          <TableCell>
-                            <Link href={`/runs/${run.run_id}`} className="font-medium text-foreground hover:text-info">
-                              {shortId(run.run_id, 10)}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{shortId(run.campaign_id, 10)}</TableCell>
-                          <TableCell><RunStatusBadge status={run.status} /></TableCell>
-                          <TableCell className="text-right text-foreground">{passRate === null ? "--" : formatPercent(passRate, 0)}</TableCell>
-                          <TableCell className="text-right text-foreground">{attemptCount ?? "--"}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{formatRelativeDate(run.created_at)}</TableCell>
-                        </TableRow>
+                    batchGroups.map((group) => {
+                      const { batchId, runs } = group;
+                      const aggStatus = batchAggStatus(runs);
+                      const passRate = batchPassRate(runs);
+                      const coveragePct = batchCoveragePct(runs);
+                      const decision = batchDecision(runs);
+                      const earliest = runs.reduce(
+                        (min, r) => (r.created_at < min ? r.created_at : min),
+                        runs[0].created_at
                       );
+                      const campaignId = runs[0].campaign_id;
+                      const isExpanded = batchId !== null && expandedBatches.has(batchId);
+
+                      return [
+                        <TableRow
+                          key={batchId ?? runs[0].run_id}
+                          className="cursor-pointer hover:bg-accent/40"
+                          onClick={() => {
+                            if (runs.length === 1) {
+                              router.push(`/runs/${runs[0].run_id}`);
+                            } else if (batchId) {
+                              toggleBatch(batchId);
+                            }
+                          }}
+                        >
+                          <TableCell className="pr-0">
+                            {batchId && runs.length > 1 ? (
+                              <ChevronDown
+                                className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-150 ${isExpanded ? "" : "-rotate-90"}`}
+                              />
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground">
+                              {batchId ? shortId(batchId, 10) : shortId(runs[0].run_id, 10)}
+                            </span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {runs.length} trace{runs.length !== 1 ? "s" : ""}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{shortId(campaignId, 10)}</TableCell>
+                          <TableCell><RunStatusBadge status={aggStatus} /></TableCell>
+                          <TableCell className="text-right text-foreground">
+                            {passRate === null ? "--" : formatPercent(passRate, 0)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={`text-sm font-medium ${coveragePct === 100 ? "text-emerald-400" : "text-muted-foreground"}`}>
+                              {coveragePct}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DecisionBadge decision={decision} />
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {formatRelativeDate(earliest)}
+                          </TableCell>
+                        </TableRow>,
+
+                        ...(isExpanded
+                          ? runs.map((run) => {
+                              const pr = runPassRate(run);
+                              const attempts = runAttemptCount(run);
+                              return (
+                                <TableRow key={run.run_id} className="bg-accent/20">
+                                  <TableCell />
+                                  <TableCell colSpan={2} className="pl-8">
+                                    <Link
+                                      href={`/runs/${run.run_id}`}
+                                      className="font-mono text-xs text-foreground hover:text-info"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {shortId(run.run_id, 12)}
+                                    </Link>
+                                  </TableCell>
+                                  <TableCell><RunStatusBadge status={run.status} /></TableCell>
+                                  <TableCell className="text-right text-foreground text-sm">
+                                    {pr === null ? "--" : formatPercent(pr, 0)}
+                                  </TableCell>
+                                  <TableCell className="text-right text-muted-foreground text-sm">
+                                    {attempts !== null ? `${attempts} attempts` : "--"}
+                                  </TableCell>
+                                  <TableCell />
+                                  <TableCell className="text-right text-muted-foreground text-sm">
+                                    {formatRelativeDate(run.created_at)}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          : []),
+                      ];
                     })
                   )}
                 </TableBody>
@@ -160,15 +331,15 @@ export function RunsListView() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {searchQuery
-                    ? `${filteredRuns.length} match${filteredRuns.length === 1 ? "" : "es"} on this page`
-                    : `Showing ${filteredRuns.length === 0 ? 0 : page * PAGE_SIZE + 1}–${page * PAGE_SIZE + filteredRuns.length}`}
+                    ? `${batchGroups.length} batch${batchGroups.length === 1 ? "" : "es"} match on this page`
+                    : `Showing ${batchGroups.length === 0 ? 0 : page * PAGE_SIZE + 1}–${page * PAGE_SIZE + filteredRuns.length}`}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={page <= 0}
-                    onClick={() => setPage((currentValue) => Math.max(0, currentValue - 1))}
+                    onClick={() => setPage((v) => Math.max(0, v - 1))}
                   >
                     <ChevronLeft className="h-4 w-4" /> Prev
                   </Button>
@@ -179,7 +350,7 @@ export function RunsListView() {
                     variant="outline"
                     size="sm"
                     disabled={!hasNext}
-                    onClick={() => setPage((currentValue) => currentValue + 1)}
+                    onClick={() => setPage((v) => v + 1)}
                   >
                     Next <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -200,6 +371,12 @@ function RunStatusBadge({ status }: { status: string }) {
   if (normalized === "running") return <Badge variant="info">running</Badge>;
   if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
   return <Badge variant="neutral">{status}</Badge>;
+}
+
+function DecisionBadge({ decision }: { decision: "pass" | "fail" | "pending" }) {
+  if (decision === "pass") return <Badge variant="success">pass</Badge>;
+  if (decision === "fail") return <Badge variant="danger">fail</Badge>;
+  return <Badge variant="neutral">pending</Badge>;
 }
 
 function RunsTableSkeleton() {

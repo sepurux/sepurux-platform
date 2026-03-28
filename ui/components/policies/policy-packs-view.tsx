@@ -22,6 +22,7 @@ export function PolicyPacksView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [archivingPolicyPackId, setArchivingPolicyPackId] = useState<string | null>(null);
+  const [confirmArchivePolicyId, setConfirmArchivePolicyId] = useState<string | null>(null);
 
   const canManagePolicyPacks =
     authSession?.permissions.can_manage_policy_packs ?? false;
@@ -54,11 +55,8 @@ export function PolicyPacksView() {
   }, []);
 
   async function onArchivePolicyPack(policyPackId: string) {
-    const confirmed = window.confirm("Archive this policy pack? It will be hidden from default views.");
-    if (!confirmed) {
-      return;
-    }
     setArchiveError(null);
+    setConfirmArchivePolicyId(null);
     setArchivingPolicyPackId(policyPackId);
     try {
       await api.deletePolicyPack(policyPackId);
@@ -191,15 +189,36 @@ export function PolicyPacksView() {
                         </TableCell>
                         {canManagePolicyPacks ? (
                           <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void onArchivePolicyPack(record.policy_pack_id)}
-                              disabled={archivingPolicyPackId === record.policy_pack_id}
-                            >
-                              {archivingPolicyPackId === record.policy_pack_id ? "Archiving..." : "Archive"}
-                            </Button>
+                            {confirmArchivePolicyId === record.policy_pack_id ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-xs text-amber-300">Archive?</span>
+                                <Button
+                                  size="sm"
+                                  variant="danger"
+                                  disabled={archivingPolicyPackId === record.policy_pack_id}
+                                  onClick={() => void onArchivePolicyPack(record.policy_pack_id)}
+                                >
+                                  {archivingPolicyPackId === record.policy_pack_id ? "Archiving..." : "Archive"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setConfirmArchivePolicyId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </span>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setConfirmArchivePolicyId(record.policy_pack_id)}
+                                disabled={archivingPolicyPackId === record.policy_pack_id}
+                              >
+                                Archive
+                              </Button>
+                            )}
                           </TableCell>
                         ) : null}
                         <TableCell className="text-right text-muted-foreground">

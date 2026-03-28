@@ -8,6 +8,7 @@ import {
   Bell,
   Bug,
   ChevronDown,
+  ClipboardList,
   FileSearch,
   FlaskConical,
   Home,
@@ -46,7 +47,7 @@ const primaryItems: NavLinkItem[] = [
   { href: "/traces", label: "Traces", section: "traces", icon: FileSearch },
   { href: "/runs", label: "Runs", section: "runs", icon: PlayCircle },
   { href: "/reports", label: "Reports", section: "reports", icon: ScrollText },
-  { href: "/audit", label: "Audit", section: "audit", icon: ScrollText },
+  { href: "/audit", label: "Audit", section: "audit", icon: ClipboardList },
   { href: "/webhooks", label: "Webhooks", section: "webhooks", icon: Bell },
   { href: "/settings", label: "Settings", section: "settings", icon: Settings },
 ];
@@ -268,8 +269,6 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         })}
       </nav>
 
-      {/* footer */}
-      <p className="px-3 py-2 text-xs text-muted-foreground/60">Credits-enabled</p>
     </aside>
   );
 }

@@ -955,3 +955,117 @@ func (a *CampaignsAPIService) PostCampaignV1CampaignsPostExecute(r ApiPostCampai
 
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
+
+// -----------------------------------------------------------------------------
+// PatchCampaignEvalSet — PATCH /v1/campaigns/{campaign_id}/eval-set
+// -----------------------------------------------------------------------------
+
+type ApiPatchCampaignEvalSetRequest struct {
+	ctx                  context.Context
+	ApiService           *CampaignsAPIService
+	campaignId           string
+	campaignEvalSetPatch *CampaignEvalSetPatch
+	xProjectId           *string
+}
+
+func (r ApiPatchCampaignEvalSetRequest) CampaignEvalSetPatch(v CampaignEvalSetPatch) ApiPatchCampaignEvalSetRequest {
+	r.campaignEvalSetPatch = &v
+	return r
+}
+
+func (r ApiPatchCampaignEvalSetRequest) XProjectId(xProjectId string) ApiPatchCampaignEvalSetRequest {
+	r.xProjectId = &xProjectId
+	return r
+}
+
+func (r ApiPatchCampaignEvalSetRequest) Execute() (*CampaignMetadata, *http.Response, error) {
+	return r.ApiService.PatchCampaignEvalSetExecute(r)
+}
+
+// PatchCampaignEvalSet registers or removes traces from a campaign's eval-set.
+// After calling this, POST /v1/ci/runs will create one run per registered trace
+// in a single batch — no trace_id required in the request body.
+func (a *CampaignsAPIService) PatchCampaignEvalSet(ctx context.Context, campaignId string) ApiPatchCampaignEvalSetRequest {
+	return ApiPatchCampaignEvalSetRequest{
+		ctx:        ctx,
+		ApiService: a,
+		campaignId: campaignId,
+	}
+}
+
+func (a *CampaignsAPIService) PatchCampaignEvalSetExecute(r ApiPatchCampaignEvalSetRequest) (*CampaignMetadata, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPatch
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *CampaignMetadata
+	)
+
+	localVarPath := "/v1/campaigns/{campaign_id}/eval-set"
+	localVarPath = strings.Replace(localVarPath, "{"+"campaign_id"+"}", url.PathEscape(parameterValueToString(r.campaignId, "campaignId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	localVarHTTPContentTypes := []string{"application/json"}
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.xProjectId != nil {
+		parameterAddToHeaderOrQuery(localVarHeaderParams, "X-Project-Id", r.xProjectId, "simple", "")
+	}
+	localVarPostBody = r.campaignEvalSetPatch
+
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 422 {
+			var v HTTPValidationError
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}

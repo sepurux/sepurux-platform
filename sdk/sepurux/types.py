@@ -82,7 +82,11 @@ class CIRunThresholds(TypedDict, total=False):
 
 
 class CIRunStatus(TypedDict, total=False):
+    batch_id: str
     run_id: str
+    run_ids: list[str]
+    trace_count: int
+    scenario_coverage_pct: float
     status: str
     decision: str
     pass_rate: float
@@ -115,7 +119,9 @@ class CampaignReliability(TypedDict, total=False):
 
 
 class CampaignRunResult(TypedDict, total=False):
+    batch_id: str | None
     run_id: str
+    run_ids: list[str]
     campaign_id: str
     trace_id: str | None
     status: str
