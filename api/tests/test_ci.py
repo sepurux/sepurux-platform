@@ -774,6 +774,120 @@ def test_ci_run_auto_applies_bootstrap_policy(
         assert row.effective_policy_pack_version_id == version_id
 
 
+def test_ci_run_refreshes_bootstrap_policy_from_eval_traces(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    pack_id = uuid4()
+    stale_version_id = uuid4()
+
+    normalized_payload = {
+        "trace_version": "0.2",
+        "source": "sdk",
+        "events": [
+            {"index": 1, "type": "tool_call", "tool": "search_docs", "args": {"q": "incident"}},
+            {"index": 2, "type": "tool_result", "tool": "search_docs", "result": {"ok": True}},
+            {
+                "index": 3,
+                "type": "tool_call",
+                "tool": "create_ticket",
+                "args": {"title": "alert"},
+            },
+            {
+                "index": 4,
+                "type": "tool_result",
+                "tool": "create_ticket",
+                "result": {"ok": True},
+            },
+        ],
+    }
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+                normalized_payload=normalized_payload,
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Trace-Synced CI Campaign",
+                mutation_set=[{"type": "noop"}],
+                eval_set={"checks": ["status"], "trace_ids": [str(trace_id)]},
+            )
+        )
+        pack = PolicyPack(
+            policy_pack_id=pack_id,
+            project_id=project_id,
+            name="trace.bootstrap.default",
+            engine="builtin",
+            policy={"version": "0.1", "defaults": {"unknown_tools": "deny"}, "rules": []},
+        )
+        db.add(pack)
+        db.flush()
+        db.add(
+            PolicyPackVersion(
+                version_id=stale_version_id,
+                policy_pack_id=pack_id,
+                version_number=1,
+                policy={"version": "0.1", "defaults": {"unknown_tools": "deny"}, "rules": []},
+            )
+        )
+        db.flush()
+        pack.active_version_id = stale_version_id
+        db.add(pack)
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+
+    with testing_session_local() as db:
+        run = db.scalar(select(Run).where(Run.run_id == run_id))
+        assert isinstance(run, Run)
+        assert run.policy_pack_id == pack_id
+        assert isinstance(run.effective_policy_pack_version_id, UUID)
+        assert run.effective_policy_pack_version_id != stale_version_id
+
+        active_version = db.scalar(
+            select(PolicyPackVersion).where(
+                PolicyPackVersion.version_id == run.effective_policy_pack_version_id
+            )
+        )
+        assert isinstance(active_version, PolicyPackVersion)
+        assert active_version.version_number == 2
+        assert isinstance(active_version.policy, dict)
+
+        rules = active_version.policy.get("rules")
+        assert isinstance(rules, list)
+        rule_tools = {
+            rule.get("match", {}).get("tool")
+            for rule in rules
+            if isinstance(rule, dict) and isinstance(rule.get("match"), dict)
+        }
+        assert "search_docs" in rule_tools
+        assert "create_ticket" in rule_tools
+        assert active_version.policy.get("defaults") == {"unknown_tools": "deny"}
+
+
 def test_ci_run_no_bootstrap_policy_leaves_policy_unset(
     ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
     monkeypatch: pytest.MonkeyPatch,
