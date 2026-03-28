@@ -513,9 +513,10 @@ def delete_campaign_contract(
     campaign_id: UUID,
     db: DbSession,
     project_scope: ProjectScopeDep,
-) -> None:
+) -> Response:
     contract = get_contract(db, campaign_id=campaign_id)
     if contract is None or contract.project_id != project_scope.project_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No contract defined")
     delete_contract(db, campaign_id=campaign_id)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

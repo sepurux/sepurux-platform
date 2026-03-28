@@ -1432,6 +1432,14 @@ export const api = {
   },
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
   getCiBatch: (batchId: string) => requestJson<CIBatchStatus>(`/v1/ci/batch/${batchId}`),
+  triggerCiRun: (payload: {
+    campaign_id: string;
+    thresholds: { min_pass_rate: number; max_unsafe: number; max_failures: number };
+  }) =>
+    postJson<{ run_id: string; run_ids: string[]; batch_id: string; trace_count: number }, typeof payload>(
+      "/v1/ci/runs",
+      payload
+    ),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
   listRunPolicyEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
     requestJson<PolicyEventListItem[]>(`/v1/runs/${runId}/policy-events`, {

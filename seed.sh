@@ -69,6 +69,40 @@ wait_for_api() {
   return 1
 }
 
+wait_for_postgres() {
+  local attempts=60
+  echo "[seed] waiting for postgres to be ready..."
+  for _ in $(seq 1 "$attempts"); do
+    if docker compose -f "$COMPOSE_FILE" exec -T postgres pg_isready -q 2>/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "[seed] ERROR: postgres did not become ready in time" >&2
+  return 1
+}
+
+# Run a command up to N times with a delay between attempts.
+# Useful for commands that depend on postgres being fully out of recovery mode.
+run_with_retry() {
+  local max_attempts="${1:-10}"
+  local delay="${2:-5}"
+  shift 2
+  local attempt=1
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if "$@"; then
+      return 0
+    fi
+    if [ "$attempt" -lt "$max_attempts" ]; then
+      echo "[seed] command failed (attempt $attempt/$max_attempts), retrying in ${delay}s..."
+      sleep "$delay"
+    fi
+    attempt=$((attempt + 1))
+  done
+  echo "[seed] ERROR: command failed after $max_attempts attempts: $*" >&2
+  return 1
+}
+
 wait_for_runs_completion() {
   local label="${1:-runs}"
   shift || true
@@ -112,6 +146,8 @@ wait_for_runs_completion() {
 
 echo "[seed] starting services..."
 docker compose -f "$COMPOSE_FILE" up -d --build
+
+wait_for_postgres
 
 echo "[seed] running migrations..."
 docker compose -f "$COMPOSE_FILE" run --rm api alembic upgrade head

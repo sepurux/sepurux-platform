@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, Play, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
 
 import { api, type CampaignMetadata, type MutationPackMetadata, type QualityContract, type TraceMetadata } from "@/lib/api";
+import { IdPill } from "@/components/ui/id-pill";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,9 +21,17 @@ type LoadState =
 
 type Tab = "scenarios" | "contract" | "overview";
 
+type RunModal = { open: false } | { open: true; minPassRate: string; maxUnsafe: string; maxFailures: string };
+type RunResult = { batch_id: string; trace_count: number };
+
 export function CampaignDetailView({ campaignId }: { campaignId: string }) {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [activeTab, setActiveTab] = useState<Tab>("scenarios");
+  const [runModal, setRunModal] = useState<RunModal>({ open: false });
+  const [triggering, setTriggering] = useState(false);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,21 +56,128 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
     setState({ status: "ready", campaign: updated });
   }
 
+  async function triggerRun() {
+    if (!runModal.open) return;
+    setTriggering(true);
+    setRunError(null);
+    try {
+      const result = await api.triggerCiRun({
+        campaign_id: campaignId,
+        thresholds: {
+          min_pass_rate: parseFloat(runModal.minPassRate) / 100,
+          max_unsafe: parseInt(runModal.maxUnsafe, 10),
+          max_failures: parseInt(runModal.maxFailures, 10),
+        },
+      });
+      setRunResult({ batch_id: result.batch_id, trace_count: result.trace_count });
+      setRunModal({ open: false });
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : "Failed to trigger run");
+    } finally {
+      setTriggering(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/campaigns" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        {state.status === "ready" ? (
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">{state.campaign.name}</h1>
-            <p className="mt-0.5 font-mono text-xs text-muted-foreground">{state.campaign.campaign_id}</p>
-          </div>
-        ) : (
-          <Skeleton className="h-7 w-64" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/campaigns" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          {state.status === "ready" ? (
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{state.campaign.name}</h1>
+              <IdPill id={state.campaign.campaign_id} className="mt-1" />
+            </div>
+          ) : (
+            <Skeleton className="h-7 w-64" />
+          )}
+        </div>
+        {state.status === "ready" && (
+          <Button
+            onClick={() => setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" })}
+            className="gap-1.5"
+          >
+            <Play className="h-3.5 w-3.5" />
+            Run Campaign
+          </Button>
         )}
       </div>
+
+      {/* Run result banner */}
+      {runResult && (
+        <div className="flex items-center justify-between rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <span>
+            Batch triggered — <span className="font-mono">{runResult.trace_count}</span> scenario{runResult.trace_count !== 1 ? "s" : ""} queued.
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-emerald-400">{runResult.batch_id}</span>
+            <Button size="sm" variant="outline" onClick={() => router.push("/runs")}>
+              View Runs
+            </Button>
+            <button onClick={() => setRunResult(null)} className="text-emerald-400 hover:text-emerald-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Run modal */}
+      {runModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-sm rounded-xl border border-border/60 bg-card p-6 shadow-xl">
+            <h2 className="mb-1 text-base font-semibold text-foreground">Run Campaign</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Set pass thresholds. The run will use the campaign's eval set and mutation pack.
+            </p>
+            {runError && (
+              <div className="mb-3 rounded border border-rose-400/20 bg-rose-500/10 p-2.5 text-xs text-rose-200">
+                {runError}
+              </div>
+            )}
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Min pass rate (%)</span>
+                <input
+                  type="number" min={0} max={100}
+                  className="w-full rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+                  value={runModal.minPassRate}
+                  onChange={(e) => setRunModal({ ...runModal, minPassRate: e.target.value })}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Max unsafe attempts</span>
+                <input
+                  type="number" min={0}
+                  className="w-full rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+                  value={runModal.maxUnsafe}
+                  onChange={(e) => setRunModal({ ...runModal, maxUnsafe: e.target.value })}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Max failures</span>
+                <input
+                  type="number" min={0}
+                  className="w-full rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+                  value={runModal.maxFailures}
+                  onChange={(e) => setRunModal({ ...runModal, maxFailures: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setRunModal({ open: false }); setRunError(null); }}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={() => void triggerRun()} disabled={triggering} className="gap-1.5">
+                <Play className="h-3.5 w-3.5" />
+                {triggering ? "Triggering…" : "Run"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {state.status === "loading" && (
         <Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
@@ -103,7 +220,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
             <ScenariosTab campaign={state.campaign} onUpdated={onCampaignUpdated} />
           )}
           {activeTab === "contract" && (
-            <ContractTab campaignId={state.campaign.campaign_id} />
+            <ContractTab campaign={state.campaign} />
           )}
           {activeTab === "overview" && (
             <OverviewTab campaign={state.campaign} />
@@ -471,7 +588,9 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 // ─── Contract Tab ──────────────────────────────────────────────────────────────
 
-function ContractTab({ campaignId }: { campaignId: string }) {
+function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
+  const campaignId = campaign.campaign_id;
+
   type ContractState =
     | { status: "loading" }
     | { status: "none" }
@@ -480,6 +599,8 @@ function ContractTab({ campaignId }: { campaignId: string }) {
 
   const [state, setState] = useState<ContractState>({ status: "loading" });
   const [packs, setPacks] = useState<MutationPackMetadata[]>([]);
+  const [discoveredTools, setDiscoveredTools] = useState<string[]>([]);
+  const [loadingTools, setLoadingTools] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -487,14 +608,15 @@ function ContractTab({ campaignId }: { campaignId: string }) {
   // Form state
   const [selectedPackIds, setSelectedPackIds] = useState<string[]>([]);
   const [requiredTools, setRequiredTools] = useState<string[]>([]);
-  const [toolInput, setToolInput] = useState("");
   const [minAttempts, setMinAttempts] = useState(10);
 
   useEffect(() => {
     let cancelled = false;
+
     void api.listMutationPacks({ include_system: true }).then((p) => {
       if (!cancelled) setPacks(p);
     });
+
     void api.getContract(campaignId)
       .then((c) => { if (!cancelled) { setState({ status: "ready", contract: c }); syncForm(c); } })
       .catch((e: unknown) => {
@@ -506,6 +628,30 @@ function ContractTab({ campaignId }: { campaignId: string }) {
           setState({ status: "error", message: msg });
         }
       });
+
+    // Discover tools from traces in the eval set
+    const traceIds = campaign.eval_set?.trace_ids ?? [];
+    if (traceIds.length > 0) {
+      setLoadingTools(true);
+      void Promise.all(traceIds.map((id) => api.getTrace(id, { includePayload: true })))
+        .then((traces) => {
+          if (cancelled) return;
+          const tools = new Set<string>();
+          for (const trace of traces) {
+            const events = (trace.payload as Record<string, unknown> | null)?.events;
+            if (!Array.isArray(events)) continue;
+            for (const event of events as Record<string, unknown>[]) {
+              if (event.type === "tool_call" && typeof event.tool === "string") {
+                tools.add(event.tool);
+              }
+            }
+          }
+          setDiscoveredTools(Array.from(tools).sort());
+          setLoadingTools(false);
+        })
+        .catch(() => { if (!cancelled) setLoadingTools(false); });
+    }
+
     return () => { cancelled = true; };
   }, [campaignId]);
 
@@ -521,12 +667,10 @@ function ContractTab({ campaignId }: { campaignId: string }) {
     );
   }
 
-  function addTool() {
-    const t = toolInput.trim();
-    if (t && !requiredTools.includes(t)) {
-      setRequiredTools((prev) => [...prev, t]);
-    }
-    setToolInput("");
+  function toggleTool(tool: string) {
+    setRequiredTools((prev) =>
+      prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool]
+    );
   }
 
   async function onSave() {
@@ -648,34 +792,32 @@ function ContractTab({ campaignId }: { campaignId: string }) {
               never exercised, the gate fails with{" "}
               <span className="font-mono text-foreground">untested_tool</span>.
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {requiredTools.map((t) => (
-                <span
-                  key={t}
-                  className="flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-0.5 text-xs font-mono text-foreground"
-                >
-                  {t}
-                  <button
-                    onClick={() => setRequiredTools((prev) => prev.filter((x) => x !== t))}
-                    className="text-muted-foreground hover:text-rose-400"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                className="w-64 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-info/60"
-                placeholder="payments.refund"
-                value={toolInput}
-                onChange={(e) => setToolInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTool(); } }}
-              />
-              <Button size="sm" variant="outline" onClick={addTool}>
-                <Plus className="h-3.5 w-3.5" /> Add
-              </Button>
-            </div>
+            {loadingTools ? (
+              <p className="text-xs text-muted-foreground">Scanning traces…</p>
+            ) : discoveredTools.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No tools found — add traces to the eval set first.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {discoveredTools.map((tool) => {
+                  const selected = requiredTools.includes(tool);
+                  return (
+                    <button
+                      key={tool}
+                      onClick={() => toggleTool(tool)}
+                      className={`rounded-full border px-3 py-1 text-xs font-mono transition-colors ${
+                        selected
+                          ? "border-info bg-info/10 text-info"
+                          : "border-border/60 text-muted-foreground hover:border-info/50 hover:text-foreground"
+                      }`}
+                    >
+                      {tool}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Min attempts */}
