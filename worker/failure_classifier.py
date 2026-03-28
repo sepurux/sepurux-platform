@@ -20,7 +20,15 @@ FAILURE_TYPES = frozenset(
 
 SEVERITY_LEVELS = frozenset({"critical", "high", "medium", "low"})
 SCHEMA_FAILURE_REASONS = frozenset(
-    {"schema_drift", "schema_mismatch", "missing_field", "type_mismatch"}
+    {
+        "schema_drift",
+        "schema_mismatch",
+        "missing_field",
+        "type_mismatch",
+        # Replay contract validation failures are schema-level defects in mutation payloads.
+        "replay_contract_invalid_tool",
+        "replay_contract_invalid_args",
+    }
 )
 POLICY_FAILURE_REASONS = frozenset(
     {"policy_blocked", "policy_denied", "policy_requires_approval", "opa_unavailable"}
@@ -120,7 +128,7 @@ def classify_failure(
         return FailureClassification(
             failure_type="tool_schema_error",
             severity="high",
-            description="A tool schema mismatch or missing field broke the replayed workflow.",
+            description="A tool schema mismatch or replay contract validation error broke the workflow.",
             metadata=_base_metadata(step, result, latency_ms=latency_ms),
         )
 

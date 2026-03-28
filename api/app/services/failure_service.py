@@ -59,6 +59,7 @@ def calculate_campaign_reliability(
     score = 100 - (severity_counts.get("critical", 0) * 10)
     score -= severity_counts.get("high", 0) * 5
     score -= severity_counts.get("medium", 0) * 2
+    score -= severity_counts.get("low", 0) * 1
     if score < 0:
         score = 0
 

@@ -17,8 +17,12 @@ from app.models import (
 )
 from app.queue import get_run_queue
 from app.services.audit_service import create_audit_event
-from app.services.policy_service import get_policy_pack_active_version
+from app.services.policy_service import get_policy_pack_active_version, update_policy_pack
 from app.services.tenant_control_service import assert_project_runs_allowed
+from app.services.trace_bootstrap_service import (
+    build_bootstrap_policy_document,
+    extract_tools_from_trace_payload,
+)
 from app.services.trace_intake import create_trace
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -204,7 +208,11 @@ def create_run_and_enqueue(
 
 
 def _build_ci_policy_pack(
-    db: Session, *, project_id: UUID
+    db: Session,
+    *,
+    project_id: UUID,
+    trace_ids: list[UUID] | None = None,
+    actor: str | None = None,
 ) -> tuple[UUID | None, UUID | None]:
     bootstrap_pack = db.scalar(
         select(PolicyPack)
@@ -218,6 +226,53 @@ def _build_ci_policy_pack(
     )
     if bootstrap_pack is None:
         return None, None
+
+    if trace_ids:
+        traces_by_id = {
+            trace.trace_id: trace
+            for trace in db.scalars(
+                select(Trace).where(
+                    Trace.project_id == project_id,
+                    Trace.trace_id.in_(trace_ids),
+                )
+            )
+        }
+        discovered_tools: list[str] = []
+        seen_tools: set[str] = set()
+        for trace_id in trace_ids:
+            trace = traces_by_id.get(trace_id)
+            if trace is None:
+                continue
+            payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+            for tool in extract_tools_from_trace_payload(payload):
+                if tool in seen_tools:
+                    continue
+                seen_tools.add(tool)
+                discovered_tools.append(tool)
+
+        if discovered_tools:
+            desired_policy = build_bootstrap_policy_document(discovered_tools)
+            active_version = get_policy_pack_active_version(db, policy_pack=bootstrap_pack)
+            active_policy = (
+                active_version.policy
+                if isinstance(active_version, PolicyPackVersion)
+                and isinstance(active_version.policy, dict)
+                else (bootstrap_pack.policy if isinstance(bootstrap_pack.policy, dict) else None)
+            )
+            if active_policy != desired_policy:
+                updated_pack = update_policy_pack(
+                    db,
+                    project_id=project_id,
+                    policy_pack_id=bootstrap_pack.policy_pack_id,
+                    name=bootstrap_pack.name,
+                    engine=bootstrap_pack.engine,
+                    policy=desired_policy,
+                    created_by=(actor or "system"),
+                    actor=actor,
+                )
+                if isinstance(updated_pack, PolicyPack):
+                    bootstrap_pack = updated_pack
+
     active_version = get_policy_pack_active_version(db, policy_pack=bootstrap_pack)
     version_id = (
         active_version.version_id if isinstance(active_version, PolicyPackVersion) else None
@@ -251,7 +306,10 @@ def create_ci_run_and_enqueue(
 
     project_id = trace.project_id
     effective_policy_pack_id, effective_policy_pack_version_id = _build_ci_policy_pack(
-        db, project_id=project_id
+        db,
+        project_id=project_id,
+        trace_ids=[trace_id],
+        actor=actor,
     )
 
     summary: dict[str, Any] = {"ci_thresholds": thresholds, "campaign_name": campaign.name}
@@ -296,7 +354,10 @@ def create_ci_batch_and_enqueue(
     project_id = campaign.project_id
 
     effective_policy_pack_id, effective_policy_pack_version_id = _build_ci_policy_pack(
-        db, project_id=project_id
+        db,
+        project_id=project_id,
+        trace_ids=trace_ids,
+        actor=actor,
     )
 
     runs: list[Run] = []
