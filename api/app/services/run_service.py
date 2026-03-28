@@ -254,7 +254,7 @@ def create_ci_run_and_enqueue(
         db, project_id=project_id
     )
 
-    summary: dict[str, Any] = {"ci_thresholds": thresholds}
+    summary: dict[str, Any] = {"ci_thresholds": thresholds, "campaign_name": campaign.name}
     if isinstance(github_context, dict):
         summary["github_context"] = github_context
     if batch_id is not None:
@@ -310,6 +310,7 @@ def create_ci_batch_and_enqueue(
         summary: dict[str, Any] = {
             "ci_thresholds": thresholds,
             "ci_batch_id": str(batch_id),
+            "campaign_name": campaign.name,
         }
         if isinstance(github_context, dict):
             summary["github_context"] = github_context

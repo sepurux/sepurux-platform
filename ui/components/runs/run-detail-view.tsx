@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, RefreshCcw } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
 
 import {
   api,
@@ -476,12 +476,20 @@ function RunStatsCards({
   );
 }
 
+const ATTEMPTS_PAGE_SIZE = 15;
+
 function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(attempts.length / ATTEMPTS_PAGE_SIZE);
+  const pageAttempts = attempts.slice(page * ATTEMPTS_PAGE_SIZE, (page + 1) * ATTEMPTS_PAGE_SIZE);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Attempts</CardTitle>
-        <CardDescription>Click an attempt to inspect timeline and counterfactual outcomes.</CardDescription>
+        <CardDescription>
+          {attempts.length} attempt{attempts.length !== 1 ? "s" : ""}. Click to inspect timeline and counterfactual outcomes.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -500,7 +508,7 @@ function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
                 <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">No attempts found for this run.</TableCell>
               </TableRow>
             ) : (
-              attempts.map((attempt) => (
+              pageAttempts.map((attempt) => (
                 <TableRow key={attempt.attempt_id}>
                   <TableCell>
                     <Link href={`/attempts/${attempt.attempt_id}`} className="font-medium text-foreground hover:text-info">
@@ -524,6 +532,21 @@ function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
             )}
           </TableBody>
         </Table>
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {page * ATTEMPTS_PAGE_SIZE + 1}–{Math.min((page + 1) * ATTEMPTS_PAGE_SIZE, attempts.length)} of {attempts.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((v) => v - 1)}>
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Button>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((v) => v + 1)}>
+                Next <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
