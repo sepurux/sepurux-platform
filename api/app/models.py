@@ -766,6 +766,30 @@ class PolicyEvent(Base):
     )
 
 
+class QualityContract(Base):
+    __tablename__ = "quality_contracts"
+
+    contract_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.project_id"), nullable=False)
+    campaign_id: Mapped[UUID] = mapped_column(
+        ForeignKey("campaigns.campaign_id"), nullable=False, unique=True
+    )
+    # List of mutation pack UUIDs (as strings) that must be used
+    required_pack_ids: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    # Tool names that must appear in at least one trace in the batch
+    required_tools: Mapped[Any] = mapped_column(JSONB_COMPAT, nullable=False)
+    # Minimum attempts that must fire for the pack used
+    min_attempts_per_pack: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    # Incremented on every update; snapshotted in CI runs for reproducibility
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 class SecurityEvent(Base):
     __tablename__ = "security_events"
 

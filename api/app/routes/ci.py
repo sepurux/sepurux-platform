@@ -6,12 +6,14 @@ from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 from app.db import get_db
-from app.models import Campaign, MutationPack, Project, Run
+from app.models import Campaign, MutationPack, Project, Run, Trace
+from app.services.contract_service import evaluate_contract, get_contract
 from app.schemas import (
     CIBatchStatusResponse,
     CIRunCreateRequest,
     CIRunCreateResponse,
     CIRunStatusResponse,
+    ContractReport,
     ToolCount,
 )
 from app.services.audit_service import create_audit_event
@@ -301,6 +303,7 @@ def get_ci_batch(batch_id: UUID, request: Request, db: DbSession) -> CIBatchStat
     agg_mutation_coverage_scores: list[int] = []
     tool_counts: dict[str, int] = {}
     completed_count = 0
+    total_attempts = 0
 
     for run in batch_runs:
         thresholds = _extract_ci_thresholds(run.summary)
@@ -330,6 +333,7 @@ def get_ci_batch(batch_id: UUID, request: Request, db: DbSession) -> CIBatchStat
                 tool_counts[t] = tool_counts.get(t, 0) + c
         if (run.status or "").lower() in _TERMINAL_STATUSES:
             completed_count += 1
+        total_attempts += int(metrics.get("total_attempts", 0))
 
     if not all_decisions:
         batch_status = "pending"
@@ -356,6 +360,22 @@ def get_ci_batch(batch_id: UUID, request: Request, db: DbSession) -> CIBatchStat
         for t, c in sorted(tool_counts.items(), key=lambda x: x[1], reverse=True)[:5]
     ]
 
+    # Evaluate quality contract if the campaign has one (only when batch is done)
+    contract_report: ContractReport | None = None
+    if batch_status == "done" and batch_runs:
+        campaign_id = batch_runs[0].campaign_id
+        if campaign_id is not None:
+            contract = get_contract(db, campaign_id=campaign_id)
+            if contract is not None:
+                contract_report = evaluate_contract(
+                    contract,
+                    batch_runs=list(batch_runs),
+                    total_attempts=total_attempts,
+                    db=db,
+                )
+                if not contract_report.passed:
+                    batch_decision = "fail"
+
     return CIBatchStatusResponse(
         batch_id=batch_id,
         run_ids=run_ids,
@@ -370,6 +390,7 @@ def get_ci_batch(batch_id: UUID, request: Request, db: DbSession) -> CIBatchStat
         mutation_categories=sorted(agg_mutation_categories),
         mutation_coverage_score=agg_coverage_score,
         dashboard_url=_build_dashboard_url(request, run_ids[0]),
+        contract_report=contract_report,
     )
 
 

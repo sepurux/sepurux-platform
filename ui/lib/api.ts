@@ -76,6 +76,37 @@ export type RunMetadata = {
   created_at: string;
 };
 
+export type ContractViolation = {
+  type: "wrong_pack" | "untested_tool" | "insufficient_attempts";
+  detail: string;
+  missing: string[];
+  required: number | string[] | null;
+  actual: number | string | null;
+};
+
+export type ContractReport = {
+  contract_id: string;
+  version: number;
+  passed: boolean;
+  violations: ContractViolation[];
+  required_pack_ids: string[];
+  required_tools: string[];
+  covered_tools: string[];
+  total_attempts: number;
+};
+
+export type QualityContract = {
+  contract_id: string;
+  campaign_id: string;
+  required_pack_ids: string[];
+  required_tools: string[];
+  min_attempts_per_pack: number;
+  version: number;
+  created_at: string;
+  updated_at: string;
+};
+
+
 export type CIBatchStatus = {
   batch_id: string;
   run_ids: string[];
@@ -90,6 +121,7 @@ export type CIBatchStatus = {
   mutation_categories: string[];
   mutation_coverage_score: number | null;
   dashboard_url: string;
+  contract_report: ContractReport | null;
 };
 
 export type CampaignFailure = {
@@ -1307,6 +1339,13 @@ export const api = {
     campaignId: string,
     payload: { add_trace_ids?: string[]; remove_trace_ids?: string[]; min_scenarios?: number }
   ) => patchJson<CampaignMetadata, typeof payload>(`/v1/campaigns/${campaignId}/eval-set`, payload),
+  getContract: (campaignId: string) =>
+    requestJson<QualityContract>(`/v1/campaigns/${campaignId}/contract`),
+  upsertContract: (
+    campaignId: string,
+    payload: { required_pack_ids: string[]; required_tools: string[]; min_attempts_per_pack: number }
+  ) => putJson<QualityContract, typeof payload>(`/v1/campaigns/${campaignId}/contract`, payload),
+  deleteContract: (campaignId: string) => deleteRequest(`/v1/campaigns/${campaignId}/contract`),
   deleteCampaign: (campaignId: string) => deleteRequest(`/v1/campaigns/${campaignId}`),
   createRun: (payload: {
     trace_id: string;
@@ -1394,6 +1433,14 @@ export const api = {
   },
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
   getCiBatch: (batchId: string) => requestJson<CIBatchStatus>(`/v1/ci/batch/${batchId}`),
+  triggerCiRun: (payload: {
+    campaign_id: string;
+    thresholds: { min_pass_rate: number; max_unsafe: number; max_failures: number };
+  }) =>
+    postJson<{ run_id: string; run_ids: string[]; batch_id: string; trace_count: number }, typeof payload>(
+      "/v1/ci/runs",
+      payload
+    ),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
   listRunPolicyEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
     requestJson<PolicyEventListItem[]>(`/v1/runs/${runId}/policy-events`, {

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowLeft, Play, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
 
-import { api, type CampaignMetadata, type TraceMetadata } from "@/lib/api";
+import { api, type CampaignMetadata, type MutationPackMetadata, type QualityContract, type TraceMetadata } from "@/lib/api";
+import { IdPill } from "@/components/ui/id-pill";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,11 +19,19 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; campaign: CampaignMetadata };
 
-type Tab = "scenarios" | "overview";
+type Tab = "scenarios" | "contract" | "overview";
+
+type RunModal = { open: false } | { open: true; minPassRate: string; maxUnsafe: string; maxFailures: string };
+type RunResult = { batch_id: string; trace_count: number };
 
 export function CampaignDetailView({ campaignId }: { campaignId: string }) {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [activeTab, setActiveTab] = useState<Tab>("scenarios");
+  const [runModal, setRunModal] = useState<RunModal>({ open: false });
+  const [triggering, setTriggering] = useState(false);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,21 +56,129 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
     setState({ status: "ready", campaign: updated });
   }
 
+  async function triggerRun() {
+    if (!runModal.open) return;
+    setTriggering(true);
+    setRunError(null);
+    try {
+      const result = await api.triggerCiRun({
+        campaign_id: campaignId,
+        thresholds: {
+          min_pass_rate: parseFloat(runModal.minPassRate) / 100,
+          max_unsafe: parseInt(runModal.maxUnsafe, 10),
+          max_failures: parseInt(runModal.maxFailures, 10),
+        },
+      });
+      setRunResult({ batch_id: result.batch_id, trace_count: result.trace_count });
+      setRunModal({ open: false });
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : "Failed to trigger run");
+    } finally {
+      setTriggering(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/campaigns" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        {state.status === "ready" ? (
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">{state.campaign.name}</h1>
-            <p className="mt-0.5 font-mono text-xs text-muted-foreground">{state.campaign.campaign_id}</p>
-          </div>
-        ) : (
-          <Skeleton className="h-7 w-64" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/campaigns" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          {state.status === "ready" ? (
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{state.campaign.name}</h1>
+              <IdPill id={state.campaign.campaign_id} className="mt-1" />
+            </div>
+          ) : (
+            <Skeleton className="h-7 w-64" />
+          )}
+        </div>
+        {state.status === "ready" && (
+          <Button
+            onClick={() => setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" })}
+            className="gap-1.5"
+          >
+            <Play className="h-3.5 w-3.5" />
+            Run Campaign
+          </Button>
         )}
       </div>
+
+      {/* Run result banner */}
+      {runResult && (
+        <div className="flex items-center justify-between rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <span>
+            Batch triggered — <span className="font-mono">{runResult.trace_count}</span> scenario{runResult.trace_count !== 1 ? "s" : ""} queued.
+          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-emerald-400">{runResult.batch_id}</span>
+            <Button size="sm" variant="outline" onClick={() => router.push("/runs")}>
+              View Runs
+            </Button>
+            <button onClick={() => setRunResult(null)} className="text-emerald-400 hover:text-emerald-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Run modal */}
+      {runModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-sm rounded-xl border border-border/60 bg-card p-6 shadow-xl">
+            <h2 className="mb-1 text-base font-semibold text-foreground">Run Campaign</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Set pass thresholds. The run will use the campaign's eval set and mutation pack.
+            </p>
+            {runError && (
+              <div className="mb-3 rounded border border-rose-400/20 bg-rose-500/10 p-2.5 text-xs text-rose-200">
+                {runError}
+              </div>
+            )}
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Min pass rate (%)</span>
+                <input
+                  type="number" min={0} max={100}
+                  className="w-full rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+                  value={runModal.minPassRate}
+                  onChange={(e) => setRunModal({ ...runModal, minPassRate: e.target.value })}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Max unsafe attempts</span>
+                <input
+                  type="number" min={0}
+                  className="w-full rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+                  value={runModal.maxUnsafe}
+                  onChange={(e) => setRunModal({ ...runModal, maxUnsafe: e.target.value })}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Max failures</span>
+                <input
+                  type="number" min={0}
+                  className="w-full rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+                  value={runModal.maxFailures}
+                  onChange={(e) => setRunModal({ ...runModal, maxFailures: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setRunModal({ open: false }); setRunError(null); }}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={() => void triggerRun()} disabled={triggering} className="gap-1.5">
+                <Play className="h-3.5 w-3.5" />
+                {triggering ? "Triggering…" : "Run"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {state.status === "loading" && (
         <Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
@@ -76,10 +194,12 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         <>
           {/* Tab bar */}
           <div className="flex gap-1 border-b border-border/60">
-            {(["scenarios", "overview"] as Tab[]).map((tab) => {
+            {(["scenarios", "contract", "overview"] as Tab[]).map((tab) => {
               const label =
                 tab === "scenarios"
                   ? `Scenarios${(state.campaign.eval_set?.trace_ids?.length ?? 0) > 0 ? ` (${state.campaign.eval_set!.trace_ids!.length})` : ""}`
+                  : tab === "contract"
+                  ? "Quality Contract"
                   : "Overview";
               return (
                 <button
@@ -99,6 +219,9 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
 
           {activeTab === "scenarios" && (
             <ScenariosTab campaign={state.campaign} onUpdated={onCampaignUpdated} />
+          )}
+          {activeTab === "contract" && (
+            <ContractTab campaign={state.campaign} />
           )}
           {activeTab === "overview" && (
             <OverviewTab campaign={state.campaign} />
@@ -460,6 +583,294 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex items-center gap-4">
       <span className="w-32 shrink-0 text-muted-foreground">{label}</span>
       <span>{children}</span>
+    </div>
+  );
+}
+
+// ─── Contract Tab ──────────────────────────────────────────────────────────────
+
+function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
+  const campaignId = campaign.campaign_id;
+
+  type ContractState =
+    | { status: "loading" }
+    | { status: "none" }
+    | { status: "ready"; contract: QualityContract }
+    | { status: "error"; message: string };
+
+  const [state, setState] = useState<ContractState>({ status: "loading" });
+  const [packs, setPacks] = useState<MutationPackMetadata[]>([]);
+  const [discoveredTools, setDiscoveredTools] = useState<string[]>([]);
+  const [loadingTools, setLoadingTools] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Form state
+  const [selectedPackIds, setSelectedPackIds] = useState<string[]>([]);
+  const [requiredTools, setRequiredTools] = useState<string[]>([]);
+  const [minAttempts, setMinAttempts] = useState(10);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void api.listMutationPacks({ include_system: true }).then((p) => {
+      if (!cancelled) setPacks(p);
+    });
+
+    void api.getContract(campaignId)
+      .then((c) => { if (!cancelled) { setState({ status: "ready", contract: c }); syncForm(c); } })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("404") || msg.toLowerCase().includes("no contract")) {
+          setState({ status: "none" });
+        } else {
+          setState({ status: "error", message: msg });
+        }
+      });
+
+    // Discover tools from traces in the eval set
+    const traceIds = campaign.eval_set?.trace_ids ?? [];
+    if (traceIds.length > 0) {
+      setLoadingTools(true);
+      void Promise.all(traceIds.map((id) => api.getTrace(id, { includePayload: true })))
+        .then((traces) => {
+          if (cancelled) return;
+          const tools = new Set<string>();
+          for (const trace of traces) {
+            const events = (trace.payload as Record<string, unknown> | null)?.events;
+            if (!Array.isArray(events)) continue;
+            for (const event of events as Record<string, unknown>[]) {
+              if (event.type === "tool_call" && typeof event.tool === "string") {
+                tools.add(event.tool);
+              }
+            }
+          }
+          setDiscoveredTools(Array.from(tools).sort());
+          setLoadingTools(false);
+        })
+        .catch(() => { if (!cancelled) setLoadingTools(false); });
+    }
+
+    return () => { cancelled = true; };
+  }, [campaignId]);
+
+  function syncForm(c: QualityContract) {
+    setSelectedPackIds(c.required_pack_ids ?? []);
+    setRequiredTools(c.required_tools ?? []);
+    setMinAttempts(c.min_attempts_per_pack ?? 10);
+  }
+
+  function togglePack(packId: string) {
+    setSelectedPackIds((prev) =>
+      prev.includes(packId) ? prev.filter((id) => id !== packId) : [...prev, packId]
+    );
+  }
+
+  function toggleTool(tool: string) {
+    setRequiredTools((prev) =>
+      prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool]
+    );
+  }
+
+  async function onSave() {
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const c = await api.upsertContract(campaignId, {
+        required_pack_ids: selectedPackIds,
+        required_tools: requiredTools,
+        min_attempts_per_pack: minAttempts,
+      });
+      setState({ status: "ready", contract: c });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save contract");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onDelete() {
+    setDeleting(true);
+    try {
+      await api.deleteContract(campaignId);
+      setState({ status: "none" });
+      setSelectedPackIds([]);
+      setRequiredTools([]);
+      setMinAttempts(10);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to delete contract");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (state.status === "loading") {
+    return <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>;
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className="rounded-md border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-100">
+        {state.message}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-info" />
+              Quality Contract
+            </CardTitle>
+            <CardDescription>
+              Define what must be tested before a CI batch is allowed to pass. Missing required
+              packs, tools, or insufficient attempts will fail the gate — regardless of pass rate.
+            </CardDescription>
+          </div>
+          {state.status === "ready" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={deleting}
+              onClick={() => void onDelete()}
+              className="text-muted-foreground hover:text-rose-400"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {saveError && (
+            <div className="rounded-md border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-100">
+              {saveError}
+            </div>
+          )}
+
+          {/* Required packs */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Required mutation packs
+            </p>
+            <p className="text-xs text-muted-foreground">
+              The pack used in the CI run must be one of these. Zero attempts with a required
+              pack = hard fail.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {packs.map((p) => {
+                const selected = selectedPackIds.includes(p.mutation_pack_id);
+                return (
+                  <button
+                    key={p.mutation_pack_id}
+                    onClick={() => togglePack(p.mutation_pack_id)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      selected
+                        ? "border-info bg-info/10 text-info"
+                        : "border-border/60 text-muted-foreground hover:border-info/50 hover:text-foreground"
+                    }`}
+                  >
+                    {p.name}
+                    {p.coverage_score != null && (
+                      <span className="ml-1.5 opacity-60">{p.coverage_score}%</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Required tools */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Required tool coverage
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Each tool listed must appear in at least one trace in the batch. If a tool is
+              never exercised, the gate fails with{" "}
+              <span className="font-mono text-foreground">untested_tool</span>.
+            </p>
+            {loadingTools ? (
+              <p className="text-xs text-muted-foreground">Scanning traces…</p>
+            ) : discoveredTools.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No tools found — add traces to the eval set first.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {discoveredTools.map((tool) => {
+                  const selected = requiredTools.includes(tool);
+                  return (
+                    <button
+                      key={tool}
+                      onClick={() => toggleTool(tool)}
+                      className={`rounded-full border px-3 py-1 text-xs font-mono transition-colors ${
+                        selected
+                          ? "border-info bg-info/10 text-info"
+                          : "border-border/60 text-muted-foreground hover:border-info/50 hover:text-foreground"
+                      }`}
+                    >
+                      {tool}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Min attempts */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Minimum attempts
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Total mutation attempts across the batch must reach this threshold. Prevents a{" "}
+              <span className="font-mono text-foreground">pass</span> verdict from a trivially
+              small run.
+            </p>
+            <input
+              type="number"
+              min={1}
+              max={500}
+              className="w-28 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+              value={minAttempts}
+              onChange={(e) => setMinAttempts(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </div>
+
+          <div className="flex items-center justify-between border-t border-border/40 pt-4">
+            {state.status === "ready" && (
+              <p className="text-xs text-muted-foreground">
+                Contract v{state.contract.version} · updated{" "}
+                {formatRelativeDate(state.contract.updated_at)}
+              </p>
+            )}
+            {state.status === "none" && (
+              <p className="text-xs text-muted-foreground">No contract defined yet.</p>
+            )}
+            <Button onClick={() => void onSave()} disabled={saving}>
+              {saving ? "Saving…" : state.status === "ready" ? "Update Contract" : "Save Contract"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Violation legend */}
+      <div className="grid gap-3 md:grid-cols-3">
+        {([
+          ["wrong_pack", "Pack not in required list. Run was tested with an unapproved mutation pack — replace it with one of the required packs."],
+          ["untested_tool", "Required tool never exercised. No trace in the batch called this tool — add a scenario that covers it."],
+          ["insufficient_attempts", "Too few mutation attempts. Increase run budget or lower the minimum to match your credit allocation."],
+        ] as [string, string][]).map(([type, desc]) => (
+          <div key={type} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <p className="font-mono text-xs font-semibold text-rose-400">{type}</p>
+            <p className="mt-1.5 text-xs leading-5 text-neutral-400">{desc}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
