@@ -11,13 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const BASELINE_MUTATION_SET = [
-  {
-    mutation_id: "baseline",
-    tool: "jira.create_issue",
-    args: { title: "Generated campaign" },
-  },
-];
 
 type LoadState =
   | { status: "loading" }
@@ -115,7 +108,7 @@ export function CampaignCreateView() {
       await api.createCampaign({
         name,
         mutation_pack_id: mutationPackId || null,
-        mutation_set: BASELINE_MUTATION_SET,
+        mutation_set: [],
         eval_set: {
           checks: ["status"],
           attempts_count: attemptsCount,
