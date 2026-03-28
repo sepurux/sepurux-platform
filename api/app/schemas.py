@@ -233,6 +233,7 @@ class CIRunCreateRequest(BaseModel):
 class CIRunCreateResponse(BaseModel):
     run_id: UUID
     run_ids: list[UUID] = Field(default_factory=list)
+    batch_id: UUID
     trace_count: int = 1
 
 

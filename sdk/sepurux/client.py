@@ -50,7 +50,8 @@ class ManagedTraceRecorder(TraceRecorder):
             trace_version=trace_version,
         )
         self.trace_id: str | None = None
-        self.run_id: str | None = None
+        self.batch_id: str | None = None
+        self.run_id: str | None = None  # first run_id in the batch (backward compat)
         self.upload_error: Exception | None = None
 
 
@@ -205,54 +206,38 @@ class SepuruxClient:
         thresholds: dict[str, Any] | CIRunThresholds | None = None,
         preflight: bool = False,
     ) -> str:
+        """Start a CI batch run. Returns the batch_id."""
         if preflight:
             self.preflight_run_inputs(trace_id=trace_id, campaign_id=campaign_id)
 
-        run_payload = {
+        ci_payload: dict[str, Any] = {
             "trace_id": trace_id,
             "campaign_id": campaign_id,
+            "thresholds": thresholds or {"min_pass_rate": 0.9, "max_unsafe": 0},
         }
         if mutation_pack_id:
-            run_payload["mutation_pack_id"] = mutation_pack_id
+            ci_payload["mutation_pack_id"] = mutation_pack_id
+        github_repo = (os.getenv("GITHUB_REPO") or "").strip()
+        github_pr_number_raw = (os.getenv("PR_NUMBER") or "").strip()
+        if github_repo:
+            ci_payload["repo"] = github_repo
+        if github_pr_number_raw:
+            try:
+                ci_payload["pull_request_number"] = int(github_pr_number_raw)
+            except ValueError:
+                pass
 
-        # Prefer standard /v1/runs. If unavailable, fallback to CI endpoint.
         response = self._client.post(
-            "/v1/runs",
+            "/v1/ci/runs",
             headers=self._request_headers(),
-            json=run_payload,
+            json=ci_payload,
         )
-
-        if response.status_code in {404, 405}:
-            ci_payload: dict[str, Any] = {
-                "trace_id": trace_id,
-                "campaign_id": campaign_id,
-                "thresholds": thresholds
-                or {
-                    "min_pass_rate": 0.9,
-                    "max_unsafe": 0,
-                },
-            }
-            github_repo = (os.getenv("GITHUB_REPO") or "").strip()
-            github_pr_number_raw = (os.getenv("PR_NUMBER") or "").strip()
-            if github_repo:
-                ci_payload["repo"] = github_repo
-            if github_pr_number_raw:
-                try:
-                    ci_payload["pull_request_number"] = int(github_pr_number_raw)
-                except ValueError:
-                    pass
-            response = self._client.post(
-                "/v1/ci/runs",
-                headers=self._request_headers(),
-                json=ci_payload,
-            )
-
         response.raise_for_status()
         payload = _parse_json_response(response)
-        run_id = payload.get("run_id")
-        if not isinstance(run_id, str) or not run_id:
-            raise ValueError("Run creation succeeded but run_id was missing")
-        return run_id
+        batch_id = payload.get("batch_id")
+        if not isinstance(batch_id, str) or not batch_id:
+            raise ValueError("Run creation succeeded but batch_id was missing")
+        return batch_id
 
     def get_ci_run(self, run_id: str) -> CIRunStatus:
         response = self._client.get(
@@ -275,6 +260,62 @@ class SepuruxClient:
         )
         return {
             "run_id": str(payload.get("run_id") or run_id),
+            "status": str(payload.get("status") or "unknown"),
+            "decision": str(payload.get("decision") or "pending"),
+            "pass_rate": (
+                float(payload.get("pass_rate"))
+                if isinstance(payload.get("pass_rate"), int | float)
+                else 0.0
+            ),
+            "unsafe_attempts": (
+                int(payload.get("unsafe_attempts"))
+                if isinstance(payload.get("unsafe_attempts"), int | float)
+                else 0
+            ),
+            "failures": (
+                int(payload.get("failures"))
+                if isinstance(payload.get("failures"), int | float)
+                else 0
+            ),
+            "top_failing_tools": (
+                [item for item in top_failing_tools if isinstance(item, dict)]
+                if isinstance(top_failing_tools, list)
+                else []
+            ),
+            "mutation_categories": mutation_categories,
+            "mutation_coverage_score": mutation_coverage,
+            "dashboard_url": str(payload.get("dashboard_url") or ""),
+        }
+
+    def get_ci_batch(self, batch_id: str) -> CIRunStatus:
+        response = self._client.get(
+            f"/v1/ci/batch/{batch_id}",
+            headers=self._request_headers(),
+        )
+        response.raise_for_status()
+        payload = _parse_json_response(response)
+
+        top_failing_tools = payload.get("top_failing_tools")
+        mutation_categories_raw = payload.get("mutation_categories")
+        mutation_categories = (
+            [item for item in mutation_categories_raw if isinstance(item, str)]
+            if isinstance(mutation_categories_raw, list)
+            else []
+        )
+        mutation_coverage_raw = payload.get("mutation_coverage_score")
+        mutation_coverage = (
+            int(mutation_coverage_raw) if isinstance(mutation_coverage_raw, int | float) else None
+        )
+        run_ids_raw = payload.get("run_ids")
+        run_ids = (
+            [str(r) for r in run_ids_raw if r] if isinstance(run_ids_raw, list) else []
+        )
+        return {
+            "batch_id": str(payload.get("batch_id") or batch_id),
+            "run_id": run_ids[0] if run_ids else batch_id,
+            "run_ids": run_ids,
+            "trace_count": int(payload.get("trace_count") or 1),
+            "scenario_coverage_pct": float(payload.get("scenario_coverage_pct") or 0.0),
             "status": str(payload.get("status") or "unknown"),
             "decision": str(payload.get("decision") or "pending"),
             "pass_rate": (
@@ -508,16 +549,21 @@ class SepuruxClient:
     ) -> CampaignRunResult:
         campaign_id = self._resolve_campaign_id(campaign_name_or_id)
         trace_id: str | None = None
+        batch_id: str | None = None
+        run_id: str | None = None
         if mutation_pack:
             run_id = self.run_pack(campaign_id=campaign_id, mutation_pack=mutation_pack)
         else:
             trace_payload = trace or _build_demo_trace(campaign_name_or_id)
             trace_id = self.upload_trace(trace_payload)
-            run_id = self.start_run(trace_id=trace_id, campaign_id=campaign_id, preflight=preflight)
+            batch_id = self.start_run(trace_id=trace_id, campaign_id=campaign_id, preflight=preflight)
+            run_id = batch_id  # backward compat alias
 
         if not wait_for_completion:
             return {
-                "run_id": run_id,
+                "batch_id": batch_id,
+                "run_id": run_id or "",
+                "run_ids": [run_id] if run_id else [],
                 "campaign_id": campaign_id,
                 "trace_id": trace_id,
                 "status": "queued",
@@ -527,19 +573,56 @@ class SepuruxClient:
                 "failures": [],
             }
 
+        if batch_id is not None:
+            batch_status = self._wait_for_batch_completion(
+                batch_id,
+                timeout_seconds=timeout_seconds,
+                poll_interval=poll_interval,
+            )
+            first_run_id = batch_status.get("run_id") or batch_id
+            reliability: CampaignReliability | None = None
+            failures: list[FailureRecord] = []
+            if batch_status["status"] not in {"queued", "running", "pending"}:
+                reliability = self.get_campaign_reliability(campaign_id, run_id=first_run_id)
+                failures = self.get_campaign_failures(campaign_id, run_id=first_run_id)
+            return {
+                "batch_id": batch_id,
+                "run_id": first_run_id,
+                "run_ids": batch_status.get("run_ids") or [first_run_id],
+                "campaign_id": campaign_id,
+                "trace_id": trace_id,
+                "status": batch_status["status"],
+                "summary": None,
+                "reliability_score": (
+                    float(reliability["reliability_score"])
+                    if reliability is not None
+                    and isinstance(reliability.get("reliability_score"), int | float)
+                    else None
+                ),
+                "reliability_status": (
+                    str(reliability["status"])
+                    if reliability is not None and isinstance(reliability.get("status"), str)
+                    else None
+                ),
+                "failures": failures,
+            }
+
+        # run_pack path — still uses single run polling
+        assert run_id is not None
         run_status = self._wait_for_run_completion(
             run_id,
             timeout_seconds=timeout_seconds,
             poll_interval=poll_interval,
         )
-        reliability: CampaignReliability | None = None
-        failures: list[FailureRecord] = []
+        reliability = None
+        failures = []
         if run_status["status"] not in {"queued", "running", "pending"}:
             reliability = self.get_campaign_reliability(campaign_id, run_id=run_id)
             failures = self.get_campaign_failures(campaign_id, run_id=run_id)
-
         return {
+            "batch_id": None,
             "run_id": run_id,
+            "run_ids": [run_id],
             "campaign_id": campaign_id,
             "trace_id": trace_id,
             "status": run_status["status"],
@@ -672,10 +755,12 @@ class SepuruxClient:
                     mutation_pack=mutation_pack,
                 )
             else:
-                recorder.run_id = self.start_run(
+                batch_id = self.start_run(
                     trace_id=recorder.trace_id,
                     campaign_id=resolved_campaign_id,
                 )
+                recorder.batch_id = batch_id
+                recorder.run_id = batch_id  # backward compat
 
     def _wait_for_run_completion(
         self,
@@ -692,6 +777,23 @@ class SepuruxClient:
             time.sleep(poll_interval)
             run_status = self.get_run(run_id)
         return run_status
+
+    def _wait_for_batch_completion(
+        self,
+        batch_id: str,
+        *,
+        timeout_seconds: float,
+        poll_interval: float,
+    ) -> CIRunStatus:
+        deadline = time.monotonic() + timeout_seconds
+        batch_status = self.get_ci_batch(batch_id)
+        while (
+            batch_status["status"] in {"queued", "running", "pending"}
+            and time.monotonic() < deadline
+        ):
+            time.sleep(poll_interval)
+            batch_status = self.get_ci_batch(batch_id)
+        return batch_status
 
 
 def _parse_json_response(response: httpx.Response) -> dict[str, Any]:

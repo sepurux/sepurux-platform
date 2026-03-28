@@ -69,6 +69,22 @@ export type RunMetadata = {
   created_at: string;
 };
 
+export type CIBatchStatus = {
+  batch_id: string;
+  run_ids: string[];
+  status: string;
+  decision: "pass" | "fail" | "pending";
+  pass_rate: number;
+  unsafe_attempts: number;
+  failures: number;
+  trace_count: number;
+  scenario_coverage_pct: number;
+  top_failing_tools: Array<{ tool: string; count: number }>;
+  mutation_categories: string[];
+  mutation_coverage_score: number | null;
+  dashboard_url: string;
+};
+
 export type CampaignFailure = {
   failure_id: string;
   run_id: string;
@@ -1364,6 +1380,7 @@ export const api = {
     });
   },
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
+  getCiBatch: (batchId: string) => requestJson<CIBatchStatus>(`/v1/ci/batch/${batchId}`),
   getRunStats: (runId: string) => requestJson<RunStats>(`/v1/runs/${runId}/stats`),
   listRunPolicyEvents: (runId: string, options?: { limit?: number; offset?: number }) =>
     requestJson<PolicyEventListItem[]>(`/v1/runs/${runId}/policy-events`, {
