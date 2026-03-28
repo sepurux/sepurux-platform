@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Play, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
+import { Archive, ArrowLeft, Play, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
 
 import { api, type CampaignMetadata, type MutationPackMetadata, type QualityContract, type TraceMetadata } from "@/lib/api";
 import { IdPill } from "@/components/ui/id-pill";
@@ -32,6 +32,8 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const [triggering, setTriggering] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveConfirm, setArchiveConfirm] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +56,20 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
 
   function onCampaignUpdated(updated: CampaignMetadata) {
     setState({ status: "ready", campaign: updated });
+  }
+
+  async function archiveCampaign() {
+    setArchiving(true);
+    try {
+      await api.deleteCampaign(campaignId);
+      router.push("/campaigns");
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setArchiving(false);
+      setArchiveConfirm(false);
+    }
   }
 
   async function triggerRun() {
@@ -95,13 +111,48 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
           )}
         </div>
         {state.status === "ready" && (
-          <Button
-            onClick={() => setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" })}
-            className="gap-1.5"
-          >
-            <Play className="h-3.5 w-3.5" />
-            Run Campaign
-          </Button>
+          <div className="flex items-center gap-2">
+            {archiveConfirm ? (
+              <>
+                <span className="text-sm text-muted-foreground">Archive this campaign?</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setArchiveConfirm(false)}
+                  disabled={archiving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => void archiveCampaign()}
+                  disabled={archiving}
+                  className="gap-1.5"
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                  {archiving ? "Archiving…" : "Confirm"}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setArchiveConfirm(true)}
+                className="gap-1.5 text-muted-foreground"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                Archive
+              </Button>
+            )}
+            <Button
+              onClick={() => setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" })}
+              className="gap-1.5"
+            >
+              <Play className="h-3.5 w-3.5" />
+              Run Campaign
+            </Button>
+          </div>
         )}
       </div>
 
