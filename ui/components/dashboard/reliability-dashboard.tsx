@@ -277,13 +277,21 @@ function ReliabilityPanels({ data }: { data: ReliabilityData }) {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col justify-center px-6 py-6 gap-6">
-          <KpiStat label="Campaigns Run" value={summary.campaigns_run} icon={BarChart3} />
-          <KpiStat
-            label="Failure Categories"
-            value={summary.failure_breakdown.length}
-            icon={Zap}
-          />
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Zap className="h-4 w-4" />
+              Activity Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col justify-center gap-6">
+            <KpiStat label="Campaigns Run" value={summary.campaigns_run} icon={BarChart3} />
+            <KpiStat
+              label="Failure Categories"
+              value={summary.failure_breakdown.length}
+              icon={Zap}
+            />
+          </CardContent>
         </Card>
 
         <Card className="md:col-span-2 xl:col-span-2">

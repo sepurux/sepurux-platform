@@ -49,7 +49,12 @@ function groupByBatch(runs: RunMetadata[]): BatchGroup[] {
   for (const run of standalone) {
     groups.push({ batchId: null, runs: [run] });
   }
-  return groups;
+  // Sort groups by their most recently created run, descending — keeps chronological order
+  return groups.sort((a, b) => {
+    const aLatest = a.runs.reduce((max, r) => (r.created_at > max ? r.created_at : max), a.runs[0].created_at);
+    const bLatest = b.runs.reduce((max, r) => (r.created_at > max ? r.created_at : max), b.runs[0].created_at);
+    return bLatest < aLatest ? -1 : bLatest > aLatest ? 1 : 0;
+  });
 }
 
 function batchAggStatus(runs: RunMetadata[]): string {
@@ -86,6 +91,11 @@ function batchPassRate(runs: RunMetadata[]): number | null {
 function batchCoveragePct(runs: RunMetadata[]): number {
   const done = runs.filter((r) => r.status === "completed" || r.status === "failed").length;
   return runs.length > 0 ? Math.round((done / runs.length) * 100) : 0;
+}
+
+function getCampaignName(run: RunMetadata): string | null {
+  const s = (run.summary ?? {}) as Record<string, unknown>;
+  return typeof s.campaign_name === "string" ? s.campaign_name : null;
 }
 
 function runPassRate(run: RunMetadata): number | null {
@@ -251,6 +261,7 @@ export function RunsListView() {
                         runs[0].created_at
                       );
                       const campaignId = runs[0].campaign_id;
+                      const campaignName = getCampaignName(runs[0]) ?? shortId(campaignId, 10);
                       const isExpanded = batchId !== null && expandedBatches.has(batchId);
 
                       return [
@@ -280,7 +291,7 @@ export function RunsListView() {
                               {runs.length} trace{runs.length !== 1 ? "s" : ""}
                             </span>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{shortId(campaignId, 10)}</TableCell>
+                          <TableCell className="text-muted-foreground">{campaignName}</TableCell>
                           <TableCell><RunStatusBadge status={aggStatus} /></TableCell>
                           <TableCell className="text-right text-foreground">
                             {passRate === null ? "--" : formatPercent(passRate, 0)}
