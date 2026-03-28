@@ -222,7 +222,11 @@ export function CampaignsView() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium text-foreground">{campaign.name}</TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        <Link href={`/campaigns/${campaign.campaign_id}`} className="hover:text-info hover:underline">
+                          {campaign.name}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{campaign.status}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {campaign.mutation_pack_id ? shortId(campaign.mutation_pack_id, 16) : "--"}

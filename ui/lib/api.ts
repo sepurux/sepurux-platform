@@ -45,13 +45,20 @@ export type TraceTimelineStep = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type CampaignEvalSet = {
+  trace_ids?: string[];
+  checks?: string[];
+  attempts_count?: number;
+  min_scenarios?: number;
+};
+
 export type CampaignMetadata = {
   campaign_id: string;
   mutation_pack_id: string | null;
   name: string;
   status: string;
   mutation_set: unknown;
-  eval_set: unknown;
+  eval_set: CampaignEvalSet | null;
   created_at: string;
 };
 
@@ -1288,12 +1295,18 @@ export const api = {
     }),
   getProjectReliability: () =>
     requestJson<ProjectReliabilitySummary>("/v1/analytics/reliability"),
+  getCampaign: (campaignId: string) =>
+    requestJson<CampaignMetadata>(`/v1/campaigns/${campaignId}`),
   createCampaign: (payload: {
     name: string;
     mutation_set: unknown;
     eval_set: unknown;
     mutation_pack_id?: string | null;
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
+  updateCampaignEvalSet: (
+    campaignId: string,
+    payload: { add_trace_ids?: string[]; remove_trace_ids?: string[]; min_scenarios?: number }
+  ) => patchJson<CampaignMetadata, typeof payload>(`/v1/campaigns/${campaignId}/eval-set`, payload),
   deleteCampaign: (campaignId: string) => deleteRequest(`/v1/campaigns/${campaignId}`),
   createRun: (payload: {
     trace_id: string;
