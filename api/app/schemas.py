@@ -237,6 +237,43 @@ class CIRunCreateResponse(BaseModel):
     trace_count: int = 1
 
 
+class ContractViolation(BaseModel):
+    type: Literal["wrong_pack", "untested_tool", "insufficient_attempts"]
+    detail: str
+    # type-specific fields
+    missing: list[str] = Field(default_factory=list)
+    required: int | list[str] | None = None
+    actual: int | str | None = None
+
+
+class ContractReport(BaseModel):
+    contract_id: UUID
+    version: int
+    passed: bool
+    violations: list[ContractViolation] = Field(default_factory=list)
+    required_pack_ids: list[str] = Field(default_factory=list)
+    required_tools: list[str] = Field(default_factory=list)
+    covered_tools: list[str] = Field(default_factory=list)
+    total_attempts: int = 0
+
+
+class QualityContractUpsert(BaseModel):
+    required_pack_ids: list[str] = Field(default_factory=list)
+    required_tools: list[str] = Field(default_factory=list)
+    min_attempts_per_pack: int = Field(default=10, ge=1, le=500)
+
+
+class QualityContractResponse(BaseModel):
+    contract_id: UUID
+    campaign_id: UUID
+    required_pack_ids: list[str]
+    required_tools: list[str]
+    min_attempts_per_pack: int
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class CIBatchStatusResponse(BaseModel):
     batch_id: UUID
     run_ids: list[UUID]
@@ -251,6 +288,7 @@ class CIBatchStatusResponse(BaseModel):
     mutation_categories: list[str] = Field(default_factory=list)
     mutation_coverage_score: int | None = None
     dashboard_url: str
+    contract_report: ContractReport | None = None
 
 
 class CIRunStatusResponse(BaseModel):

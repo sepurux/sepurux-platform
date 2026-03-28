@@ -69,6 +69,40 @@ wait_for_api() {
   return 1
 }
 
+wait_for_postgres() {
+  local attempts=60
+  echo "[seed] waiting for postgres to be ready..."
+  for _ in $(seq 1 "$attempts"); do
+    if docker compose -f "$COMPOSE_FILE" exec -T postgres pg_isready -q 2>/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "[seed] ERROR: postgres did not become ready in time" >&2
+  return 1
+}
+
+# Run a command up to N times with a delay between attempts.
+# Useful for commands that depend on postgres being fully out of recovery mode.
+run_with_retry() {
+  local max_attempts="${1:-10}"
+  local delay="${2:-5}"
+  shift 2
+  local attempt=1
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if "$@"; then
+      return 0
+    fi
+    if [ "$attempt" -lt "$max_attempts" ]; then
+      echo "[seed] command failed (attempt $attempt/$max_attempts), retrying in ${delay}s..."
+      sleep "$delay"
+    fi
+    attempt=$((attempt + 1))
+  done
+  echo "[seed] ERROR: command failed after $max_attempts attempts: $*" >&2
+  return 1
+}
+
 wait_for_runs_completion() {
   local label="${1:-runs}"
   shift || true
@@ -112,6 +146,8 @@ wait_for_runs_completion() {
 
 echo "[seed] starting services..."
 docker compose -f "$COMPOSE_FILE" up -d --build
+
+wait_for_postgres
 
 echo "[seed] running migrations..."
 docker compose -f "$COMPOSE_FILE" run --rm api alembic upgrade head
@@ -421,7 +457,7 @@ curl_api PATCH "/v1/campaigns/$CHAOS_CAMPAIGN_ID/eval-set" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -H "X-Project-Id: $PROJECT_ID" \
-  -d "{\"trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
+  -d "{\"add_trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
 
 echo "[seed] creating policy campaign..."
 POLICY_CAMPAIGN_JSON="$(
@@ -475,7 +511,37 @@ curl_api PATCH "/v1/campaigns/$SECURITY_CAMPAIGN_ID/eval-set" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $API_KEY" \
   -H "X-Project-Id: $PROJECT_ID" \
-  -d "{\"trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
+  -d "{\"add_trace_ids\": [$TRACE_IDS_JSON]}" >/dev/null
+
+echo "[seed] attaching quality contracts..."
+
+# Chaos campaign contract: require the chaos pack, key tools from the mutation_set,
+# and enough attempts to exercise the full scenario pool.
+curl_api PUT "/v1/campaigns/$CHAOS_CAMPAIGN_ID/contract" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Id: $PROJECT_ID" \
+  -d @- <<JSON >/dev/null
+{
+  "required_pack_ids": ["$MUTATION_PACK_ID"],
+  "required_tools": ["payments.refund", "jira.create_issue", "slack.send_message"],
+  "min_attempts_per_pack": 10
+}
+JSON
+
+# Security campaign contract: require the security injection pack and the tools
+# it targets — a run with the wrong pack or missing tool coverage hard-fails.
+curl_api PUT "/v1/campaigns/$SECURITY_CAMPAIGN_ID/contract" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Id: $PROJECT_ID" \
+  -d @- <<JSON >/dev/null
+{
+  "required_pack_ids": ["$SECURITY_MUTATION_PACK_ID"],
+  "required_tools": ["jira.create_issue", "slack.send_message"],
+  "min_attempts_per_pack": 8
+}
+JSON
 
 echo "[seed] creating template demo campaign..."
 TEMPLATE_CAMPAIGN_JSON="$(
@@ -644,9 +710,9 @@ printf '  trace_ids=%s\n' "${TRACE_IDS[@]}"
 echo "  mutation_pack_id=$MUTATION_PACK_ID"
 echo "  security_mutation_pack_id=$SECURITY_MUTATION_PACK_ID"
 echo "  policy_pack_id=$POLICY_PACK_ID"
-echo "  chaos_campaign_id=$CHAOS_CAMPAIGN_ID"
+echo "  chaos_campaign_id=$CHAOS_CAMPAIGN_ID (contract: packs=1 tools=3 min_attempts=10)"
 echo "  policy_campaign_id=$POLICY_CAMPAIGN_ID"
-echo "  security_campaign_id=$SECURITY_CAMPAIGN_ID"
+echo "  security_campaign_id=$SECURITY_CAMPAIGN_ID (contract: packs=1 tools=2 min_attempts=8)"
 echo "  template_campaign_id=$TEMPLATE_CAMPAIGN_ID"
 echo "  template_baseline_run_id=$TEMPLATE_BASELINE_RUN_ID"
 if [ "${#TEMPLATE_IDS[@]}" -gt 0 ]; then

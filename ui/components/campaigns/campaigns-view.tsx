@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { api, type CampaignMetadata } from "@/lib/api";
+import { IdPill } from "@/components/ui/id-pill";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { Button } from "@/components/ui/button";
@@ -210,17 +211,7 @@ export function CampaignsView() {
                     return (
                     <TableRow key={campaign.campaign_id}>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <span className="break-all text-foreground">{campaign.campaign_id}</span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void onCopyCampaignId(campaign.campaign_id)}
-                          >
-                            {copiedCampaignId === campaign.campaign_id ? "Copied" : "Copy ID"}
-                          </Button>
-                        </div>
+                        <IdPill id={campaign.campaign_id} />
                       </TableCell>
                       <TableCell className="font-medium text-foreground">
                         <Link href={`/campaigns/${campaign.campaign_id}`} className="hover:text-info hover:underline">
