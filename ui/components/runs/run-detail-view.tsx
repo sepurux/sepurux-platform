@@ -477,6 +477,7 @@ function RunStatsCards({
 }
 
 const ATTEMPTS_PAGE_SIZE = 15;
+const POLICY_EVENTS_PAGE_SIZE = 15;
 
 function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
   const [page, setPage] = useState(0);
@@ -553,11 +554,24 @@ function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
 }
 
 function PolicyEventsTable({ policyEvents }: { policyEvents: PolicyEventListItem[] }) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(policyEvents.length / POLICY_EVENTS_PAGE_SIZE);
+  const pageEvents = policyEvents.slice(
+    page * POLICY_EVENTS_PAGE_SIZE,
+    (page + 1) * POLICY_EVENTS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [policyEvents.length]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Policy Events</CardTitle>
-        <CardDescription>Policy decisions recorded for replayed tool calls.</CardDescription>
+        <CardDescription>
+          {policyEvents.length} event{policyEvents.length === 1 ? "" : "s"} recorded for replayed tool calls.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -578,7 +592,7 @@ function PolicyEventsTable({ policyEvents }: { policyEvents: PolicyEventListItem
                 </TableCell>
               </TableRow>
             ) : (
-              policyEvents.map((event) => (
+              pageEvents.map((event) => (
                 <TableRow key={event.policy_event_id}>
                   <TableCell>
                     <Badge
@@ -608,6 +622,22 @@ function PolicyEventsTable({ policyEvents }: { policyEvents: PolicyEventListItem
             )}
           </TableBody>
         </Table>
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {page * POLICY_EVENTS_PAGE_SIZE + 1}–
+              {Math.min((page + 1) * POLICY_EVENTS_PAGE_SIZE, policyEvents.length)} of {policyEvents.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((v) => v - 1)}>
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Button>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((v) => v + 1)}>
+                Next <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
