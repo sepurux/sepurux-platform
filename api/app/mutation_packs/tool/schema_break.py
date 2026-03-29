@@ -15,18 +15,20 @@ def get_mutations() -> list[Mutation]:
             mutation_type="schema.rename_field",
             params={"from": "status", "to": "state"},
             weight=2.0,
+            probability=0.1,
         ),
         RegisteredMutation(
             name="tool.schema.break.drop_payload_id",
             mutation_type="schema.drop_field",
             params={"field": "id"},
             weight=2.0,
+            probability=0.08,
         ),
         RegisteredMutation(
             name="tool.schema.break.drop_status",
             mutation_type="schema.drop_field",
             params={"field": "status"},
             weight=1.0,
-            probability=0.8,
+            probability=0.06,
         ),
     ]

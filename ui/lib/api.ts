@@ -47,7 +47,6 @@ export type TraceTimelineStep = {
 
 export type CampaignEvalSet = {
   trace_ids?: string[];
-  checks?: string[];
   attempts_count?: number;
   min_scenarios?: number;
 };
@@ -57,7 +56,6 @@ export type CampaignMetadata = {
   mutation_pack_id: string | null;
   name: string;
   status: string;
-  mutation_set: unknown;
   eval_set: CampaignEvalSet | null;
   created_at: string;
 };
@@ -122,6 +120,38 @@ export type CIBatchStatus = {
   mutation_coverage_score: number | null;
   dashboard_url: string;
   contract_report: ContractReport | null;
+};
+
+export type CIRunPreflightIssue = {
+  code: string;
+  message: string;
+  hint?: string | null;
+};
+
+export type CIRunPreflight = {
+  ready: boolean;
+  campaign_id: string;
+  trace_count: number;
+  attempts_per_trace: number;
+  estimated_attempts_total: number;
+  thresholds: {
+    min_pass_rate: number;
+    max_unsafe: number;
+    max_failures?: number | null;
+    min_reliability_score?: number | null;
+    min_mutation_categories?: number | null;
+    required_mutation_categories?: string[] | null;
+  };
+  blockers: CIRunPreflightIssue[];
+  warnings: CIRunPreflightIssue[];
+  recommended_thresholds: {
+    min_pass_rate: number;
+    max_unsafe: number;
+    max_failures?: number | null;
+    min_reliability_score?: number | null;
+    min_mutation_categories?: number | null;
+    required_mutation_categories?: string[] | null;
+  } | null;
 };
 
 export type CampaignFailure = {
@@ -1331,9 +1361,8 @@ export const api = {
     requestJson<CampaignMetadata>(`/v1/campaigns/${campaignId}`),
   createCampaign: (payload: {
     name: string;
-    mutation_set: unknown;
-    eval_set: unknown;
     mutation_pack_id?: string | null;
+    eval_set?: { attempts_count?: number; trace_ids?: string[]; min_scenarios?: number };
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
   updateCampaignEvalSet: (
     campaignId: string,
@@ -1433,11 +1462,20 @@ export const api = {
   },
   getRun: (runId: string) => requestJson<RunMetadata>(`/v1/runs/${runId}`),
   getCiBatch: (batchId: string) => requestJson<CIBatchStatus>(`/v1/ci/batch/${batchId}`),
+  preflightCiRun: (payload: {
+    trace_id?: string | null;
+    campaign_id: string;
+    thresholds: { min_pass_rate: number; max_unsafe: number; max_failures: number };
+  }) =>
+    postJson<CIRunPreflight, typeof payload>(
+      "/v1/ci/preflight",
+      payload
+    ),
   triggerCiRun: (payload: {
     campaign_id: string;
     thresholds: { min_pass_rate: number; max_unsafe: number; max_failures: number };
   }) =>
-    postJson<{ run_id: string; run_ids: string[]; batch_id: string; trace_count: number }, typeof payload>(
+    postJson<{ run_id: string; run_ids: string[]; batch_id: string; trace_count: number; warnings: { code: string; message: string; hint?: string }[]; estimated_attempts_total: number }, typeof payload>(
       "/v1/ci/runs",
       payload
     ),

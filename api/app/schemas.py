@@ -55,11 +55,16 @@ class TraceBootstrapResponse(BaseModel):
     campaigns: list[TraceBootstrapCampaign] = Field(default_factory=list)
 
 
+class CampaignEvalSet(BaseModel):
+    trace_ids: list[UUID] = Field(default_factory=list)
+    attempts_count: int = Field(default=50, ge=1, le=50)
+    min_scenarios: int | None = Field(default=None, ge=1)
+
+
 class CampaignCreateRequest(BaseModel):
     name: str
-    mutation_set: list[Any]
-    eval_set: dict[str, Any]
     mutation_pack_id: UUID | None = None
+    eval_set: CampaignEvalSet = Field(default_factory=CampaignEvalSet)
 
 
 class CampaignEvalSetPatch(BaseModel):
@@ -73,7 +78,6 @@ class CampaignMetadata(BaseModel):
     mutation_pack_id: UUID | None = None
     name: str
     status: str
-    mutation_set: Any
     eval_set: Any
     created_at: datetime
 
@@ -235,6 +239,26 @@ class CIRunCreateResponse(BaseModel):
     run_ids: list[UUID] = Field(default_factory=list)
     batch_id: UUID
     trace_count: int = 1
+    warnings: list["CIRunPreflightIssue"] = Field(default_factory=list)
+    estimated_attempts_total: int = 0
+
+
+class CIRunPreflightIssue(BaseModel):
+    code: str
+    message: str
+    hint: str | None = None
+
+
+class CIRunPreflightResponse(BaseModel):
+    ready: bool
+    campaign_id: UUID
+    trace_count: int
+    attempts_per_trace: int
+    estimated_attempts_total: int
+    thresholds: CIRunThresholds
+    blockers: list[CIRunPreflightIssue] = Field(default_factory=list)
+    warnings: list[CIRunPreflightIssue] = Field(default_factory=list)
+    recommended_thresholds: CIRunThresholds | None = None
 
 
 class ContractViolation(BaseModel):

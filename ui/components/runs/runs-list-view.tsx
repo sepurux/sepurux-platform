@@ -22,6 +22,7 @@ type BatchGroup = {
   batchId: string | null;
   runs: RunMetadata[];
 };
+type RunType = "ci_batch" | "template_replay" | "manual";
 
 const PAGE_SIZE = 12;
 
@@ -110,6 +111,18 @@ function runAttemptCount(run: RunMetadata): number | null {
   return typeof s.attempt_count === "number" ? s.attempt_count : null;
 }
 
+function runTypeForRun(run: RunMetadata): RunType {
+  const summary = (run.summary ?? {}) as Record<string, unknown>;
+  if (typeof summary.ci_batch_id === "string" && summary.ci_batch_id.trim()) {
+    return "ci_batch";
+  }
+  const templateApplication = summary.template_application;
+  if (templateApplication && typeof templateApplication === "object") {
+    return "template_replay";
+  }
+  return "manual";
+}
+
 export function RunsListView() {
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -180,7 +193,7 @@ export function RunsListView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Runs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Batch runs grouped by scenario set. Expand a batch to inspect individual traces.</p>
+          <p className="mt-1 text-sm text-muted-foreground">CI batches, template replays, and manual runs. Expand a batch to inspect individual traces.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground">
@@ -220,7 +233,7 @@ export function RunsListView() {
       <Card>
         <CardHeader>
           <CardTitle>Run Catalog</CardTitle>
-          <CardDescription>Server-paginated runs grouped by CI batch for the active project.</CardDescription>
+          <CardDescription>Server-paginated run history with clear run type labels.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {state.status === "loading" ? (
@@ -235,6 +248,7 @@ export function RunsListView() {
                     <TableHead className="w-6" />
                     <TableHead>Batch</TableHead>
                     <TableHead>Campaign</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Avg Pass Rate</TableHead>
                     <TableHead className="text-right">Coverage</TableHead>
@@ -245,7 +259,7 @@ export function RunsListView() {
                 <TableBody>
                   {batchGroups.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                         {searchQuery ? "No runs match your search." : "No runs match this filter."}
                       </TableCell>
                     </TableRow>
@@ -263,6 +277,7 @@ export function RunsListView() {
                       const campaignId = runs[0].campaign_id;
                       const campaignName = getCampaignName(runs[0]) ?? shortId(campaignId, 10);
                       const isExpanded = batchId !== null && expandedBatches.has(batchId);
+                      const runType: RunType = batchId ? "ci_batch" : runTypeForRun(runs[0]);
 
                       return [
                         <TableRow
@@ -292,6 +307,7 @@ export function RunsListView() {
                             </span>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{campaignName}</TableCell>
+                          <TableCell><RunTypeBadge type={runType} /></TableCell>
                           <TableCell><RunStatusBadge status={aggStatus} /></TableCell>
                           <TableCell className="text-right text-foreground">
                             {passRate === null ? "--" : formatPercent(passRate, 0)}
@@ -316,7 +332,7 @@ export function RunsListView() {
                                 ? [(
                                     <TableRow key={`${batchId}-contract`} className="bg-rose-500/5">
                                       <TableCell />
-                                      <TableCell colSpan={7} className="pl-8 py-2">
+                                      <TableCell colSpan={8} className="pl-8 py-2">
                                         <div className="flex flex-wrap items-start gap-3">
                                           <span className="shrink-0 rounded-full bg-rose-500/15 px-2 py-0.5 text-xs font-semibold text-rose-400">
                                             contract failed
@@ -349,6 +365,9 @@ export function RunsListView() {
                                       >
                                         {shortId(run.run_id, 12)}
                                       </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <RunTypeBadge type={runTypeForRun(run)} />
                                     </TableCell>
                                     <TableCell><RunStatusBadge status={run.status} /></TableCell>
                                     <TableCell className="text-right text-foreground text-sm">
@@ -415,6 +434,12 @@ function RunStatusBadge({ status }: { status: string }) {
   if (normalized === "running") return <Badge variant="info">running</Badge>;
   if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
   return <Badge variant="neutral">{status}</Badge>;
+}
+
+function RunTypeBadge({ type }: { type: RunType }) {
+  if (type === "ci_batch") return <Badge variant="info">CI batch</Badge>;
+  if (type === "template_replay") return <Badge variant="warning">Template replay</Badge>;
+  return <Badge variant="outline">Manual run</Badge>;
 }
 
 function DecisionBadge({ decision }: { decision: "pass" | "fail" | "pending" }) {

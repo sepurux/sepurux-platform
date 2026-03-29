@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCcw, ShieldCheck } from "lucide-react";
 
 import {
   api,
@@ -43,6 +43,7 @@ type LoadState =
       baselineRun: RunMetadata | null;
       baselineStats: RunStats | null;
     };
+type RunType = "ci_batch" | "template_replay" | "manual";
 
 export function RunDetailView({ runId }: { runId: string }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -161,17 +162,53 @@ function RunDetailPanels({
     () => derivePolicyViolationCount(run, policyEvents),
     [run, policyEvents]
   );
+  const runType = runTypeFromSummary(run.summary);
+  const [policyPackName, setPolicyPackName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!run.policy_pack_id) return;
+    void api.getPolicyPack(run.policy_pack_id).then((p) => setPolicyPackName(p.name)).catch(() => null);
+  }, [run.policy_pack_id]);
+
+  // Detect when all failures are replay tool mismatches — a config issue, not agent failure
+  const replayContractFailures = useMemo(() =>
+    attempts.filter((a) => a.failure_reason?.includes("replay_contract_invalid_tool") || a.failure_reason?.includes("invalid_tool")),
+    [attempts]
+  );
+  const hasReplayContractIssue = replayContractFailures.length > 0 && replayContractFailures.length === attempts.filter((a) => a.result === "failed").length;
 
   return (
     <>
+      {hasReplayContractIssue && (
+        <div className="flex items-start gap-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <div>
+            <p className="font-medium text-amber-100">Mutation pack incompatible with this trace</p>
+            <p className="mt-0.5 text-amber-300/80">
+              All {replayContractFailures.length} attempt{replayContractFailures.length !== 1 ? "s" : ""} failed because the selected mutation pack targets tools that don't appear in this trace.
+              The reliability score is unaffected — no agent behaviour was tested.
+              Fix: select a mutation pack whose tools match this trace, or run without a pack to use baseline only.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-3">
-            <span>Run Summary</span>
+            <span className="flex items-center gap-2">
+              <span>Run Summary</span>
+              <RunTypeBadge type={runType} />
+            </span>
             <StatusBadge status={run.status} />
           </CardTitle>
           <CardDescription>
-            Campaign {shortId(run.campaign_id, 12)} • Trace {shortId(run.trace_id, 12)} • {formatRelativeDate(run.created_at)}
+            Campaign {shortId(run.campaign_id, 12)} • Trace {shortId(run.trace_id, 12)} • {runTypeLabel(runType)} • {formatRelativeDate(run.created_at)}
+            {policyPackName && (
+              <span className="ml-3 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <ShieldCheck className="h-3 w-3" /> {policyPackName}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -477,6 +514,7 @@ function RunStatsCards({
 }
 
 const ATTEMPTS_PAGE_SIZE = 15;
+const POLICY_EVENTS_PAGE_SIZE = 15;
 
 function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
   const [page, setPage] = useState(0);
@@ -553,11 +591,24 @@ function AttemptsTable({ attempts }: { attempts: ReplayAttemptListItem[] }) {
 }
 
 function PolicyEventsTable({ policyEvents }: { policyEvents: PolicyEventListItem[] }) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(policyEvents.length / POLICY_EVENTS_PAGE_SIZE);
+  const pageEvents = policyEvents.slice(
+    page * POLICY_EVENTS_PAGE_SIZE,
+    (page + 1) * POLICY_EVENTS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [policyEvents.length]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Policy Events</CardTitle>
-        <CardDescription>Policy decisions recorded for replayed tool calls.</CardDescription>
+        <CardDescription>
+          {policyEvents.length} event{policyEvents.length === 1 ? "" : "s"} recorded for replayed tool calls.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -578,7 +629,7 @@ function PolicyEventsTable({ policyEvents }: { policyEvents: PolicyEventListItem
                 </TableCell>
               </TableRow>
             ) : (
-              policyEvents.map((event) => (
+              pageEvents.map((event) => (
                 <TableRow key={event.policy_event_id}>
                   <TableCell>
                     <Badge
@@ -608,6 +659,22 @@ function PolicyEventsTable({ policyEvents }: { policyEvents: PolicyEventListItem
             )}
           </TableBody>
         </Table>
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {page * POLICY_EVENTS_PAGE_SIZE + 1}–
+              {Math.min((page + 1) * POLICY_EVENTS_PAGE_SIZE, policyEvents.length)} of {policyEvents.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 0} onClick={() => setPage((v) => v - 1)}>
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Button>
+              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((v) => v + 1)}>
+                Next <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -665,6 +732,25 @@ function sourceRunIdFromSummary(summary: Record<string, unknown> | null): string
   }
   const sourceRunId = (templateApplication as Record<string, unknown>).source_run_id;
   return typeof sourceRunId === "string" && sourceRunId ? sourceRunId : null;
+}
+
+function runTypeFromSummary(summary: Record<string, unknown> | null): RunType {
+  const summaryObj = summary ?? {};
+  const batchId = summaryObj.ci_batch_id;
+  if (typeof batchId === "string" && batchId.trim()) {
+    return "ci_batch";
+  }
+  const templateApplication = summaryObj.template_application;
+  if (templateApplication && typeof templateApplication === "object") {
+    return "template_replay";
+  }
+  return "manual";
+}
+
+function runTypeLabel(runType: RunType): string {
+  if (runType === "ci_batch") return "CI batch";
+  if (runType === "template_replay") return "Template replay";
+  return "Manual run";
 }
 
 function RunComparisonCard({
@@ -892,6 +978,12 @@ function StatusBadge({ status }: { status: string }) {
   if (normalized === "running") return <Badge variant="info">running</Badge>;
   if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
   return <Badge variant="neutral">{status}</Badge>;
+}
+
+function RunTypeBadge({ type }: { type: RunType }) {
+  if (type === "ci_batch") return <Badge variant="info">CI batch</Badge>;
+  if (type === "template_replay") return <Badge variant="warning">Template replay</Badge>;
+  return <Badge variant="outline">Manual run</Badge>;
 }
 
 function RunDetailSkeleton() {

@@ -27,15 +27,17 @@ def build_run_insights(
     schema_lethal = [
         item
         for item in most_lethal_mutations
-        if str(item.get("mutation_id", "")).startswith("schema.")
+        if _is_schema_mutation(str(item.get("mutation_id", "")))
     ]
     retry_lethal = [
         item
         for item in most_lethal_mutations
-        if str(item.get("mutation_id")) in {"fault.timeout", "fault.rate_limit"}
+        if _is_retry_mutation(str(item.get("mutation_id", "")))
     ]
     poison_lethal = [
-        item for item in most_lethal_mutations if str(item.get("mutation_id")) == "poison.inject"
+        item
+        for item in most_lethal_mutations
+        if _is_poison_mutation(str(item.get("mutation_id", "")))
     ]
 
     boost = _counterfactual_boost(total=counterfactual_total, passed=counterfactual_passed)
@@ -336,3 +338,21 @@ def _float(value: Any) -> float:
     if isinstance(value, int | float):
         return float(value)
     return 0.0
+
+
+def _is_schema_mutation(mutation_id: str) -> bool:
+    """Match schema-type mutations regardless of pack namespace."""
+    lower = mutation_id.lower()
+    return lower.startswith("schema.") or "rename" in lower or "schema" in lower
+
+
+def _is_retry_mutation(mutation_id: str) -> bool:
+    """Match timeout/rate-limit mutations regardless of pack namespace."""
+    lower = mutation_id.lower()
+    return lower in {"fault.timeout", "fault.rate_limit"} or "timeout" in lower or "rate_limit" in lower
+
+
+def _is_poison_mutation(mutation_id: str) -> bool:
+    """Match prompt injection mutations regardless of pack namespace."""
+    lower = mutation_id.lower()
+    return lower == "poison.inject" or "poison" in lower or "inject" in lower
