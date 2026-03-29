@@ -17,6 +17,17 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; mutationPacks: MutationPackMetadata[] };
 
+const MIN_ATTEMPTS = 1;
+const MAX_ATTEMPTS = 50;
+
+function clampAttempts(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 50;
+  }
+  const normalized = Math.trunc(value);
+  return Math.min(MAX_ATTEMPTS, Math.max(MIN_ATTEMPTS, normalized));
+}
+
 export function CampaignCreateView() {
   const authSession = useAuthSession();
   const router = useRouter();
@@ -94,9 +105,13 @@ export function CampaignCreateView() {
       (record) => !record.is_system || !recommendedSystemPackNames.has(record.name)
     )
   );
+  // coverage_score is (categories / 4) * 100 — convert back to N/4 for display
+  const selectedPackCategories = selectedMutationPack
+    ? Math.round(selectedMutationPack.coverage_score / 25)
+    : 0;
   const selectedPackWarning =
-    selectedMutationPack && selectedMutationPack.coverage_score < 40
-      ? "This mutation pack may not detect realistic failures."
+    selectedMutationPack && selectedPackCategories < 2
+      ? "This pack covers only 1 mutation category — it may miss many failure types."
       : null;
 
   async function onCreateCampaign(event: FormEvent<HTMLFormElement>) {
@@ -104,14 +119,15 @@ export function CampaignCreateView() {
     setCreating(true);
     setCreateError(null);
 
+    const normalizedAttemptsCount = clampAttempts(attemptsCount);
+    setAttemptsCount(normalizedAttemptsCount);
+
     try {
       await api.createCampaign({
         name,
         mutation_pack_id: mutationPackId || null,
-        mutation_set: [],
         eval_set: {
-          checks: ["status"],
-          attempts_count: attemptsCount,
+          attempts_count: normalizedAttemptsCount,
         },
       });
       router.push("/campaigns");
@@ -190,7 +206,7 @@ export function CampaignCreateView() {
                     );
                     const suggestedAttempts = record?.config?.suggested_attempts;
                     if (typeof suggestedAttempts === "number" && Number.isFinite(suggestedAttempts)) {
-                      setAttemptsCount(Math.max(1, Math.trunc(suggestedAttempts)));
+                      setAttemptsCount(clampAttempts(suggestedAttempts));
                     }
                   }}
                   disabled={creating}
@@ -220,13 +236,14 @@ export function CampaignCreateView() {
               {selectedMutationPack ? (
                 <div className="rounded-md border border-border/70 bg-background/70 p-3 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Coverage Score</span>
-                    <Badge
-                      variant={selectedMutationPack.coverage_score < 40 ? "default" : "warning"}
-                    >
-                      {selectedMutationPack.coverage_score}%
+                    <span className="text-muted-foreground">Category breadth</span>
+                    <Badge variant={selectedPackCategories < 2 ? "default" : selectedPackCategories < 4 ? "warning" : "neutral"}>
+                      {selectedPackCategories}/4 categories
                     </Badge>
                   </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Covers: {["schema", "fault", "latency", "security"].slice(0, selectedPackCategories).join(", ") || "none"}
+                  </p>
                   {selectedPackWarning ? (
                     <p className="mt-2 text-xs text-amber-300">{selectedPackWarning}</p>
                   ) : null}
@@ -237,12 +254,19 @@ export function CampaignCreateView() {
                 <span className="text-muted-foreground">Attempts Count</span>
                 <input
                   type="number"
-                  min={1}
+                  min={MIN_ATTEMPTS}
+                  max={MAX_ATTEMPTS}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
                   value={attemptsCount}
-                  onChange={(event) => setAttemptsCount(Number(event.target.value || 50))}
+                  onChange={(event) => {
+                    const rawValue = Number(event.target.value);
+                    setAttemptsCount(clampAttempts(rawValue));
+                  }}
                   disabled={creating}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Allowed range: {MIN_ATTEMPTS}-{MAX_ATTEMPTS}.
+                </p>
               </label>
 
               {createError ? (

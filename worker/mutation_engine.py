@@ -173,6 +173,7 @@ def _extract_params(item: dict[str, Any]) -> dict[str, Any]:
         "prob",
         "probability",
         "timeout_ms",
+        "min_backoff_ms",
     ):
         if key in item and key not in params_obj:
             params_obj[key] = item[key]
@@ -420,6 +421,10 @@ def _apply_fault(
     timeout_ms_value: int | None = None
     if isinstance(timeout_ms, int | float) and not isinstance(timeout_ms, bool):
         timeout_ms_value = max(0, int(timeout_ms))
+    min_backoff_ms = definition.params.get("min_backoff_ms")
+    min_backoff_ms_value: int | None = None
+    if isinstance(min_backoff_ms, int | float) and not isinstance(min_backoff_ms, bool):
+        min_backoff_ms_value = max(0, int(min_backoff_ms))
 
     for index, event in enumerate(events):
         if event.get("type") != "tool_call":
@@ -451,6 +456,11 @@ def _apply_fault(
                     "failure_reason": failure_reason,
                     "error_type": error_type,
                     **({"timeout_ms": timeout_ms_value} if timeout_ms_value else {}),
+                    **(
+                        {"min_backoff_ms": min_backoff_ms_value}
+                        if min_backoff_ms_value is not None
+                        else {}
+                    ),
                     **(
                         {"http_status": 429}
                         if definition.mutation_type == "fault.rate_limit"

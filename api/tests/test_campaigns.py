@@ -240,3 +240,54 @@ def test_campaign_create_rejects_non_dict_eval_set(
             },
         )
         assert response.status_code == 422, f"Expected 422 for eval_set={bad_eval_set!r}"
+
+
+def test_patch_campaign_mutation_set_updates_campaign(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _ = campaign_test_context
+    create_response = client.post(
+        "/v1/campaigns",
+        json={
+            "name": "Editable Mutations",
+            "mutation_set": [{"mutation_id": "baseline.refund", "tool": "payments.refund", "args": {}}],
+            "eval_set": {"checks": ["status"]},
+        },
+    )
+    assert create_response.status_code == 201
+    campaign_id = create_response.json()["campaign_id"]
+
+    patch_response = client.patch(
+        f"/v1/campaigns/{campaign_id}/mutation-set",
+        json={
+            "mutation_set": [
+                {
+                    "mutation_id": "baseline.refund",
+                    "tool": "payments.refund",
+                    "args": {"confirmation_token": "approved"},
+                }
+            ]
+        },
+    )
+    assert patch_response.status_code == 200
+    payload = patch_response.json()
+    assert payload["campaign_id"] == campaign_id
+    assert payload["mutation_set"] == [
+        {
+            "mutation_id": "baseline.refund",
+            "tool": "payments.refund",
+            "args": {"confirmation_token": "approved"},
+        }
+    ]
+
+
+def test_patch_campaign_mutation_set_returns_404_for_missing_campaign(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _ = campaign_test_context
+    response = client.patch(
+        f"/v1/campaigns/{uuid4()}/mutation-set",
+        json={"mutation_set": [{"mutation_id": "baseline"}]},
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Campaign not found"}
