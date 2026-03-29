@@ -9,7 +9,16 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, CreditWallet, Project, Tenant, Trace, User, UserSubscription
+from app.models import (
+    Base,
+    Campaign,
+    CreditTransaction,
+    CreditWallet,
+    Project,
+    Trace,
+    User,
+    UserSubscription,
+)
 from app.services.billing_service import (
     FREE_PLAN_ID,
     MUTATION_CAMPAIGN_CREDIT_COST,
@@ -241,7 +250,7 @@ def test_ci_run_returns_402_when_insufficient_credits(
     """Projects whose owner has too few credits get a 402 and no run is enqueued."""
     client, testing_session_local, fake_queue, project_id = credit_ci_context
     with testing_session_local() as db:
-        _seed_user_with_wallet(db, project_id=project_id, balance=1)
+        user_id = _seed_user_with_wallet(db, project_id=project_id, balance=1)
         trace_id, campaign_id = _seed_trace_and_campaign(
             db, project_id=project_id, attempts_count=5
         )
@@ -257,3 +266,17 @@ def test_ci_run_returns_402_when_insufficient_credits(
     assert response.status_code == 402
     assert response.json()["detail"] == "insufficient_credits"
     assert len(fake_queue.calls) == 0
+
+    with testing_session_local() as db:
+        wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == user_id))
+        assert wallet is not None
+        assert wallet.balance == 1
+        assert wallet.monthly_credits == 1
+        assert wallet.topup_credits == 0
+
+        transactions = list(
+            db.scalars(
+                select(CreditTransaction).where(CreditTransaction.user_id == user_id)
+            )
+        )
+        assert transactions == []

@@ -113,13 +113,17 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
             raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
 
         try:
-            charged_amount, charged_reason = operation_cost_for_campaign_record(campaign)
-            charged_project_id = campaign.project_id
+            pending_charge_amount, pending_charge_reason = operation_cost_for_campaign_record(
+                campaign
+            )
             consume_credits_for_project_campaign(
                 db,
                 project_id=campaign.project_id,
                 campaign=campaign,
             )
+            charged_amount = pending_charge_amount
+            charged_reason = pending_charge_reason
+            charged_project_id = campaign.project_id
         except InsufficientCreditsError as exc:
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
