@@ -169,7 +169,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         </p>
       </div>
 
-      <nav className="relative z-30 flex-1 space-y-1 overflow-y-auto pointer-events-auto pr-1">
+      <nav className="relative z-30 flex-1 space-y-1 overflow-y-auto pointer-events-auto pr-1" data-tour="sidebar-nav">
         {dashboardItem ? (
           <Link
             href={dashboardItem.href}
@@ -207,6 +207,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
                 <Link
                   href={primaryChild.href}
                   className="group flex min-w-0 flex-1 items-center gap-2.5 pl-3 py-2.5"
+                  data-tour={group.section === "campaigns" ? "campaigns-nav" : undefined}
                 >
                   <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                   <span className="truncate text-left">{group.label}</span>
@@ -246,6 +247,13 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
                       <Link
                         key={child.href}
                         href={child.href}
+                        data-tour={
+                          child.href === "/campaigns/new"
+                            ? "create-campaign-link"
+                            : child.href === "/campaigns"
+                              ? "campaigns-list-link"
+                              : undefined
+                        }
                         className={cn(
                           "relative z-30 block rounded-md border border-transparent px-3 py-2 text-[12px] transition-colors duration-150",
                           childActive

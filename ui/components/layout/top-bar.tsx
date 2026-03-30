@@ -6,7 +6,17 @@ import { createPortal } from "react-dom";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, Coins, CreditCard, FolderKanban, LogOut, Plus, User } from "lucide-react";
+import {
+  Bell,
+  ChevronDown,
+  Coins,
+  CreditCard,
+  FolderKanban,
+  LogOut,
+  Plus,
+  Sparkles,
+  User,
+} from "lucide-react";
 
 import {
   api,
@@ -33,6 +43,7 @@ import {
   setStoredProjectId,
 } from "@/lib/tenant-settings";
 import { cn } from "@/lib/utils";
+import { dispatchOpenNewUserTour } from "@/lib/onboarding-tour";
 
 const tabs = [
   { href: "/dashboard", label: "Dashboard", section: "dashboard" },
@@ -255,7 +266,10 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         </div>
 
         {showProjectSelector ? (
-          <label className="glass-surface flex min-w-0 cursor-pointer items-center gap-1 px-2.5 py-1">
+          <label
+            className="glass-surface flex min-w-0 cursor-pointer items-center gap-1 px-2.5 py-1"
+            data-tour="project-switcher"
+          >
             <select
               className="min-w-0 max-w-[170px] truncate bg-transparent text-sm font-semibold text-foreground outline-none"
               value={selectedProjectId}
@@ -287,7 +301,10 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
       {/* center: tab pill group */}
       <div className="flex flex-1 items-center justify-center overflow-x-auto px-2">
-        <div className="inline-flex items-center gap-0.5 rounded-full border border-border/70 bg-card/65 p-1.5 shadow-insetSoft">
+        <div
+          className="inline-flex items-center gap-0.5 rounded-full border border-border/70 bg-card/65 p-1.5 shadow-insetSoft"
+          data-tour="top-tabs"
+        >
           {visibleTabs.map((tab) => {
             const active = pathname === tab.href || (tab.href !== "/dashboard" && pathname.startsWith(tab.href + "/"));
             return (
@@ -314,6 +331,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         {typeof creditBalance === "number" ? (
           <button
             onClick={() => setCreditsModalOpen(true)}
+            data-tour="credits-button"
             className={cn(
               "glass-surface hidden items-center gap-1.5 px-3 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45 lg:flex",
               authSession?.is_low_credit
@@ -451,7 +469,10 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
         {/* user menu */}
         <details className="group relative">
-          <summary className="glass-surface flex cursor-pointer list-none items-center gap-2 px-2.5 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45">
+          <summary
+            className="glass-surface flex cursor-pointer list-none items-center gap-2 px-2.5 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45"
+            data-tour="account-menu"
+          >
             <span
               className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold"
               style={{
@@ -503,6 +524,17 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                   <p className="text-xs text-muted-foreground">Plans &amp; credits</p>
                 </div>
               </Link>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-150 hover:bg-accent"
+                onClick={() => dispatchOpenNewUserTour()}
+              >
+                <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Product tour</p>
+                  <p className="text-xs text-muted-foreground">Replay onboarding guide</p>
+                </div>
+              </button>
               {canManageWorkspace ? (
                 <Link
                   href="/profile#projects"
