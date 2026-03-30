@@ -219,7 +219,7 @@ export default function APIReferencePage() {
         title="Base URL & Auth"
         description="All project-scoped `/v1` endpoints require `X-API-Key` and `X-Project-Id` headers."
       >
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-neutral-200">
+        <div className="rounded-2xl border border-[--border] bg-white shadow-sm px-4 py-3 text-sm text-slate-700">
           Base URL: <code>{baseUrl}</code>
         </div>
         <DocsCodeBlock code={headersSnippet} label="required headers" />
@@ -230,19 +230,19 @@ export default function APIReferencePage() {
         title="Core Endpoints"
         description="These are the most common endpoints used by product teams and platform engineers."
       >
-        <div className="overflow-hidden rounded-2xl border border-white/10">
-          <table className="min-w-full divide-y divide-white/10 text-left">
-            <thead className="bg-white/[0.03]">
+        <div className="overflow-hidden rounded-2xl border border-[--border]">
+          <table className="min-w-full divide-y divide-slate-200 text-left">
+            <thead className="bg-white shadow-sm">
               <tr>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/60">Endpoint</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/60">Purpose</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Endpoint</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Purpose</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10 bg-black/50">
+            <tbody className="divide-y divide-slate-200 bg-white">
               {endpoints.map(([endpoint, purpose]) => (
                 <tr key={endpoint}>
-                  <td className="px-4 py-3 font-mono text-xs text-white">{endpoint}</td>
-                  <td className="px-4 py-3 text-sm text-neutral-300">{purpose}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[--text-primary]">{endpoint}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{purpose}</td>
                 </tr>
               ))}
             </tbody>
@@ -255,9 +255,9 @@ export default function APIReferencePage() {
         title="Request Examples"
         description="Start from these examples and expand payloads based on your workflow semantics."
       >
-        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Create trace</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Create trace</p>
         <DocsCodeTabs tabs={createTraceTabs} />
-        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Start run</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Start run</p>
         <DocsCodeTabs tabs={startRunTabs} />
       </DocsSection>
 
@@ -266,9 +266,9 @@ export default function APIReferencePage() {
         title="Eval-Set & Batch CI"
         description="Register a pool of real-world traces against a campaign. CI runs then replay every registered trace in parallel and gate on the aggregated verdict."
       >
-        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Register trace pool</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Register trace pool</p>
         <DocsCodeBlock code={evalSetSnippet} label="bash" />
-        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Batch run + poll</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Batch run + poll</p>
         <DocsCodeBlock code={batchSnippet} label="bash" />
         <div className="grid gap-4 md:grid-cols-3">
           {[
@@ -276,9 +276,9 @@ export default function APIReferencePage() {
             ["min_scenarios", "CI submission is rejected (422) if the registered pool falls below this count. Prevents gating against a trivially small scenario set."],
             ["scenario_coverage_pct", "Returned by the batch endpoint: completed runs / total traces × 100. Use this to verify full coverage before acting on the verdict."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>
@@ -294,7 +294,7 @@ export default function APIReferencePage() {
             href={`${baseUrl}/docs`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-200 transition-colors hover:bg-white/[0.06]"
+            className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-700 transition-colors hover:bg-[--surface-2]"
           >
             Interactive Docs: <code>{baseUrl}/docs</code>
           </a>
@@ -302,7 +302,7 @@ export default function APIReferencePage() {
             href={`${baseUrl}/openapi.json`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-200 transition-colors hover:bg-white/[0.06]"
+            className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-700 transition-colors hover:bg-[--surface-2]"
           >
             OpenAPI Schema: <code>{baseUrl}/openapi.json</code>
           </a>

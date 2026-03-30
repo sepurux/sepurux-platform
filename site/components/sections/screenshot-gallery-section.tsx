@@ -30,14 +30,17 @@ const screenshots = [
 
 export function ScreenshotGallerySection() {
   return (
-    <section className="bg-neutral-950 py-24 sm:py-32">
+    <section className="bg-white py-24 sm:py-32">
       <div className="site-container">
         <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Screenshots</p>
-          <h2 className="mt-5 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
+          <p className="section-kicker">Screenshots</p>
+          <h2
+            className="mt-5 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em]"
+            style={{ color: "var(--text-primary)" }}
+          >
             Every failure, fully visible.
           </h2>
-          <p className="mt-4 text-base leading-8 text-white/50">
+          <p className="mt-4 text-base leading-8 text-gray-500">
             Replay traces, inspect mutations, and read the reliability report — all in one place.
           </p>
         </div>
@@ -48,8 +51,8 @@ export function ScreenshotGallerySection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
-            className="overflow-hidden rounded-[28px] bg-black ring-1 ring-white/[0.06]"
-            style={{ boxShadow: "0 30px 80px rgba(0,0,0,0.3)" }}
+            className="overflow-hidden rounded-[28px] border border-[--border] bg-white"
+            style={{ boxShadow: "var(--shadow-card)" }}
           >
             <Image
               src={screenshots[0].src}
@@ -68,8 +71,8 @@ export function ScreenshotGallerySection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.15 }}
                 transition={{ duration: 0.45, ease: "easeOut", delay: index * 0.08 }}
-                className="overflow-hidden rounded-[28px] bg-black ring-1 ring-white/[0.06]"
-                style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.24)" }}
+                className="overflow-hidden rounded-[28px] border border-[--border] bg-white"
+                style={{ boxShadow: "var(--shadow-card)" }}
               >
                 <Image
                   src={shot.src}

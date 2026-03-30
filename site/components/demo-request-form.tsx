@@ -1,4 +1,3 @@
-// site/components/demo-request-form.tsx
 "use client";
 
 import { FormEvent, useState } from "react";
@@ -9,10 +8,10 @@ type DemoRole = "Platform Eng" | "Security" | "Product" | "Founder" | "Other";
 const roles: DemoRole[] = ["Platform Eng", "Security", "Product", "Founder", "Other"];
 
 const fieldClass =
-  "h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm text-white outline-none placeholder:text-white/30 transition focus:border-[rgba(0,229,204,0.4)] focus:bg-white/[0.06] focus:ring-2 focus:ring-[rgba(0,229,204,0.12)]";
+  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 transition focus:border-[--color-accent] focus:ring-2 focus:ring-[rgba(var(--accent-rgb),0.12)]";
 
 const labelClass = "block space-y-1.5 text-sm";
-const labelTextClass = "text-xs font-medium uppercase tracking-[0.14em] text-white/40";
+const labelTextClass = "text-xs font-medium uppercase tracking-[0.14em] text-slate-500";
 
 export function DemoRequestForm() {
   const [email, setEmail] = useState("");
@@ -58,30 +57,24 @@ export function DemoRequestForm() {
 
   if (status === "success") {
     return (
-      <div
-        className="flex min-h-[360px] flex-col items-center justify-center rounded-[24px] border p-10 text-center"
-        style={{
-          borderColor: "rgba(0,229,204,0.2)",
-          background: "rgba(0,229,204,0.04)",
-        }}
-      >
+      <div className="accent-panel-soft flex min-h-[360px] flex-col items-center justify-center rounded-[24px] p-10 text-center">
         <div
           className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border"
-          style={{ borderColor: "rgba(0,229,204,0.3)", background: "rgba(0,229,204,0.08)" }}
+          style={{
+            borderColor: "rgba(var(--accent-rgb), 0.22)",
+            background: "rgba(var(--accent-rgb), 0.08)",
+          }}
         >
-          <CheckCircle2 className="h-7 w-7" style={{ color: "var(--accent-teal)" }} />
+          <CheckCircle2 className="h-7 w-7" style={{ color: "var(--color-accent)" }} />
         </div>
-        <h2 className="text-xl font-semibold text-white">Request received</h2>
-        <p className="mt-3 max-w-sm text-sm leading-7 text-neutral-400">{message}</p>
+        <h2 className="text-xl font-semibold text-[--text-primary]">Request received</h2>
+        <p className="mt-3 max-w-sm text-sm leading-7 text-slate-600">{message}</p>
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="space-y-5 rounded-[24px] border border-white/8 bg-white/[0.03] p-6 md:p-8"
-    >
+    <form onSubmit={onSubmit} className="space-y-5 rounded-[24px] border border-[--border] bg-white p-6 shadow-panel md:p-8">
       <div className="grid gap-4 md:grid-cols-2">
         <label className={labelClass}>
           <span className={labelTextClass}>Work email</span>
@@ -103,7 +96,7 @@ export function DemoRequestForm() {
             className={`${fieldClass} appearance-none`}
           >
             {roles.map((item) => (
-              <option key={item} value={item} className="bg-neutral-900 text-white">
+              <option key={item} value={item} className="bg-white text-slate-900">
                 {item}
               </option>
             ))}
@@ -133,7 +126,6 @@ export function DemoRequestForm() {
           />
         </label>
 
-        {/* honeypot */}
         <label className="hidden" aria-hidden>
           Website
           <input
@@ -152,8 +144,8 @@ export function DemoRequestForm() {
           disabled={status === "loading"}
           className="teal-glow-btn inline-flex h-11 items-center justify-center gap-2 rounded-full border px-6 text-sm font-semibold text-white disabled:opacity-50"
           style={{
-            borderColor: "rgba(0,229,204,0.35)",
-            background: "rgba(0,229,204,0.08)",
+            borderColor: "rgba(var(--accent-rgb), 0.35)",
+            background: "var(--color-accent)",
           }}
         >
           {status === "loading" ? (
@@ -169,9 +161,7 @@ export function DemoRequestForm() {
           )}
         </button>
 
-        {message && status === "error" ? (
-          <p className="text-sm text-rose-400">{message}</p>
-        ) : null}
+        {message && status === "error" ? <p className="text-sm text-rose-600">{message}</p> : null}
       </div>
     </form>
   );

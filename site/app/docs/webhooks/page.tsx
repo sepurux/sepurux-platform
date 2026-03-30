@@ -206,9 +206,9 @@ export default function WebhooksPage() {
               "Set false to pause deliveries without deleting the webhook. Toggle back to true to resume.",
             ],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>
@@ -219,13 +219,13 @@ export default function WebhooksPage() {
         title="Event Types"
         description="Subscribe to one or more of these events. Use * to receive all events for the project."
       >
-        <div className="overflow-hidden rounded-2xl border border-white/10">
+        <div className="overflow-hidden rounded-2xl border border-[--border]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 bg-white/[0.03]">
-                <th className="px-4 py-3 text-left font-semibold text-white">Event</th>
-                <th className="px-4 py-3 text-left font-semibold text-white">Description</th>
-                <th className="hidden px-4 py-3 text-left font-semibold text-white md:table-cell">
+              <tr className="border-b border-[--border] bg-white shadow-sm">
+                <th className="px-4 py-3 text-left font-semibold text-[--text-primary]">Event</th>
+                <th className="px-4 py-3 text-left font-semibold text-[--text-primary]">Description</th>
+                <th className="hidden px-4 py-3 text-left font-semibold text-[--text-primary] md:table-cell">
                   data fields
                 </th>
               </tr>
@@ -237,10 +237,10 @@ export default function WebhooksPage() {
                   className={i < events.length - 1 ? "border-b border-white/5" : ""}
                 >
                   <td className="px-4 py-3">
-                    <code className="text-xs text-teal-400">{event.name}</code>
+                    <code className="text-xs text-[var(--color-accent)]">{event.name}</code>
                   </td>
-                  <td className="px-4 py-3 text-neutral-300">{event.description}</td>
-                  <td className="hidden px-4 py-3 text-xs text-neutral-400 md:table-cell">
+                  <td className="px-4 py-3 text-slate-600">{event.description}</td>
+                  <td className="hidden px-4 py-3 text-xs text-slate-500 md:table-cell">
                     {event.dataFields}
                   </td>
                 </tr>
@@ -256,7 +256,7 @@ export default function WebhooksPage() {
         description="Every delivery is a JSON POST with a consistent envelope. The data field varies by event type."
       >
         <DocsCodeBlock code={payloadSnippet} label="json" />
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-300">
+        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-600">
           The JSON body is serialised with sorted keys and compact separators before signing. Use the
           raw request body bytes — not a re-serialised version — when computing the verification
           digest.
@@ -272,11 +272,11 @@ export default function WebhooksPage() {
           <DocsCodeBlock code={verifyPythonSnippet} label="python" />
           <DocsCodeBlock code={verifyNodeSnippet} label="typescript" />
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-300">
+        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-600">
           Always use a constant-time comparison (
-          <code className="text-white">hmac.compare_digest</code> /
-          <code className="text-white"> crypto.timingSafeEqual</code>) to prevent timing attacks.
-          Never compare signature strings with <code className="text-white">==</code>.
+          <code className="text-[--text-primary]">hmac.compare_digest</code> /
+          <code className="text-[--text-primary]"> crypto.timingSafeEqual</code>) to prevent timing attacks.
+          Never compare signature strings with <code className="text-[--text-primary]">==</code>.
         </div>
       </DocsSection>
 
@@ -320,9 +320,9 @@ export default function WebhooksPage() {
               "If a delivery fails all retries, the webhook record's last_error field captures the HTTP status or connection error for debugging.",
             ],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>

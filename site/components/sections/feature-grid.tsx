@@ -56,11 +56,14 @@ const features: Feature[] = [
 
 export function FeatureGrid() {
   return (
-    <section className="bg-neutral-950 py-24 sm:py-32">
+    <section className="bg-white py-24 sm:py-32">
       <div className="site-container">
         <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Features</p>
-          <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
+          <p className="section-kicker">Features</p>
+          <h2
+            className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em]"
+            style={{ color: "var(--text-primary)" }}
+          >
             Product surfaces, not icon marketing.
           </h2>
         </div>
@@ -77,12 +80,13 @@ export function FeatureGrid() {
                 viewport={{ once: true, amount: 0.2 }}
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.4, ease: "easeOut", delay: index * 0.06 }}
-                className="group relative overflow-hidden rounded-[28px] bg-neutral-950 ring-1 ring-white/[0.06] transition-all duration-300 hover:ring-[rgba(0,229,204,0.2)]"
+                className="group relative overflow-hidden rounded-2xl border border-[--border] bg-white transition-all duration-300 hover:border-[--color-accent]/30 hover:shadow-md"
+                style={{ boxShadow: "var(--shadow-card)" }}
               >
-                {/* teal left-border accent on hover */}
+                {/* warm left-border accent on hover */}
                 <div
                   className="absolute left-0 top-0 h-full w-0.5 origin-top scale-y-0 rounded-full transition-transform duration-300 group-hover:scale-y-100"
-                  style={{ background: "var(--accent-teal)" }}
+                  style={{ background: "var(--color-warm)" }}
                 />
 
                 <div className="overflow-hidden">
@@ -110,11 +114,22 @@ export function FeatureGrid() {
                 </div>
 
                 <div className="p-7">
-                  <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/6">
-                    <Icon className="h-4 w-4 text-white/70" />
+                  <div
+                    className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border"
+                    style={{
+                      borderColor: "rgba(var(--warm-rgb), 0.18)",
+                      background: "rgba(var(--warm-rgb), 0.10)",
+                    }}
+                  >
+                    <Icon className="h-4 w-4" style={{ color: "var(--color-warm)" }} />
                   </div>
-                  <h3 className="font-display text-xl font-semibold text-white">{feature.title}</h3>
-                  <p className="mt-2.5 text-sm leading-7 text-neutral-400">{feature.description}</p>
+                  <h3
+                    className="font-display text-xl font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {feature.title}
+                  </h3>
+                  <p className="mt-2.5 text-sm leading-7 text-gray-500">{feature.description}</p>
                 </div>
               </motion.div>
             );

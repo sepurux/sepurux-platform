@@ -1,4 +1,3 @@
-// site/app/book-demo/page.tsx
 import type { Metadata } from "next";
 import { CheckCircle2 } from "lucide-react";
 
@@ -27,61 +26,44 @@ const stats = [
 
 export default function BookDemoPage() {
   return (
-    <section className="relative overflow-hidden bg-black">
-      {/* teal radial behind headline */}
+    <section className="relative overflow-hidden bg-background">
       <div
-        className="pointer-events-none absolute left-0 top-0 h-[500px] w-[600px] opacity-60"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
         style={{
-          background: "radial-gradient(ellipse at 10% 20%, rgba(0,229,204,0.08), transparent 60%)",
-          filter: "blur(40px)",
+          background: "radial-gradient(circle at 12% 18%, rgba(var(--accent-rgb), 0.10), transparent 42%)",
         }}
       />
 
       <div className="site-container relative z-10 py-16 md:py-28">
         <div className="grid gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-16">
-
-          {/* left column */}
           <div className="max-w-2xl">
-            <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Book a demo</p>
-            <h1 className="page-hero-title mt-3 text-white">
-              See Sepurux on your workflows.
-            </h1>
-            <p className="mt-5 text-lg leading-8 text-neutral-400">
-              Tell us what you want to validate and we'll tailor the walkthrough around your traces,
+            <p className="section-kicker">Book a demo</p>
+            <h1 className="page-hero-title mt-3 text-[--text-primary]">See Sepurux on your workflows.</h1>
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Tell us what you want to validate and we&apos;ll tailor the walkthrough around your traces,
               campaigns, mutation packs, and policy or security requirements.
             </p>
 
-            {/* stats strip */}
-            <div className="mt-8 flex flex-wrap gap-6">
+            <div className="mt-8 flex flex-wrap gap-4">
               {stats.map(({ value, label }) => (
-                <div key={label}>
-                  <p className="text-base font-semibold text-white">{value}</p>
-                  <p className="mt-0.5 text-xs text-white/40">{label}</p>
+                <div key={label} className="rounded-2xl border border-[--border] bg-white px-4 py-3 shadow-sm">
+                  <p className="text-base font-semibold text-[--text-primary]">{value}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{label}</p>
                 </div>
               ))}
             </div>
 
-            {/* demo coverage card */}
-            <div
-              className="mt-8 rounded-[24px] border p-6 md:p-7"
-              style={{
-                borderColor: "rgba(0,229,204,0.15)",
-                background: "rgba(0,229,204,0.04)",
-              }}
-            >
-              <p
-                className="mb-1 text-[11px] font-medium uppercase tracking-[0.22em]"
-                style={{ color: "var(--accent-teal)" }}
-              >
+            <div className="accent-panel-soft mt-8 rounded-[24px] p-6 md:p-7">
+              <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--color-accent)]">
                 What we cover
               </p>
-              <h2 className="mb-5 text-base font-semibold text-white">Typical demo topics</h2>
+              <h2 className="mb-5 text-base font-semibold text-[--text-primary]">Typical demo topics</h2>
               <ul className="space-y-3.5">
                 {demoTopics.map((topic) => (
-                  <li key={topic} className="flex items-start gap-3 text-sm leading-7 text-neutral-400">
+                  <li key={topic} className="flex items-start gap-3 text-sm leading-7 text-slate-600">
                     <CheckCircle2
                       className="mt-0.5 h-4 w-4 shrink-0"
-                      style={{ color: "var(--accent-teal)" }}
+                      style={{ color: "var(--color-accent)" }}
                     />
                     <span>{topic}</span>
                   </li>
@@ -90,7 +72,6 @@ export default function BookDemoPage() {
             </div>
           </div>
 
-          {/* right column: form */}
           <div>
             <DemoRequestForm />
           </div>

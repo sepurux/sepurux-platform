@@ -28,11 +28,11 @@ export function PolicyGatesSection() {
           </p>
           <div className="mt-6 space-y-3">
             <div className="flex items-start gap-3 text-sm text-muted-foreground">
-              <ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" />
+              <ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-400" />
               <span>Approval tokens required for high-risk tools.</span>
             </div>
             <div className="flex items-start gap-3 text-sm text-muted-foreground">
-              <BadgeCheck className="mt-0.5 h-4 w-4 text-emerald-300" />
+              <BadgeCheck className="mt-0.5 h-4 w-4 text-emerald-400" />
               <span>Safe-action enforcement prevents accidental destructive actions.</span>
             </div>
           </div>

@@ -27,54 +27,49 @@ const testimonials = [
 
 export function SocialProofSection() {
   return (
-    <section
-      className="bg-black"
-      style={{
-        borderTop: "1px solid rgba(255,255,255,0.08)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
+    <section className="ink-section-muted">
       <div className="site-container py-10 sm:py-12">
+        {/* stat strip */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex flex-wrap items-stretch justify-center divide-y divide-white/8 sm:divide-x sm:divide-y-0"
+          className="grid grid-cols-2 divide-x divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/5 px-0 backdrop-blur-sm sm:grid-cols-4 sm:divide-y-0"
+          style={{ boxShadow: "0 18px 40px rgba(0, 0, 0, 0.24)" }}
         >
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="flex w-full flex-col items-center px-8 py-6 text-center sm:w-auto sm:flex-1 sm:py-0"
+              className="flex flex-col items-center px-8 py-6 text-center"
             >
               <span
-                className="font-display text-[clamp(1.8rem,3.5vw,2.8rem)] font-bold tabular-nums leading-none tracking-tight text-white"
+                className="font-display text-[clamp(1.8rem,3.5vw,2.8rem)] font-bold tabular-nums leading-none tracking-tight"
+                style={{ color: "var(--color-warm)" }}
               >
                 {stat.value}
               </span>
-              <span className="mt-2 text-sm font-medium text-white/40">{stat.label}</span>
+              <span className="mt-1 text-sm text-slate-300">{stat.label}</span>
             </div>
           ))}
         </motion.div>
 
+        {/* testimonials */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5, ease: "easeOut", delay: 0.15 }}
-          className="mt-10 flex flex-wrap justify-center gap-4"
+          className="mt-6 flex flex-wrap justify-center gap-4"
         >
           {testimonials.map((t) => (
             <blockquote
               key={t.cite}
-              className="w-full max-w-sm flex-1 rounded-xl px-5 py-4 text-sm leading-7 text-white/60"
-              style={{
-                borderLeft: "3px solid rgba(0,229,204,0.35)",
-                background: "rgba(255,255,255,0.02)",
-              }}
+              className="w-full max-w-sm flex-1 rounded-xl border border-white/10 bg-white/6 p-5 text-sm leading-7 backdrop-blur-sm"
+              style={{ boxShadow: "0 12px 32px rgba(0, 0, 0, 0.18)" }}
             >
-              <p>&ldquo;{t.quote}&rdquo;</p>
-              <cite className="mt-3 block not-italic text-xs text-white/30">{t.cite}</cite>
+              <p className="italic text-slate-100">&ldquo;{t.quote}&rdquo;</p>
+              <cite className="mt-3 block not-italic text-xs text-slate-400">{t.cite}</cite>
             </blockquote>
           ))}
         </motion.div>

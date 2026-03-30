@@ -14,20 +14,20 @@ const socialLinks = [
 
 export function Footer() {
   return (
-    <footer className="bg-black">
-      <div className="site-container border-t border-white/10 py-12">
+    <footer className="ink-section-muted border-t border-white/10">
+      <div className="site-container py-12">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-display text-base font-semibold text-white">Sepurux</p>
-            <p className="mt-2 max-w-md text-sm text-neutral-500">
+            <p className="mt-2 max-w-md text-sm text-slate-300">
               Chaos engineering, replay, and policy-aware reliability testing for AI agents.
             </p>
-            <div className="mt-3 space-y-1 text-xs text-neutral-400">
+            <div className="mt-3 space-y-1 text-xs text-slate-400">
               <p>
                 Founder:{" "}
                 <a
                   href={`mailto:${siteConfig.founderEmail}`}
-                  className="text-neutral-300 transition-colors hover:text-white"
+                  className="text-slate-200 transition-colors hover:text-white"
                 >
                   {siteConfig.founderEmail}
                 </a>
@@ -36,7 +36,7 @@ export function Footer() {
                 Support:{" "}
                 <a
                   href={`mailto:${siteConfig.supportEmail}`}
-                  className="text-neutral-300 transition-colors hover:text-white"
+                  className="text-slate-200 transition-colors hover:text-white"
                 >
                   {siteConfig.supportEmail}
                 </a>
@@ -52,7 +52,7 @@ export function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={label}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-neutral-500 transition-colors hover:border-white/20 hover:text-white"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/6 text-slate-300 transition-colors hover:border-white/20 hover:text-white"
                 >
                   <Icon className="h-3.5 w-3.5" />
                 </a>
@@ -60,7 +60,7 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-5 text-sm text-neutral-500">
+          <div className="flex flex-wrap items-center gap-5 text-sm text-slate-400">
             <Link href="/pricing" className="transition-colors hover:text-white">
               Pricing
             </Link>
@@ -85,7 +85,7 @@ export function Footer() {
           </div>
         </div>
 
-        <p className="mt-10 text-xs tracking-[0.14em] text-neutral-600">
+        <p className="mt-10 text-xs tracking-[0.14em] text-slate-500">
           © {new Date().getFullYear()} Sepurux
         </p>
       </div>
