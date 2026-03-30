@@ -25,6 +25,7 @@ import {
   type UserNotificationMetadata,
 } from "@/lib/api";
 import { clearStoredAuthSession } from "@/lib/auth-session";
+import { uiBrandIconUrl } from "@/lib/brand";
 import { formatRelativeDate } from "@/lib/format";
 import { GetCreditsModal } from "@/components/billing/get-credits-modal";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -262,7 +263,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
       {/* left: logo icon + project name/selector */}
       <div className="flex min-w-0 items-center gap-2">
         <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-primary/35 bg-primary/10">
-          <img src="/brand-icon.png" alt="Sepurux" className="h-full w-full object-cover" />
+          <img src={uiBrandIconUrl} alt="Sepurux" className="h-full w-full object-cover" />
         </div>
 
         {showProjectSelector ? (
@@ -473,13 +474,13 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
             className="glass-surface flex cursor-pointer list-none items-center gap-2 px-2.5 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45"
             data-tour="account-menu"
           >
-            <span
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold"
-              style={{
-                background: "rgba(0,229,204,0.15)",
-                color: "var(--accent-teal)",
-              }}
-            >
+              <span
+                className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold"
+                style={{
+                  background: "var(--accent-teal-dim)",
+                  color: "var(--accent-teal)",
+                }}
+              >
               {userInitials}
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -489,7 +490,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
             <div className="flex items-center gap-3 px-4 py-4">
               <span
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold"
-                style={{ background: "rgba(0,229,204,0.15)", color: "var(--accent-teal)" }}
+                style={{ background: "var(--accent-teal-dim)", color: "var(--accent-teal)" }}
               >
                 {userInitials}
               </span>

@@ -14,11 +14,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Line,
   LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -49,11 +46,11 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; data: DashboardData };
 
-const CHART_LINE = "#00e5cc";
-const CHART_GRID = "#1E2936";
-const CHART_AXIS = "#94A3B8";
-const TOOLTIP_BG = "#121821";
-const TOOLTIP_BORDER = "#1E2936";
+const CHART_LINE = "hsl(var(--primary))";
+const CHART_GRID = "hsl(var(--border))";
+const CHART_AXIS = "hsl(var(--muted-foreground))";
+const TOOLTIP_BG = "hsl(var(--card))";
+const TOOLTIP_BORDER = "hsl(var(--border))";
 
 export function DashboardView() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -154,22 +151,9 @@ function DashboardPanels({ data }: { data: DashboardData }) {
     () => buildFailureTaxonomyHeatmap(data.failedAttemptsByRunId),
     [data.failedAttemptsByRunId]
   );
-  const lethalMutations = useMemo(
-    () => buildDashboardLethalMutations(data.runStatsById),
-    [data.runStatsById]
-  );
-  const statusMix = useMemo(() => buildRunStatusMix(dashboardRuns), [dashboardRuns]);
   const failureReasons = useMemo(
     () => buildFailureReasonSeries(data.runStatsById),
     [data.runStatsById]
-  );
-  const failureStepSeries = useMemo(
-    () => buildFirstFailureStepSeries(data.runStatsById),
-    [data.runStatsById]
-  );
-  const attemptVolumeSeries = useMemo(
-    () => buildAttemptVolumeSeries(dashboardRuns, data.runStatsById),
-    [dashboardRuns, data.runStatsById]
   );
   const mostRecentRun = dashboardRuns[0];
   const recentRunInsights = mostRecentRun ? (data.runStatsById[mostRecentRun.run_id]?.insights ?? []) : [];
@@ -215,28 +199,20 @@ function DashboardPanels({ data }: { data: DashboardData }) {
           />
         </div>
 
-        <div className="grid gap-4 grid-cols-[1fr_360px]">
+        <div className="grid gap-4 xl:grid-cols-2">
           <RecentRunsCard runs={dashboardRuns} statsById={data.runStatsById} />
           <PassRateTrendCard series={passRateTrend} />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-3">
+        <div className="grid gap-6 xl:grid-cols-2">
           <TopFragileToolsCard fragility={data.fragility} />
-          <RunStatusMixCard series={statusMix} />
-          <FailureReasonsCard reasons={failureReasons} />
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-2">
-          <MostLethalMutationsCard mutations={lethalMutations} />
-          <FirstFailureStepCard series={failureStepSeries} />
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-2">
-          <RecommendedFixesCard
-            runId={mostRecentRun?.run_id ?? null}
-            insights={recentRunInsights.slice(0, 3)}
-          />
-          <AttemptVolumeCard series={attemptVolumeSeries} />
+          <div className="grid gap-6">
+            <FailureReasonsCard reasons={failureReasons} />
+            <RecommendedFixesCard
+              runId={mostRecentRun?.run_id ?? null}
+              insights={recentRunInsights.slice(0, 3)}
+            />
+          </div>
         </div>
       </TabsContent>
 
@@ -380,7 +356,7 @@ function PassRateTrendCard({ series }: { series: Array<{ name: string; passRate:
                     background: TOOLTIP_BG,
                     border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
-                    color: "#e5e7eb",
+                    color: "hsl(var(--foreground))",
                   }}
                   formatter={(value: number) => `${value.toFixed(0)}%`}
                 />
@@ -437,7 +413,7 @@ function TopFragileToolsCard({ fragility }: { fragility: ToolFragilityResponse }
                     background: TOOLTIP_BG,
                     border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
-                    color: "#e5e7eb",
+                    color: "hsl(var(--foreground))",
                   }}
                 />
                 <Bar dataKey="failures" radius={[6, 6, 0, 0]} fill={CHART_LINE} />
@@ -445,79 +421,6 @@ function TopFragileToolsCard({ fragility }: { fragility: ToolFragilityResponse }
             </ResponsiveContainer>
           )}
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function RunStatusMixCard({
-  series,
-}: {
-  series: Array<{ status: string; count: number }>;
-}) {
-  const total = series.reduce((sum, item) => sum + item.count, 0);
-
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Run Status Mix</CardTitle>
-        <CardDescription>Distribution of recent run statuses in the dashboard sample.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="h-[220px] rounded-md border border-border/60 bg-card/40 p-2">
-          {series.length === 0 ? (
-            <EmptyPanelMessage>No runs available yet.</EmptyPanelMessage>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={series}
-                  dataKey="count"
-                  nameKey="status"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={52}
-                  outerRadius={84}
-                  paddingAngle={2}
-                >
-                  {series.map((entry, index) => (
-                    <Cell key={entry.status} fill={statusColor(entry.status, index)} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: TOOLTIP_BG,
-                    border: `1px solid ${TOOLTIP_BORDER}`,
-                    borderRadius: 12,
-                    color: "#e5e7eb",
-                  }}
-                  formatter={(value: number) => `${value} runs`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-        {series.length > 0 ? (
-          <div className="space-y-2">
-            {series.map((item, index) => {
-              const percent = total > 0 ? Math.round((item.count / total) * 100) : 0;
-              return (
-                <div key={item.status} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: statusColor(item.status, index) }}
-                    />
-                    <span>{item.status}</span>
-                  </div>
-                  <span className="text-foreground">
-                    {item.count} ({percent}%)
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );
@@ -552,90 +455,10 @@ function FailureReasonsCard({ reasons }: { reasons: Array<{ reason: string; coun
                     background: TOOLTIP_BG,
                     border: `1px solid ${TOOLTIP_BORDER}`,
                     borderRadius: 12,
-                    color: "#e5e7eb",
+                    color: "hsl(var(--foreground))",
                   }}
                 />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]} fill={CHART_LINE} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function FirstFailureStepCard({
-  series,
-}: {
-  series: Array<{ step: string; failures: number }>;
-}) {
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>First-Failure Step Distribution</CardTitle>
-        <CardDescription>Where failures happen first in event timelines.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {series.length === 0 ? (
-          <EmptyPanelMessage>No failure step data available yet.</EmptyPanelMessage>
-        ) : (
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                <XAxis dataKey="step" tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip
-                  contentStyle={{
-                    background: TOOLTIP_BG,
-                    border: `1px solid ${TOOLTIP_BORDER}`,
-                    borderRadius: 12,
-                    color: "#e5e7eb",
-                  }}
-                  formatter={(value: number) => `${value} failures`}
-                />
-                <Bar dataKey="failures" radius={[6, 6, 0, 0]} fill={CHART_LINE} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function AttemptVolumeCard({
-  series,
-}: {
-  series: Array<{ run: string; attempts: number; failed: number }>;
-}) {
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Attempt Volume by Run</CardTitle>
-        <CardDescription>Recent run volume split by failed attempts.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {series.length === 0 ? (
-          <EmptyPanelMessage>No attempt metrics available yet.</EmptyPanelMessage>
-        ) : (
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={series} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                <XAxis dataKey="run" tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: CHART_AXIS, fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip
-                  contentStyle={{
-                    background: TOOLTIP_BG,
-                    border: `1px solid ${TOOLTIP_BORDER}`,
-                    borderRadius: 12,
-                    color: "#e5e7eb",
-                  }}
-                />
-                <Bar dataKey="attempts" radius={[6, 6, 0, 0]} fill={CHART_LINE} />
-                <Bar dataKey="failed" radius={[6, 6, 0, 0]} fill="#f43f5e" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -673,54 +496,6 @@ function FailureTaxonomyHeatmap({ heatmap }: { heatmap: ReturnType<typeof buildF
                 <HeatmapRow key={category} category={category} heatmap={heatmap} />
               ))}
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function MostLethalMutationsCard({
-  mutations,
-}: {
-  mutations: Array<{
-    mutation_id: string;
-    failures: number;
-    attempts_hit: number;
-    failure_rate_when_hit: number;
-    top_tools: Array<{ tool: string; count: number }>;
-  }>;
-}) {
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Most Lethal Mutations</CardTitle>
-        <CardDescription>
-          Top mutation_trace contributors to failures across the current dashboard sample.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {mutations.length === 0 ? (
-          <EmptyPanelMessage>Run more attempts to compute lethal mutations.</EmptyPanelMessage>
-        ) : (
-          <div className="space-y-2">
-            {mutations.slice(0, 5).map((item) => (
-              <div
-                key={item.mutation_id}
-                className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-foreground" title={item.mutation_id}>
-                    {item.mutation_id}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.failures}/{item.attempts_hit} •{" "}
-                    {formatPercent(item.failure_rate_when_hit, 1)}
-                  </p>
-                </div>
-                <Badge variant="outline">{item.top_tools[0]?.tool ?? "unknown"}</Badge>
-              </div>
-            ))}
           </div>
         )}
       </CardContent>
@@ -854,16 +629,6 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant="neutral">{status}</Badge>;
 }
 
-function statusColor(status: string, index: number) {
-  const normalized = status.trim().toLowerCase();
-  if (normalized === "completed") return "#00e5cc";
-  if (normalized === "failed") return "#EF4444";
-  if (normalized === "running") return "#3B82F6";
-  if (normalized === "queued") return "#94A3B8";
-  const fallbackPalette = ["#60A5FA", "#F59E0B", "#A78BFA", "#22D3EE", "#94A3B8"];
-  return fallbackPalette[index % fallbackPalette.length];
-}
-
 function DashboardLoading() {
   return (
     <div className="space-y-6">
@@ -882,14 +647,16 @@ function DashboardLoading() {
         <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
         <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
       </div>
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
         <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
-        <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
+        <Card><CardContent className="p-5"><Skeleton className="h-72 w-full" /></CardContent></Card>
+        <div className="grid gap-6">
+          <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
+          <Card><CardContent className="p-5"><Skeleton className="h-64 w-full" /></CardContent></Card>
+        </div>
       </div>
     </div>
   );
@@ -1023,85 +790,6 @@ function buildFailureTaxonomyHeatmap(failedAttemptsByRunId: Record<string, Repla
   return { categories, faultTypes, matrix: normalizedMatrix, maxCount };
 }
 
-function buildDashboardLethalMutations(statsById: Record<string, RunStats>) {
-  const byMutation = new Map<
-    string,
-    {
-      failures: number;
-      attempts_hit: number;
-      topTools: Map<string, number>;
-      topReasons: Map<string, number>;
-    }
-  >();
-
-  for (const stats of Object.values(statsById)) {
-    for (const item of stats.most_lethal_mutations ?? []) {
-      if (!byMutation.has(item.mutation_id)) {
-        byMutation.set(item.mutation_id, {
-          failures: 0,
-          attempts_hit: 0,
-          topTools: new Map(),
-          topReasons: new Map(),
-        });
-      }
-      const current = byMutation.get(item.mutation_id)!;
-      current.failures += item.failures;
-      current.attempts_hit += item.attempts_hit;
-
-      for (const tool of item.top_tools) {
-        current.topTools.set(tool.tool, (current.topTools.get(tool.tool) ?? 0) + tool.count);
-      }
-      for (const reason of item.top_reasons) {
-        current.topReasons.set(
-          reason.reason,
-          (current.topReasons.get(reason.reason) ?? 0) + reason.count
-        );
-      }
-    }
-  }
-
-  return [...byMutation.entries()]
-    .map(([mutation_id, value]) => {
-      const topTools = [...value.topTools.entries()]
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .slice(0, 3)
-        .map(([tool, count]) => ({ tool, count }));
-      const topReasons = [...value.topReasons.entries()]
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .slice(0, 3)
-        .map(([reason, count]) => ({ reason, count }));
-      const failureRate =
-        value.attempts_hit > 0 ? Number((value.failures / value.attempts_hit).toFixed(4)) : 0;
-
-      return {
-        mutation_id,
-        failures: value.failures,
-        attempts_hit: value.attempts_hit,
-        failure_rate_when_hit: failureRate,
-        top_tools: topTools,
-        top_reasons: topReasons,
-      };
-    })
-    .sort(
-      (a, b) =>
-        b.failures - a.failures ||
-        b.failure_rate_when_hit - a.failure_rate_when_hit ||
-        b.attempts_hit - a.attempts_hit ||
-        a.mutation_id.localeCompare(b.mutation_id)
-    );
-}
-
-function buildRunStatusMix(runs: RunMetadata[]) {
-  const byStatus = new Map<string, number>();
-  for (const run of runs) {
-    const status = run.status.trim().toLowerCase() || "unknown";
-    byStatus.set(status, (byStatus.get(status) ?? 0) + 1);
-  }
-  return [...byStatus.entries()]
-    .map(([status, count]) => ({ status, count }))
-    .sort((a, b) => b.count - a.count || a.status.localeCompare(b.status));
-}
-
 function buildFailureReasonSeries(statsById: Record<string, RunStats>) {
   const byReason = new Map<string, number>();
   for (const stats of Object.values(statsById)) {
@@ -1116,41 +804,4 @@ function buildFailureReasonSeries(statsById: Record<string, RunStats>) {
     }))
     .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason))
     .slice(0, 6);
-}
-
-function buildFirstFailureStepSeries(statsById: Record<string, RunStats>) {
-  const byStep = new Map<number, number>();
-  for (const stats of Object.values(statsById)) {
-    for (const item of stats.first_failure_step_distribution ?? []) {
-      byStep.set(item.event_index, (byStep.get(item.event_index) ?? 0) + item.count);
-    }
-  }
-  return [...byStep.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .slice(0, 10)
-    .map(([eventIndex, failures]) => ({ step: `#${eventIndex}`, failures }));
-}
-
-function buildAttemptVolumeSeries(runs: RunMetadata[], statsById: Record<string, RunStats>) {
-  return runs
-    .slice(0, 8)
-    .map((run) => {
-      const stats = statsById[run.run_id];
-      const summary = run.summary as Record<string, unknown> | null;
-      const attemptsFromSummary =
-        typeof summary?.attempt_count === "number" ? summary.attempt_count : null;
-      const failedFromSummary =
-        typeof summary?.failed_count === "number" ? summary.failed_count : null;
-
-      const attempts = stats?.attempts.total ?? attemptsFromSummary ?? 0;
-      const failed = stats?.attempts.failed ?? failedFromSummary ?? 0;
-
-      return {
-        run: shortId(run.run_id, 6),
-        attempts,
-        failed,
-      };
-    })
-    .filter((item) => item.attempts > 0)
-    .reverse();
 }

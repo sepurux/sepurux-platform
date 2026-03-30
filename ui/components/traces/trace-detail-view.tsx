@@ -184,7 +184,7 @@ const STEP_TYPE_CONFIG: Record<string, { iconColor: string; dotBg: string; dotBo
   model:        { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
   agent_output: { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
   tool_call:    { iconColor: "text-blue-400",        dotBg: "bg-blue-400/10",   dotBorder: "border-blue-400/40",   accentBorder: "border-l-blue-400/60" },
-  tool_result:  { iconColor: "text-teal-400",        dotBg: "bg-teal-400/10",   dotBorder: "border-teal-400/40",   accentBorder: "border-l-teal-400/60" },
+  tool_result:  { iconColor: "text-teal",            dotBg: "bg-teal/10",       dotBorder: "border-teal/40",       accentBorder: "border-l-teal/60" },
   mutation:     { iconColor: "text-amber-400",       dotBg: "bg-amber-400/10",  dotBorder: "border-amber-400/40",  accentBorder: "border-l-amber-400/60" },
   failure:      { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },
   error:        { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },

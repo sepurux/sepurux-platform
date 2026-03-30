@@ -177,7 +177,7 @@ export function CounterfactualInspector({
             </div>
 
             {inspector.error ? (
-              <div className="rounded-md border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-100">{inspector.error}</div>
+              <div className="rounded-md border border-danger/20 bg-danger/8 p-4 text-sm text-danger">{inspector.error}</div>
             ) : inspector.attempt ? (
               <div className="rounded-md border border-border/60 bg-muted/15 p-4">
                 <div className="flex flex-wrap items-center gap-2">
