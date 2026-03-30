@@ -5,68 +5,72 @@
 
 :root {
   color-scheme: light;
-  --background: 210 38% 98%;
+  --background: 210 48% 97%;
   --surface: 0 0% 100%;
-  --sidebar: 210 30% 96%;
-  --foreground: 222 47% 11%;
+  --sidebar: 212 42% 94%;
+  --foreground: 221 42% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --border: 214 26% 86%;
-  --input: 210 28% 92%;
-  --ring: 174 100% 36%;
-  --muted: 210 34% 94%;
-  --muted-foreground: 215 16% 40%;
-  --accent: 174 42% 90%;
-  --accent-foreground: 222 47% 11%;
-  --primary: 174 100% 33%;
+  --card-foreground: 221 42% 10%;
+  --border: 214 30% 84%;
+  --input: 212 34% 91%;
+  --ring: 182 83% 36%;
+  --muted: 214 37% 92%;
+  --muted-foreground: 216 20% 36%;
+  --accent: 184 37% 89%;
+  --accent-foreground: 221 42% 10%;
+  --primary: 182 89% 32%;
   --primary-foreground: 0 0% 100%;
   --secondary: 192 72% 44%;
-  --success: 142 70% 36%;
-  --info: 192 72% 44%;
-  --neutral: 215 14% 45%;
+  --success: 146 68% 35%;
+  --info: 193 74% 42%;
+  --neutral: 214 14% 46%;
   --warning: 38 92% 45%;
   --danger: 0 72% 45%;
   --accent-teal: #00a693;
-  --accent-teal-dim: rgba(0, 166, 147, 0.14);
+  --accent-teal-dim: rgba(0, 166, 147, 0.12);
   --body-gradient-1: rgba(0, 166, 147, 0.08);
-  --body-gradient-2: rgba(17, 24, 39, 0.06);
+  --body-gradient-2: rgba(14, 23, 43, 0.05);
   --body-gradient-3: rgba(0, 166, 147, 0.05);
+  --body-gradient-4: rgba(43, 87, 255, 0.04);
   --grid-dot: rgba(15, 23, 42, 0.08);
   --scrollbar-track: rgba(15, 23, 42, 0.05);
   --scrollbar-thumb: rgba(15, 23, 42, 0.24);
+  --noise-texture: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.02) 0, transparent 46%);
 }
 
 .dark {
   color-scheme: dark;
-  --background: 214 27% 6%;
-  --surface: 217 29% 10%;
-  --sidebar: 215 26% 8%;
-  --foreground: 220 16% 93%;
-  --card: 218 30% 13%;
-  --card-foreground: 220 16% 93%;
-  --border: 215 28% 16%;
-  --input: 215 24% 14%;
-  --ring: 174 100% 45%;
-  --muted: 217 23% 14%;
-  --muted-foreground: 215 16% 62%;
-  --accent: 215 22% 18%;
-  --accent-foreground: 220 16% 93%;
-  --primary: 174 100% 45%;
-  --primary-foreground: 180 60% 5%;
-  --secondary: 190 95% 58%;
-  --success: 142 72% 48%;
-  --info: 174 100% 45%;
+  --background: 224 40% 6%;
+  --surface: 222 34% 10%;
+  --sidebar: 225 34% 8%;
+  --foreground: 214 32% 93%;
+  --card: 224 31% 13%;
+  --card-foreground: 214 32% 93%;
+  --border: 221 26% 17%;
+  --input: 221 25% 14%;
+  --ring: 176 92% 48%;
+  --muted: 222 24% 14%;
+  --muted-foreground: 216 18% 64%;
+  --accent: 220 20% 18%;
+  --accent-foreground: 214 32% 93%;
+  --primary: 176 92% 48%;
+  --primary-foreground: 181 64% 7%;
+  --secondary: 193 94% 60%;
+  --success: 145 72% 48%;
+  --info: 176 92% 48%;
   --neutral: 215 20% 65%;
   --warning: 38 92% 50%;
   --danger: 0 84% 60%;
-  --accent-teal: #00e5cc;
-  --accent-teal-dim: rgba(0, 229, 204, 0.12);
-  --body-gradient-1: rgba(0, 229, 204, 0.10);
-  --body-gradient-2: rgba(0, 229, 204, 0.05);
-  --body-gradient-3: rgba(0, 229, 204, 0.03);
+  --accent-teal: #11f4dc;
+  --accent-teal-dim: rgba(17, 244, 220, 0.14);
+  --body-gradient-1: rgba(17, 244, 220, 0.11);
+  --body-gradient-2: rgba(15, 74, 132, 0.11);
+  --body-gradient-3: rgba(17, 244, 220, 0.05);
+  --body-gradient-4: rgba(73, 114, 255, 0.08);
   --grid-dot: rgba(255, 255, 255, 0.035);
   --scrollbar-track: rgba(255, 255, 255, 0.02);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+  --noise-texture: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.025) 0, transparent 46%);
 }
 
 * {
@@ -80,24 +84,77 @@ body {
 
 body {
   @apply bg-background text-foreground antialiased;
+  font-family: var(--font-sans), "Space Grotesk", "Inter", "Segoe UI", sans-serif;
   background-image:
-    radial-gradient(circle at 12% 0%, var(--body-gradient-1), transparent 34%),
-    radial-gradient(circle at 88% 10%, var(--body-gradient-2), transparent 28%),
-    linear-gradient(to bottom, var(--body-gradient-3), transparent 140px);
+    radial-gradient(circle at 12% -8%, var(--body-gradient-1), transparent 34%),
+    radial-gradient(circle at 92% 6%, var(--body-gradient-2), transparent 28%),
+    radial-gradient(circle at 50% 120%, var(--body-gradient-4), transparent 38%),
+    linear-gradient(to bottom, var(--body-gradient-3), transparent 160px);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.6;
+  background-image: var(--noise-texture);
+  mix-blend-mode: soft-light;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, hsl(var(--primary)) 35%, transparent);
+    color: hsl(var(--foreground));
+  }
 }
 
 @layer components {
   .panel-surface {
-    @apply rounded-[10px] bg-card shadow-panel backdrop-blur;
-    border: 1px solid hsl(var(--border));
+    @apply rounded-[14px] bg-card shadow-panel backdrop-blur-xl;
+    border: 1px solid hsl(var(--border) / 0.78);
+    background-color: hsl(var(--card) / 0.88);
+    box-shadow:
+      0 22px 44px rgba(1, 5, 16, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
+
   .dark .panel-surface {
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 24px 54px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .glass-surface {
+    @apply rounded-xl border bg-card backdrop-blur-xl;
+    border-color: hsl(var(--border) / 0.72);
+    background-color: hsl(var(--card) / 0.65);
+  }
+
+  .app-shell-backdrop {
+    background-image:
+      linear-gradient(to bottom, hsl(var(--background) / 0.92), hsl(var(--background) / 0.98)),
+      radial-gradient(circle at 20% 12%, var(--body-gradient-1), transparent 26%),
+      radial-gradient(circle at 90% 4%, var(--body-gradient-2), transparent 22%);
   }
 
   .faint-grid {
     background-size: 18px 18px;
     background-image: radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 0);
+  }
+
+  .soft-divider {
+    border-color: hsl(var(--border) / 0.66);
   }
 }
 
@@ -113,4 +170,14 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel-surface,
+  .glass-surface {
+    transition:
+      border-color 160ms ease,
+      box-shadow 220ms ease,
+      transform 220ms ease;
+  }
 }

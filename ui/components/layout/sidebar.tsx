@@ -151,16 +151,33 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
   }, [groups, pathname]);
 
   return (
-    <aside className="relative z-30 hidden h-screen w-[220px] shrink-0 overflow-hidden border-r border-border bg-sidebar/95 px-2 py-3 backdrop-blur xl:flex xl:flex-col">
-      <nav className="relative z-30 flex-1 space-y-0.5 overflow-y-auto pointer-events-auto">
+    <aside className="relative z-30 hidden h-screen w-[244px] shrink-0 overflow-hidden border-r border-border/75 bg-sidebar/72 px-3 py-4 backdrop-blur-2xl xl:flex xl:flex-col">
+      <div className="mb-4 rounded-xl border border-border/70 bg-card/50 p-3 shadow-insetSoft">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-md border border-primary/35 bg-primary/10">
+            <img src="/brand-icon.png" alt="Sepurux" className="h-full w-full object-cover" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+              Sepurux
+            </p>
+            <p className="truncate text-sm font-semibold text-foreground">Control Center</p>
+          </div>
+        </div>
+        <p className="mt-3 truncate text-xs text-muted-foreground">
+          {authSession?.project_name ?? "Workspace"}
+        </p>
+      </div>
+
+      <nav className="relative z-30 flex-1 space-y-1 overflow-y-auto pointer-events-auto pr-1">
         {dashboardItem ? (
           <Link
             href={dashboardItem.href}
             className={cn(
-              "relative z-30 group flex h-10 items-center gap-2.5 rounded-md border-l-2 pl-3 pr-2 text-[14px] transition-colors duration-150",
+              "relative z-30 group flex h-10 items-center gap-2.5 rounded-lg border pl-3 pr-2 text-[13px] transition-all duration-150",
               pathname === dashboardItem.href
-                ? "border-l-primary bg-accent text-foreground"
-                : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
+                ? "border-primary/45 bg-primary/12 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]"
+                : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/50 hover:text-foreground",
             )}
           >
             <dashboardItem.icon className={cn("h-4 w-4 shrink-0", pathname === dashboardItem.href ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
@@ -181,10 +198,10 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
             <div key={group.section} className="space-y-0.5">
               <div
                 className={cn(
-                  "flex items-center rounded-md border-l-2 text-[14px] transition-colors duration-150",
+                  "flex items-center rounded-lg border text-[13px] transition-all duration-150",
                   active
-                    ? "border-l-primary bg-accent text-foreground"
-                    : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
+                    ? "border-primary/45 bg-primary/12 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]"
+                    : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/50 hover:text-foreground",
                 )}
               >
                 <Link
@@ -221,7 +238,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
               </div>
 
               {expanded ? (
-                <div className="relative z-30 space-y-0.5 pl-5">
+                <div className="relative z-30 space-y-0.5 pl-4">
                   {group.children.map((child) => {
                     const childActive =
                       pathname === child.href || pathname.startsWith(child.href + "/");
@@ -230,10 +247,10 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
                         key={child.href}
                         href={child.href}
                         className={cn(
-                          "relative z-30 block rounded-md px-3 py-2 text-[13px] transition-colors duration-150",
+                          "relative z-30 block rounded-md border border-transparent px-3 py-2 text-[12px] transition-colors duration-150",
                           childActive
-                            ? "bg-accent text-foreground"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                            ? "border-primary/30 bg-primary/10 text-foreground"
+                            : "text-muted-foreground hover:border-border/65 hover:bg-accent/45 hover:text-foreground",
                         )}
                       >
                         {child.label}
@@ -256,10 +273,10 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
               key={item.label}
               href={item.href}
               className={cn(
-                "relative z-30 group flex h-10 items-center gap-2.5 rounded-md border-l-2 pl-3 pr-2 text-[14px] transition-colors duration-150",
+                "relative z-30 group flex h-10 items-center gap-2.5 rounded-lg border pl-3 pr-2 text-[13px] transition-all duration-150",
                 active
-                  ? "border-l-primary bg-accent text-foreground"
-                  : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
+                  ? "border-primary/45 bg-primary/12 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]"
+                  : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/50 hover:text-foreground",
               )}
             >
               <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />

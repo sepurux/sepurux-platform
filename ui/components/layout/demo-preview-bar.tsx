@@ -78,7 +78,7 @@ export function DemoPreviewBar() {
 
   if (isBootstrapping) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-foreground/90 px-3 py-1.5 text-xs text-background shadow-lg backdrop-blur">
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-primary/35 bg-card/92 px-3 py-1.5 text-xs font-medium text-foreground shadow-panel backdrop-blur-xl">
         <Loader2 className="h-3 w-3 animate-spin text-teal" />
         <span>Setting up demo…</span>
       </div>

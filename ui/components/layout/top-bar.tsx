@@ -247,24 +247,17 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const creditBalance = authSession?.credits_balance;
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border/70 bg-background/72 px-4 backdrop-blur-2xl md:px-6">
       {/* left: logo icon + project name/selector */}
       <div className="flex min-w-0 items-center gap-2">
-        <div
-          className="h-7 w-7 shrink-0 overflow-hidden rounded-md"
-          style={{
-            borderColor: "rgba(0,229,204,0.25)",
-            background: "rgba(0,229,204,0.08)",
-            border: "1px solid rgba(0,229,204,0.25)",
-          }}
-        >
+        <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-primary/35 bg-primary/10">
           <img src="/brand-icon.png" alt="Sepurux" className="h-full w-full object-cover" />
         </div>
 
         {showProjectSelector ? (
-          <label className="flex min-w-0 items-center gap-1 cursor-pointer">
+          <label className="glass-surface flex min-w-0 cursor-pointer items-center gap-1 px-2.5 py-1">
             <select
-              className="min-w-0 max-w-[160px] truncate bg-transparent text-sm font-semibold text-foreground outline-none"
+              className="min-w-0 max-w-[170px] truncate bg-transparent text-sm font-semibold text-foreground outline-none"
               value={selectedProjectId}
               onChange={(event) => { void handleProjectChange(event.target.value); }}
               disabled={!projects.length || projectSwitching}
@@ -293,8 +286,8 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
       </div>
 
       {/* center: tab pill group */}
-      <div className="flex flex-1 items-center justify-center overflow-x-auto">
-        <div className="inline-flex items-center gap-0.5 rounded-full bg-muted/70 p-1">
+      <div className="flex flex-1 items-center justify-center overflow-x-auto px-2">
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-border/70 bg-card/65 p-1.5 shadow-insetSoft">
           {visibleTabs.map((tab) => {
             const active = pathname === tab.href || (tab.href !== "/dashboard" && pathname.startsWith(tab.href + "/"));
             return (
@@ -302,10 +295,10 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "inline-flex h-8 items-center rounded-full px-4 text-sm transition-colors duration-150",
+                  "inline-flex h-8 items-center rounded-full px-4 text-sm font-medium transition-all duration-150",
                   active
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-primary/12 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.24)]"
+                    : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
                 )}
               >
                 {tab.label}
@@ -322,10 +315,10 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
           <button
             onClick={() => setCreditsModalOpen(true)}
             className={cn(
-              "hidden items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors duration-150 hover:bg-accent lg:flex",
+              "glass-surface hidden items-center gap-1.5 px-3 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45 lg:flex",
               authSession?.is_low_credit
-                ? "border-amber-400/40 bg-amber-500/10 text-amber-700 dark:text-amber-100"
-                : "border-border text-muted-foreground"
+                ? "border-amber-400/45 bg-amber-500/12 text-amber-700 dark:text-amber-100"
+                : "text-muted-foreground"
             )}
           >
             <Coins
@@ -340,7 +333,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         {canManageWorkspace ? (
           <Link
             href="/profile#projects"
-            className="hidden items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:border-primary hover:text-foreground lg:flex"
+            className="glass-surface hidden items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:border-primary/45 hover:bg-accent/45 hover:text-foreground lg:flex"
           >
             <Plus className="h-3.5 w-3.5" />
             <span className="hidden xl:inline">New Project</span>
@@ -351,7 +344,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
         {/* bell */}
         <details className="group relative">
-          <summary className="relative inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md border border-border bg-muted/50 text-muted-foreground transition-colors duration-150 hover:text-foreground">
+          <summary className="glass-surface relative inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-foreground">
             <Bell className="h-4 w-4" />
             {notificationsUnreadCount > 0 ? (
               <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
@@ -359,7 +352,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               </span>
             ) : null}
           </summary>
-          <div className="absolute right-0 mt-2 w-[360px] overflow-hidden rounded-xl border border-border bg-card shadow-panel">
+          <div className="absolute right-0 mt-2 w-[360px] overflow-hidden rounded-xl border border-border/75 bg-card/95 shadow-panel backdrop-blur-xl">
             <div className="flex items-center justify-between px-4 py-3">
               <p className="text-sm font-semibold text-foreground">Notifications</p>
               <button
@@ -458,7 +451,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
         {/* user menu */}
         <details className="group relative">
-          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 py-1.5 text-sm transition-colors duration-150 hover:bg-accent">
+          <summary className="glass-surface flex cursor-pointer list-none items-center gap-2 px-2.5 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45">
             <span
               className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold"
               style={{
@@ -470,7 +463,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
           </summary>
-          <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-border bg-card shadow-panel">
+          <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-border/75 bg-card/95 shadow-panel backdrop-blur-xl">
             {/* user info */}
             <div className="flex items-center gap-3 px-4 py-4">
               <span
