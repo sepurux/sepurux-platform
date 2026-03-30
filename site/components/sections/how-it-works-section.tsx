@@ -38,14 +38,14 @@ const itemVariants = {
 
 export function HowItWorksSection() {
   return (
-    <section className="bg-black py-24 sm:py-32">
+    <section className="bg-[--surface-2] py-24 sm:py-32">
       <div className="site-container">
         <div className="mx-auto mb-16 max-w-3xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">How it works</p>
-          <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
+          <p className="section-kicker">How it works</p>
+          <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em]" style={{ color: "var(--text-primary)" }}>
             Capture, mutate, and gate in three steps.
           </h2>
-          <p className="mt-4 text-base leading-8 text-neutral-400">
+          <p className="mt-4 text-base leading-8 text-gray-500">
             A clean flow your engineering team can adopt without changing your whole stack.
           </p>
         </div>
@@ -62,26 +62,27 @@ export function HowItWorksSection() {
               <motion.div
                 key={step.title}
                 variants={itemVariants}
-                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition-all duration-300 hover:border-[rgba(0,229,204,0.28)] hover:bg-white/[0.05]"
+                className="group relative overflow-hidden rounded-2xl border border-[--border] bg-white p-6 transition-all duration-300 hover:border-l-2 hover:border-l-[--color-accent]"
+                style={{ boxShadow: "var(--shadow-card)" }}
               >
                 <div className="mb-4 flex items-center justify-between">
                   <div
-                    className="flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold tabular-nums"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold font-mono tabular-nums"
                     style={{
-                      borderColor: "rgba(0,229,204,0.35)",
-                      background: "rgba(0,229,204,0.08)",
-                      color: "var(--accent-teal)",
+                      borderColor: "rgba(var(--accent-rgb), 0.18)",
+                      background: "rgba(var(--accent-rgb), 0.08)",
+                      color: "var(--color-accent)",
                     }}
                   >
                     {String(index + 1).padStart(2, "0")}
                   </div>
                   {index < steps.length - 1 ? (
-                    <ArrowRight className="h-4 w-4 text-white/30 group-hover:text-[var(--accent-teal)]" />
+                    <ArrowRight className="h-4 w-4 text-gray-300 transition-colors group-hover:text-[var(--color-accent)]" />
                   ) : null}
                 </div>
 
-                <h3 className="font-display text-xl font-semibold text-white">{step.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-neutral-300">{step.description}</p>
+                <h3 className="font-display text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{step.title}</h3>
+                <p className="mt-2 text-sm leading-7 text-gray-500">{step.description}</p>
               </motion.div>
             ))}
           </motion.div>

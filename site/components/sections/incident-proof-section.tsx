@@ -23,14 +23,17 @@ const incidents = [
 
 export function IncidentProofSection() {
   return (
-    <section className="bg-neutral-950 py-24 sm:py-32">
+    <section className="bg-[--surface-2] py-24 sm:py-32">
       <div className="site-container">
         <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Proof</p>
-          <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
+          <p className="section-kicker">Proof</p>
+          <h2
+            className="mt-4 font-display text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.05] tracking-[-0.03em]"
+            style={{ color: "var(--text-primary)" }}
+          >
             What teams catch before production.
           </h2>
-          <p className="mt-4 text-base leading-8 text-neutral-400">
+          <p className="mt-4 text-base leading-8 text-gray-500">
             Real classes of regressions that are difficult to detect with unit tests alone.
           </p>
         </div>
@@ -39,14 +42,28 @@ export function IncidentProofSection() {
           {incidents.map((incident) => (
             <article
               key={incident.title}
-              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition-colors hover:border-[rgba(0,229,204,0.28)]"
+              className="rounded-xl border border-[--border] bg-white p-5 transition-colors"
+              style={{
+                borderLeftWidth: "4px",
+                borderLeftColor: "var(--color-accent)",
+                boxShadow: "var(--shadow-card)",
+              }}
             >
-              <h3 className="font-display text-xl font-semibold text-white">{incident.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-neutral-300">{incident.impact}</p>
-              <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">Detected by</p>
-                <p className="text-sm text-neutral-200">{incident.foundBy}</p>
-                <p className="text-sm text-neutral-400">{incident.action}</p>
+              <h3
+                className="font-display text-xl font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {incident.title}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-gray-500">{incident.impact}</p>
+              <div className="mt-5 space-y-3 border-t border-[--border] pt-4">
+                <p className="text-xs font-mono uppercase tracking-[0.18em] text-gray-400">
+                  Detected by
+                </p>
+                <p className="text-sm font-medium text-gray-700">{incident.foundBy}</p>
+                <p className="mt-2 text-xs" style={{ color: "var(--color-accent)" }}>
+                  {incident.action}
+                </p>
               </div>
             </article>
           ))}

@@ -107,9 +107,9 @@ export default function DocsPage() {
               "Capture a trace, create a pack with Basic Builder, and run it from the Mutation Packs page.",
             ],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>
@@ -142,10 +142,10 @@ export default function DocsPage() {
             href={referenceUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:bg-white/[0.06]"
+            className="rounded-2xl border border-[--border] bg-white shadow-sm p-5 transition-colors hover:bg-[--surface-2]"
           >
-            <p className="text-sm font-semibold text-white">Interactive API Docs</p>
-            <p className="mt-2 text-sm leading-6 text-neutral-300">
+            <p className="text-sm font-semibold text-[--text-primary]">Interactive API Docs</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               Swagger-style endpoint documentation for the live hosted API.
             </p>
           </a>
@@ -153,18 +153,18 @@ export default function DocsPage() {
             href={openApiUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:bg-white/[0.06]"
+            className="rounded-2xl border border-[--border] bg-white shadow-sm p-5 transition-colors hover:bg-[--surface-2]"
           >
-            <p className="text-sm font-semibold text-white">OpenAPI Schema</p>
-            <p className="mt-2 text-sm leading-6 text-neutral-300">
+            <p className="text-sm font-semibold text-[--text-primary]">OpenAPI Schema</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               Raw schema for client generation and contract validation.
             </p>
           </a>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm leading-7 text-neutral-300">
-          Need help designing a rollout path for your team? Visit <Link href="/book-demo" className="text-white underline underline-offset-4">Book a Demo</Link> or email{" "}
-          <a href={`mailto:${siteConfig.supportEmail}`} className="text-white underline underline-offset-4">
+        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-5 text-sm leading-7 text-slate-600">
+          Need help designing a rollout path for your team? Visit <Link href="/book-demo" className="text-[--text-primary] underline underline-offset-4">Book a Demo</Link> or email{" "}
+          <a href={`mailto:${siteConfig.supportEmail}`} className="text-[--text-primary] underline underline-offset-4">
             {siteConfig.supportEmail}
           </a>
           .
