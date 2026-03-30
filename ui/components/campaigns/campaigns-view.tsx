@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { api, type CampaignMetadata } from "@/lib/api";
+import { api, type CampaignMetadata, type MutationPackMetadata } from "@/lib/api";
 import { IdPill } from "@/components/ui/id-pill";
-import { formatRelativeDate, shortId } from "@/lib/format";
+import { formatRelativeDate } from "@/lib/format";
 import { useAuthSession } from "@/lib/use-auth-session";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -29,6 +30,7 @@ export function CampaignsView() {
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
+  const [packNames, setPackNames] = useState<Record<string, string>>({});
 
   const canCreateCampaigns = authSession?.permissions.can_create_campaigns ?? false;
 
@@ -47,6 +49,15 @@ export function CampaignsView() {
         }
         setState({ status: "ready", campaigns });
         setHasNext(campaigns.length === PAGE_SIZE);
+        // Resolve pack names for all campaigns that have a pack
+        const packIds = [...new Set(campaigns.map((c) => c.mutation_pack_id).filter(Boolean))] as string[];
+        if (packIds.length > 0) {
+          void api.listMutationPacks({ include_system: true }).then((packs: MutationPackMetadata[]) => {
+            const map: Record<string, string> = {};
+            for (const p of packs) map[p.mutation_pack_id] = p.name;
+            setPackNames(map);
+          }).catch(() => null);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -208,19 +219,28 @@ export function CampaignsView() {
                       );
                     }
 
+                    const isBootstrap = campaign.name.startsWith("Bootstrap · ");
+                    const displayName = isBootstrap ? campaign.name.replace("Bootstrap · ", "") : campaign.name;
                     return (
                     <TableRow key={campaign.campaign_id}>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         <IdPill id={campaign.campaign_id} />
                       </TableCell>
                       <TableCell className="font-medium text-foreground">
-                        <Link href={`/campaigns/${campaign.campaign_id}`} className="hover:text-info hover:underline">
-                          {campaign.name}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/campaigns/${campaign.campaign_id}`} className="hover:text-info hover:underline">
+                            {displayName}
+                          </Link>
+                          {isBootstrap && (
+                            <Badge variant="neutral" className="text-xs font-normal">auto-generated</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{campaign.status}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {campaign.mutation_pack_id ? shortId(campaign.mutation_pack_id, 16) : "--"}
+                      <TableCell className="text-xs text-muted-foreground">
+                        {campaign.mutation_pack_id
+                          ? (packNames[campaign.mutation_pack_id] ?? <span className="font-mono">{campaign.mutation_pack_id.slice(0, 8)}…</span>)
+                          : "—"}
                       </TableCell>
                       {canCreateCampaigns ? (
                         <TableCell className="text-right">

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCcw, ShieldCheck } from "lucide-react";
 
 import {
   api,
@@ -43,6 +43,7 @@ type LoadState =
       baselineRun: RunMetadata | null;
       baselineStats: RunStats | null;
     };
+type RunType = "ci_batch" | "template_replay" | "manual";
 
 export function RunDetailView({ runId }: { runId: string }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -161,17 +162,53 @@ function RunDetailPanels({
     () => derivePolicyViolationCount(run, policyEvents),
     [run, policyEvents]
   );
+  const runType = runTypeFromSummary(run.summary);
+  const [policyPackName, setPolicyPackName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!run.policy_pack_id) return;
+    void api.getPolicyPack(run.policy_pack_id).then((p) => setPolicyPackName(p.name)).catch(() => null);
+  }, [run.policy_pack_id]);
+
+  // Detect when all failures are replay tool mismatches — a config issue, not agent failure
+  const replayContractFailures = useMemo(() =>
+    attempts.filter((a) => a.failure_reason?.includes("replay_contract_invalid_tool") || a.failure_reason?.includes("invalid_tool")),
+    [attempts]
+  );
+  const hasReplayContractIssue = replayContractFailures.length > 0 && replayContractFailures.length === attempts.filter((a) => a.result === "failed").length;
 
   return (
     <>
+      {hasReplayContractIssue && (
+        <div className="flex items-start gap-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <div>
+            <p className="font-medium text-amber-100">Mutation pack incompatible with this trace</p>
+            <p className="mt-0.5 text-amber-300/80">
+              All {replayContractFailures.length} attempt{replayContractFailures.length !== 1 ? "s" : ""} failed because the selected mutation pack targets tools that don't appear in this trace.
+              The reliability score is unaffected — no agent behaviour was tested.
+              Fix: select a mutation pack whose tools match this trace, or run without a pack to use baseline only.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-3">
-            <span>Run Summary</span>
+            <span className="flex items-center gap-2">
+              <span>Run Summary</span>
+              <RunTypeBadge type={runType} />
+            </span>
             <StatusBadge status={run.status} />
           </CardTitle>
           <CardDescription>
-            Campaign {shortId(run.campaign_id, 12)} • Trace {shortId(run.trace_id, 12)} • {formatRelativeDate(run.created_at)}
+            Campaign {shortId(run.campaign_id, 12)} • Trace {shortId(run.trace_id, 12)} • {runTypeLabel(runType)} • {formatRelativeDate(run.created_at)}
+            {policyPackName && (
+              <span className="ml-3 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <ShieldCheck className="h-3 w-3" /> {policyPackName}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -697,6 +734,25 @@ function sourceRunIdFromSummary(summary: Record<string, unknown> | null): string
   return typeof sourceRunId === "string" && sourceRunId ? sourceRunId : null;
 }
 
+function runTypeFromSummary(summary: Record<string, unknown> | null): RunType {
+  const summaryObj = summary ?? {};
+  const batchId = summaryObj.ci_batch_id;
+  if (typeof batchId === "string" && batchId.trim()) {
+    return "ci_batch";
+  }
+  const templateApplication = summaryObj.template_application;
+  if (templateApplication && typeof templateApplication === "object") {
+    return "template_replay";
+  }
+  return "manual";
+}
+
+function runTypeLabel(runType: RunType): string {
+  if (runType === "ci_batch") return "CI batch";
+  if (runType === "template_replay") return "Template replay";
+  return "Manual run";
+}
+
 function RunComparisonCard({
   baselineRun,
   baselineStats,
@@ -922,6 +978,12 @@ function StatusBadge({ status }: { status: string }) {
   if (normalized === "running") return <Badge variant="info">running</Badge>;
   if (normalized === "queued") return <Badge variant="neutral">queued</Badge>;
   return <Badge variant="neutral">{status}</Badge>;
+}
+
+function RunTypeBadge({ type }: { type: RunType }) {
+  if (type === "ci_batch") return <Badge variant="info">CI batch</Badge>;
+  if (type === "template_replay") return <Badge variant="warning">Template replay</Badge>;
+  return <Badge variant="outline">Manual run</Badge>;
 }
 
 function RunDetailSkeleton() {

@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Archive, ArrowLeft, Play, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
 
-import { api, type CampaignMetadata, type MutationPackMetadata, type QualityContract, type TraceMetadata } from "@/lib/api";
+import {
+  ApiError,
+  api,
+  type CIRunPreflight,
+  type CampaignMetadata,
+  type MutationPackMetadata,
+  type QualityContract,
+  type TraceMetadata,
+} from "@/lib/api";
 import { IdPill } from "@/components/ui/id-pill";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +30,53 @@ type LoadState =
 type Tab = "scenarios" | "contract" | "overview";
 
 type RunModal = { open: false } | { open: true; minPassRate: string; maxUnsafe: string; maxFailures: string };
-type RunResult = { batch_id: string; trace_count: number };
+type RunResult = { batch_id: string; trace_count: number; warnings: { code: string; message: string; hint?: string }[] };
+type ParsedRunThresholds = { min_pass_rate: number; max_unsafe: number; max_failures: number };
+
+function parseRunThresholds(runModal: RunModal): ParsedRunThresholds | null {
+  if (!runModal.open) {
+    return null;
+  }
+  const minPassRate = Number.parseFloat(runModal.minPassRate);
+  const maxUnsafe = Number.parseInt(runModal.maxUnsafe, 10);
+  const maxFailures = Number.parseInt(runModal.maxFailures, 10);
+  if (!Number.isFinite(minPassRate) || minPassRate < 0 || minPassRate > 100) {
+    return null;
+  }
+  if (!Number.isFinite(maxUnsafe) || maxUnsafe < 0) {
+    return null;
+  }
+  if (!Number.isFinite(maxFailures) || maxFailures < 0) {
+    return null;
+  }
+  return {
+    min_pass_rate: minPassRate / 100,
+    max_unsafe: maxUnsafe,
+    max_failures: maxFailures,
+  };
+}
+
+function formatPreflightError(error: unknown): string {
+  if (error instanceof ApiError && error.body && typeof error.body === "object") {
+    const detail = (error.body as { detail?: unknown }).detail;
+    if (detail && typeof detail === "object") {
+      const message =
+        typeof (detail as { message?: unknown }).message === "string"
+          ? (detail as { message: string }).message
+          : "CI preflight failed";
+      const blockers = Array.isArray((detail as { blockers?: unknown }).blockers)
+        ? ((detail as { blockers: Array<{ message?: unknown }> }).blockers ?? [])
+            .map((item) => (typeof item.message === "string" ? item.message : null))
+            .filter((item): item is string => Boolean(item))
+        : [];
+      if (blockers.length > 0) {
+        return `${message}: ${blockers.join(" | ")}`;
+      }
+      return message;
+    }
+  }
+  return error instanceof Error ? error.message : "Failed to trigger run";
+}
 
 export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const router = useRouter();
@@ -32,8 +86,66 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const [triggering, setTriggering] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [preflight, setPreflight] = useState<CIRunPreflight | null>(null);
+  const [preflightLoading, setPreflightLoading] = useState(false);
+  const [preflightError, setPreflightError] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [archiveConfirm, setArchiveConfirm] = useState(false);
+  const parsedThresholds = useMemo(() => parseRunThresholds(runModal), [runModal]);
+  const hasPreflightBlockers = (preflight?.blockers.length ?? 0) > 0;
+  const runBlocked =
+    !runModal.open ||
+    parsedThresholds === null ||
+    preflightLoading ||
+    preflight === null ||
+    !preflight.ready ||
+    hasPreflightBlockers;
+
+  useEffect(() => {
+    if (!runModal.open) {
+      setPreflight(null);
+      setPreflightError(null);
+      setPreflightLoading(false);
+      return;
+    }
+    if (parsedThresholds === null) {
+      setPreflight(null);
+      setPreflightError(null);
+      setPreflightLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setPreflightLoading(true);
+      setPreflightError(null);
+      void api.preflightCiRun({
+        campaign_id: campaignId,
+        thresholds: parsedThresholds,
+      })
+        .then((result) => {
+          if (!cancelled) {
+            setPreflight(result);
+          }
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setPreflight(null);
+            setPreflightError(error instanceof Error ? error.message : "Failed to run preflight checks");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setPreflightLoading(false);
+          }
+        });
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [campaignId, runModal.open, parsedThresholds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,22 +185,18 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   }
 
   async function triggerRun() {
-    if (!runModal.open) return;
+    if (!runModal.open || parsedThresholds === null || hasPreflightBlockers) return;
     setTriggering(true);
     setRunError(null);
     try {
       const result = await api.triggerCiRun({
         campaign_id: campaignId,
-        thresholds: {
-          min_pass_rate: parseFloat(runModal.minPassRate) / 100,
-          max_unsafe: parseInt(runModal.maxUnsafe, 10),
-          max_failures: parseInt(runModal.maxFailures, 10),
-        },
+        thresholds: parsedThresholds,
       });
-      setRunResult({ batch_id: result.batch_id, trace_count: result.trace_count });
+      setRunResult({ batch_id: result.batch_id, trace_count: result.trace_count, warnings: result.warnings ?? [] });
       setRunModal({ open: false });
     } catch (err) {
-      setRunError(err instanceof Error ? err.message : "Failed to trigger run");
+      setRunError(formatPreflightError(err));
     } finally {
       setTriggering(false);
     }
@@ -146,7 +254,12 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
               </Button>
             )}
             <Button
-              onClick={() => setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" })}
+              onClick={() => {
+                setRunError(null);
+                setPreflight(null);
+                setPreflightError(null);
+                setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" });
+              }}
               className="gap-1.5"
             >
               <Play className="h-3.5 w-3.5" />
@@ -158,19 +271,31 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
 
       {/* Run result banner */}
       {runResult && (
-        <div className="flex items-center justify-between rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-          <span>
-            Batch triggered — <span className="font-mono">{runResult.trace_count}</span> scenario{runResult.trace_count !== 1 ? "s" : ""} queued.
-          </span>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-emerald-400">{runResult.batch_id}</span>
-            <Button size="sm" variant="outline" onClick={() => router.push("/runs")}>
-              View Runs
-            </Button>
-            <button onClick={() => setRunResult(null)} className="text-emerald-400 hover:text-emerald-200">
-              <X className="h-4 w-4" />
-            </button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <span>
+              Batch triggered — <span className="font-mono">{runResult.trace_count}</span> scenario{runResult.trace_count !== 1 ? "s" : ""} queued.
+            </span>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs text-emerald-400">{runResult.batch_id}</span>
+              <Button size="sm" variant="outline" onClick={() => router.push("/runs")}>
+                View Runs
+              </Button>
+              <button onClick={() => setRunResult(null)} className="text-emerald-400 hover:text-emerald-200">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
+          {runResult.warnings.length > 0 && (
+            <div className="space-y-1">
+              {runResult.warnings.map((w) => (
+                <div key={w.code} className="rounded-md border border-amber-400/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+                  <span className="font-medium">{w.message}</span>
+                  {w.hint && <span className="ml-2 text-amber-300/70">{w.hint}</span>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -216,11 +341,105 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
                 />
               </label>
             </div>
+            <div className="mt-4 space-y-2">
+              {parsedThresholds === null ? (
+                <div className="rounded border border-amber-400/20 bg-amber-500/10 p-2.5 text-xs text-amber-200">
+                  Use valid numeric thresholds to run CI preflight checks.
+                </div>
+              ) : preflightLoading ? (
+                <div className="rounded border border-info/20 bg-info/10 p-2.5 text-xs text-info">
+                  Running CI preflight checks…
+                </div>
+              ) : preflightError ? (
+                <div className="rounded border border-rose-400/20 bg-rose-500/10 p-2.5 text-xs text-rose-200">
+                  {preflightError}
+                </div>
+              ) : preflight ? (
+                <div className="space-y-2">
+                  <div className="rounded border border-border/60 bg-muted/20 p-2.5 text-xs text-muted-foreground">
+                    <span className="text-foreground">{preflight.trace_count}</span> trace{preflight.trace_count === 1 ? "" : "s"} ×{" "}
+                    <span className="text-foreground">{preflight.attempts_per_trace}</span> attempts/trace ={" "}
+                    <span className="font-medium text-foreground">{preflight.estimated_attempts_total} total attempts</span>
+                  </div>
+                  {preflight.blockers.length > 0 ? (
+                    <div className="rounded border border-rose-400/20 bg-rose-500/10 p-2.5 text-xs text-rose-200">
+                      <p className="font-semibold text-rose-100">Run blocked until these are fixed:</p>
+                      <ul className="mt-1 list-disc space-y-1 pl-4">
+                        {preflight.blockers.map((issue) => (
+                          <li key={`${issue.code}-${issue.message}`}>
+                            {issue.message}
+                            {issue.hint ? <span className="block text-rose-300/90">{issue.hint}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="rounded border border-emerald-400/20 bg-emerald-500/10 p-2.5 text-xs text-emerald-200">
+                      Preflight passed. This campaign is ready to run.
+                    </div>
+                  )}
+                  {preflight.warnings.length > 0 ? (
+                    <div className="rounded border border-amber-400/20 bg-amber-500/10 p-2.5 text-xs text-amber-200">
+                      <p className="font-semibold text-amber-100">Warnings:</p>
+                      <ul className="mt-1 list-disc space-y-1 pl-4">
+                        {preflight.warnings.map((issue) => (
+                          <li key={`${issue.code}-${issue.message}`}>
+                            {issue.message}
+                            {issue.hint ? <span className="block text-amber-300/90">{issue.hint}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {preflight.recommended_thresholds ? (
+                    <div className="flex items-center justify-between rounded border border-border/60 bg-muted/20 p-2.5 text-xs text-muted-foreground">
+                      <span>
+                        Recommended: {Math.round(preflight.recommended_thresholds.min_pass_rate * 100)}% pass,{" "}
+                        {preflight.recommended_thresholds.max_unsafe} unsafe,{" "}
+                        {preflight.recommended_thresholds.max_failures ?? 0} failures
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setRunModal((current) =>
+                            current.open
+                              ? {
+                                  ...current,
+                                  minPassRate: String(Math.round(preflight.recommended_thresholds!.min_pass_rate * 100)),
+                                  maxUnsafe: String(preflight.recommended_thresholds!.max_unsafe),
+                                  maxFailures: String(preflight.recommended_thresholds!.max_failures ?? 0),
+                                }
+                              : current
+                          )
+                        }
+                      >
+                        Use recommended
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
             <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setRunModal({ open: false }); setRunError(null); }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setRunModal({ open: false });
+                  setRunError(null);
+                  setPreflight(null);
+                  setPreflightError(null);
+                }}
+              >
                 Cancel
               </Button>
-              <Button size="sm" onClick={() => void triggerRun()} disabled={triggering} className="gap-1.5">
+              <Button
+                size="sm"
+                onClick={() => void triggerRun()}
+                disabled={triggering || runBlocked}
+                className="gap-1.5"
+              >
                 <Play className="h-3.5 w-3.5" />
                 {triggering ? "Triggering…" : "Run"}
               </Button>
