@@ -40,9 +40,12 @@ const OAUTH_API_BASE_URL_KEY = "sepurux.oauthApiBaseUrl";
 type AccessMode = "demo" | "access";
 type AccessIntent = "signup" | "login";
 
-const TEAL = "#00e5cc";
-const TEAL_DIM = "rgba(0,229,204,0.12)";
-const TEAL_BORDER = "rgba(0,229,204,0.3)";
+const TEAL = "hsl(var(--primary))";
+const TEAL_DIM = "rgb(var(--primary-rgb) / 0.12)";
+const TEAL_BORDER = "rgb(var(--primary-rgb) / 0.3)";
+const GREEN = "var(--accent-teal)";
+const GREEN_DIM = "var(--accent-teal-dim)";
+const GREEN_BORDER = "rgb(var(--teal-rgb) / 0.2)";
 
 const leftPanelFeatures = [
   "Replay exact agent executions step by step",
@@ -118,7 +121,7 @@ function resolveOauthBrowserBase(inputBaseUrl: string) {
 
 // ── Shared field style ──────────────────────────────────────────────────────
 const fieldClass =
-  "w-full rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition focus:border-[rgba(0,229,204,0.5)] focus:ring-2 focus:ring-[rgba(0,229,204,0.12)]";
+  "w-full rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition focus:border-primary/45 focus:ring-2 focus:ring-primary/12";
 
 // ── Segmented control tab ───────────────────────────────────────────────────
 function Tab({
@@ -146,7 +149,7 @@ function Tab({
   );
 }
 
-// ── Teal primary button ─────────────────────────────────────────────────────
+// ── Primary action button ──────────────────────────────────────────────────
 function TealButton({
   type = "button",
   disabled,
@@ -165,8 +168,8 @@ function TealButton({
       onClick={onClick}
       className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-black transition-all disabled:opacity-50"
       style={{
-        background: disabled ? "rgba(0,229,204,0.4)" : TEAL,
-        boxShadow: disabled ? "none" : "0 0 0 1px rgba(0,229,204,0.4), 0 4px 24px rgba(0,229,204,0.2)",
+        background: disabled ? "hsl(var(--primary) / 0.45)" : TEAL,
+        boxShadow: disabled ? "none" : "0 0 0 1px hsl(var(--primary) / 0.4), 0 4px 24px hsl(var(--primary) / 0.2)",
       }}
     >
       {children}
@@ -190,7 +193,7 @@ function SocialButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="relative inline-flex w-full items-center justify-center rounded-2xl border border-border/70 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 transition hover:border-[rgba(0,229,204,0.35)] hover:shadow-[0_0_0_1px_rgba(0,229,204,0.18)] disabled:cursor-not-allowed disabled:opacity-60"
+      className="relative inline-flex w-full items-center justify-center rounded-2xl border border-border/70 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 transition hover:border-primary/35 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.18)] disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span className="absolute left-4 flex h-6 w-6 items-center justify-center">
         <ProviderIcon provider={provider} />
@@ -517,18 +520,18 @@ export function AccessPortal() {
           className="relative hidden flex-col justify-between overflow-hidden p-8 lg:flex"
           style={{ background: "hsl(214 27% 4%)" }}
         >
-          {/* teal orb */}
+          {/* brand orbs */}
           <div
             className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(0,229,204,0.18) 0%, transparent 70%)",
+              background: "radial-gradient(circle, rgb(var(--primary-rgb) / 0.18) 0%, transparent 70%)",
               filter: "blur(40px)",
             }}
           />
           <div
             className="pointer-events-none absolute -bottom-16 right-0 h-48 w-48 rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(0,229,204,0.10) 0%, transparent 70%)",
+              background: "radial-gradient(circle, rgb(var(--teal-rgb) / 0.1) 0%, transparent 70%)",
               filter: "blur(30px)",
             }}
           />
@@ -560,7 +563,7 @@ export function AccessPortal() {
                 <li key={f} className="flex items-start gap-2.5 text-sm text-white/60">
                   <CheckCircle2
                     className="mt-0.5 h-4 w-4 shrink-0"
-                    style={{ color: TEAL }}
+                    style={{ color: GREEN }}
                   />
                   <span>{f}</span>
                 </li>
@@ -572,7 +575,7 @@ export function AccessPortal() {
           <div className="relative z-10">
             <div
               className="grid grid-cols-2 gap-3 rounded-2xl border p-4"
-              style={{ borderColor: "rgba(0,229,204,0.15)", background: "rgba(0,229,204,0.04)" }}
+              style={{ borderColor: GREEN_BORDER, background: "rgb(var(--teal-rgb) / 0.05)" }}
             >
               {[
                 { value: "12", label: "Pilot teams" },
@@ -647,14 +650,14 @@ export function AccessPortal() {
             <div className="space-y-4">
               <div
                 className="rounded-xl border p-4 text-sm"
-                style={{ borderColor: "rgba(0,229,204,0.2)", background: "rgba(0,229,204,0.05)" }}
+                style={{ borderColor: GREEN_BORDER, background: "rgb(var(--teal-rgb) / 0.05)" }}
               >
-                <p className="font-semibold" style={{ color: TEAL }}>Seeded demo workspace</p>
-                <p className="mt-1 text-white/60">
+                <p className="font-semibold" style={{ color: GREEN }}>Seeded demo workspace</p>
+                <p className="mt-1 text-muted-foreground">
                   Isolated session, resettable dataset — no credentials needed.
                 </p>
                 {demoInfo ? (
-                  <p className="mt-2 text-xs text-white/40">
+                  <p className="mt-2 text-xs text-muted-foreground/80">
                     Limits: {demoInfo.limits.campaigns_per_hour}/hr campaigns,{" "}
                     {demoInfo.limits.mutations_per_run}/run mutations.
                   </p>

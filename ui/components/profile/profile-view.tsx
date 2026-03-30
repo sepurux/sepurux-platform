@@ -352,7 +352,7 @@ export function ProfileView() {
         <div className="flex items-center gap-4 pb-5">
           <div
             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-lg font-bold"
-            style={{ background: "rgba(0,229,204,0.15)", color: "var(--accent-teal)" }}
+            style={{ background: "var(--accent-teal-dim)", color: "var(--accent-teal)" }}
           >
             {initials}
           </div>
@@ -682,7 +682,7 @@ export function ProfileView() {
                         member.role === "admin"
                           ? "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300"
                           : member.role === "developer"
-                          ? "bg-teal-500/15 text-teal-300"
+                          ? "bg-teal/12 text-teal"
                           : "bg-muted/50 text-muted-foreground"
                       )}>
                         {member.role}

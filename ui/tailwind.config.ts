@@ -37,8 +37,8 @@ const config: Config = {
         warning: "hsl(var(--warning))",
         danger: "hsl(var(--danger))",
         teal: {
-          DEFAULT: "#00e5cc",
-          dim: "rgba(0,229,204,0.12)",
+          DEFAULT: "rgb(var(--teal-rgb) / <alpha-value>)",
+          dim: "rgb(var(--teal-rgb) / 0.12)",
         },
       },
       borderRadius: {
@@ -49,7 +49,7 @@ const config: Config = {
       boxShadow: {
         panel: "0 6px 24px rgba(0,0,0,0.35)",
         insetSoft: "inset 0 1px 0 rgba(255,255,255,0.04)",
-        "teal-glow": "0 0 0 1px rgba(0,229,204,0.25), 0 0 20px rgba(0,229,204,0.15)",
+        "teal-glow": "0 0 0 1px rgb(var(--teal-rgb) / 0.25), 0 0 20px rgb(var(--teal-rgb) / 0.15)",
       },
       backgroundImage: {
         "grid-faint": "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)"

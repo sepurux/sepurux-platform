@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import type { AuthPermissionSet, AuthSessionMetadata } from "@/lib/api";
+import { uiBrandIconUrl } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type NavLinkItem = {
@@ -155,7 +156,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
       <div className="mb-4 rounded-xl border border-border/70 bg-card/50 p-3 shadow-insetSoft">
         <div className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-md border border-primary/35 bg-primary/10">
-            <img src="/brand-icon.png" alt="Sepurux" className="h-full w-full object-cover" />
+            <img src={uiBrandIconUrl} alt="Sepurux" className="h-full w-full object-cover" />
           </span>
           <div className="min-w-0">
             <p className="truncate text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
@@ -189,8 +190,8 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
           const active = group.children.some(
             (child) => pathname === child.href || pathname.startsWith(child.href + "/")
           );
-          // default expanded = true
-          const expanded = expandedGroups[group.section] ?? true;
+          // default expanded = false; active sections are opened by the effect above.
+          const expanded = expandedGroups[group.section] ?? false;
           const Icon = group.icon;
           const primaryChild = group.children[0];
 
