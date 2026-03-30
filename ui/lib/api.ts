@@ -350,6 +350,7 @@ export type MutationPackMetadata = {
   description: string | null;
   config: Record<string, unknown>;
   is_system: boolean;
+  is_archived: boolean;
   coverage_score: number;
   credit_cost: number;
   created_at: string;
@@ -1387,14 +1388,19 @@ export const api = {
     description?: string | null;
     config: Record<string, unknown>;
   }) => postJson<MutationPackCreateResponse, typeof payload>("/v1/mutation-packs", payload),
-  listMutationPacks: (options?: { include_system?: boolean }) =>
+  listMutationPacks: (options?: { include_system?: boolean; include_archived?: boolean }) =>
     requestJson<MutationPackMetadata[]>("/v1/mutation-packs", {
       include_system: options?.include_system === false ? "false" : "true",
+      include_archived: options?.include_archived ? "true" : undefined,
     }),
-  getMutationPack: (mutationPackId: string) =>
-    requestJson<MutationPackMetadata>(`/v1/mutation-packs/${mutationPackId}`),
-  getMutationPackCoverage: (mutationPackId: string) =>
-    requestJson<MutationPackCoverageResponse>(`/v1/mutation-packs/${mutationPackId}/coverage`),
+  getMutationPack: (mutationPackId: string, options?: { include_archived?: boolean }) =>
+    requestJson<MutationPackMetadata>(`/v1/mutation-packs/${mutationPackId}`, {
+      include_archived: options?.include_archived ? "true" : undefined,
+    }),
+  getMutationPackCoverage: (mutationPackId: string, options?: { include_archived?: boolean }) =>
+    requestJson<MutationPackCoverageResponse>(`/v1/mutation-packs/${mutationPackId}/coverage`, {
+      include_archived: options?.include_archived ? "true" : undefined,
+    }),
   updateMutationPack: (
     mutationPackId: string,
     payload: { name?: string; description?: string | null; config?: Record<string, unknown>; credit_cost?: number }

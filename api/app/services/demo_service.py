@@ -260,6 +260,7 @@ def _ensure_demo_mutation_pack(db: Session, *, project: Project) -> MutationPack
         .where(
             MutationPack.project_id == project.project_id,
             MutationPack.name == DEMO_MUTATION_PACK_NAME,
+            MutationPack.is_archived.is_(False),
         )
         .order_by(MutationPack.created_at.desc(), MutationPack.mutation_pack_id.desc())
     )
