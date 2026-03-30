@@ -15,6 +15,7 @@ import {
 } from "@/lib/tenant-settings";
 
 import { DemoPreviewBar } from "@/components/layout/demo-preview-bar";
+import { NewUserTour } from "@/components/onboarding/new-user-tour";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/top-bar";
 
@@ -187,6 +188,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <NewUserTour authSession={authSession} />
     </div>
   );
 }
