@@ -10,11 +10,11 @@ import { Badge } from "@/components/ui/badge";
 
 const EVENT_TYPE_CONFIG: Record<string, { iconColor: string; dotBg: string; dotBorder: string; accentBorder: string }> = {
   tool_call:    { iconColor: "text-blue-400",        dotBg: "bg-blue-400/10",   dotBorder: "border-blue-400/40",   accentBorder: "border-l-blue-400/60" },
-  tool_result:  { iconColor: "text-teal-400",        dotBg: "bg-teal-400/10",   dotBorder: "border-teal-400/40",   accentBorder: "border-l-teal-400/60" },
+  tool_result:  { iconColor: "text-teal",            dotBg: "bg-teal/10",       dotBorder: "border-teal/40",       accentBorder: "border-l-teal/60" },
   model:        { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
   llm_call:     { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
   mutation:     { iconColor: "text-amber-400",       dotBg: "bg-amber-400/10",  dotBorder: "border-amber-400/40",  accentBorder: "border-l-amber-400/60" },
-  error:        { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },
+  error:        { iconColor: "text-danger",          dotBg: "bg-danger/10",     dotBorder: "border-danger/35",     accentBorder: "border-l-danger/60" },
 };
 
 const DEFAULT_EVENT_CONFIG = {
@@ -83,8 +83,8 @@ export function TimelineViewer({
       </CardHeader>
       <CardContent className="min-w-0">
         {timeline?.first_failure ? (
-          <div className="mb-4 rounded-md border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
-            <span className="font-medium">First failure:</span>{" "}
+          <div className="mb-4 rounded-md border border-danger/20 bg-danger/8 px-3 py-2 text-sm text-danger">
+            <span className="font-semibold">First failure:</span>{" "}
             {timeline.first_failure.tool ?? "unknown"} at event #{timeline.first_failure.event_index ?? "?"}
             {timeline.first_failure.reason ? ` — ${timeline.first_failure.reason}` : ""}
           </div>

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { uiAppleTouchIconUrl, uiFaviconIcoUrl, uiFaviconUrl } from "@/lib/brand";
 
 import "./globals.css";
 
@@ -50,9 +51,12 @@ export const metadata: Metadata = {
   title: "Sepurux UI",
   description: "Agent Sepurux dashboard",
   icons: {
-    icon: [{ url: "/favicon.png", type: "image/png" }],
-    shortcut: [{ url: "/favicon.png", type: "image/png" }],
-    apple: [{ url: "/apple-touch-icon.png", type: "image/png" }],
+    icon: [
+      { url: uiFaviconIcoUrl, type: "image/x-icon" },
+      { url: uiFaviconUrl, type: "image/png" },
+    ],
+    shortcut: [{ url: uiFaviconIcoUrl, type: "image/x-icon" }],
+    apple: [{ url: uiAppleTouchIconUrl, type: "image/png", sizes: "180x180" }],
   },
 };
 

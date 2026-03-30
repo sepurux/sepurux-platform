@@ -20,24 +20,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const CHART_GRID = "#1E2936";
-const CHART_AXIS = "#94A3B8";
-const TOOLTIP_BG = "#121821";
-const TOOLTIP_BORDER = "#1E2936";
-const COLOR_HEALTHY = "#00e5cc";
-const COLOR_WARNING = "#f59e0b";
-const COLOR_CRITICAL = "#ef4444";
-const COLOR_MUTED = "#1E2936";
+const CHART_GRID = "hsl(var(--border))";
+const CHART_AXIS = "hsl(var(--muted-foreground))";
+const TOOLTIP_BG = "hsl(var(--card))";
+const TOOLTIP_BORDER = "hsl(var(--border))";
+const COLOR_HEALTHY = "hsl(var(--success))";
+const COLOR_WARNING = "hsl(var(--warning))";
+const COLOR_CRITICAL = "hsl(var(--danger))";
+const COLOR_MUTED = "hsl(var(--border))";
 
 const BAR_COLORS = [
-  "#00e5cc",
-  "#7c3aed",
-  "#f59e0b",
-  "#ef4444",
-  "#3b82f6",
-  "#10b981",
-  "#f97316",
-  "#8b5cf6",
+  "hsl(var(--primary))",
+  "hsl(var(--success))",
+  "#E3A25E",
+  "#6B9B80",
+  "hsl(var(--warning))",
+  "hsl(var(--danger))",
+  "#B8763B",
+  "#86A691",
 ];
 
 type ReliabilityData = {
