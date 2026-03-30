@@ -62,9 +62,9 @@ export function InternalShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar/95 px-4 py-4 backdrop-blur xl:flex">
-        <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-3 shadow-insetSoft">
+    <div className="app-shell-backdrop flex h-screen overflow-hidden bg-background text-foreground">
+      <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-border/75 bg-sidebar/72 px-4 py-4 backdrop-blur-2xl xl:flex">
+        <div className="glass-surface px-3 py-3 shadow-insetSoft">
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Sepurux</p>
           <p className="mt-1 text-sm font-semibold text-foreground">Internal Console</p>
           <p className="mt-0.5 text-[11px] uppercase tracking-[0.12em]" style={{ color: "var(--accent-teal)" }}>
@@ -72,13 +72,13 @@ export function InternalShell({ children }: { children: ReactNode }) {
           </p>
           <Link
             href="/internal/search"
-            className="mt-3 inline-flex rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+            className="mt-3 inline-flex rounded-md border border-primary/45 bg-primary/12 px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/18"
           >
             Global Search
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-0.5 px-1 py-3">
+        <nav className="flex-1 space-y-1 px-1 py-3">
           {navItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
@@ -87,10 +87,10 @@ export function InternalShell({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group flex items-center gap-2.5 rounded-md border-l-2 border-l-transparent px-3 py-2 text-sm transition",
+                  "group flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm transition-all duration-150",
                   active
-                    ? "border-l-primary bg-muted/45 text-primary shadow-insetSoft"
-                    : "text-muted-foreground hover:border-l-border hover:bg-accent/35 hover:text-foreground"
+                    ? "border-primary/45 bg-primary/12 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]"
+                    : "border-transparent text-muted-foreground hover:border-border/75 hover:bg-accent/40 hover:text-foreground"
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0 opacity-70" />
@@ -104,7 +104,7 @@ export function InternalShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent/35"
+            className="glass-surface flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent/40"
           >
             <LogOut className="h-4 w-4 text-muted-foreground" />
             Sign out
@@ -112,8 +112,8 @@ export function InternalShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="h-screen min-w-0 flex-1 overflow-y-auto bg-background">
-        <header className="sticky top-0 z-10 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur md:px-6">
+      <main className="h-screen min-w-0 flex-1 overflow-y-auto bg-background/20">
+        <header className="sticky top-0 z-10 border-b border-border/70 bg-background/72 px-4 py-3 backdrop-blur-2xl md:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">Internal Console</p>
@@ -123,14 +123,14 @@ export function InternalShell({ children }: { children: ReactNode }) {
               <ThemeToggle />
               <Link
                 href="/internal/search"
-                className="inline-flex rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+                className="inline-flex rounded-md border border-primary/45 bg-primary/12 px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/18"
               >
                 Global Search
               </Link>
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/35"
+                className="glass-surface inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent/40"
               >
                 <LogOut className="h-3.5 w-3.5 text-muted-foreground" />
                 Sign out

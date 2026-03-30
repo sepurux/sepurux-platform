@@ -4,14 +4,14 @@ import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("panel-surface", className)} {...props} />
+    <div ref={ref} className={cn("panel-surface relative overflow-hidden", className)} {...props} />
   )
 );
 Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-5", className)} {...props} />
+    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-5 md:p-6", className)} {...props} />
   )
 );
 CardHeader.displayName = "CardHeader";
@@ -20,7 +20,7 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn("text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground", className)}
+      className={cn("text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground", className)}
       {...props}
     />
   )
@@ -35,13 +35,15 @@ const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
 CardDescription.displayName = "CardDescription";
 
 const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn("px-5 pb-5", className)} {...props} />
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("px-5 pb-5 md:px-6 md:pb-6", className)} {...props} />
+  )
 );
 CardContent.displayName = "CardContent";
 
 const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex items-center px-5 pb-5 pt-0", className)} {...props} />
+    <div ref={ref} className={cn("flex items-center px-5 pb-5 pt-0 md:px-6 md:pb-6", className)} {...props} />
   )
 );
 CardFooter.displayName = "CardFooter";

@@ -45,7 +45,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       type="button"
       onClick={handleToggleTheme}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-card/70 px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent/40",
+        "glass-surface inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent/45",
         className
       )}
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
@@ -56,4 +56,3 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     </button>
   );
 }
-

@@ -149,15 +149,15 @@ export function ShellFrame({ children }: { children: ReactNode }) {
   }, [isAuthPage, isInternalPage, pathname, router, searchParams]);
 
   if (isAuthPage) {
-    return <main className="faint-grid min-h-screen p-4 md:p-8">{children}</main>;
+    return <main className="app-shell-backdrop faint-grid min-h-screen p-4 md:p-8">{children}</main>;
   }
 
   if (gateState !== "allowed") {
     return (
-      <div className="faint-grid flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="rounded-lg border border-border/70 bg-card/80 px-6 py-5 text-sm text-muted-foreground shadow-panel">
-          <span className="inline-flex items-center gap-2 text-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-blue-300" />
+      <div className="app-shell-backdrop faint-grid flex min-h-screen items-center justify-center p-6">
+        <div className="glass-surface px-7 py-5 text-sm text-muted-foreground shadow-panel">
+          <span className="inline-flex items-center gap-2 font-medium text-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
             Preparing workspace...
           </span>
         </div>
@@ -166,23 +166,25 @@ export function ShellFrame({ children }: { children: ReactNode }) {
   }
 
   if (isInternalPage) {
-    return <div className="min-h-screen bg-background text-foreground">{children}</div>;
+    return <div className="app-shell-backdrop min-h-screen bg-background text-foreground">{children}</div>;
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+    <div className="app-shell-backdrop flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <DemoPreviewBar />
       <div className="flex min-h-0 flex-1">
         <Sidebar authSession={authSession} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <TopBar authSession={authSession} />
           {pathname.startsWith("/dashboard") && authSession?.is_low_credit ? (
-            <div className="border-b border-amber-300 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100 md:px-6">
+            <div className="border-b border-amber-300/45 bg-amber-100/90 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/22 dark:bg-amber-500/12 dark:text-amber-100 md:px-6">
               Credits are running low. This workspace has {authSession.credits_balance ?? 0} credits remaining.
               Upgrade the plan or top up credits before the next campaign run is blocked.
             </div>
           ) : null}
-          <main className="faint-grid flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+          <main className="faint-grid flex-1 overflow-y-auto px-4 pb-6 pt-4 md:px-6 md:pb-8 md:pt-6">
+            {children}
+          </main>
         </div>
       </div>
     </div>

@@ -53,7 +53,11 @@ const config: Config = {
       },
       backgroundImage: {
         "grid-faint": "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)"
-      }
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+      },
     }
   },
   plugins: [require("tailwindcss-animate")]
