@@ -73,6 +73,7 @@ def create_run(
             select(MutationPack).where(
                 MutationPack.mutation_pack_id == effective_mutation_pack_id,
                 MutationPack.project_id == project_id,
+                MutationPack.is_archived.is_(False),
             )
         )
         is None

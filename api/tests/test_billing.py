@@ -14,6 +14,7 @@ from app.models import (
     CreditWallet,
     InternalFeatureFlag,
     Project,
+    SubscriptionPlan,
     Tenant,
     Trace,
 )
@@ -133,6 +134,12 @@ def _project_owner_id(db: Session, *, project_id: UUID) -> UUID:
     assert isinstance(project, Project)
     assert isinstance(project.owner_id, UUID)
     return project.owner_id
+
+
+def _plan_monthly_credits(db: Session, *, plan_id: UUID) -> int:
+    plan = db.scalar(select(SubscriptionPlan).where(SubscriptionPlan.plan_id == plan_id))
+    assert isinstance(plan, SubscriptionPlan)
+    return int(plan.monthly_credits)
 
 
 def test_billing_endpoints_bootstrap_plans_and_wallet(
@@ -327,6 +334,7 @@ def test_subscription_checkout_webhook_activates_plan_once(
 
     with testing_session_local() as db:
         owner_id = _project_owner_id(db, project_id=project_id)
+        pro_monthly_credits = _plan_monthly_credits(db, plan_id=PRO_PLAN_ID)
         subscription = get_user_subscription(db, user_id=owner_id)
         wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == owner_id))
         tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == tenant_id))
@@ -338,8 +346,8 @@ def test_subscription_checkout_webhook_activates_plan_once(
         assert subscription.plan_id == PRO_PLAN_ID
         assert subscription.stripe_customer_id == "cus_123"
         assert subscription.stripe_subscription_id == "sub_123"
-        assert wallet.balance == 2000
-        assert wallet.monthly_credits == 2000
+        assert wallet.balance == pro_monthly_credits
+        assert wallet.monthly_credits == pro_monthly_credits
         assert wallet.topup_credits == 0
         assert tenant.pricing_tier == "starter"
         assert len(events) == 1
@@ -429,10 +437,11 @@ def test_post_run_consumes_credits_and_uses_priority_queue(
 
     with testing_session_local() as db:
         owner_id = _project_owner_id(db, project_id=project_id)
+        pro_monthly_credits = _plan_monthly_credits(db, plan_id=PRO_PLAN_ID)
         wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == owner_id))
         assert isinstance(wallet, CreditWallet)
-        assert wallet.balance == 1980
-        assert wallet.monthly_credits == 1980
+        assert wallet.balance == pro_monthly_credits - 20
+        assert wallet.monthly_credits == pro_monthly_credits - 20
 
 
 def test_run_is_blocked_when_wallet_is_short(
@@ -517,10 +526,11 @@ def test_post_run_refunds_credits_when_enqueue_fails(
 
     with testing_session_local() as db:
         owner_id = _project_owner_id(db, project_id=project_id)
+        pro_monthly_credits = _plan_monthly_credits(db, plan_id=PRO_PLAN_ID)
         wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == owner_id))
         assert isinstance(wallet, CreditWallet)
-        assert wallet.balance == 2000
-        assert wallet.monthly_credits == 1980
+        assert wallet.balance == pro_monthly_credits
+        assert wallet.monthly_credits == pro_monthly_credits - 20
         assert wallet.topup_credits == 20
 
 

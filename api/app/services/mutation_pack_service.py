@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from app.models import Campaign, MutationPack
+from app.models import MutationPack
 from app.mutation_registry import get_registered_pack_definition
 from app.services.mutation_pack_policy import (
     SYSTEM_MUTATION_PACK_DEFINITIONS,
@@ -14,10 +14,6 @@ from sqlalchemy.orm import Session
 
 
 class SystemMutationPackModificationError(Exception):
-    pass
-
-
-class MutationPackInUseError(Exception):
     pass
 
 
@@ -114,6 +110,7 @@ def list_mutation_packs(
     *,
     project_id: UUID,
     include_system: bool = True,
+    include_archived: bool = False,
 ) -> list[MutationPack]:
     ensure_system_mutation_packs(db, project_id=project_id)
 
@@ -128,6 +125,8 @@ def list_mutation_packs(
     )
     if not include_system:
         stmt = stmt.where(MutationPack.is_system.is_(False))
+    if not include_archived:
+        stmt = stmt.where(MutationPack.is_archived.is_(False))
     return list(db.scalars(stmt))
 
 
@@ -136,11 +135,14 @@ def get_mutation_pack(
     *,
     project_id: UUID,
     mutation_pack_id: UUID,
+    include_archived: bool = False,
 ) -> MutationPack | None:
     stmt = select(MutationPack).where(
         MutationPack.project_id == project_id,
         MutationPack.mutation_pack_id == mutation_pack_id,
     )
+    if not include_archived:
+        stmt = stmt.where(MutationPack.is_archived.is_(False))
     return db.scalar(stmt)
 
 
@@ -149,12 +151,15 @@ def get_mutation_pack_by_name(
     *,
     project_id: UUID,
     name: str,
+    include_archived: bool = False,
 ) -> MutationPack | None:
     ensure_system_mutation_packs(db, project_id=project_id)
     stmt = select(MutationPack).where(
         MutationPack.project_id == project_id,
         MutationPack.name == name,
     )
+    if not include_archived:
+        stmt = stmt.where(MutationPack.is_archived.is_(False))
     return db.scalar(stmt)
 
 
@@ -163,6 +168,7 @@ def resolve_mutation_pack(
     *,
     project_id: UUID,
     pack_ref: str,
+    include_archived: bool = False,
 ) -> MutationPack | None:
     normalized = pack_ref.strip()
     if not normalized:
@@ -171,9 +177,19 @@ def resolve_mutation_pack(
     try:
         pack_id = UUID(normalized)
     except ValueError:
-        return get_mutation_pack_by_name(db, project_id=project_id, name=normalized)
+        return get_mutation_pack_by_name(
+            db,
+            project_id=project_id,
+            name=normalized,
+            include_archived=include_archived,
+        )
 
-    return get_mutation_pack(db, project_id=project_id, mutation_pack_id=pack_id)
+    return get_mutation_pack(
+        db,
+        project_id=project_id,
+        mutation_pack_id=pack_id,
+        include_archived=include_archived,
+    )
 
 
 def ensure_registered_mutation_pack(
@@ -219,7 +235,11 @@ def update_mutation_pack(
     config: object = None,
     credit_cost: int | None = None,
 ) -> MutationPack | None:
-    record = get_mutation_pack(db, project_id=project_id, mutation_pack_id=mutation_pack_id)
+    record = get_mutation_pack(
+        db,
+        project_id=project_id,
+        mutation_pack_id=mutation_pack_id,
+    )
     if record is None:
         return None
     if record.is_system:
@@ -247,23 +267,20 @@ def delete_mutation_pack(
     project_id: UUID,
     mutation_pack_id: UUID,
 ) -> bool:
-    record = get_mutation_pack(db, project_id=project_id, mutation_pack_id=mutation_pack_id)
+    record = get_mutation_pack(
+        db,
+        project_id=project_id,
+        mutation_pack_id=mutation_pack_id,
+        include_archived=True,
+    )
     if record is None:
         return False
     if record.is_system:
         raise SystemMutationPackModificationError("System mutation packs cannot be deleted")
-
-    in_use = db.scalar(
-        select(Campaign.campaign_id).where(
-            Campaign.project_id == project_id,
-            Campaign.mutation_pack_id == mutation_pack_id,
-        )
-    )
-    if in_use is not None:
-        raise MutationPackInUseError("Mutation pack is in use by one or more campaigns")
-
-    db.delete(record)
-    db.commit()
+    if not record.is_archived:
+        record.is_archived = True
+        db.add(record)
+        db.commit()
     return True
 
 

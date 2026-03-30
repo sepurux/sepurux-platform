@@ -601,6 +601,9 @@ class MutationPack(Base):
     is_system: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     coverage_score: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default=text("0")
     )

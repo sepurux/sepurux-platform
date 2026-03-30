@@ -1014,6 +1014,7 @@ class MutationPackMetadata(BaseModel):
     description: str | None = None
     config: Any
     is_system: bool = False
+    is_archived: bool = False
     coverage_score: int = 0
     credit_cost: int = 20
     created_at: datetime

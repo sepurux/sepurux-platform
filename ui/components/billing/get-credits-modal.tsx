@@ -17,6 +17,9 @@ type State =
   | { status: "ready"; plans: SubscriptionPlanMetadata[] };
 
 const PLAN_ORDER = ["Free", "Pro", "Team", "Enterprise"];
+const TRACE_REPLAY_COST = 5;
+const MUTATION_CAMPAIGN_COST = 20;
+const LARGE_CAMPAIGN_COST = 50;
 
 function sortPlans(plans: SubscriptionPlanMetadata[]) {
   return [...plans].sort((a, b) => {
@@ -27,6 +30,27 @@ function sortPlans(plans: SubscriptionPlanMetadata[]) {
     if (bi === -1) return -1;
     return ai - bi;
   });
+}
+
+function estimateMonthlyCapacity(monthlyCredits: number) {
+  return {
+    traceReplays: Math.floor(monthlyCredits / TRACE_REPLAY_COST),
+    mutationCampaigns: Math.floor(monthlyCredits / MUTATION_CAMPAIGN_COST),
+    largeCampaigns: Math.floor(monthlyCredits / LARGE_CAMPAIGN_COST),
+  };
+}
+
+function actionLabelForPlan(plan: SubscriptionPlanMetadata, currentPlan: SubscriptionPlanMetadata | null) {
+  if (!currentPlan) {
+    return "Choose plan";
+  }
+  if (plan.monthly_price > currentPlan.monthly_price) {
+    return "Upgrade";
+  }
+  if (plan.monthly_price < currentPlan.monthly_price) {
+    return "Downgrade";
+  }
+  return "Switch plan";
 }
 
 export function GetCreditsModal({ currentPlanName, onClose }: Props) {
@@ -63,6 +87,10 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
   }
 
   const plans = state.status === "ready" ? sortPlans(state.plans) : [];
+  const currentPlan =
+    currentPlanName == null
+      ? null
+      : plans.find((plan) => plan.name.toLowerCase() === currentPlanName.toLowerCase()) ?? null;
 
   return (
     <div
@@ -76,8 +104,14 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
           <div>
             <h2 className="text-lg font-semibold text-foreground">Choose a plan</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Credits are consumed per run. Unused monthly credits carry into the next cycle.
+              Compare monthly credits, run capacity, and queue priority before checkout.
             </p>
+            {currentPlan ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Current plan: <span className="font-medium text-foreground">{currentPlan.name}</span> (
+                {currentPlan.monthly_credits.toLocaleString()} credits / month)
+              </p>
+            ) : null}
           </div>
           <button
             onClick={onClose}
@@ -116,6 +150,7 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
                     ? plan.features.queue_priority
                     : "normal";
                 const isEnterprise = !plan.checkout_enabled && !isCurrent;
+                const capacity = estimateMonthlyCapacity(plan.monthly_credits);
 
                 return (
                   <div
@@ -146,6 +181,14 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
                     <p className="mt-1 text-xs text-muted-foreground">
                       {plan.monthly_credits.toLocaleString()} credits · {queuePriority} queue
                     </p>
+                    <div className="mt-3 rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+                      <p className="font-medium uppercase tracking-wide text-foreground">Approx monthly capacity</p>
+                      <p className="mt-1">
+                        Up to {capacity.traceReplays.toLocaleString()} trace replays,{" "}
+                        {capacity.mutationCampaigns.toLocaleString()} campaigns, or{" "}
+                        {capacity.largeCampaigns.toLocaleString()} large campaigns.
+                      </p>
+                    </div>
 
                     <ul className="mt-4 flex-1 space-y-2">
                       {highlights.slice(0, 5).map((item) => (
@@ -175,7 +218,9 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
                           disabled={busyPlanId === plan.plan_id}
                           onClick={() => void handleSelect(plan.plan_id, plan.checkout_enabled)}
                         >
-                          {busyPlanId === plan.plan_id ? "Redirecting..." : "Upgrade"}
+                          {busyPlanId === plan.plan_id
+                            ? "Redirecting..."
+                            : actionLabelForPlan(plan, currentPlan)}
                         </Button>
                       )}
                     </div>
@@ -191,9 +236,16 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
               Credit costs per operation
             </p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-muted-foreground">
-              <span><span className="font-medium text-foreground">5</span> · Trace replay</span>
-              <span><span className="font-medium text-foreground">20</span> · Mutation campaign</span>
-              <span><span className="font-medium text-foreground">50</span> · Large campaign (50+ attempts)</span>
+              <span>
+                <span className="font-medium text-foreground">{TRACE_REPLAY_COST}</span> · Trace replay
+              </span>
+              <span>
+                <span className="font-medium text-foreground">{MUTATION_CAMPAIGN_COST}</span> · Mutation campaign
+              </span>
+              <span>
+                <span className="font-medium text-foreground">{LARGE_CAMPAIGN_COST}</span> · Large campaign (50+
+                attempts)
+              </span>
               <span><span className="font-medium text-foreground">pack cost</span> · Scheduled pack run</span>
             </div>
           </div>

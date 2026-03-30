@@ -113,5 +113,6 @@ def resolve_mutation_pack_for_project(
         select(MutationPack).where(
             MutationPack.mutation_pack_id == mutation_pack_id,
             MutationPack.project_id == project_id,
+            MutationPack.is_archived.is_(False),
         )
     )

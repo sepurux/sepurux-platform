@@ -241,6 +241,90 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
     assert delete_response.json() == {"detail": "System mutation packs cannot be deleted"}
 
 
+def test_delete_mutation_pack_archives_and_hides_by_default(
+    mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, _, _, _ = mutation_pack_test_context
+    create_response = client.post(
+        "/v1/mutation-packs",
+        json={
+            "name": "Archive Mutation Pack",
+            "description": "Soft delete this pack",
+            "config": {"mutations": []},
+        },
+    )
+    assert create_response.status_code == 201
+    mutation_pack_id = create_response.json()["mutation_pack_id"]
+
+    delete_response = client.delete(f"/v1/mutation-packs/{mutation_pack_id}")
+    assert delete_response.status_code == 204
+
+    hidden_get = client.get(f"/v1/mutation-packs/{mutation_pack_id}")
+    assert hidden_get.status_code == 404
+
+    hidden_list = client.get("/v1/mutation-packs")
+    assert hidden_list.status_code == 200
+    assert mutation_pack_id not in {item["mutation_pack_id"] for item in hidden_list.json()}
+
+    visible_get = client.get(f"/v1/mutation-packs/{mutation_pack_id}?include_archived=true")
+    assert visible_get.status_code == 200
+    assert visible_get.json()["is_archived"] is True
+
+    visible_list = client.get("/v1/mutation-packs?include_archived=true")
+    assert visible_list.status_code == 200
+    assert mutation_pack_id in {item["mutation_pack_id"] for item in visible_list.json()}
+
+
+def test_archived_mutation_pack_cannot_be_used_for_new_runs(
+    mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, testing_session_local, project_id, _ = mutation_pack_test_context
+    trace_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.commit()
+
+    pack_response = client.post(
+        "/v1/mutation-packs",
+        json={
+            "name": "Archive then run",
+            "description": "Archive should block new runs",
+            "config": {"mutations": []},
+        },
+    )
+    assert pack_response.status_code == 201
+    mutation_pack_id = pack_response.json()["mutation_pack_id"]
+
+    campaign_response = client.post(
+        "/v1/campaigns",
+        json={
+            "name": "Archived Pack Campaign",
+            "mutation_pack_id": mutation_pack_id,
+            "eval_set": {"checks": ["status"]},
+        },
+    )
+    assert campaign_response.status_code == 201
+    campaign_id = campaign_response.json()["campaign_id"]
+
+    archive_response = client.delete(f"/v1/mutation-packs/{mutation_pack_id}")
+    assert archive_response.status_code == 204
+
+    run_response = client.post(
+        "/v1/runs",
+        json={"trace_id": str(trace_id), "campaign_id": campaign_id},
+    )
+    assert run_response.status_code == 404
+    assert run_response.json() == {"detail": "Mutation pack not found"}
+
+
 def test_system_mutation_pack_config_is_refreshed_when_definition_drifts(
     mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
 ) -> None:
