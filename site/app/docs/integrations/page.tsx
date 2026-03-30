@@ -119,33 +119,33 @@ export default function IntegrationsPage() {
           {integrations.map((integration) => (
             <div
               key={integration.name}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+              className="rounded-2xl border border-[--border] bg-white shadow-sm p-5"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-base font-semibold text-white">{integration.name}</p>
+                <p className="text-base font-semibold text-[--text-primary]">{integration.name}</p>
                 {integration.status === "available" ? (
-                  <span className="rounded-full bg-teal-400/10 px-2.5 py-0.5 text-xs font-medium text-teal-400">
+                  <span className="rounded-full bg-[rgba(var(--accent-rgb),0.10)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-accent)]">
                     Available
                   </span>
                 ) : (
-                  <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs font-medium text-neutral-400">
+                  <span className="rounded-full bg-[--surface-2] px-2.5 py-0.5 text-xs font-medium text-slate-500">
                     Coming soon
                   </span>
                 )}
               </div>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{integration.description}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{integration.description}</p>
               {integration.records.length > 0 && (
                 <ul className="mt-3 space-y-1">
                   {integration.records.map((r) => (
-                    <li key={r} className="flex items-center gap-2 text-xs text-neutral-400">
-                      <span className="h-1 w-1 rounded-full bg-teal-400/60" />
+                    <li key={r} className="flex items-center gap-2 text-xs text-slate-500">
+                      <span className="h-1 w-1 rounded-full bg-[rgba(var(--accent-rgb),0.55)]" />
                       {r}
                     </li>
                   ))}
                 </ul>
               )}
               {integration.install && (
-                <code className="mt-3 block rounded-lg bg-white/[0.04] px-3 py-2 text-xs text-neutral-300">
+                <code className="mt-3 block rounded-lg bg-[--surface-2] px-3 py-2 text-xs text-slate-600">
                   {integration.install}
                 </code>
               )}
@@ -166,9 +166,9 @@ export default function IntegrationsPage() {
             ["Async support", "Call await ai.chat.completions.acreate(...) for AsyncOpenAI — same recording behavior."],
             ["Tool call capture", "Function calls returned by the model are automatically recorded as tool_call events."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>
@@ -186,9 +186,9 @@ export default function IntegrationsPage() {
             ["Context manager", "Use with SepuruxCallbackHandler(...) as handler: and finish() is called on exit."],
             ["Full event capture", "LLM calls with latency, tool call/result pairs, and final agent output — all recorded."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>
@@ -206,9 +206,9 @@ export default function IntegrationsPage() {
             ["AutoGen", "Trace multi-agent conversations, function calls, and code execution steps in AutoGen workflows."],
             ["Custom integration", "Any framework can be instrumented manually using client.trace() and the TraceRecorder API."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>

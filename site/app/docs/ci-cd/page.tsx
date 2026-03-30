@@ -260,9 +260,9 @@ export default function CICDPage() {
             ["campaign_name", "Human-readable name of your campaign. The action looks up the UUID via the campaigns API — no secrets to rotate when campaigns change."],
             ["Outputs", "The step exposes run_id, trace_id, campaign_id, decision (pass|fail), and dashboard_url as step outputs for downstream steps."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>
@@ -289,11 +289,11 @@ export default function CICDPage() {
         title="Scenario Coverage & Batch Runs"
         description="Register a pool of real-world traces against a campaign's eval-set. CI submissions against that campaign automatically run every registered trace in parallel and gate on an aggregated verdict."
       >
-        <p className="text-xs uppercase tracking-[0.14em] text-white/50">1. Register scenario pool (one-time setup)</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-500">1. Register scenario pool (one-time setup)</p>
         <DocsCodeBlock code={evalSetSnippet} label="bash" />
-        <p className="text-xs uppercase tracking-[0.14em] text-white/50">2. Submit batch CI run + poll</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-500">2. Submit batch CI run + poll</p>
         <DocsCodeBlock code={batchCiSnippet} label="bash" />
-        <p className="text-xs uppercase tracking-[0.14em] text-white/50">Batch verdict response</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Batch verdict response</p>
         <DocsCodeBlock code={batchDecisionSnippet} label="json" />
         <div className="grid gap-4 md:grid-cols-3">
           {[
@@ -301,9 +301,9 @@ export default function CICDPage() {
             ["Batch verdict rule", "Decision is `pass` only when every scenario run passes. A single failing trace produces a `fail` verdict regardless of aggregate pass rate."],
             ["scenario_coverage_pct", "Completed runs / total traces × 100. Use this field to confirm that all scenarios were actually evaluated before acting on the verdict."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>
@@ -336,9 +336,9 @@ export default function CICDPage() {
             ["Week 2", "Soft gate: require review when reliability falls below threshold."],
             ["Week 3+", "Hard gate: block merge/deploy when decision is fail."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">{body}</p>
+            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+              <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
             </div>
           ))}
         </div>

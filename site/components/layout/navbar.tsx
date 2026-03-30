@@ -25,7 +25,7 @@ export function Navbar() {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-[--border]">
       <div className="site-container flex h-16 items-center justify-between gap-4">
         <Link href="/" className="inline-flex items-center gap-3" aria-label="Sepurux home">
           <img
@@ -39,20 +39,36 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-6 md:flex">
           {navItems.map((item) => {
+            const isLogin = item.label === "Login";
             const isActive = !item.external && pathname === item.href;
+
+            if (isLogin) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-gray-700 border border-[--border] rounded-md px-3 py-1.5 transition-colors hover:border-[--color-warm] hover:text-[--color-warm]"
+                >
+                  {item.label}
+                </a>
+              );
+            }
+
             return (
               <a
                 key={item.href}
                 href={item.href}
                 target={item.external ? "_blank" : undefined}
                 rel={item.external ? "noreferrer" : undefined}
-                className="relative text-sm font-medium text-white/68 transition-colors hover:text-white"
+                className="relative text-sm font-medium text-gray-700 transition-colors hover:text-[--color-warm]"
               >
                 {item.label}
                 {isActive && (
                   <span
                     className="absolute -bottom-0.5 left-0 h-px w-full rounded-full"
-                    style={{ background: "var(--accent-teal)" }}
+                    style={{ background: "var(--color-warm)" }}
                   />
                 )}
               </a>
@@ -63,20 +79,8 @@ export function Navbar() {
         <div className="hidden items-center md:flex">
           <a
             href={buildAppAuthHref({ mode: "access", intent: "signup" })}
-            className="inline-flex h-9 items-center justify-center rounded-full border px-4 text-sm font-medium text-white transition-all duration-200"
-            style={{
-              borderColor: "rgba(0,229,204,0.35)",
-              background: "rgba(0,229,204,0.06)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                "0 0 0 1px rgba(0,229,204,0.5), 0 0 20px rgba(0,229,204,0.2)";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,229,204,0.6)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "none";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,229,204,0.35)";
-            }}
+            className="inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-medium text-white transition-all duration-200 hover:brightness-110"
+            style={{ background: "var(--color-accent)" }}
           >
             Try Sepurux
           </a>
@@ -84,7 +88,7 @@ export function Navbar() {
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-800 bg-black text-white transition-colors hover:border-neutral-700 hover:bg-neutral-950 md:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[--border] bg-white text-gray-700 transition-colors hover:border-[--color-warm] hover:text-[--color-warm] md:hidden"
           aria-expanded={mobileOpen}
           aria-controls="site-mobile-menu"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
@@ -95,7 +99,7 @@ export function Navbar() {
       </div>
 
       {mobileOpen ? (
-        <div id="site-mobile-menu" className="border-t border-neutral-900 md:hidden">
+        <div id="site-mobile-menu" className="border-t border-[--border] md:hidden">
           <div className="site-container flex flex-col gap-2 py-4">
             {navItems.map((item) => (
               <a
@@ -103,14 +107,14 @@ export function Navbar() {
                 href={item.href}
                 target={item.external ? "_blank" : undefined}
                 rel={item.external ? "noreferrer" : undefined}
-                className="rounded-2xl px-3 py-3 text-sm font-medium text-white/78 transition-colors hover:bg-white/[0.04] hover:text-white"
+                className="rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-[--surface-2] hover:text-[--color-warm]"
               >
                 {item.label}
               </a>
             ))}
             <Link
               href={buildAppAuthHref({ mode: "demo" })}
-              className="mt-2 inline-flex h-11 items-center justify-center rounded-full border border-neutral-800 bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-950"
+              className="mt-2 inline-flex h-11 items-center justify-center rounded-md border border-[--border] bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:border-[--color-warm] hover:text-[--color-warm]"
             >
               View Demo
             </Link>

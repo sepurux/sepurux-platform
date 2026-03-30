@@ -1,4 +1,3 @@
-// site/app/legal/privacy/page.tsx
 import type { Metadata } from "next";
 
 import { buildPageMetadata } from "@/lib/site";
@@ -31,48 +30,32 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <section className="bg-black">
+    <section className="bg-background">
       <div className="site-container py-16 md:py-24">
         <div className="max-w-2xl">
-          {/* kicker */}
-          <p
-            className="text-[11px] font-medium uppercase tracking-[0.22em]"
-            style={{ color: "var(--accent-teal)" }}
-          >
-            Legal
-          </p>
-
-          {/* heading */}
-          <h1 className="mt-3 font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
+          <p className="section-kicker">Legal</p>
+          <h1 className="mt-3 font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-[--text-primary]">
             Privacy Policy
           </h1>
+          <p className="mt-3 text-sm text-slate-500">Last updated: February 27, 2026</p>
+          <div className="mt-8 h-px bg-slate-200" />
 
-          <p className="mt-3 text-sm text-white/40">Last updated: February 27, 2026</p>
-
-          {/* divider */}
-          <div className="mt-8 h-px bg-white/8" />
-
-          {/* sections */}
           <div className="mt-8 space-y-10">
             {sections.map((section) => (
-              <div
-                key={section.title}
-                className="group relative pl-5"
-              >
-                {/* teal left accent */}
+              <div key={section.title} className="group relative pl-5">
                 <div
                   className="absolute left-0 top-1 h-4 w-0.5 rounded-full"
-                  style={{ background: "var(--accent-teal)" }}
+                  style={{ background: "var(--color-accent)" }}
                 />
-                <h2 className="text-base font-semibold text-white">{section.title}</h2>
-                <p className="mt-2 text-sm leading-7 text-neutral-400">
+                <h2 className="text-base font-semibold text-[--text-primary]">{section.title}</h2>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
                   {section.body ?? (
                     <>
                       For privacy inquiries:{" "}
                       <a
                         href={`mailto:${section.contact}`}
-                        className="transition-colors hover:text-white"
-                        style={{ color: "var(--accent-teal)" }}
+                        className="transition-colors hover:text-[--color-accent]"
+                        style={{ color: "var(--color-accent)" }}
                       >
                         {section.contact}
                       </a>
@@ -83,14 +66,13 @@ export default function PrivacyPage() {
             ))}
           </div>
 
-          {/* footer note */}
-          <div className="mt-14 rounded-[20px] border border-white/8 bg-white/[0.02] px-6 py-5 text-sm text-neutral-500">
+          <div className="mt-14 rounded-[20px] border border-[--border] bg-white px-6 py-5 text-sm text-slate-600 shadow-sm">
             This policy applies to data collected through sepurux.com and the Sepurux application.
             For data processing agreements or enterprise compliance requirements, contact{" "}
             <a
               href="mailto:privacy@sepurux.com"
-              className="transition-colors hover:text-white"
-              style={{ color: "var(--accent-teal)" }}
+              className="transition-colors hover:text-[--color-accent]"
+              style={{ color: "var(--color-accent)" }}
             >
               privacy@sepurux.com
             </a>

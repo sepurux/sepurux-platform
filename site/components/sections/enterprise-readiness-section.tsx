@@ -22,14 +22,17 @@ const capabilities = [
 
 export function EnterpriseReadinessSection() {
   return (
-    <section className="bg-black py-24 sm:py-32">
+    <section className="ink-section-muted py-24 sm:py-32">
       <div className="site-container">
         <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Enterprise Readiness</p>
-          <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-white">
+          <p className="section-kicker ink-kicker">Enterprise Readiness</p>
+          <h2
+            className="mt-4 font-display text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.05] tracking-[-0.03em]"
+            style={{ color: "#F8FAFC" }}
+          >
             Add compliance, audit, and security layers without rebuilding your stack.
           </h2>
-          <p className="mt-4 text-base leading-8 text-neutral-400">
+          <p className="mt-4 text-base leading-8 text-slate-300">
             Sepurux evolves from developer testing into a platform your platform team and security reviewers can trust.
           </p>
         </div>
@@ -38,13 +41,19 @@ export function EnterpriseReadinessSection() {
           {capabilities.map((item) => (
             <div
               key={item.title}
-              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition-colors hover:border-[rgba(0,229,204,0.3)]"
+              className="rounded-2xl border border-white/10 border-t-2 bg-white/6 p-6 transition-colors hover:border-[--color-warm]/40 backdrop-blur-sm"
+              style={{
+                borderTopColor: "var(--color-warm)",
+                boxShadow: "0 18px 36px rgba(0, 0, 0, 0.2)",
+              }}
             >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent-teal)]">
+              <p className="mb-2 text-xs font-mono font-semibold uppercase tracking-wider" style={{ color: "var(--color-warm)" }}>
                 {item.tag}
               </p>
-              <h3 className="mt-3 font-display text-xl font-semibold text-white">{item.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-neutral-300">{item.body}</p>
+              <h3 className="mt-3 font-display text-xl font-semibold text-slate-100">
+                {item.title}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-300">{item.body}</p>
             </div>
           ))}
         </div>
@@ -52,13 +61,14 @@ export function EnterpriseReadinessSection() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/book-demo"
-            className="inline-flex items-center rounded-full border border-[rgba(0,229,204,0.35)] bg-[rgba(0,229,204,0.10)] px-6 py-2.5 text-sm font-semibold text-white"
+            className="inline-flex items-center rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110"
+            style={{ background: "var(--color-accent)" }}
           >
             Book enterprise demo
           </Link>
           <Link
             href="/docs/policy-security"
-            className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.04] px-6 py-2.5 text-sm font-semibold text-white/90"
+            className="inline-flex items-center rounded-full border border-white/15 bg-white/6 px-6 py-2.5 text-sm font-semibold text-slate-100 transition-colors hover:border-white/30 hover:bg-white/10"
           >
             Policy & security docs
           </Link>
