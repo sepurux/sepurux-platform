@@ -5,9 +5,7 @@ import { useEffect, useState } from "react";
 
 import {
   api,
-  type CampaignMetadata,
   type MutationPackMetadata,
-  type TraceMetadata,
 } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Check, Copy } from "lucide-react";
@@ -23,19 +21,11 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; records: MutationPackMetadata[] };
 
-type DeleteState = { status: "idle" } | { status: "confirming"; id: string; name: string } | { status: "deleting"; id: string } | { status: "error"; message: string };
-
-type RunDependenciesState =
+type ArchiveState =
   | { status: "idle" }
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; traces: TraceMetadata[]; campaigns: CampaignMetadata[] };
-
-type RunState =
-  | { status: "idle" }
-  | { status: "running" }
-  | { status: "error"; message: string }
-  | { status: "success"; runId: string };
+  | { status: "confirming"; id: string; name: string }
+  | { status: "archiving"; id: string }
+  | { status: "error"; message: string };
 
 function CopyIdButton({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
@@ -59,21 +49,13 @@ function CopyIdButton({ id }: { id: string }) {
 export function MutationPacksView() {
   const authSession = useAuthSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [runDependencies, setRunDependencies] = useState<RunDependenciesState>({
-    status: "idle",
-  });
-  const [selectedMutationPackId, setSelectedMutationPackId] = useState("");
-  const [selectedTraceId, setSelectedTraceId] = useState("");
-  const [selectedCampaignId, setSelectedCampaignId] = useState("");
-  const [runState, setRunState] = useState<RunState>({ status: "idle" });
 
-  const [deleteState, setDeleteState] = useState<DeleteState>({ status: "idle" });
+  const [archiveState, setArchiveState] = useState<ArchiveState>({ status: "idle" });
 
   const canManageMutationPacks = authSession?.permissions.can_manage_mutation_packs ?? false;
-  const canRunCampaigns = authSession?.permissions.can_run_campaigns ?? false;
 
-  async function onDeletePack(packId: string) {
-    setDeleteState({ status: "deleting", id: packId });
+  async function onArchivePack(packId: string) {
+    setArchiveState({ status: "archiving", id: packId });
     try {
       await api.deleteMutationPack(packId);
       setState((prev) =>
@@ -81,11 +63,11 @@ export function MutationPacksView() {
           ? { status: "ready", records: prev.records.filter((r) => r.mutation_pack_id !== packId) }
           : prev
       );
-      setDeleteState({ status: "idle" });
+      setArchiveState({ status: "idle" });
     } catch (error) {
-      setDeleteState({
+      setArchiveState({
         status: "error",
-        message: error instanceof Error ? error.message : "Failed to delete mutation pack",
+        message: error instanceof Error ? error.message : "Failed to archive mutation pack",
       });
     }
   }
@@ -117,42 +99,6 @@ export function MutationPacksView() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!canRunCampaigns) {
-      setRunDependencies({ status: "idle" });
-      return;
-    }
-
-    let cancelled = false;
-    setRunDependencies({ status: "loading" });
-
-    async function loadDependencies() {
-      try {
-        const [traces, campaigns] = await Promise.all([
-          api.listTraces({ limit: 200, offset: 0 }),
-          api.listCampaigns({ limit: 200, offset: 0 }),
-        ]);
-        if (cancelled) {
-          return;
-        }
-        setRunDependencies({ status: "ready", traces, campaigns });
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        setRunDependencies({
-          status: "error",
-          message: error instanceof Error ? error.message : "Failed to load traces/campaigns",
-        });
-      }
-    }
-
-    void loadDependencies();
-    return () => {
-      cancelled = true;
-    };
-  }, [canRunCampaigns]);
-
   const records =
     state.status === "ready"
       ? [...state.records].sort((left, right) => {
@@ -165,89 +111,6 @@ export function MutationPacksView() {
           return left.name.localeCompare(right.name);
         })
       : [];
-
-  useEffect(() => {
-    if (records.length === 0) {
-      setSelectedMutationPackId("");
-      return;
-    }
-    setSelectedMutationPackId((previous) => {
-      if (previous && records.some((record) => record.mutation_pack_id === previous)) {
-        return previous;
-      }
-      return records[0].mutation_pack_id;
-    });
-  }, [records]);
-
-  useEffect(() => {
-    if (runDependencies.status !== "ready") {
-      return;
-    }
-
-    setSelectedTraceId((previous) => {
-      if (previous && runDependencies.traces.some((trace) => trace.trace_id === previous)) {
-        return previous;
-      }
-      return runDependencies.traces[0]?.trace_id ?? "";
-    });
-
-    setSelectedCampaignId((previous) => {
-      if (
-        previous &&
-        runDependencies.campaigns.some((campaign) => campaign.campaign_id === previous)
-      ) {
-        return previous;
-      }
-      return runDependencies.campaigns[0]?.campaign_id ?? "";
-    });
-  }, [runDependencies]);
-
-  async function onRunMutationPack(packIdOverride?: string) {
-    const mutationPackId = (packIdOverride ?? selectedMutationPackId).trim();
-    if (!mutationPackId) {
-      setRunState({ status: "error", message: "Select a mutation pack before running." });
-      return;
-    }
-
-    if (runDependencies.status !== "ready") {
-      setRunState({
-        status: "error",
-        message: "Trace and campaign options are still loading. Try again in a moment.",
-      });
-      return;
-    }
-
-    if (!selectedTraceId || !selectedCampaignId) {
-      setRunState({
-        status: "error",
-        message: "Select both a trace and a campaign before running.",
-      });
-      return;
-    }
-
-    setSelectedMutationPackId(mutationPackId);
-    setRunState({ status: "running" });
-
-    try {
-      const run = await api.createRun({
-        trace_id: selectedTraceId,
-        campaign_id: selectedCampaignId,
-        mutation_pack_id: mutationPackId,
-      });
-      setRunState({ status: "success", runId: run.run_id });
-    } catch (error) {
-      setRunState({
-        status: "error",
-        message: error instanceof Error ? error.message : "Failed to create run",
-      });
-    }
-  }
-
-  const runControlsDisabled =
-    runState.status === "running" ||
-    runDependencies.status !== "ready" ||
-    runDependencies.traces.length === 0 ||
-    runDependencies.campaigns.length === 0;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -270,113 +133,6 @@ export function MutationPacksView() {
           <CardContent className="p-5 text-sm text-muted-foreground">
             Custom mutation packs follow workspace membership rules. Your current membership can
             view packs but cannot create or modify them.
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {canRunCampaigns ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Run Mutation Pack</CardTitle>
-            <CardDescription>
-              One-click execution using the selected trace and campaign.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {runDependencies.status === "loading" ? (
-              <Skeleton className="h-28 w-full" />
-            ) : runDependencies.status === "error" ? (
-              <p className="text-sm text-rose-200">{runDependencies.message}</p>
-            ) : runDependencies.status === "ready" ? (
-              runDependencies.traces.length === 0 || runDependencies.campaigns.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Add at least one trace and one campaign before running mutation packs.
-                </p>
-              ) : (
-                <>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Mutation Pack</span>
-                      <select
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={selectedMutationPackId}
-                        onChange={(event) => setSelectedMutationPackId(event.target.value)}
-                        disabled={runState.status === "running"}
-                      >
-                        {records.map((record) => (
-                          <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
-                            {record.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Campaign</span>
-                      <select
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={selectedCampaignId}
-                        onChange={(event) => setSelectedCampaignId(event.target.value)}
-                        disabled={runState.status === "running"}
-                      >
-                        {runDependencies.campaigns.map((campaign) => (
-                          <option key={campaign.campaign_id} value={campaign.campaign_id}>
-                            {campaign.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block space-y-1 text-sm">
-                      <span className="text-muted-foreground">Trace</span>
-                      <select
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                        value={selectedTraceId}
-                        onChange={(event) => setSelectedTraceId(event.target.value)}
-                        disabled={runState.status === "running"}
-                      >
-                        {runDependencies.traces.map((trace) => (
-                          <option key={trace.trace_id} value={trace.trace_id}>
-                            {trace.task_name?.trim() || shortId(trace.trace_id, 12)} ·{" "}
-                            {formatRelativeDate(trace.created_at)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Button
-                      type="button"
-                      onClick={() => void onRunMutationPack()}
-                      disabled={runControlsDisabled}
-                    >
-                      {runState.status === "running" ? "Starting run..." : "Run Selected Pack"}
-                    </Button>
-                    {runState.status === "error" ? (
-                      <p className="text-sm text-rose-200">{runState.message}</p>
-                    ) : null}
-                    {runState.status === "success" ? (
-                      <p className="text-sm text-emerald-300">
-                        Run started.{" "}
-                        <Link
-                          href={`/runs/${runState.runId}`}
-                          className="underline underline-offset-4"
-                        >
-                          Open run
-                        </Link>
-                      </p>
-                    ) : null}
-                  </div>
-                </>
-              )
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : authSession ? (
-        <Card className="border-border/60">
-          <CardContent className="p-5 text-sm text-muted-foreground">
-            This membership can view mutation packs but cannot start campaign runs.
           </CardContent>
         </Card>
       ) : null}
@@ -457,17 +213,6 @@ export function MutationPacksView() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {canRunCampaigns ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={runControlsDisabled}
-                                onClick={() => void onRunMutationPack(record.mutation_pack_id)}
-                              >
-                                Run Now
-                              </Button>
-                            ) : null}
                             {canManageMutationPacks && !record.is_system ? (
                               <>
                                 <Button asChild variant="ghost" size="sm">
@@ -475,38 +220,36 @@ export function MutationPacksView() {
                                     Edit
                                   </Link>
                                 </Button>
-                                {deleteState.status === "confirming" && deleteState.id === record.mutation_pack_id ? (
+                                {archiveState.status === "confirming" && archiveState.id === record.mutation_pack_id ? (
                                   <span className="inline-flex items-center gap-1.5">
-                                    <span className="text-xs text-rose-300">Delete?</span>
+                                    <span className="text-xs text-amber-300">Archive?</span>
                                     <Button
                                       type="button"
-                                      variant="ghost"
+                                      variant="danger"
                                       size="sm"
-                                      className="text-rose-400 hover:text-rose-300"
                                       disabled={false}
-                                      onClick={() => void onDeletePack(record.mutation_pack_id)}
+                                      onClick={() => void onArchivePack(record.mutation_pack_id)}
                                     >
-                                      Yes
+                                      Archive
                                     </Button>
                                     <Button
                                       type="button"
-                                      variant="ghost"
+                                      variant="outline"
                                       size="sm"
-                                      onClick={() => setDeleteState({ status: "idle" })}
+                                      onClick={() => setArchiveState({ status: "idle" })}
                                     >
-                                      No
+                                      Cancel
                                     </Button>
                                   </span>
                                 ) : (
                                   <Button
                                     type="button"
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
-                                    className="text-rose-400 hover:text-rose-300"
-                                    disabled={deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id}
-                                    onClick={() => setDeleteState({ status: "confirming", id: record.mutation_pack_id, name: record.name })}
+                                    disabled={archiveState.status === "archiving" && archiveState.id === record.mutation_pack_id}
+                                    onClick={() => setArchiveState({ status: "confirming", id: record.mutation_pack_id, name: record.name })}
                                   >
-                                    {deleteState.status === "deleting" && deleteState.id === record.mutation_pack_id ? "Deleting..." : "Delete"}
+                                    Archive
                                   </Button>
                                 )}
                               </>
@@ -523,9 +266,9 @@ export function MutationPacksView() {
         </Card>
       )}
 
-      {deleteState.status === "error" ? (
+      {archiveState.status === "error" ? (
         <div className="rounded-md border border-rose-900/60 bg-rose-950/30 px-4 py-3">
-          <p className="text-sm text-rose-200">{deleteState.message}</p>
+          <p className="text-sm text-rose-200">{archiveState.message}</p>
         </div>
       ) : null}
     </div>

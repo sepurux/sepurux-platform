@@ -6,36 +6,36 @@ import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 const integrations = [
-  { name: "OpenAI Agents", bg: "rgba(16,163,127,0.15)", color: "#10a37f", abbr: "OA" },
-  { name: "LlamaIndex",    bg: "rgba(108,71,255,0.15)", color: "#a78bfa", abbr: "LI" },
+  { name: "OpenAI SDK",    bg: "rgba(16,163,127,0.15)", color: "#10a37f", abbr: "OA" },
+  { name: "LangChain",     bg: "rgba(28,127,230,0.15)", color: "#60a5fa", abbr: "LC" },
   { name: "LangGraph",     bg: "rgba(28,127,230,0.15)", color: "#60a5fa", abbr: "LG" },
-  { name: "Pydantic AI",   bg: "rgba(233,32,99,0.15)",  color: "#f472b6", abbr: "PY" },
+  { name: "LlamaIndex",    bg: "rgba(108,71,255,0.15)", color: "#a78bfa", abbr: "LI" },
+  { name: "Pydantic AI",   bg: "rgba(233,32,99,0.15)", color: "#f472b6", abbr: "PY" },
   { name: "Crew AI",       bg: "rgba(249,115,22,0.15)", color: "#fb923c", abbr: "CR" },
   { name: "OpenTelemetry", bg: "rgba(245,166,35,0.15)", color: "#fbbf24", abbr: "OT" },
-  { name: "OpenAI",        bg: "rgba(16,163,127,0.15)", color: "#10a37f", abbr: "OI" },
-  { name: "LangChain",     bg: "rgba(28,127,230,0.15)", color: "#60a5fa", abbr: "LC" },
   { name: "Vercel AI SDK", bg: "rgba(255,255,255,0.06)", color: "#e2e8f0", abbr: "V" },
+  { name: "MCP Tools",     bg: "rgba(6,182,212,0.15)", color: "#22d3ee", abbr: "MC" },
+  { name: "Custom APIs",   bg: "rgba(255,255,255,0.08)", color: "#e2e8f0", abbr: "API" },
   { name: "Agent Core",    bg: "rgba(139,92,246,0.15)", color: "#a78bfa", abbr: "AC" },
   { name: "LiteLLM",       bg: "rgba(6,182,212,0.15)",  color: "#22d3ee", abbr: "Li" },
   { name: "Portkey",       bg: "rgba(124,58,237,0.15)", color: "#c4b5fd", abbr: "PK" },
 ];
 
-const spans = [
-  { id: "span_01", label: "span_01", indent: 0, active: false },
-  { id: "trace_01", label: "trace_01", indent: 1, active: false },
-  { id: "span_02", label: "span_02", indent: 1, active: false },
-  { id: "trace_02", label: "trace_02", indent: 0, active: true },
-  { id: "span_03", label: "span_03", indent: 1, active: false },
-  { id: "span_04", label: "span_04", indent: 0, active: false },
+const pipeline = [
+  { id: "trace.upload", label: "trace.upload", indent: 0, active: false },
+  { id: "campaign.bind", label: "campaign.bind", indent: 1, active: false },
+  { id: "replay.execute", label: "replay.execute", indent: 1, active: true },
+  { id: "mutation.trace", label: "mutation.trace", indent: 1, active: true },
+  { id: "policy.events", label: "policy.events", indent: 1, active: false },
+  { id: "failure.classify", label: "failure.classify", indent: 0, active: false },
+  { id: "ci.batch.decision", label: "ci.batch.decision", indent: 0, active: false },
 ];
 
-const risks = [
-  { label: "Prompt Leakage",    pct: 6 },
-  { label: "Goal Theft",        pct: 7 },
-  { label: "PII Leakage",       pct: 4 },
-  { label: "Excessive Agency",  pct: 3 },
-  { label: "Misinformation",    pct: 5 },
-  { label: "Bias",              pct: 2 },
+const gateMetrics = [
+  { label: "Scenario coverage", value: "100%", pct: 100 },
+  { label: "Contract checks", value: "10/10", pct: 100 },
+  { label: "Policy unsafe", value: "0", pct: 100 },
+  { label: "Pass rate", value: "84%", pct: 84 },
 ];
 
 /** SVG animated dashed connector — horizontal with mid-elbow */
@@ -99,20 +99,20 @@ export function IntegrationSection() {
             Integration
           </p>
           <h2 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-            Stay In Your Stack.
+            Keep Your Existing Stack.
             <br />
-            We&apos;ll Meet You There.
+            Get A Real CI Verdict.
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base text-neutral-400">
-            SDKs in Python and TypeScript — 20+ integrations including OpenAI, LangGraph,
-            OpenTelemetry, and more LLM gateways.
+            Sepurux records your real traces, replays them with mutation packs, applies policy packs,
+            and returns a batch decision you can enforce before merge.
           </p>
           <div className="mt-8 flex justify-center">
             <Link
-              href="/product#integrations"
+              href="/docs/ci-cd"
               className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
             >
-              See all integrations
+              Open CI + SDK guide
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
@@ -158,11 +158,11 @@ export function IntegrationSection() {
               {/* outer dashed container */}
               <DashRect x={8} y={8} w={364} h={324} />
 
-              {/* inner cluster highlight box */}
-              <DashRect x={40} y={100} w={300} h={180} active />
+              {/* inner replay/policy cluster */}
+              <DashRect x={40} y={96} w={300} h={184} active />
 
               {/* span labels */}
-              {spans.map((s, i) => {
+              {pipeline.map((s, i) => {
                 const y = 44 + i * 46;
                 const x = s.indent ? 80 : 52;
                 const w = s.indent ? 180 : 240;
@@ -210,11 +210,11 @@ export function IntegrationSection() {
                 );
               })}
 
-              {/* pip install badge */}
-              <rect x={90} y={296} width={200} height={26} rx={5}
+              {/* gateway badge */}
+              <rect x={82} y={296} width={216} height={26} rx={5}
                 fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
-              <text x={100} y={313} fontSize="9" fontFamily="monospace" fill="rgba(0,229,204,0.7)">
-                pip install sepurux
+              <text x={94} y={313} fontSize="9" fontFamily="monospace" fill="rgba(0,229,204,0.7)">
+                sepurux-gate@main · decision=pass|fail
               </text>
 
               {/* animated connection lines left → diagram */}
@@ -229,9 +229,14 @@ export function IntegrationSection() {
             </svg>
           </div>
 
-          {/* ── col 3: risk metrics ── */}
+          {/* ── col 3: gate metrics ── */}
           <div className="space-y-3 rounded-xl border border-white/8 bg-white/[0.03] p-5 backdrop-blur">
-            {risks.map((r, i) => (
+            <div className="mb-1 border-b border-white/10 pb-3">
+              <p className="text-sm font-medium text-white">CI Batch Verdict Snapshot</p>
+              <p className="mt-1 text-xs text-white/45">From replay + mutation + policy evaluation</p>
+            </div>
+
+            {gateMetrics.map((r, i) => (
               <motion.div
                 key={r.label}
                 initial={{ opacity: 0, x: 16 }}
@@ -246,21 +251,23 @@ export function IntegrationSection() {
                     className="absolute inset-y-0 left-0 rounded-full"
                     style={{ background: "var(--accent-teal)" }}
                     initial={{ width: 0 }}
-                    whileInView={{ width: `${r.pct * 8}%` }}
+                    whileInView={{ width: `${r.pct}%` }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.3 + i * 0.07, duration: 0.6, ease: "easeOut" }}
                   />
                 </div>
-                <span className="w-6 shrink-0 text-right text-xs tabular-nums text-white/40">
-                  {r.pct}%
+                <span className="w-10 shrink-0 text-right text-xs tabular-nums text-white/40">
+                  {r.value}
                 </span>
               </motion.div>
             ))}
 
             <div className="mt-5 border-t border-white/8 pt-4">
-              <p className="text-[10px] uppercase tracking-widest text-white/25">
-                Safety scan · live results
-              </p>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-white/30">
+                <span className="rounded border border-white/12 bg-white/[0.04] px-2 py-1">trace_count=3</span>
+                <span className="rounded border border-white/12 bg-white/[0.04] px-2 py-1">required_tools=9/9</span>
+                <span className="rounded border border-white/12 bg-white/[0.04] px-2 py-1">unsafe_attempts=0</span>
+              </div>
             </div>
           </div>
         </motion.div>

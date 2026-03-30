@@ -15,7 +15,6 @@ from app.schemas import (
 )
 from app.services.mutation_pack_policy import evaluate_mutation_pack_config
 from app.services.mutation_pack_service import (
-    MutationPackInUseError,
     SystemMutationPackModificationError,
     create_mutation_pack,
     delete_mutation_pack,
@@ -46,6 +45,7 @@ def _to_mutation_pack_metadata(record) -> MutationPackMetadata:
         description=record.description,
         config=record.config,
         is_system=record.is_system,
+        is_archived=record.is_archived,
         coverage_score=record.coverage_score,
         credit_cost=record.credit_cost,
         created_at=record.created_at,
@@ -95,11 +95,13 @@ def get_mutation_packs(
     db: DbSession,
     project_scope: MutationPackReadScope,
     include_system: bool = Query(True),
+    include_archived: bool = Query(False),
 ) -> list[MutationPackMetadata]:
     records = list_mutation_packs(
         db,
         project_id=project_scope.project_id,
         include_system=include_system,
+        include_archived=include_archived,
     )
     return [_to_mutation_pack_metadata(record) for record in records]
 
@@ -109,11 +111,13 @@ def get_mutation_pack_by_id(
     pack_ref: str,
     db: DbSession,
     project_scope: MutationPackReadScope,
+    include_archived: bool = Query(False),
 ) -> MutationPackMetadata:
     record = resolve_mutation_pack(
         db,
         project_id=project_scope.project_id,
         pack_ref=pack_ref,
+        include_archived=include_archived,
     )
     if record is None:
         raise HTTPException(
@@ -128,11 +132,13 @@ def get_mutation_pack_coverage(
     pack_ref: str,
     db: DbSession,
     project_scope: MutationPackReadScope,
+    include_archived: bool = Query(False),
 ) -> MutationPackCoverageResponse:
     record = resolve_mutation_pack(
         db,
         project_id=project_scope.project_id,
         pack_ref=pack_ref,
+        include_archived=include_archived,
     )
     if record is None:
         raise HTTPException(
@@ -224,8 +230,6 @@ def delete_mutation_pack_by_id(
         )
     except SystemMutationPackModificationError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    except MutationPackInUseError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     if not deleted:
         raise HTTPException(

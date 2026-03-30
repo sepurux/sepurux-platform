@@ -21,6 +21,8 @@ const operationCosts = [
   { label: "Scheduled pack run", credits: "pack-specific cost (default 20)" },
 ];
 
+const ANNUAL_DISCOUNT_RATE = 0.2;
+
 const valuePoints = [
   {
     icon: Coins,
@@ -41,6 +43,29 @@ const valuePoints = [
       "Free and Pro are single-workspace oriented. Team and Enterprise unlock member invites and workspace expansion.",
   },
 ];
+
+function parseUsdPrice(value: string): number {
+  const normalized = value.replaceAll(/[^0-9]/g, "");
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatUsd(value: number): string {
+  return `$${value.toLocaleString()}`;
+}
+
+function capacityFromCredits(monthlyCredits: string) {
+  const credits = Number.parseInt(monthlyCredits.replaceAll(/[^0-9]/g, ""), 10);
+  if (!Number.isFinite(credits) || credits <= 0) {
+    return null;
+  }
+  return {
+    credits,
+    traceReplays: Math.floor(credits / 5),
+    campaigns: Math.floor(credits / 20),
+    largeCampaigns: Math.floor(credits / 50),
+  };
+}
 
 export default function PricingPage() {
   return (
@@ -117,71 +142,109 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Tier sections */}
-      {pricingTiers.map((tier) => (
-        <section key={tier.tier} className="bg-black">
-          <div className="site-container grid gap-10 py-16 md:py-24 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-16">
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm uppercase tracking-[0.18em] text-neutral-500">{tier.name}</p>
-                {tier.featured ? (
-                  <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-neutral-300">
-                    Most popular
-                  </span>
-                ) : null}
-              </div>
-              <div className="mt-5 flex flex-wrap items-end gap-3">
-                <h2 className="text-5xl font-semibold tracking-[-0.05em] text-white md:text-6xl">
-                  {tier.price}
-                </h2>
-                <span className="pb-2 text-sm text-neutral-400">{tier.interval}</span>
-              </div>
-              <p className="mt-5 max-w-xl text-lg leading-8 text-neutral-400">{tier.description}</p>
-
-              <div className="mt-10 flex flex-wrap gap-3">
-                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-neutral-300">
-                  <Coins className="mr-2 h-4 w-4 text-white/40" />
-                  {tier.monthlyCredits}
-                </span>
-                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium capitalize text-neutral-300">
-                  <Zap className="mr-2 h-4 w-4 text-white/40" />
-                  {tier.queuePriority} queue
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/8 bg-white/[0.03] p-7 md:p-8">
-              <div className="space-y-3">
-                {tier.features.map((feature) => (
-                  <div key={feature} className="flex items-start gap-3">
-                    <div
-                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
-                      style={{ borderColor: "rgba(0,229,204,0.25)", background: "rgba(0,229,204,0.06)" }}
-                    >
-                      <Check className="h-3.5 w-3.5" style={{ color: "var(--accent-teal)" }} />
-                    </div>
-                    <p className="text-sm leading-6 text-neutral-300">{feature}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8">
-                <a
-                  href={tier.href}
-                  className="teal-glow-btn inline-flex h-11 items-center justify-center gap-2 rounded-full border px-6 text-sm font-semibold text-white"
-                  style={{
-                    borderColor: "rgba(0,229,204,0.35)",
-                    background: "rgba(0,229,204,0.08)",
-                  }}
-                >
-                  {tier.cta}
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </div>
+      {/* Tier comparison */}
+      <section className="bg-black">
+        <div className="site-container py-16 md:py-24">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">Plan comparison</p>
+            <h2 className="section-heading mt-4 text-white">Choose the best plan for your reliability workflow.</h2>
+            <p className="mt-4 text-base leading-7 text-neutral-400 md:text-lg">
+              Monthly credits refresh each billing cycle on paid tiers. Annual billing applies a 20% discount for
+              equivalent monthly cost.
+            </p>
+            <div className="mt-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-1">
+              <span className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-black">
+                Monthly
+              </span>
+              <span className="rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-300">
+                Yearly
+              </span>
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300">
+                -20% off
+              </span>
             </div>
           </div>
-        </section>
-      ))}
+
+          <div className="mt-12 grid gap-4 xl:grid-cols-4">
+            {pricingTiers.map((tier, index) => {
+              const monthlyPrice = parseUsdPrice(tier.price);
+              const annualTotal = Math.round(monthlyPrice * 12 * (1 - ANNUAL_DISCOUNT_RATE));
+              const annualMonthlyEquivalent = Math.round(monthlyPrice * (1 - ANNUAL_DISCOUNT_RATE));
+              const capacity = capacityFromCredits(tier.monthlyCredits);
+              const inheritedFrom = index > 0 ? pricingTiers[index - 1]?.name : null;
+
+              return (
+                <div
+                  key={tier.tier}
+                  className={`relative flex h-full flex-col rounded-[22px] border p-6 ${
+                    tier.featured
+                      ? "border-[rgba(0,229,204,0.38)] bg-[rgba(0,229,204,0.06)]"
+                      : "border-white/10 bg-white/[0.03]"
+                  }`}
+                >
+                  {tier.featured ? (
+                    <span className="absolute right-4 top-4 rounded-full border border-[rgba(0,229,204,0.35)] bg-[rgba(0,229,204,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-teal)]">
+                      Most popular
+                    </span>
+                  ) : null}
+
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-400">{tier.name}</p>
+                  <p className="mt-3 text-sm leading-6 text-neutral-400">{tier.description}</p>
+
+                  <div className="mt-5 flex items-end gap-2">
+                    <p className="text-4xl font-semibold tracking-[-0.04em] text-white">{tier.price}</p>
+                    <span className="pb-1 text-xs text-neutral-400">per user / month</span>
+                  </div>
+                  {monthlyPrice > 0 ? (
+                    <p className="mt-1 text-xs text-neutral-400">
+                      billed annually as {formatUsd(annualTotal)} ({formatUsd(annualMonthlyEquivalent)}/mo)
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-neutral-400">free forever</p>
+                  )}
+
+                  <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400">Includes</p>
+                    <p className="mt-2 text-sm font-medium text-white">{tier.monthlyCredits}</p>
+                    {capacity ? (
+                      <p className="mt-1 text-xs leading-5 text-neutral-400">
+                        {capacity.credits.toLocaleString()} credits = {capacity.traceReplays.toLocaleString()} trace
+                        replays or {capacity.campaigns.toLocaleString()} campaigns or{" "}
+                        {capacity.largeCampaigns.toLocaleString()} large campaigns.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {inheritedFrom ? (
+                    <p className="mt-4 text-xs text-neutral-500">Everything in {inheritedFrom} and...</p>
+                  ) : null}
+
+                  <ul className="mt-4 flex-1 space-y-2.5">
+                    {tier.features.slice(0, 6).map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm text-neutral-300">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-teal)]" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <a
+                    href={tier.href}
+                    className="teal-glow-btn mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold text-white"
+                    style={{
+                      borderColor: tier.featured ? "rgba(0,229,204,0.45)" : "rgba(255,255,255,0.18)",
+                      background: tier.featured ? "rgba(0,229,204,0.14)" : "rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    {tier.cta}
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Enterprise CTA */}
       <section className="bg-neutral-950">
