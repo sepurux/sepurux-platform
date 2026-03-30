@@ -50,31 +50,49 @@ def create_mutation_pack(
 
 
 def ensure_system_mutation_packs(db: Session, *, project_id: UUID) -> list[MutationPack]:
-    existing = {
-        name
-        for name in db.scalars(
-            select(MutationPack.name).where(
+    existing_records = list(
+        db.scalars(
+            select(MutationPack).where(
                 MutationPack.project_id == project_id,
                 MutationPack.is_system.is_(True),
             )
         )
-    }
+    )
+    existing_by_name = {record.name: record for record in existing_records}
 
     created: list[MutationPack] = []
+    updated: list[MutationPack] = []
     for definition in SYSTEM_MUTATION_PACK_DEFINITIONS:
         name = str(definition["name"])
-        if name in existing:
-            continue
         config = definition["config"]
         if not isinstance(config, dict):
             continue
         credit_cost_raw = definition.get("credit_cost")
         credit_cost = int(credit_cost_raw) if isinstance(credit_cost_raw, int) else 20
+        description = str(definition.get("description") or "")
+
+        existing = existing_by_name.get(name)
+        if existing is not None:
+            expected_coverage = coverage_score_for_config(config)
+            if (
+                existing.description != description
+                or existing.config != config
+                or int(existing.credit_cost or 20) != credit_cost
+                or int(existing.coverage_score or 0) != expected_coverage
+            ):
+                existing.description = description
+                existing.config = config
+                existing.credit_cost = credit_cost
+                existing.coverage_score = expected_coverage
+                db.add(existing)
+                updated.append(existing)
+            continue
+
         record = MutationPack(
             mutation_pack_id=uuid4(),
             project_id=project_id,
             name=name,
-            description=str(definition.get("description") or ""),
+            description=description,
             config=config,
             is_system=True,
             coverage_score=coverage_score_for_config(config),
@@ -83,7 +101,7 @@ def ensure_system_mutation_packs(db: Session, *, project_id: UUID) -> list[Mutat
         db.add(record)
         created.append(record)
 
-    if created:
+    if created or updated:
         db.commit()
         for record in created:
             db.refresh(record)

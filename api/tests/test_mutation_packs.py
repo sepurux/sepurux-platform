@@ -7,6 +7,7 @@ import pytest
 from app.db import get_db
 from app.main import app
 from app.models import Base, Campaign, MutationPack, Project, Run, Trace
+from app.mutation_registry import get_registered_pack_definition
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -238,6 +239,50 @@ def test_system_mutation_packs_are_bootstrapped_and_cannot_be_deleted(
     delete_response = client.delete(f"/v1/mutation-packs/{sample_system_pack_id}")
     assert delete_response.status_code == 403
     assert delete_response.json() == {"detail": "System mutation packs cannot be deleted"}
+
+
+def test_system_mutation_pack_config_is_refreshed_when_definition_drifts(
+    mutation_pack_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+) -> None:
+    client, testing_session_local, project_id, _ = mutation_pack_test_context
+
+    bootstrap = client.get("/v1/mutation-packs")
+    assert bootstrap.status_code == 200
+
+    with testing_session_local() as db:
+        pack = db.scalar(
+            select(MutationPack).where(
+                MutationPack.project_id == project_id,
+                MutationPack.name == "sepurux.max_chaos",
+            )
+        )
+        assert pack is not None
+        config = dict(pack.config) if isinstance(pack.config, dict) else {}
+        config["suggested_attempts"] = 999
+        mutations = config.get("mutations")
+        assert isinstance(mutations, list) and mutations
+        first_mutation = mutations[0]
+        assert isinstance(first_mutation, dict)
+        first_mutation["probability"] = 1.0
+        pack.config = config
+        db.add(pack)
+        db.commit()
+
+    refreshed = client.get("/v1/mutation-packs")
+    assert refreshed.status_code == 200
+    payload = refreshed.json()
+    restored = next((row for row in payload if row["name"] == "sepurux.max_chaos"), None)
+    assert restored is not None
+
+    definition = get_registered_pack_definition("sepurux.max_chaos")
+    assert definition is not None
+    expected_config = definition["config"]
+
+    assert restored["config"]["suggested_attempts"] == expected_config["suggested_attempts"]
+    restored_first = restored["config"]["mutations"][0]
+    expected_first = expected_config["mutations"][0]
+    assert restored_first["mutation_id"] == expected_first["mutation_id"]
+    assert restored_first["probability"] == expected_first["probability"]
 
 
 def test_viewer_can_create_mutation_pack() -> None:

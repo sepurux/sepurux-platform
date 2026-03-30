@@ -16,6 +16,7 @@ from app.models import (
     PolicyPack,
     PolicyPackVersion,
     Project,
+    QualityContract,
     ReplayAttempt,
     Run,
     TenantControl,
@@ -125,9 +126,14 @@ def test_ci_post_run_allows_when_ci_token_unset_and_stores_thresholds(
         row = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
         assert row.project_id == project_id
         assert row.status == "queued"
-        assert row.summary == {
-            "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0, "max_failures": 2}
+        assert isinstance(row.summary, dict)
+        assert row.summary.get("ci_thresholds") == {
+            "min_pass_rate": 0.8,
+            "max_unsafe": 0,
+            "max_failures": 2,
         }
+        assert row.summary.get("campaign_name") == "Seed Campaign"
+        assert isinstance(row.summary.get("ci_batch_id"), str)
 
 
 def test_ci_post_run_stores_github_context(
@@ -155,10 +161,14 @@ def test_ci_post_run_stores_github_context(
     run_id = UUID(response.json()["run_id"])
     with testing_session_local() as db:
         row = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
-        assert row.summary == {
-            "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
-            "github_context": {"repo": "sepurux/sepurux-platform", "pull_request_number": 97},
+        assert isinstance(row.summary, dict)
+        assert row.summary.get("ci_thresholds") == {"min_pass_rate": 0.8, "max_unsafe": 0}
+        assert row.summary.get("github_context") == {
+            "repo": "sepurux/sepurux-platform",
+            "pull_request_number": 97,
         }
+        assert row.summary.get("campaign_name") == "Seed Campaign"
+        assert isinstance(row.summary.get("ci_batch_id"), str)
 
 
 def test_ci_post_run_reads_repo_and_pr_number_from_env(
@@ -186,10 +196,14 @@ def test_ci_post_run_reads_repo_and_pr_number_from_env(
     run_id = UUID(response.json()["run_id"])
     with testing_session_local() as db:
         row = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
-        assert row.summary == {
-            "ci_thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
-            "github_context": {"repo": "sepurux/sepurux-platform", "pull_request_number": 123},
+        assert isinstance(row.summary, dict)
+        assert row.summary.get("ci_thresholds") == {"min_pass_rate": 0.8, "max_unsafe": 0}
+        assert row.summary.get("github_context") == {
+            "repo": "sepurux/sepurux-platform",
+            "pull_request_number": 123,
         }
+        assert row.summary.get("campaign_name") == "Seed Campaign"
+        assert isinstance(row.summary.get("ci_batch_id"), str)
 
 
 def test_ci_post_run_returns_423_when_tenant_runs_paused(
@@ -956,6 +970,51 @@ def _seed_campaign_with_eval_traces(
     return trace_ids, campaign_id
 
 
+def _seed_campaign_with_tool_trace(
+    db: Session,
+    *,
+    project_id: UUID,
+    tool: str,
+    with_confirmation_token: bool,
+) -> tuple[UUID, UUID]:
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    db.add(
+        Trace(
+            trace_id=trace_id,
+            project_id=project_id,
+            source="test",
+            normalized_payload={
+                "events": [
+                    {"type": "tool_call", "tool": tool, "args": {"input": "x"}},
+                    {"type": "tool_result", "tool": tool, "output": {"ok": True}},
+                ]
+            },
+            s3_key=f"traces/{trace_id}.json",
+        )
+    )
+    mutation_args: dict[str, object] = {"amount": 100}
+    if with_confirmation_token:
+        mutation_args["confirmation_token"] = "ok"
+    db.add(
+        Campaign(
+            campaign_id=campaign_id,
+            project_id=project_id,
+            name="Preflight Tool Campaign",
+            mutation_set=[
+                {
+                    "mutation_id": "tool-write-check",
+                    "tool": tool,
+                    "args": mutation_args,
+                }
+            ],
+            eval_set={"checks": ["status"], "trace_ids": [str(trace_id)]},
+        )
+    )
+    db.commit()
+    return trace_id, campaign_id
+
+
 def test_ci_post_run_uses_eval_set_trace_ids_batch(
     ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
     monkeypatch: pytest.MonkeyPatch,
@@ -1073,6 +1132,89 @@ def test_ci_post_run_requires_trace_id_when_no_eval_set_traces(
     assert fake_queue.calls == []
 
 
+def test_ci_preflight_blocks_missing_confirmation_token_for_irreversible_tool(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+    with testing_session_local() as db:
+        _, campaign_id = _seed_campaign_with_tool_trace(
+            db,
+            project_id=project_id,
+            tool="payments.refund",
+            with_confirmation_token=False,
+        )
+
+    response = client.post(
+        "/v1/ci/preflight",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0, "max_failures": 1},
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ready"] is False
+    assert any(item["code"] == "missing_confirmation_token" for item in payload["blockers"])
+
+
+def test_ci_preflight_ready_when_confirmation_token_present(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+    with testing_session_local() as db:
+        _, campaign_id = _seed_campaign_with_tool_trace(
+            db,
+            project_id=project_id,
+            tool="payments.refund",
+            with_confirmation_token=True,
+        )
+
+    response = client.post(
+        "/v1/ci/preflight",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0, "max_failures": 1},
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ready"] is True
+    assert payload["blockers"] == []
+
+
+def test_ci_post_run_rejects_when_preflight_has_blockers(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+    with testing_session_local() as db:
+        _, campaign_id = _seed_campaign_with_tool_trace(
+            db,
+            project_id=project_id,
+            tool="payments.refund",
+            with_confirmation_token=False,
+        )
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0, "max_failures": 1},
+        },
+    )
+    assert response.status_code == 422
+    payload = response.json()
+    assert isinstance(payload["detail"], dict)
+    assert payload["detail"]["message"] == "CI preflight failed"
+    assert any(item["code"] == "missing_confirmation_token" for item in payload["detail"]["blockers"])
+    assert fake_queue.calls == []
+
+
 def test_get_ci_batch_returns_aggregated_verdict(
     ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
     monkeypatch: pytest.MonkeyPatch,
@@ -1125,6 +1267,91 @@ def test_get_ci_batch_returns_aggregated_verdict(
     assert payload["trace_count"] == 2
     assert payload["scenario_coverage_pct"] == 100.0
     assert set(UUID(rid) for rid in payload["run_ids"]) == {run_a_id, run_b_id}
+
+
+def test_get_ci_batch_contract_tool_coverage_uses_normalized_trace_events(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.setenv("CI_TOKEN", "secret-token")
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    batch_id = uuid4()
+    run_id = uuid4()
+    required_tool = "payments.refund"
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {"type": "tool_call", "tool": required_tool, "args": {"amount": 10}},
+                        {"type": "tool_result", "tool": required_tool, "output": {"ok": True}},
+                    ]
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Contract Coverage Campaign",
+                mutation_set=[],
+                eval_set={},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="completed",
+                summary={
+                    "ci_thresholds": {"min_pass_rate": 0.5, "max_unsafe": 0},
+                    "ci_batch_id": str(batch_id),
+                },
+            )
+        )
+        db.add(
+            ReplayAttempt(
+                attempt_id=uuid4(),
+                project_id=project_id,
+                run_id=run_id,
+                mutation_id="baseline",
+                result="passed",
+                failure_reason=None,
+                first_failure_event_index=None,
+                first_failure_tool=None,
+                artifacts_s3_key=None,
+            )
+        )
+        db.add(
+            QualityContract(
+                contract_id=uuid4(),
+                project_id=project_id,
+                campaign_id=campaign_id,
+                required_pack_ids=[],
+                required_tools=[required_tool],
+                min_attempts_per_pack=1,
+                version=1,
+            )
+        )
+        db.commit()
+
+    headers = {"X-Sepurux-Token": "secret-token"}
+    response = client.get(f"/v1/ci/batch/{batch_id}", headers=headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["contract_report"] is not None
+    assert payload["contract_report"]["passed"] is True
+    assert required_tool in payload["contract_report"]["covered_tools"]
 
 
 def test_get_ci_batch_fails_when_any_run_fails(

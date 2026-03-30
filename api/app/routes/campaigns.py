@@ -18,12 +18,6 @@ from app.schemas import (
     QualityContractResponse,
     QualityContractUpsert,
 )
-from app.services.contract_service import (
-    delete_contract,
-    get_contract,
-    serialize_contract,
-    upsert_contract,
-)
 from app.services.audit_service import actor_from_request
 from app.services.billing_service import (
     InsufficientCreditsError,
@@ -35,6 +29,12 @@ from app.services.billing_service import (
 from app.services.campaign_service import archive_campaign, create_campaign
 from app.services.campaign_service import get_campaign as get_campaign_record
 from app.services.campaign_service import list_campaigns as list_campaign_records
+from app.services.contract_service import (
+    delete_contract,
+    get_contract,
+    serialize_contract,
+    upsert_contract,
+)
 from app.services.demo_service import (
     enforce_demo_campaign_create_limit,
     enforce_demo_run_limits,
@@ -61,7 +61,6 @@ logger = logging.getLogger(__name__)
 DbSession = Annotated[Session, Depends(get_db)]
 ProjectScopeDep = Annotated[ProjectScope, Depends(require_project_scope)]
 DeveloperAuth = Annotated[TenantAuthContext, Depends(require_role("developer"))]
-PACK_DEFINITION_KEYS = frozenset({"target", "params", "probability", "weight"})
 RUN_ID_QUERY = Query(None)
 
 
@@ -71,25 +70,9 @@ def _to_campaign_metadata(campaign) -> CampaignMetadata:
         mutation_pack_id=campaign.mutation_pack_id,
         name=campaign.name,
         status=campaign.status,
-        mutation_set=campaign.mutation_set,
         eval_set=campaign.eval_set,
         created_at=campaign.created_at,
     )
-
-
-def _looks_like_pack_definition(item: object) -> bool:
-    return isinstance(item, dict) and bool(PACK_DEFINITION_KEYS.intersection(item))
-
-
-def _mutation_set_contains_pack_definitions(mutation_set: object) -> bool:
-    if isinstance(mutation_set, list):
-        return any(_looks_like_pack_definition(item) for item in mutation_set)
-    if isinstance(mutation_set, dict):
-        nested_mutations = mutation_set.get("mutations")
-        if isinstance(nested_mutations, list):
-            return any(_looks_like_pack_definition(item) for item in nested_mutations)
-        return _looks_like_pack_definition(mutation_set)
-    return False
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=CampaignMetadata)
@@ -113,23 +96,13 @@ def post_campaign(
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found")
 
-    if payload.mutation_pack_id is not None and _mutation_set_contains_pack_definitions(
-        payload.mutation_set
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                "Campaign mutation_set must contain replay mutations, not mutation-pack "
-                "definitions"
-            ),
-        )
-
+    eval_set = payload.eval_set.model_dump(exclude_none=True)
     campaign = create_campaign(
         db,
         project_id=project_scope.project_id,
         name=payload.name,
-        mutation_set=payload.mutation_set,
-        eval_set=payload.eval_set,
+        mutation_set=[],
+        eval_set=eval_set,
         mutation_pack_id=payload.mutation_pack_id,
         actor=actor_from_request(request),
     )
@@ -229,6 +202,7 @@ def patch_campaign_eval_set(
     db.commit()
     db.refresh(campaign)
     return _to_campaign_metadata(campaign)
+
 
 
 @router.delete("/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)

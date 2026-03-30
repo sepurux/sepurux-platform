@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import logging
 import os
+from math import ceil
 from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 from app.db import get_db
 from app.models import Campaign, MutationPack, Project, Run, Trace
-from app.services.contract_service import evaluate_contract, get_contract
 from app.schemas import (
     CIBatchStatusResponse,
     CIRunCreateRequest,
     CIRunCreateResponse,
+    CIRunPreflightIssue,
+    CIRunPreflightResponse,
     CIRunStatusResponse,
+    CIRunThresholds,
     ContractReport,
     ToolCount,
 )
@@ -23,6 +26,7 @@ from app.services.billing_service import (
     operation_cost_for_campaign_record,
     refund_credits_for_project_owner,
 )
+from app.services.contract_service import evaluate_contract, get_contract
 from app.services.github_client import (
     GitHubClientError,
     format_pr_comment,
@@ -41,6 +45,7 @@ from app.services.tenant_control_service import (
     TenantControlViolationError,
     assert_project_runs_allowed,
 )
+from app.services.trace_bootstrap_service import build_bootstrap_policy_document
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -97,6 +102,363 @@ def _resolve_ci_trace_ids(
     return [payload.trace_id]
 
 
+def _campaign_mutation_set_is_empty(campaign: Campaign) -> bool:
+    mutation_set = campaign.mutation_set
+    if mutation_set is None:
+        return True
+    if isinstance(mutation_set, list):
+        return len(mutation_set) == 0
+    if isinstance(mutation_set, dict):
+        nested = mutation_set.get("mutations")
+        if isinstance(nested, list):
+            return len(nested) == 0
+        return len(mutation_set) == 0
+    return False
+
+
+def _campaign_mutation_items(campaign: Campaign) -> list[Any]:
+    mutation_set = campaign.mutation_set
+    if isinstance(mutation_set, list):
+        return mutation_set or [{"mutation_id": "baseline"}]
+    if isinstance(mutation_set, dict):
+        nested = mutation_set.get("mutations")
+        if isinstance(nested, list):
+            return nested or [{"mutation_id": "baseline"}]
+        return [mutation_set]
+    if mutation_set is None:
+        return [{"mutation_id": "baseline"}]
+    return [mutation_set]
+
+
+def _campaign_attempt_repeats(campaign: Campaign) -> int:
+    eval_set = campaign.eval_set if isinstance(campaign.eval_set, dict) else {}
+    raw_attempts = eval_set.get("attempts_count")
+    if isinstance(raw_attempts, bool):
+        return 1
+    if isinstance(raw_attempts, int):
+        return max(1, min(raw_attempts, 50))
+    if isinstance(raw_attempts, float):
+        return max(1, min(int(raw_attempts), 50))
+    return 1
+
+
+def _mutation_tool_and_args(mutation: Any) -> tuple[str | None, dict[str, Any], str]:
+    mutation_obj = mutation if isinstance(mutation, dict) else {}
+    mutation_id = str(
+        mutation_obj.get("mutation_id")
+        or mutation_obj.get("id")
+        or mutation_obj.get("tool")
+        or "mutation"
+    )
+
+    tool_obj = mutation_obj.get("tool")
+    tool_name = tool_obj.strip() if isinstance(tool_obj, str) and tool_obj.strip() else None
+
+    args_obj = mutation_obj.get("args")
+    args: dict[str, Any] = dict(args_obj) if isinstance(args_obj, dict) else {}
+
+    event_obj = mutation_obj.get("event")
+    if isinstance(event_obj, dict):
+        if tool_name is None:
+            event_tool = event_obj.get("tool")
+            if isinstance(event_tool, str) and event_tool.strip():
+                tool_name = event_tool.strip()
+        if not args:
+            event_args = event_obj.get("args")
+            if isinstance(event_args, dict):
+                args = dict(event_args)
+
+    for key in ("confirmation_token", "approval_token"):
+        if key in mutation_obj and key not in args:
+            args[key] = mutation_obj.get(key)
+
+    return tool_name, args, mutation_id
+
+
+def _approval_token_field(policy_doc: dict[str, Any]) -> str:
+    approval_obj = policy_doc.get("approval")
+    if isinstance(approval_obj, dict):
+        token_field = approval_obj.get("token_field")
+        if isinstance(token_field, str) and token_field.strip():
+            return token_field.strip()
+    return "confirmation_token"
+
+
+def _irreversible_tools(policy_doc: dict[str, Any]) -> set[str]:
+    irreversible_obj = policy_doc.get("irreversible")
+    if not isinstance(irreversible_obj, dict):
+        return set()
+    tools_obj = irreversible_obj.get("tools")
+    if not isinstance(tools_obj, list):
+        return set()
+    return {
+        item.strip()
+        for item in tools_obj
+        if isinstance(item, str) and item.strip()
+    }
+
+
+def _has_approval_token(args: dict[str, Any], *, token_field: str) -> bool:
+    token_value = args.get(token_field)
+    if isinstance(token_value, str) and token_value.strip():
+        return True
+    if token_value is not None and bool(token_value):
+        return True
+    return bool(args.get("confirmation_token") or args.get("approval_token"))
+
+
+def _trace_tools_for_ids(db: Session, *, project_id: UUID, trace_ids: list[UUID]) -> list[str]:
+    if not trace_ids:
+        return []
+    traces = list(
+        db.scalars(
+            select(Trace).where(
+                Trace.project_id == project_id,
+                Trace.trace_id.in_(trace_ids),
+            )
+        )
+    )
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for trace in traces:
+        payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+        events = payload.get("events")
+        if not isinstance(events, list):
+            continue
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            event_type = event.get("type")
+            if event_type not in {"tool_call", "tool_result"}:
+                continue
+            tool = event.get("tool")
+            if not isinstance(tool, str):
+                continue
+            normalized = tool.strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            ordered.append(normalized)
+    return ordered
+
+
+def _build_ci_preflight(
+    db: Session,
+    *,
+    payload: CIRunCreateRequest,
+    campaign: Campaign,
+    trace_ids: list[UUID] | None = None,
+) -> CIRunPreflightResponse:
+    blockers: list[CIRunPreflightIssue] = []
+    warnings: list[CIRunPreflightIssue] = []
+    resolved_trace_ids = list(trace_ids or [])
+
+    if not resolved_trace_ids:
+        try:
+            resolved_trace_ids = _resolve_ci_trace_ids(payload, campaign)
+        except HTTPException as exc:
+            blockers.append(
+                CIRunPreflightIssue(
+                    code="trace_resolution_failed",
+                    message=str(exc.detail),
+                    hint="Register traces in campaign eval set or pass trace_id in the run request.",
+                )
+            )
+            resolved_trace_ids = []
+
+    mutation_items = _campaign_mutation_items(campaign)
+    attempts_per_trace = len(mutation_items) * _campaign_attempt_repeats(campaign)
+    estimated_attempts_total = attempts_per_trace * len(resolved_trace_ids)
+
+    thresholds_payload = (
+        payload.thresholds.model_dump(exclude_none=True)
+        if hasattr(payload.thresholds, "model_dump")
+        else payload.thresholds.dict(exclude_none=True)
+    )
+    thresholds = CIRunThresholds(**thresholds_payload)
+
+    recommended_max_failures = 0
+    if estimated_attempts_total > 0:
+        recommended_max_failures = max(0, estimated_attempts_total - ceil(0.8 * estimated_attempts_total))
+    recommended_thresholds = CIRunThresholds(
+        min_pass_rate=0.8,
+        max_unsafe=0,
+        max_failures=recommended_max_failures,
+    )
+
+    if _campaign_mutation_set_is_empty(campaign):
+        warnings.append(
+            CIRunPreflightIssue(
+                code="empty_mutation_set_auto_seeded",
+                message=(
+                    "Campaign mutation_set is empty. Worker will auto-seed a baseline mutation "
+                    "from each trace."
+                ),
+                hint="Define explicit baseline mutations for predictable CI behavior.",
+            )
+        )
+
+    if resolved_trace_ids:
+        trace_records = list(
+            db.scalars(
+                select(Trace).where(
+                    Trace.project_id == campaign.project_id,
+                    Trace.trace_id.in_(resolved_trace_ids),
+                )
+            )
+        )
+        existing_trace_ids = {record.trace_id for record in trace_records}
+        missing = [str(trace_id) for trace_id in resolved_trace_ids if trace_id not in existing_trace_ids]
+        if missing:
+            blockers.append(
+                CIRunPreflightIssue(
+                    code="trace_not_found",
+                    message=f"{len(missing)} trace(s) referenced by the campaign were not found.",
+                    hint="Re-open campaign scenarios and remove stale trace IDs.",
+                )
+            )
+
+        discovered_tools = _trace_tools_for_ids(
+            db,
+            project_id=campaign.project_id,
+            trace_ids=resolved_trace_ids,
+        )
+        if discovered_tools:
+            policy_doc = build_bootstrap_policy_document(discovered_tools)
+            token_field = _approval_token_field(policy_doc)
+            irreversible = _irreversible_tools(policy_doc)
+            missing_token_mutations: list[str] = []
+            for mutation in mutation_items:
+                tool_name, args, mutation_id = _mutation_tool_and_args(mutation)
+                if tool_name is None or tool_name not in irreversible:
+                    continue
+                if _has_approval_token(args, token_field=token_field):
+                    continue
+                missing_token_mutations.append(f"{mutation_id} → {tool_name}")
+
+            if missing_token_mutations:
+                blockers.append(
+                    CIRunPreflightIssue(
+                        code="missing_confirmation_token",
+                        message=(
+                            "Policy will require approval tokens for one or more irreversible "
+                            "tool calls, but campaign mutations do not provide them."
+                        ),
+                        hint=(
+                            "Add confirmation_token (or approval_token) to these mutations: "
+                            + ", ".join(missing_token_mutations[:6])
+                        ),
+                    )
+                )
+
+    if estimated_attempts_total > 0 and thresholds.max_failures is not None:
+        max_failures_from_pass_rate = max(
+            0,
+            estimated_attempts_total
+            - ceil(float(thresholds.min_pass_rate) * estimated_attempts_total),
+        )
+        if thresholds.max_failures < max_failures_from_pass_rate:
+            warnings.append(
+                CIRunPreflightIssue(
+                    code="thresholds_stricter_than_pass_rate",
+                    message=(
+                        "Max failures is stricter than min pass rate for this attempt budget."
+                    ),
+                    hint=(
+                        f"At {estimated_attempts_total} attempts and min pass "
+                        f"{int(thresholds.min_pass_rate * 100)}%, a matching max_failures is "
+                        f"{max_failures_from_pass_rate}."
+                    ),
+                )
+            )
+
+    # Quality contract pre-run validation
+    contract = get_contract(db, campaign_id=campaign.campaign_id)
+    if contract is not None:
+        # Check required pack IDs
+        required_pack_ids: list[str] = list(contract.required_pack_ids or [])
+        if required_pack_ids:
+            pack_id_str = str(campaign.mutation_pack_id) if campaign.mutation_pack_id else None
+            if pack_id_str not in required_pack_ids:
+                blockers.append(
+                    CIRunPreflightIssue(
+                        code="contract_wrong_pack",
+                        message=(
+                            f"Quality contract requires one of {len(required_pack_ids)} approved "
+                            f"pack(s), but campaign uses "
+                            f"{'no pack' if pack_id_str is None else pack_id_str[:8] + '…'}."
+                        ),
+                        hint=(
+                            "Update the campaign to use one of the required mutation packs: "
+                            + ", ".join(p[:8] + "…" for p in required_pack_ids[:4])
+                        ),
+                    )
+                )
+
+        # Check required tools against trace coverage
+        required_tools: list[str] = list(contract.required_tools or [])
+        if required_tools and resolved_trace_ids:
+            all_trace_tools = _trace_tools_for_ids(
+                db, project_id=campaign.project_id, trace_ids=resolved_trace_ids
+            )
+            covered = set(all_trace_tools)
+            missing_tools = [t for t in required_tools if t not in covered]
+            if missing_tools:
+                blockers.append(
+                    CIRunPreflightIssue(
+                        code="contract_untested_tool",
+                        message=(
+                            f"{len(missing_tools)} tool(s) required by the quality contract "
+                            "do not appear in any selected trace."
+                        ),
+                        hint=(
+                            "Add traces that exercise these tools or update the contract: "
+                            + ", ".join(missing_tools[:6])
+                        ),
+                    )
+                )
+
+        # Check minimum attempts
+        min_attempts = contract.min_attempts_per_pack or 0
+        if min_attempts > 0 and estimated_attempts_total < min_attempts:
+            blockers.append(
+                CIRunPreflightIssue(
+                    code="contract_insufficient_attempts",
+                    message=(
+                        f"Quality contract requires at least {min_attempts} attempt(s), "
+                        f"but this run estimates only {estimated_attempts_total}."
+                    ),
+                    hint=(
+                        "Increase attempts_count in the campaign eval set or add more traces."
+                    ),
+                )
+            )
+
+    return CIRunPreflightResponse(
+        ready=len(blockers) == 0,
+        campaign_id=campaign.campaign_id,
+        trace_count=len(resolved_trace_ids),
+        attempts_per_trace=attempts_per_trace,
+        estimated_attempts_total=estimated_attempts_total,
+        thresholds=thresholds,
+        blockers=blockers,
+        warnings=warnings,
+        recommended_thresholds=recommended_thresholds,
+    )
+
+
+@router.post("/preflight", response_model=CIRunPreflightResponse)
+def post_ci_preflight(payload: CIRunCreateRequest, db: DbSession) -> CIRunPreflightResponse:
+    campaign = db.scalar(select(Campaign).where(Campaign.campaign_id == payload.campaign_id))
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+    return _build_ci_preflight(
+        db,
+        payload=payload,
+        campaign=campaign,
+    )
+
+
 @router.post("/runs", status_code=status.HTTP_201_CREATED, response_model=CIRunCreateResponse)
 def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateResponse:
     charged_amount: int | None = None
@@ -111,6 +473,39 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
             assert_project_runs_allowed(db, project_id=campaign.project_id)
         except TenantControlViolationError as exc:
             raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
+
+    def _refund(reason_suffix: str) -> None:
+        if charged_amount is not None and charged_reason is not None and charged_project_id is not None:
+            try:
+                refund_credits_for_project_owner(
+                    db,
+                    project_id=charged_project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:{reason_suffix}",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after %s", reason_suffix)
+
+    try:
+        if campaign is None:
+            raise RelatedRecordNotFoundError("Campaign not found")
+
+        trace_ids = _resolve_ci_trace_ids(payload, campaign)
+        preflight = _build_ci_preflight(
+            db,
+            payload=payload,
+            campaign=campaign,
+            trace_ids=trace_ids,
+        )
+        if not preflight.ready:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "CI preflight failed",
+                    "blockers": [item.model_dump() for item in preflight.blockers],
+                    "warnings": [item.model_dump() for item in preflight.warnings],
+                },
+            )
 
         try:
             pending_charge_amount, pending_charge_reason = operation_cost_for_campaign_record(
@@ -130,22 +525,6 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
                 detail="insufficient_credits",
             ) from exc
 
-    def _refund(reason_suffix: str) -> None:
-        if charged_amount is not None and charged_reason is not None and charged_project_id is not None:
-            try:
-                refund_credits_for_project_owner(
-                    db,
-                    project_id=charged_project_id,
-                    amount=charged_amount,
-                    reason=f"refund:{charged_reason}:{reason_suffix}",
-                )
-            except Exception:
-                logger.exception("Failed to refund credits after %s", reason_suffix)
-
-    try:
-        if campaign is None:
-            raise RelatedRecordNotFoundError("Campaign not found")
-        trace_ids = _resolve_ci_trace_ids(payload, campaign)
         github_context = _build_github_context(payload)
         thresholds_payload = (
             payload.thresholds.model_dump(exclude_none=True)
@@ -169,6 +548,8 @@ def post_ci_run(payload: CIRunCreateRequest, db: DbSession) -> CIRunCreateRespon
             run_ids=all_run_ids,
             batch_id=batch_id,
             trace_count=len(runs),
+            warnings=preflight.warnings,
+            estimated_attempts_total=preflight.estimated_attempts_total,
         )
 
     except RelatedRecordNotFoundError as exc:
@@ -337,7 +718,10 @@ def get_ci_batch(batch_id: UUID, request: Request, db: DbSession) -> CIBatchStat
                 tool_counts[t] = tool_counts.get(t, 0) + c
         if (run.status or "").lower() in _TERMINAL_STATUSES:
             completed_count += 1
-        total_attempts += int(metrics.get("total_attempts", 0))
+        total_attempts_raw = metrics.get("total_attempts")
+        if not isinstance(total_attempts_raw, int | float):
+            total_attempts_raw = metrics.get("attempt_count", 0)
+        total_attempts += int(total_attempts_raw)
 
     if not all_decisions:
         batch_status = "pending"

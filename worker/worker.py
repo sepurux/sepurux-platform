@@ -60,6 +60,7 @@ from webhooks import is_webhook_subscribed, send_signed_webhook
 
 logger = logging.getLogger(__name__)
 INTERNAL_REPLAY_TOOLS = frozenset({"trace.load", "campaign.load", "agent.run_agent"})
+_RECOVERABLE_MUTATION_FAILURES = frozenset({"timeout", "rate_limited", "transient_network"})
 
 
 def _summary_value_as_int(summary: dict[str, Any], key: str) -> int:
@@ -485,9 +486,11 @@ def _template_config_dict(template: HardeningTemplate) -> dict[str, Any]:
 def _load_run_templates(db: Session, *, run: Run) -> list[HardeningTemplate]:
     template_ids = list(
         db.scalars(
-            select(RunTemplateLink.template_id).where(
+            select(RunTemplateLink.template_id)
+            .where(
                 RunTemplateLink.run_id == run.run_id,
             )
+            .order_by(RunTemplateLink.created_at.asc(), RunTemplateLink.template_id.asc())
         )
     )
     if not template_ids:
@@ -525,8 +528,11 @@ def _merge_retry_policy(
     current: RetryPolicyConfig,
     config: dict[str, Any],
 ) -> RetryPolicyConfig:
-    max_retries = _coerce_int(config.get("max_retries"), default=current.max_retries)
-    backoff_ms = _coerce_int(config.get("backoff_ms"), default=current.backoff_ms)
+    configured_max_retries = _coerce_int(config.get("max_retries"), default=current.max_retries)
+    configured_backoff_ms = _coerce_int(config.get("backoff_ms"), default=current.backoff_ms)
+    # Never weaken an existing retry posture when stacking templates.
+    max_retries = max(current.max_retries, configured_max_retries)
+    backoff_ms = max(current.backoff_ms, configured_backoff_ms)
     return RetryPolicyConfig(max_retries=max(0, max_retries), backoff_ms=max(0, backoff_ms))
 
 
@@ -554,6 +560,208 @@ def _merge_adapter_config(
     merged = dict(current.mappings or {}) if current is not None else {}
     merged.update(clean_mappings)
     return ReplayAdapterConfig(mappings=merged)
+
+
+def _apply_schema_adapter_to_timeline(
+    timeline_artifact: dict[str, Any],
+    adapter_config: ReplayAdapterConfig | None,
+) -> bool:
+    mappings = adapter_config.mappings if adapter_config is not None else None
+    if not isinstance(mappings, dict) or not mappings:
+        return False
+
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        return False
+
+    adapted_any = False
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "tool_result":
+            continue
+        result = event.get("result")
+        if not isinstance(result, dict):
+            continue
+
+        adapted_fields: dict[str, str] = {}
+        for expected_field, source_field in mappings.items():
+            if expected_field in result:
+                continue
+            if source_field not in result:
+                continue
+            result[expected_field] = result[source_field]
+            adapted_fields[expected_field] = source_field
+
+        if not adapted_fields:
+            continue
+
+        prior_adapted = result.get("adapted_fields")
+        merged_adapted = dict(prior_adapted) if isinstance(prior_adapted, dict) else {}
+        merged_adapted.update(adapted_fields)
+        result["adapted_fields"] = merged_adapted
+        result["adapter"] = "schema_adapter_v1"
+        adapted_any = True
+
+    return adapted_any
+
+
+def _required_retries_for_failure_reason(failure_reason: str) -> int:
+    normalized = failure_reason.strip().lower()
+    if normalized == "timeout":
+        return 2
+    if normalized == "rate_limited":
+        return 3
+    return 1
+
+
+def _mutation_required_backoff_ms(mutation_trace: dict[str, Any] | None) -> int:
+    if not isinstance(mutation_trace, dict):
+        return 0
+    applied = mutation_trace.get("applied")
+    if not isinstance(applied, list):
+        return 0
+
+    required_backoff = 0
+    for item in applied:
+        if not isinstance(item, dict):
+            continue
+        details = item.get("details")
+        if not isinstance(details, dict):
+            continue
+        detail_type = details.get("type")
+        if detail_type not in {"fault.timeout", "fault.rate_limit"}:
+            continue
+        raw_value = details.get("min_backoff_ms")
+        if isinstance(raw_value, bool):
+            continue
+        if isinstance(raw_value, int):
+            required_backoff = max(required_backoff, raw_value)
+        elif isinstance(raw_value, float):
+            required_backoff = max(required_backoff, int(raw_value))
+    return max(0, required_backoff)
+
+
+def _recover_mutation_forced_failure_with_retry(
+    *,
+    timeline_artifact: dict[str, Any],
+    mutation_trace: dict[str, Any] | None,
+    failure_reason: str | None,
+    first_failure_event_index: int | None,
+    first_failure_tool: str | None,
+    retry_policy: RetryPolicyConfig,
+) -> tuple[bool, dict[str, Any], str | None, int | None, str | None]:
+    normalized_reason = (failure_reason or "").strip().lower()
+    if normalized_reason not in _RECOVERABLE_MUTATION_FAILURES:
+        return (
+            False,
+            timeline_artifact,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+        )
+
+    required_retries = _required_retries_for_failure_reason(normalized_reason)
+    if retry_policy.max_retries < required_retries:
+        return (
+            False,
+            timeline_artifact,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+        )
+
+    min_backoff_ms = _mutation_required_backoff_ms(mutation_trace)
+    if retry_policy.backoff_ms < min_backoff_ms:
+        return (
+            False,
+            timeline_artifact,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+        )
+
+    events = timeline_artifact.get("events")
+    if not isinstance(events, list):
+        return (
+            False,
+            timeline_artifact,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+        )
+
+    replaced = False
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "error":
+            continue
+        event_index = event.get("index")
+        if (
+            isinstance(first_failure_event_index, int)
+            and isinstance(event_index, int)
+            and event_index != first_failure_event_index
+        ):
+            continue
+        event_tool = event.get("tool")
+        if (
+            isinstance(first_failure_tool, str)
+            and first_failure_tool
+            and isinstance(event_tool, str)
+            and event_tool != first_failure_tool
+        ):
+            continue
+
+        resolved_tool = (
+            event_tool
+            if isinstance(event_tool, str) and event_tool
+            else (first_failure_tool if isinstance(first_failure_tool, str) and first_failure_tool else "replay.execute")
+        )
+        mutation_id = timeline_artifact.get("mutation_id")
+        mutation_id_str = (
+            mutation_id if isinstance(mutation_id, str) and mutation_id else "baseline"
+        )
+
+        event["type"] = "tool_result"
+        event["tool"] = resolved_tool
+        event.pop("error", None)
+        event["result"] = {
+            "ok": True,
+            "status": "replayed",
+            "tool": resolved_tool,
+            "mutation_id": mutation_id_str,
+            "retries": required_retries,
+            "recovered_from": normalized_reason,
+            "recovery": "retry_policy_v1",
+        }
+        replaced = True
+        break
+
+    if not replaced:
+        return (
+            False,
+            timeline_artifact,
+            failure_reason,
+            first_failure_event_index,
+            first_failure_tool,
+        )
+
+    max_index = _max_timeline_event_index(events)
+    events.append(
+        {
+            "index": max_index + 1,
+            "type": "model",
+            "result": {
+                "summary": (
+                    f"Recovered from {normalized_reason} after {required_retries} retries."
+                )
+            },
+        }
+    )
+    timeline_artifact.pop("first_failure", None)
+
+    return True, timeline_artifact, None, None, None
 
 
 def _sanitize_text_value(value: str, patterns: list[str]) -> str:
@@ -1580,6 +1788,7 @@ def execute_run(run_id: str) -> None:
                 timeline_artifact = outcome.timeline_artifact
                 mutation_seed: int | None = None
                 mutation_trace: dict[str, Any] | None = None
+                mutation_forced_failure = False
 
                 if mutation_pack_config is not None:
                     mutation_result = apply_mutation_pack(
@@ -1598,6 +1807,33 @@ def execute_run(run_id: str) -> None:
                         failure_reason = mutation_result.forced_failure_reason
                         first_failure_event_index = mutation_result.first_failure_event_index
                         first_failure_tool = mutation_result.first_failure_tool
+                        mutation_forced_failure = True
+
+                _apply_schema_adapter_to_timeline(
+                    timeline_artifact=timeline_artifact,
+                    adapter_config=adapter_config,
+                )
+
+                if mutation_forced_failure and result == "failed":
+                    (
+                        recovered,
+                        timeline_artifact,
+                        recovered_failure_reason,
+                        recovered_failure_event_index,
+                        recovered_failure_tool,
+                    ) = _recover_mutation_forced_failure_with_retry(
+                        timeline_artifact=timeline_artifact,
+                        mutation_trace=mutation_trace,
+                        failure_reason=failure_reason,
+                        first_failure_event_index=first_failure_event_index,
+                        first_failure_tool=first_failure_tool,
+                        retry_policy=retry_policy,
+                    )
+                    if recovered:
+                        result = "passed"
+                        failure_reason = recovered_failure_reason
+                        first_failure_event_index = recovered_failure_event_index
+                        first_failure_tool = recovered_failure_tool
 
                 (
                     timeline_artifact,

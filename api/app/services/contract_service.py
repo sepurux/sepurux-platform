@@ -107,7 +107,8 @@ def evaluate_contract(
     if trace_ids:
         traces = db.scalars(select(Trace).where(Trace.trace_id.in_(trace_ids))).all()
         for trace in traces:
-            events = trace.events if isinstance(trace.events, list) else []
+            payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+            events = payload.get("events") if isinstance(payload.get("events"), list) else []
             for event in events:
                 if isinstance(event, dict) and event.get("type") in {"tool_call", "tool_result"}:
                     tool = event.get("tool") or event.get("name")
