@@ -532,6 +532,12 @@ export type OperationMessageResponse = {
   message: string;
 };
 
+export type NewsletterUnsubscribeResponse = {
+  message: string;
+  email: string | null;
+  unsubscribed: boolean;
+};
+
 export type InternalSystemHealth = {
   status: string;
   worker_status: string;
@@ -617,6 +623,52 @@ export type InternalAlertNotificationResult = {
 export type InternalAlertNotificationResponse = {
   alerts_count: number;
   notifications: InternalAlertNotificationResult[];
+};
+
+export type InternalNewsletterAudienceSummary = {
+  total_users: number;
+  subscribed_users: number;
+  unsubscribed_users: number;
+};
+
+export type InternalNewsletterCampaignEntry = {
+  newsletter_campaign_id: string;
+  audience: "subscribed_users";
+  subject: string;
+  preview_text: string | null;
+  eyebrow: string | null;
+  title: string;
+  summary: string | null;
+  body: string;
+  cta_label: string | null;
+  cta_url: string | null;
+  sent_by: string;
+  recipients_count: number;
+  delivered_count: number;
+  created_at: string;
+  sent_at: string | null;
+};
+
+export type InternalNewsletterOverview = {
+  audience: InternalNewsletterAudienceSummary;
+  campaigns: InternalNewsletterCampaignEntry[];
+};
+
+export type InternalNewsletterSendRequest = {
+  audience: "subscribed_users";
+  subject: string;
+  preview_text?: string | null;
+  eyebrow?: string | null;
+  title: string;
+  summary?: string | null;
+  body: string;
+  cta_label?: string | null;
+  cta_url?: string | null;
+};
+
+export type InternalNewsletterSendResponse = {
+  campaign: InternalNewsletterCampaignEntry;
+  audience: InternalNewsletterAudienceSummary;
 };
 
 export type InternalProjectAnalyticsEntry = {
@@ -1170,6 +1222,15 @@ export const api = {
       payload,
       { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
     ),
+  unsubscribeFromNewsletter: (
+    payload: { token: string },
+    options?: { baseUrl?: string }
+  ) =>
+    postJson<NewsletterUnsubscribeResponse, typeof payload>(
+      "/email/unsubscribe",
+      payload,
+      { requireProjectHeader: false, includeAuth: false, baseUrl: options?.baseUrl }
+    ),
   getAuthSession: () =>
     requestJson<AuthSessionMetadata>("/v1/auth/session"),
   getInternalDashboard: () =>
@@ -1208,6 +1269,16 @@ export const api = {
     postJson<InternalAlertNotificationResponse, Record<string, never>>(
       "/v1/internal/alerts/notify",
       {},
+      { requireProjectHeader: false }
+    ),
+  getInternalNewsletters: () =>
+    requestJson<InternalNewsletterOverview>("/v1/internal/newsletters", undefined, {
+      requireProjectHeader: false,
+    }),
+  sendInternalNewsletter: (payload: InternalNewsletterSendRequest) =>
+    postJson<InternalNewsletterSendResponse, InternalNewsletterSendRequest>(
+      "/v1/internal/newsletters/send",
+      payload,
       { requireProjectHeader: false }
     ),
   getInternalAnalytics: () =>

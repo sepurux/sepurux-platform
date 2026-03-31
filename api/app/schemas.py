@@ -609,6 +609,16 @@ class OperationMessageResponse(BaseModel):
     message: str
 
 
+class NewsletterUnsubscribeRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=4096)
+
+
+class NewsletterUnsubscribeResponse(BaseModel):
+    message: str
+    email: str | None = None
+    unsubscribed: bool = True
+
+
 class OAuthSessionExchangeRequest(BaseModel):
     token: str = Field(min_length=1, max_length=512)
 
@@ -702,6 +712,52 @@ class InternalAlertNotificationResult(BaseModel):
 class InternalAlertNotificationResponse(BaseModel):
     alerts_count: int
     notifications: list[InternalAlertNotificationResult]
+
+
+class InternalNewsletterAudienceSummary(BaseModel):
+    total_users: int
+    subscribed_users: int
+    unsubscribed_users: int
+
+
+class InternalNewsletterCampaignEntry(BaseModel):
+    newsletter_campaign_id: UUID
+    audience: Literal["subscribed_users"]
+    subject: str
+    preview_text: str | None = None
+    eyebrow: str | None = None
+    title: str
+    summary: str | None = None
+    body: str
+    cta_label: str | None = None
+    cta_url: str | None = None
+    sent_by: str
+    recipients_count: int
+    delivered_count: int
+    created_at: datetime
+    sent_at: datetime | None = None
+
+
+class InternalNewsletterOverview(BaseModel):
+    audience: InternalNewsletterAudienceSummary
+    campaigns: list[InternalNewsletterCampaignEntry]
+
+
+class InternalNewsletterSendRequest(BaseModel):
+    audience: Literal["subscribed_users"] = "subscribed_users"
+    subject: str = Field(min_length=3, max_length=180)
+    preview_text: str | None = Field(default=None, max_length=180)
+    eyebrow: str | None = Field(default="Sepurux Newsletter", max_length=60)
+    title: str = Field(min_length=3, max_length=140)
+    summary: str | None = Field(default=None, max_length=240)
+    body: str = Field(min_length=16, max_length=12000)
+    cta_label: str | None = Field(default=None, max_length=60)
+    cta_url: str | None = Field(default=None, max_length=2048)
+
+
+class InternalNewsletterSendResponse(BaseModel):
+    campaign: InternalNewsletterCampaignEntry
+    audience: InternalNewsletterAudienceSummary
 
 
 class InternalProjectAnalyticsEntry(BaseModel):

@@ -29,6 +29,9 @@ from app.schemas import (
     InternalDashboardOverview,
     InternalFeatureFlags,
     InternalFeatureFlagsUpdate,
+    InternalNewsletterOverview,
+    InternalNewsletterSendRequest,
+    InternalNewsletterSendResponse,
     InternalQueueActionRequest,
     InternalQueueActionResponse,
     InternalQueueOverview,
@@ -52,6 +55,10 @@ from app.services.internal_billing_service import (
     adjust_internal_credits,
     list_internal_transactions,
     list_internal_wallets,
+)
+from app.services.internal_newsletter_service import (
+    get_newsletter_overview,
+    send_newsletter_campaign,
 )
 from app.services.internal_queue_service import (
     cancel_queue_job,
@@ -404,6 +411,62 @@ def notify_internal_alert_channels(
         metadata={
             "alerts_count": len(alerts),
             "notifications": [item.model_dump() for item in notifications],
+        },
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/newsletters", response_model=InternalNewsletterOverview)
+def get_internal_newsletters(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalNewsletterOverview:
+    payload = get_newsletter_overview(db)
+    create_audit_log(
+        db,
+        action="internal.newsletters.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.newsletters",
+        metadata={
+            "campaigns_count": len(payload.campaigns),
+            "subscribed_users": payload.audience.subscribed_users,
+        },
+    )
+    db.commit()
+    return payload
+
+
+@router.post("/newsletters/send", response_model=InternalNewsletterSendResponse)
+def post_internal_newsletter_send(
+    body: InternalNewsletterSendRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalNewsletterSendResponse:
+    actor = _actor_label(db, super_admin)
+    campaign = send_newsletter_campaign(
+        db,
+        subject=body.subject,
+        preview_text=body.preview_text,
+        eyebrow=body.eyebrow,
+        title=body.title,
+        summary=body.summary,
+        body=body.body,
+        cta_label=body.cta_label,
+        cta_url=body.cta_url,
+        sent_by=actor,
+    )
+    audience = get_newsletter_overview(db).audience
+    payload = InternalNewsletterSendResponse(campaign=campaign, audience=audience)
+    create_audit_log(
+        db,
+        action="internal.newsletters.send",
+        actor=actor,
+        entity=f"newsletter:{campaign.newsletter_campaign_id}",
+        metadata={
+            "subject": campaign.subject,
+            "recipients_count": campaign.recipients_count,
+            "delivered_count": campaign.delivered_count,
         },
     )
     db.commit()

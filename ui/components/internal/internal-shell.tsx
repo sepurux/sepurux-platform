@@ -15,6 +15,7 @@ import {
   Layers,
   ListChecks,
   LogOut,
+  Mail,
   ScrollText,
   Settings,
   Shield,
@@ -45,6 +46,7 @@ const navItems: InternalNavItem[] = [
   { href: "/internal/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/internal/audit-logs", label: "Audit Logs", icon: ScrollText },
   { href: "/internal/alerts", label: "Alerts", icon: Bell },
+  { href: "/internal/email", label: "Email", icon: Mail },
   { href: "/internal/system", label: "System", icon: Shield },
   { href: "/internal/settings", label: "Settings", icon: Settings },
 ];

@@ -77,10 +77,12 @@ export function ShellFrame({ children }: { children: ReactNode }) {
   const [authSession, setAuthSession] = useState<AuthSessionMetadata | null>(null);
 
   const isAuthPage = pathname.startsWith("/auth");
+  const isUnsubscribePage = pathname.startsWith("/unsubscribe");
+  const isPublicPage = isAuthPage || isUnsubscribePage;
   const isInternalPage = pathname.startsWith("/internal");
 
   useEffect(() => {
-    if (isAuthPage) {
+    if (isPublicPage) {
       setGateState("allowed");
       return;
     }
@@ -147,9 +149,9 @@ export function ShellFrame({ children }: { children: ReactNode }) {
     clearStoredAuthSession();
     setGateState("redirecting");
     router.replace(`/auth?mode=access&intent=signup&next=${encodeURIComponent(nextPath)}`);
-  }, [isAuthPage, isInternalPage, pathname, router, searchParams]);
+  }, [isInternalPage, isPublicPage, pathname, router, searchParams]);
 
-  if (isAuthPage) {
+  if (isPublicPage) {
     return <main className="app-shell-backdrop faint-grid min-h-screen p-4 md:p-8">{children}</main>;
   }
 
