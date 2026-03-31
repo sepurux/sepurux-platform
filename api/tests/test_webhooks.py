@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+import json
 from uuid import UUID, uuid4
 
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, Project, Tenant, Trace
+from app.models import Base, Campaign, Project, Tenant, Trace, Webhook
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -108,6 +109,67 @@ def test_webhook_crud_and_rotate_secret(
     assert rotated["webhook_id"] == webhook_id
     assert rotated["secret"].startswith("whsec_")
     assert rotated["secret"] != first_secret
+
+
+def test_send_test_webhook_posts_signed_payload(
+    webhook_test_context: tuple[TestClient, sessionmaker[Session], UUID, FakeQueue],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, _ = webhook_test_context
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        status_code = 204
+
+        def raise_for_status(self) -> None:
+            return None
+
+    def fake_post(url: str, *, content: bytes, headers: dict[str, str], timeout: float) -> FakeResponse:
+        captured["url"] = url
+        captured["content"] = content
+        captured["headers"] = headers
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr("app.services.webhook_service.httpx.post", fake_post)
+
+    create_response = client.post(
+        "/v1/webhooks",
+        json={
+            "url": "http://example.test/hooks/sepurux",
+            "events": ["run.completed"],
+            "is_enabled": True,
+        },
+    )
+    assert create_response.status_code == 201
+    created = create_response.json()
+    webhook_id = created["webhook_id"]
+
+    test_response = client.post(f"/v1/webhooks/{webhook_id}/test")
+    assert test_response.status_code == 200
+    payload = test_response.json()
+    assert payload["delivered"] is True
+    assert payload["event_type"] == "webhook.test"
+    assert payload["status_code"] == 204
+
+    headers = captured["headers"]
+    assert isinstance(headers, dict)
+    assert headers["X-Sepurux-Event"] == "webhook.test"
+    assert headers["X-Sepurux-Signature"].startswith("sha256=")
+    assert headers["X-Sepurux-Webhook"] == webhook_id
+    assert headers["X-Sepurux-Delivery"] == payload["delivery_id"]
+
+    raw_body = captured["content"]
+    assert isinstance(raw_body, bytes)
+    posted = json.loads(raw_body.decode("utf-8"))
+    assert posted["id"] == payload["delivery_id"]
+    assert posted["type"] == "webhook.test"
+    assert posted["webhook_id"] == webhook_id
+
+    with testing_session_local() as db:
+        record = db.execute(select(Webhook).where(Webhook.webhook_id == UUID(webhook_id))).scalar_one()
+        assert record.last_success_at is not None
+        assert record.last_error is None
 
 
 def test_webhooks_endpoint_requires_webhooks_section_access(

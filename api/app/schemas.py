@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TraceMetadata(BaseModel):
@@ -56,6 +56,8 @@ class TraceBootstrapResponse(BaseModel):
 
 
 class CampaignEvalSet(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     trace_ids: list[UUID] = Field(default_factory=list)
     attempts_count: int = Field(default=50, ge=1, le=50)
     min_scenarios: int | None = Field(default=None, ge=1)
@@ -64,6 +66,7 @@ class CampaignEvalSet(BaseModel):
 class CampaignCreateRequest(BaseModel):
     name: str
     mutation_pack_id: UUID | None = None
+    mutation_set: list[dict[str, Any]] = Field(default_factory=list)
     eval_set: CampaignEvalSet = Field(default_factory=CampaignEvalSet)
 
 
@@ -73,11 +76,16 @@ class CampaignEvalSetPatch(BaseModel):
     min_scenarios: int | None = Field(default=None, ge=1)
 
 
+class CampaignMutationSetPatch(BaseModel):
+    mutation_set: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class CampaignMetadata(BaseModel):
     campaign_id: UUID
     mutation_pack_id: UUID | None = None
     name: str
     status: str
+    mutation_set: Any | None = None
     eval_set: Any
     created_at: datetime
 
@@ -1217,6 +1225,16 @@ class WebhookCreateResponse(WebhookMetadata):
 class WebhookRotateSecretResponse(BaseModel):
     webhook_id: UUID
     secret: str
+
+
+class WebhookTestDeliveryResponse(BaseModel):
+    webhook_id: UUID
+    delivery_id: str
+    event_type: str
+    delivered: bool
+    status_code: int | None = None
+    message: str
+    attempted_at: datetime
 
 
 class ToolRegistryCreateRequest(BaseModel):

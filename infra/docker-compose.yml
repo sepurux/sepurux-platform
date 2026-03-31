@@ -122,14 +122,18 @@ services:
   ui:
     build:
       context: ../ui
+      # NEXT_PUBLIC_* vars are baked into the Next.js bundle at build time.
+      # For local dev you can pass real values via a .env file in the repo root.
+      # Never set NEXT_PUBLIC_SEPURUX_API_KEY or NEXT_PUBLIC_PROJECT_ID to
+      # hardcoded dev values here — they end up compiled into the browser bundle.
       args:
-        NEXT_PUBLIC_API_BASE_URL: http://api:8000
-        NEXT_PUBLIC_SEPURUX_API_KEY: sepurux-dev-key
-        NEXT_PUBLIC_PROJECT_ID: 22222222-2222-2222-2222-222222222222
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SEPURUX_API_KEY: ${NEXT_PUBLIC_SEPURUX_API_KEY:-}
+        NEXT_PUBLIC_PROJECT_ID: ${NEXT_PUBLIC_PROJECT_ID:-}
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://api:8000
-      NEXT_PUBLIC_SEPURUX_API_KEY: sepurux-dev-key
-      NEXT_PUBLIC_PROJECT_ID: 22222222-2222-2222-2222-222222222222
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      NEXT_PUBLIC_SEPURUX_API_KEY: ${NEXT_PUBLIC_SEPURUX_API_KEY:-}
+      NEXT_PUBLIC_PROJECT_ID: ${NEXT_PUBLIC_PROJECT_ID:-}
     ports:
       - "3000:3000"
     depends_on:
