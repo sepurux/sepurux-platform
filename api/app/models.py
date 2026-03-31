@@ -47,6 +47,16 @@ class User(Base):
     email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     name: Mapped[str | None] = mapped_column(Text, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    marketing_emails_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=true(),
+    )
+    marketing_unsubscribed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -404,6 +414,45 @@ class UserNotification(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+
+class NewsletterCampaign(Base):
+    __tablename__ = "newsletter_campaigns"
+
+    newsletter_campaign_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    audience: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="subscribed_users",
+        server_default=text("'subscribed_users'"),
+    )
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    preview_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    eyebrow: Mapped[str | None] = mapped_column(Text, nullable=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    cta_label: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cta_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sent_by: Mapped[str] = mapped_column(Text, nullable=False)
+    recipients_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    delivered_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class AuditLog(Base):
