@@ -15,6 +15,7 @@ from app.models import (
     CreditTransaction,
     CreditWallet,
     Failure,
+    NewsletterCampaign,
     Project,
     ProjectMembership,
     Role,
@@ -23,6 +24,7 @@ from app.models import (
     Trace,
     User,
 )
+from app.services.user_notification_service import build_marketing_unsubscribe_token
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -869,3 +871,84 @@ def test_internal_tenant_controls_reject_non_super_admin(
     )
     assert revoke_response.status_code == 403
     assert revoke_response.json() == {"detail": "Super admin access required"}
+
+
+def test_internal_newsletter_send_targets_subscribed_users_only(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+        unsubscribed_user = db.scalar(select(User).where(User.email == "admin@example.com"))
+        assert isinstance(unsubscribed_user, User)
+        unsubscribed_user.marketing_emails_enabled = False
+        db.add(unsubscribed_user)
+        db.commit()
+
+    delivered_to: list[str] = []
+
+    def _send_email_stub(*, to_email: str, subject: str, text_body: str, html_body: str | None = None) -> bool:
+        delivered_to.append(to_email)
+        assert subject == "Quarterly Sepurux update"
+        assert "Unsubscribe:" in text_body
+        assert html_body is not None
+        return True
+
+    monkeypatch.setattr("app.services.internal_newsletter_service.send_email", _send_email_stub)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+    response = client.post(
+        "/v1/internal/newsletters/send",
+        json={
+            "audience": "subscribed_users",
+            "subject": "Quarterly Sepurux update",
+            "preview_text": "UI refresh, diagnostics polish, and email branding updates.",
+            "eyebrow": "Platform Update",
+            "title": "Sharper reliability workflows across Sepurux.",
+            "summary": "A focused product update for subscribed users.",
+            "body": "We refreshed the product surface and hardened the diagnostics review flow.",
+            "cta_label": "Open Sepurux",
+            "cta_url": "https://app.sepurux.com/dashboard",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["campaign"]["recipients_count"] == 1
+    assert payload["campaign"]["delivered_count"] == 1
+    assert payload["audience"]["subscribed_users"] == 1
+    assert delivered_to == ["ops@sepurux.com"]
+
+    with session_factory() as db:
+        campaigns = list(db.scalars(select(NewsletterCampaign)))
+        assert len(campaigns) == 1
+        assert campaigns[0].subject == "Quarterly Sepurux update"
+        assert campaigns[0].delivered_count == 1
+
+
+def test_public_newsletter_unsubscribe_turns_off_marketing_emails(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+        user = db.scalar(select(User).where(User.email == "ops@sepurux.com"))
+        assert isinstance(user, User)
+        token = build_marketing_unsubscribe_token(user_id=user.user_id, email=user.email)
+
+    response = client.post("/email/unsubscribe", json={"token": token})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["unsubscribed"] is True
+    assert payload["email"] == "ops@sepurux.com"
+
+    with session_factory() as db:
+        user = db.scalar(select(User).where(User.email == "ops@sepurux.com"))
+        assert isinstance(user, User)
+        assert user.marketing_emails_enabled is False
+        assert user.marketing_unsubscribed_at is not None

@@ -18,6 +18,7 @@ from app.routes.ci import router as ci_router
 from app.routes.compliance import router as compliance_router
 from app.routes.counterfactuals import router as counterfactuals_router
 from app.routes.demo import router as demo_router
+from app.routes.email import public_router as public_email_router
 from app.routes.internal import router as internal_router
 from app.routes.members import router as members_router
 from app.routes.mutation_packs import router as mutation_packs_router
@@ -123,6 +124,7 @@ app.include_router(traces_router)
 app.include_router(webhooks_router)
 app.include_router(demo_router)
 app.include_router(public_auth_router)
+app.include_router(public_email_router)
 app.include_router(internal_router)
 
 
