@@ -10,6 +10,7 @@ from app.schemas import (
     WebhookCreateResponse,
     WebhookMetadata,
     WebhookRotateSecretResponse,
+    WebhookTestDeliveryResponse,
     WebhookUpdateRequest,
 )
 from app.services.webhook_service import (
@@ -17,6 +18,7 @@ from app.services.webhook_service import (
     get_webhook,
     list_webhooks,
     rotate_webhook_secret,
+    send_test_webhook,
     update_webhook,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -137,3 +139,20 @@ def get_webhook_by_id(
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook not found")
     return _to_webhook_metadata(record)
+
+
+@router.post("/{webhook_id}/test", response_model=WebhookTestDeliveryResponse)
+def post_test_webhook(
+    webhook_id: UUID,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    _webhook_access: WebhookAccessDep,
+) -> WebhookTestDeliveryResponse:
+    attempted = send_test_webhook(
+        db,
+        project_id=project_scope.project_id,
+        webhook_id=webhook_id,
+    )
+    if attempted is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook not found")
+    return WebhookTestDeliveryResponse(**attempted)

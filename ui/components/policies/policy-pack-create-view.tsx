@@ -6,27 +6,20 @@ import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
 import { useAuthSession } from "@/lib/use-auth-session";
+import {
+  DEFAULT_POLICY_JSON,
+  PolicyPackBuilder,
+  parsePolicyText,
+  type PolicyEngine,
+} from "@/components/policies/policy-pack-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-const DEFAULT_POLICY_JSON = JSON.stringify(
-  {
-    version: "0.1",
-    defaults: { unknown_tools: "allow" },
-    irreversible: {
-      tools: ["payments.refund", "jira.create_issue(commit)"],
-    },
-    approval: { token_field: "confirmation_token" },
-  },
-  null,
-  2
-);
 
 export function PolicyPackCreateView() {
   const authSession = useAuthSession();
   const router = useRouter();
   const [name, setName] = useState("");
-  const [engine, setEngine] = useState<"builtin" | "opa">("builtin");
+  const [engine, setEngine] = useState<PolicyEngine>("builtin");
   const [policyText, setPolicyText] = useState(DEFAULT_POLICY_JSON);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -40,22 +33,27 @@ export function PolicyPackCreateView() {
     setCreating(true);
 
     try {
-      const parsedPolicy = JSON.parse(policyText) as Record<string, unknown>;
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        setCreateError("Policy pack name is required");
+        return;
+      }
+      const parsed = parsePolicyText(policyText);
+      if (parsed.error || parsed.policy === null) {
+        setCreateError(parsed.error ?? "Policy JSON must be valid JSON");
+        return;
+      }
       await api.createPolicyPack({
-        name,
+        name: trimmedName,
         engine,
-        policy: parsedPolicy,
+        policy: parsed.policy,
       });
       router.push("/policies");
       router.refresh();
     } catch (error) {
-      if (error instanceof SyntaxError) {
-        setCreateError("Policy JSON must be valid JSON");
-      } else {
-        setCreateError(
-          error instanceof Error ? error.message : "Failed to create policy pack"
-        );
-      }
+      setCreateError(
+        error instanceof Error ? error.message : "Failed to create policy pack"
+      );
     } finally {
       setCreating(false);
     }
@@ -90,49 +88,22 @@ export function PolicyPackCreateView() {
           <CardHeader>
             <CardTitle>Policy Pack</CardTitle>
             <CardDescription>
-              Policy changes are restricted to admin memberships on plans with policy support.
+              Start with the guided builder, then use raw JSON only for unsupported keys.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onCreatePolicyPack}>
-              <label className="block space-y-1 text-sm">
-                <span className="text-muted-foreground">Name</span>
-                <input
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Strict approvals"
-                  required
-                  disabled={creating}
-                />
-              </label>
-              <label className="block space-y-1 text-sm">
-                <span className="text-muted-foreground">Engine</span>
-                <select
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                  value={engine}
-                  onChange={(event) =>
-                    setEngine(event.target.value === "opa" ? "opa" : "builtin")
-                  }
-                  disabled={creating}
-                >
-                  <option value="builtin">builtin</option>
-                  <option value="opa">opa</option>
-                </select>
-              </label>
-              <label className="block space-y-1 text-sm">
-                <span className="text-muted-foreground">Policy JSON</span>
-                <textarea
-                  className="min-h-[260px] w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs text-foreground"
-                  value={policyText}
-                  onChange={(event) => setPolicyText(event.target.value)}
-                  spellCheck={false}
-                  required
-                  disabled={creating}
-                />
-              </label>
+              <PolicyPackBuilder
+                name={name}
+                onNameChange={setName}
+                engine={engine}
+                onEngineChange={setEngine}
+                policyText={policyText}
+                onPolicyTextChange={setPolicyText}
+                disabled={creating}
+              />
               {createError ? (
-                <p className="text-sm text-rose-200">{createError}</p>
+                <p className="text-sm text-danger">{createError}</p>
               ) : null}
               <div className="flex justify-end gap-2">
                 <Button asChild type="button" variant="outline">

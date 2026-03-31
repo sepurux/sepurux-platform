@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { api, type MutationPackMetadata } from "@/lib/api";
+import { api, type CampaignMutation, type MutationPackMetadata } from "@/lib/api";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,8 @@ export function CampaignCreateView() {
   const [name, setName] = useState("");
   const [mutationPackId, setMutationPackId] = useState("");
   const [attemptsCount, setAttemptsCount] = useState(50);
+  const [baselineMutationId, setBaselineMutationId] = useState("baseline");
+  const [baselineTool, setBaselineTool] = useState("");
 
   const canCreateCampaigns = authSession?.permissions.can_create_campaigns ?? false;
   const recommendedSystemPackNames = useMemo(
@@ -120,12 +122,24 @@ export function CampaignCreateView() {
     setCreateError(null);
 
     const normalizedAttemptsCount = clampAttempts(attemptsCount);
+    const normalizedMutationId = baselineMutationId.trim() || "baseline";
+    const normalizedBaselineTool = baselineTool.trim();
+    const mutationSet: CampaignMutation[] = [
+      {
+        mutation_id: normalizedMutationId,
+        ...(normalizedBaselineTool ? { tool: normalizedBaselineTool } : {}),
+      },
+    ];
+
     setAttemptsCount(normalizedAttemptsCount);
+    setBaselineMutationId(normalizedMutationId);
+    setBaselineTool(normalizedBaselineTool);
 
     try {
       await api.createCampaign({
         name,
         mutation_pack_id: mutationPackId || null,
+        mutation_set: mutationSet,
         eval_set: {
           attempts_count: normalizedAttemptsCount,
         },
@@ -268,6 +282,51 @@ export function CampaignCreateView() {
                   Allowed range: {MIN_ATTEMPTS}-{MAX_ATTEMPTS}.
                 </p>
               </label>
+
+              <div className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-4">
+                <div className="space-y-1">
+                  <h2 className="text-sm font-medium text-foreground">Explicit Baseline Mutation</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Persist a baseline mutation now so CI does not auto-seed one later. Add a tool
+                    if you want the baseline pinned to a specific operation.
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="block space-y-1 text-sm">
+                    <span className="text-muted-foreground">Mutation ID</span>
+                    <input
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                      placeholder="baseline"
+                      value={baselineMutationId}
+                      onChange={(event) => setBaselineMutationId(event.target.value)}
+                      disabled={creating}
+                    />
+                  </label>
+                  <label className="block space-y-1 text-sm">
+                    <span className="text-muted-foreground">Tool (optional)</span>
+                    <input
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                      placeholder="jira.create_issue"
+                      value={baselineTool}
+                      onChange={(event) => setBaselineTool(event.target.value)}
+                      disabled={creating}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Stored as{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
+                    {JSON.stringify(
+                      {
+                        mutation_id: baselineMutationId.trim() || "baseline",
+                        ...(baselineTool.trim() ? { tool: baselineTool.trim() } : {}),
+                      },
+                      null,
+                      0
+                    )}
+                  </code>
+                </p>
+              </div>
 
               {createError ? (
                 <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">

@@ -49,6 +49,14 @@ export type CampaignEvalSet = {
   trace_ids?: string[];
   attempts_count?: number;
   min_scenarios?: number;
+  [key: string]: unknown;
+};
+
+export type CampaignMutation = {
+  mutation_id?: string;
+  tool?: string;
+  args?: Record<string, unknown>;
+  [key: string]: unknown;
 };
 
 export type CampaignMetadata = {
@@ -56,6 +64,7 @@ export type CampaignMetadata = {
   mutation_pack_id: string | null;
   name: string;
   status: string;
+  mutation_set: CampaignMutation[] | Record<string, unknown> | null;
   eval_set: CampaignEvalSet | null;
   created_at: string;
 };
@@ -460,6 +469,16 @@ export type WebhookCreateResponse = WebhookMetadata & {
 export type WebhookRotateSecretResponse = {
   webhook_id: string;
   secret: string;
+};
+
+export type WebhookTestDeliveryResponse = {
+  webhook_id: string;
+  delivery_id: string;
+  event_type: string;
+  delivered: boolean;
+  status_code: number | null;
+  message: string;
+  attempted_at: string;
 };
 
 export type DemoInfoResponse = {
@@ -1434,8 +1453,11 @@ export const api = {
   createCampaign: (payload: {
     name: string;
     mutation_pack_id?: string | null;
-    eval_set?: { attempts_count?: number; trace_ids?: string[]; min_scenarios?: number };
+    mutation_set?: CampaignMutation[];
+    eval_set?: CampaignEvalSet;
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
+  updateCampaignMutationSet: (campaignId: string, payload: { mutation_set: CampaignMutation[] }) =>
+    patchJson<CampaignMetadata, typeof payload>(`/v1/campaigns/${campaignId}/mutation-set`, payload),
   updateCampaignEvalSet: (
     campaignId: string,
     payload: { add_trace_ids?: string[]; remove_trace_ids?: string[]; min_scenarios?: number }
@@ -1602,6 +1624,11 @@ export const api = {
   rotateWebhookSecret: (webhookId: string) =>
     postJson<WebhookRotateSecretResponse, Record<string, never>>(
       `/v1/webhooks/${webhookId}/rotate-secret`,
+      {}
+    ),
+  sendTestWebhook: (webhookId: string) =>
+    postJson<WebhookTestDeliveryResponse, Record<string, never>>(
+      `/v1/webhooks/${webhookId}/test`,
       {}
     ),
   listRunAttempts: (runId: string, options?: { limit?: number; offset?: number; result?: string }) =>

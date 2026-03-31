@@ -260,7 +260,11 @@ export function RunsListView() {
                   {batchGroups.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
-                        {searchQuery ? "No runs match your search." : "No runs match this filter."}
+                        {searchQuery
+                          ? "No runs match your search."
+                          : statusFilter !== "all"
+                            ? "No runs match this filter."
+                            : "No runs yet — queue one via the SDK, CLI, or API."}
                       </TableCell>
                     </TableRow>
                   ) : (

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import { api, type WebhookMetadata } from "@/lib/api";
+import { api, type WebhookMetadata, type WebhookTestDeliveryResponse } from "@/lib/api";
 import { formatRelativeDate, shortId } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ export function WebhooksView() {
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>(null);
   const [rotateConfirmId, setRotateConfirmId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<WebhookTestDeliveryResponse | null>(null);
 
   async function load() {
     setState({ status: "loading" });
@@ -50,6 +51,7 @@ export function WebhooksView() {
     try {
       setSubmitBusy(true);
       setRevealedSecret(null);
+      setTestResult(null);
       const created = await api.createWebhook({
         url,
         events: parseEvents(events),
@@ -93,8 +95,21 @@ export function WebhooksView() {
     try {
       setBusyWebhookId(webhookId);
       setRotateConfirmId(null);
+      setTestResult(null);
       const rotated = await api.rotateWebhookSecret(webhookId);
       setRevealedSecret(rotated.secret);
+      await load();
+    } finally {
+      setBusyWebhookId(null);
+    }
+  }
+
+  async function onSendTestWebhook(webhookId: string) {
+    try {
+      setBusyWebhookId(webhookId);
+      setTestResult(null);
+      const result = await api.sendTestWebhook(webhookId);
+      setTestResult(result);
       await load();
     } finally {
       setBusyWebhookId(null);
@@ -126,6 +141,35 @@ export function WebhooksView() {
         </Card>
       ) : null}
 
+      {testResult ? (
+        <Card
+          className={
+            testResult.delivered
+              ? "border-teal/20 bg-teal/6"
+              : "border-danger/20 bg-danger/8"
+          }
+        >
+          <CardHeader>
+            <CardTitle className={testResult.delivered ? "text-teal" : "text-danger"}>
+              {testResult.delivered ? "Test Delivery Succeeded" : "Test Delivery Failed"}
+            </CardTitle>
+            <CardDescription>
+              Event <code>{testResult.event_type}</code> at{" "}
+              {formatRelativeDate(testResult.attempted_at)}
+              {typeof testResult.status_code === "number"
+                ? ` · HTTP ${testResult.status_code}`
+                : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-foreground">{testResult.message}</p>
+            <code className="block overflow-auto rounded-md border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
+              delivery_id={testResult.delivery_id}
+            </code>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Create Webhook</CardTitle>
@@ -134,6 +178,10 @@ export function WebhooksView() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Local testing on macOS Docker: point the webhook URL at{" "}
+            <code>http://host.docker.internal:&lt;port&gt;/your-path</code>.
+          </p>
           <form className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]" onSubmit={onCreateWebhook}>
             <input
               className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
@@ -170,8 +218,8 @@ export function WebhooksView() {
           </CardContent>
         </Card>
       ) : state.status === "error" ? (
-        <Card className="border-rose-400/20">
-          <CardContent className="p-5 text-sm text-rose-100">{state.message}</CardContent>
+        <Card className="border-danger/20">
+          <CardContent className="p-5 text-sm text-danger">{state.message}</CardContent>
         </Card>
       ) : (
         <Card>
@@ -293,6 +341,14 @@ export function WebhooksView() {
                           {shortId(webhook.webhook_id, 12)}
                         </TableCell>
                         <TableCell className="space-x-2 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() => void onSendTestWebhook(webhook.webhook_id)}
+                          >
+                            Send Test
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
