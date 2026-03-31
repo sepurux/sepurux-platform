@@ -12,6 +12,7 @@ from app.schemas import (
     CampaignFailureBreakdownItem,
     CampaignFailureRecord,
     CampaignMetadata,
+    CampaignMutationSetPatch,
     CampaignReliabilityResponse,
     CampaignRunPackRequest,
     CampaignRunPackResponse,
@@ -70,9 +71,39 @@ def _to_campaign_metadata(campaign) -> CampaignMetadata:
         mutation_pack_id=campaign.mutation_pack_id,
         name=campaign.name,
         status=campaign.status,
+        mutation_set=campaign.mutation_set,
         eval_set=campaign.eval_set,
         created_at=campaign.created_at,
     )
+
+
+def _mutation_looks_like_pack_definition(mutation: object) -> bool:
+    if not isinstance(mutation, dict):
+        return False
+    return any(
+        key in mutation for key in ("type", "target", "params", "probability", "weight")
+    )
+
+
+def _ensure_replay_mutation_set(
+    mutation_set: list[dict[str, object]],
+    *,
+    mutation_pack_id: UUID | None,
+) -> None:
+    if mutation_pack_id is None:
+        return
+    if any(_mutation_looks_like_pack_definition(item) for item in mutation_set):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "Campaign mutation_set must contain replay mutations, not mutation-pack "
+                "definitions"
+            ),
+        )
+
+
+def _default_campaign_mutation_set() -> list[dict[str, str]]:
+    return [{"mutation_id": "baseline"}]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=CampaignMetadata)
@@ -96,12 +127,15 @@ def post_campaign(
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found")
 
-    eval_set = payload.eval_set.model_dump(exclude_none=True)
+    mutation_set = payload.mutation_set or _default_campaign_mutation_set()
+    _ensure_replay_mutation_set(mutation_set, mutation_pack_id=payload.mutation_pack_id)
+
+    eval_set = payload.eval_set.model_dump(exclude_none=True, exclude_unset=True)
     campaign = create_campaign(
         db,
         project_id=project_scope.project_id,
         name=payload.name,
-        mutation_set=[],
+        mutation_set=mutation_set,
         eval_set=eval_set,
         mutation_pack_id=payload.mutation_pack_id,
         actor=actor_from_request(request),
@@ -198,6 +232,28 @@ def patch_campaign_eval_set(
         eval_set["min_scenarios"] = payload.min_scenarios
 
     campaign.eval_set = eval_set
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    return _to_campaign_metadata(campaign)
+
+
+@router.patch("/{campaign_id}/mutation-set", response_model=CampaignMetadata)
+def patch_campaign_mutation_set(
+    campaign_id: UUID,
+    payload: CampaignMutationSetPatch,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
+) -> CampaignMetadata:
+    del tenant_auth
+    campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    _ensure_replay_mutation_set(payload.mutation_set, mutation_pack_id=campaign.mutation_pack_id)
+
+    campaign.mutation_set = payload.mutation_set
     db.add(campaign)
     db.commit()
     db.refresh(campaign)
