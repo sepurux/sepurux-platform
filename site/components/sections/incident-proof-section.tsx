@@ -3,70 +3,73 @@
 const incidents = [
   {
     title: "Database timeout cascade",
-    impact: "Would have caused run retries and delayed customer actions.",
-    foundBy: "Mutation pack: db.timeout + CI reliability gate",
-    action: "Raised as a blocker before merge and fixed in staging.",
+    impact: "Retries would have stacked, delayed refunds, and obscured the real first failing tool.",
+    detectedBy: "Mutation pack: db.timeout + replay attribution",
+    response: "Caught in staging, replayed, and hardened before rollout.",
   },
   {
-    title: "Prompt injection via support tool",
-    impact: "Could trigger unauthorized tool actions from crafted user input.",
-    foundBy: "Policy + security checks on replayed tool call path",
-    action: "Sanitization rule and deny policy added before release.",
+    title: "Prompt injection through support tooling",
+    impact: "An agent could have triggered unauthorized tool actions from crafted external input.",
+    detectedBy: "Policy + security checks on replayed support workflow",
+    response: "Sanitization and deny rules were added before release.",
   },
   {
-    title: "Schema drift in billing webhook",
-    impact: "Would break downstream parsing and silently drop events.",
-    foundBy: "Replay with mutated response schema and contract checks",
-    action: "Parser hardened and validation added before deploy.",
+    title: "Schema drift in webhook parsing",
+    impact: "Downstream logic would have silently dropped billing events while returning superficially valid responses.",
+    detectedBy: "Mutated schema replay + contract validation",
+    response: "Parser was hardened and the CI gate blocked the change until fixed.",
   },
 ];
 
 export function IncidentProofSection() {
   return (
-    <section className="bg-[--surface-2] py-24 sm:py-32">
+    <section className="bg-transparent py-20 sm:py-24">
       <div className="site-container">
-        <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="section-kicker">Proof</p>
-          <h2
-            className="mt-4 font-display text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.05] tracking-[-0.03em]"
-            style={{ color: "var(--text-primary)" }}
-          >
-            What teams catch before production.
-          </h2>
-          <p className="mt-4 text-base leading-8 text-gray-500">
-            Real classes of regressions that are difficult to detect with unit tests alone.
-          </p>
-        </div>
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] lg:gap-16">
+          <div className="max-w-xl">
+            <p className="section-kicker">Failure classes</p>
+            <h2 className="section-heading mt-4 text-[--text-primary]">
+              The costly bugs are the ones that look plausible until production proves otherwise.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-slate-300 md:text-lg">
+              Agents rarely fail like ordinary software. They often continue returning believable
+              outputs while a schema shifts, a downstream service degrades, or approval logic is
+              quietly bypassed.
+            </p>
+          </div>
 
-        <div className="grid gap-5 lg:grid-cols-3">
-          {incidents.map((incident) => (
-            <article
-              key={incident.title}
-              className="rounded-xl border border-[--border] bg-white p-5 transition-colors"
-              style={{
-                borderLeftWidth: "4px",
-                borderLeftColor: "var(--color-accent)",
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              <h3
-                className="font-display text-xl font-semibold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {incident.title}
-              </h3>
-              <p className="mt-3 text-sm leading-7 text-gray-500">{incident.impact}</p>
-              <div className="mt-5 space-y-3 border-t border-[--border] pt-4">
-                <p className="text-xs font-mono uppercase tracking-[0.18em] text-gray-400">
-                  Detected by
-                </p>
-                <p className="text-sm font-medium text-gray-700">{incident.foundBy}</p>
-                <p className="mt-2 text-xs" style={{ color: "var(--color-accent)" }}>
-                  {incident.action}
-                </p>
-              </div>
-            </article>
-          ))}
+          <div className="space-y-8">
+            {incidents.map((incident) => (
+              <article key={incident.title} className="grid gap-5 border-t border-[--border] pt-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Scenario
+                  </p>
+                  <h3 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-[--text-primary]">
+                    {incident.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-300">{incident.impact}</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Detected by
+                    </p>
+                    <p className="mt-2 text-sm font-medium leading-6 text-[--text-primary]">
+                      {incident.detectedBy}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Outcome
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">{incident.response}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </div>
     </section>

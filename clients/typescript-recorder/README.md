@@ -106,6 +106,6 @@ await recorder.flush();
 
 ## Release
 
-- Push a tag in the format `ts-recorder-v0.3.0` (must match `package.json` version).
+- Push a tag in the format `ts-recorder-v0.4.0` (must match `package.json` version).
 - GitHub Actions workflow `ts-recorder-publish-npm.yml` will test, pack, and publish to npm.
 - Required repo secret: `NPM_TOKEN`.

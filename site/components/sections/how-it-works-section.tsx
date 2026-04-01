@@ -1,90 +1,105 @@
-// site/components/sections/how-it-works-section.tsx
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 
 const steps = [
   {
-    title: "Capture a real trace",
+    step: "01",
+    title: "Capture the real execution path",
     description:
-      "Record production-like workflows with real tool calls so tests run against behavior that actually matters.",
+      "Instrument the agent once and keep the prompts, tool calls, arguments, outputs, and run metadata that actually matter.",
   },
   {
-    title: "Apply a mutation pack",
+    step: "02",
+    title: "Replay under controlled degradation",
     description:
-      "Inject schema drift, timeouts, and tool faults to expose brittle logic before users hit it in production.",
+      "Inject schema drift, timeouts, rate limits, and value corruption into the exact path that failed or the workflow you need confidence in.",
   },
   {
-    title: "Gate release in CI",
+    step: "03",
+    title: "Enforce policy and safety rules",
     description:
-      "Register a scenario pool and run the reliability gate in pull requests. Every registered trace is replayed in parallel — block deploys when any scenario fails.",
+      "Require approval tokens, block unsafe tool paths, and surface violations before sensitive actions leave the sandbox.",
+  },
+  {
+    step: "04",
+    title: "Ship a CI verdict teams can trust",
+    description:
+      "Aggregate pass rate, scenario coverage, unsafe attempts, and reliability evidence into a gate that can block risky merges.",
   },
 ];
 
-const containerVariants = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.12,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, x: -20 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.45, ease: "easeOut" } },
-};
+const artifacts = [
+  "trace.timeline.json",
+  "mutation_trace.json",
+  "policy_events.log",
+  "ci_decision=pass|fail",
+];
 
 export function HowItWorksSection() {
   return (
-    <section className="bg-[--surface-2] py-24 sm:py-32">
+    <section className="bg-transparent py-20 sm:py-24">
       <div className="site-container">
-        <div className="mx-auto mb-16 max-w-3xl text-center">
-          <p className="section-kicker">How it works</p>
-          <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em]" style={{ color: "var(--text-primary)" }}>
-            Capture, mutate, and gate in three steps.
-          </h2>
-          <p className="mt-4 text-base leading-8 text-gray-500">
-            A clean flow your engineering team can adopt without changing your whole stack.
-          </p>
-        </div>
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] lg:gap-16">
+          <div className="max-w-xl">
+            <p className="section-kicker">Operator workflow</p>
+            <h2 className="section-heading mt-4 text-[--text-primary]">
+              A reliability loop built around evidence, not assumptions.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-slate-300 md:text-lg">
+              Sepurux is strongest when it behaves like platform infrastructure. The system records
+              what happened, stresses the same workflow, and turns the outcome into a release
+              decision.
+            </p>
 
-        <div className="mx-auto max-w-6xl">
+            <div className="mt-8 border-t border-[--border] pt-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Artifacts teams keep
+              </p>
+              <div className="mt-4 space-y-3">
+                {artifacts.map((artifact) => (
+                  <div key={artifact} className="flex items-center justify-between border-b border-[--border] pb-3">
+                    <span className="font-mono text-sm text-[--text-primary]">{artifact}</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      output
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <motion.div
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.15 }}
-            variants={containerVariants}
-            className="grid gap-4 lg:grid-cols-3"
+            variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+            className="border-l border-[--border] pl-0 md:pl-8"
           >
-            {steps.map((step, index) => (
-              <motion.div
-                key={step.title}
-                variants={itemVariants}
-                className="group relative overflow-hidden rounded-2xl border border-[--border] bg-white p-6 transition-all duration-300 hover:border-l-2 hover:border-l-[--color-accent]"
-                style={{ boxShadow: "var(--shadow-card)" }}
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div
-                    className="flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold font-mono tabular-nums"
-                    style={{
-                      borderColor: "rgba(var(--accent-rgb), 0.18)",
-                      background: "rgba(var(--accent-rgb), 0.08)",
-                      color: "var(--color-accent)",
-                    }}
-                  >
-                    {String(index + 1).padStart(2, "0")}
+            <div className="space-y-8">
+              {steps.map((step) => (
+                <motion.div
+                  key={step.step}
+                  variants={{
+                    hidden: { opacity: 0, y: 22 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
+                  }}
+                  className="grid gap-4 border-b border-[--border] pb-8 md:grid-cols-[84px_minmax(0,1fr)]"
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    {step.step}
                   </div>
-                  {index < steps.length - 1 ? (
-                    <ArrowRight className="h-4 w-4 text-gray-300 transition-colors group-hover:text-[var(--color-accent)]" />
-                  ) : null}
-                </div>
-
-                <h3 className="font-display text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{step.title}</h3>
-                <p className="mt-2 text-sm leading-7 text-gray-500">{step.description}</p>
-              </motion.div>
-            ))}
+                  <div>
+                    <h3 className="text-[1.45rem] font-semibold tracking-[-0.04em] text-[--text-primary]">
+                      {step.title}
+                    </h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+                      {step.description}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         </div>
       </div>

@@ -206,9 +206,9 @@ export default function WebhooksPage() {
               "Set false to pause deliveries without deleting the webhook. Toggle back to true to resume.",
             ],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+            <div key={title} className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4">
               <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{body}</p>
             </div>
           ))}
         </div>
@@ -222,7 +222,7 @@ export default function WebhooksPage() {
         <div className="overflow-hidden rounded-2xl border border-[--border]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[--border] bg-white shadow-sm">
+              <tr className="border-b border-[--border] bg-white/8 shadow-sm">
                 <th className="px-4 py-3 text-left font-semibold text-[--text-primary]">Event</th>
                 <th className="px-4 py-3 text-left font-semibold text-[--text-primary]">Description</th>
                 <th className="hidden px-4 py-3 text-left font-semibold text-[--text-primary] md:table-cell">
@@ -239,7 +239,7 @@ export default function WebhooksPage() {
                   <td className="px-4 py-3">
                     <code className="text-xs text-[var(--color-accent)]">{event.name}</code>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{event.description}</td>
+                  <td className="px-4 py-3 text-slate-300">{event.description}</td>
                   <td className="hidden px-4 py-3 text-xs text-slate-500 md:table-cell">
                     {event.dataFields}
                   </td>
@@ -256,7 +256,7 @@ export default function WebhooksPage() {
         description="Every delivery is a JSON POST with a consistent envelope. The data field varies by event type."
       >
         <DocsCodeBlock code={payloadSnippet} label="json" />
-        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300">
           The JSON body is serialised with sorted keys and compact separators before signing. Use the
           raw request body bytes — not a re-serialised version — when computing the verification
           digest.
@@ -272,7 +272,7 @@ export default function WebhooksPage() {
           <DocsCodeBlock code={verifyPythonSnippet} label="python" />
           <DocsCodeBlock code={verifyNodeSnippet} label="typescript" />
         </div>
-        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300">
           Always use a constant-time comparison (
           <code className="text-[--text-primary]">hmac.compare_digest</code> /
           <code className="text-[--text-primary]"> crypto.timingSafeEqual</code>) to prevent timing attacks.
@@ -320,9 +320,9 @@ export default function WebhooksPage() {
               "If a delivery fails all retries, the webhook record's last_error field captures the HTTP status or connection error for debugging.",
             ],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+            <div key={title} className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4">
               <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{body}</p>
             </div>
           ))}
         </div>

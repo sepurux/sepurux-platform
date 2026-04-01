@@ -30,7 +30,7 @@ const screenshots = [
 
 export function ScreenshotGallerySection() {
   return (
-    <section className="bg-white py-24 sm:py-32">
+    <section className="bg-transparent py-24 sm:py-32">
       <div className="site-container">
         <div className="mx-auto mb-14 max-w-3xl text-center">
           <p className="section-kicker">Screenshots</p>
@@ -40,7 +40,7 @@ export function ScreenshotGallerySection() {
           >
             Every failure, fully visible.
           </h2>
-          <p className="mt-4 text-base leading-8 text-gray-500">
+          <p className="mt-4 text-base leading-8 text-slate-400">
             Replay traces, inspect mutations, and read the reliability report — all in one place.
           </p>
         </div>
@@ -51,7 +51,7 @@ export function ScreenshotGallerySection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
-            className="overflow-hidden rounded-[28px] border border-[--border] bg-white"
+            className="overflow-hidden rounded-[28px] border border-[--border] bg-[rgba(13,22,41,0.6)]"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
             <Image
@@ -71,7 +71,7 @@ export function ScreenshotGallerySection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.15 }}
                 transition={{ duration: 0.45, ease: "easeOut", delay: index * 0.08 }}
-                className="overflow-hidden rounded-[28px] border border-[--border] bg-white"
+                className="overflow-hidden rounded-[28px] border border-[--border] bg-[rgba(13,22,41,0.6)]"
                 style={{ boxShadow: "var(--shadow-card)" }}
               >
                 <Image

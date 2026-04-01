@@ -33,12 +33,12 @@ export function ScreenshotPlaceholder({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[28px] border border-[--border] bg-white p-4 shadow-panel",
+        "relative overflow-hidden rounded-[28px] border border-[--border] bg-card p-4 shadow-panel",
         className
       )}
     >
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">{title}</p>
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{title}</p>
         <div className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-danger/80" />
           <span className="h-2.5 w-2.5 rounded-full bg-warning/80" />

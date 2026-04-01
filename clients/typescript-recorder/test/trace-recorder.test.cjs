@@ -32,8 +32,8 @@ test("SepuruxClient.trace uploads traces and starts runs", async () => {
       if (input.endsWith("/v1/traces")) {
         return response(201, { trace_id: "trace-123" });
       }
-      if (input.endsWith("/v1/runs")) {
-        return response(201, { run_id: "run-456" });
+      if (input.endsWith("/v1/ci/runs")) {
+        return response(201, { batch_id: "batch-456" });
       }
       return response(404, { detail: "not found" });
     },
@@ -50,10 +50,11 @@ test("SepuruxClient.trace uploads traces and starts runs", async () => {
   );
 
   assert.equal(recorder.traceId, "trace-123");
-  assert.equal(recorder.runId, "run-456");
+  assert.equal(recorder.batchId, "batch-456");
+  assert.equal(recorder.runId, "batch-456");
   assert.equal(requests.length, 2);
   assert.equal(requests[0].input, "http://localhost:8000/v1/traces");
-  assert.equal(requests[1].input, "http://localhost:8000/v1/runs");
+  assert.equal(requests[1].input, "http://localhost:8000/v1/ci/runs");
   assert.equal(requests[0].init.headers["X-API-Key"], "key-1");
   assert.equal(requests[0].init.headers["X-Project-Id"], "project-1");
 });

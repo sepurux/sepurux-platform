@@ -35,7 +35,7 @@ const docTracks = [
   },
   {
     title: "Integrations",
-    description: "Drop-in OpenAI and LangChain integrations — auto-record traces without manual instrumentation.",
+    description: "Drop-in OpenAI and LangChain integrations that record traces without manual instrumentation.",
     href: "/docs/integrations",
   },
   {
@@ -80,8 +80,8 @@ export default function DocsPage() {
   return (
     <DocsShell
       kicker="Documentation"
-      title="Professional docs for shipping reliable AI agents."
-      description="Everything in one place: onboarding, SDK paths, CI/CD gate setup, policy and security controls, and API-level examples that map to real production workflows."
+      title="Operational docs for teams shipping reliable AI agents."
+      description="Use the docs the same way you use the product: start from a real workflow, connect a project, capture a trace, and move into replay, policy, and CI control."
       nav={[
         { href: "#start", label: "Start Here" },
         { href: "#tracks", label: "Documentation Tracks" },
@@ -96,20 +96,17 @@ export default function DocsPage() {
       <DocsSection
         id="start"
         title="Start Here"
-        description="Use this 3-step flow to validate your setup before diving deeper into CI, policy, and enterprise controls."
+        description="Validate the full setup path in three steps before diving deeper into CI, policy, and enterprise controls."
       >
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-5">
           {[
-            ["1. Connect project", "Generate a project API key and copy your project UUID from the app."],
-            ["2. Set environment", "Define base URLs and auth variables once in your shell or CI secrets."],
-            [
-              "3. Build + run",
-              "Capture a trace, create a pack with Basic Builder, and run it from the Mutation Packs page.",
-            ],
+            ["1. Connect a project", "Generate a project API key and copy your project UUID from the app workspace."],
+            ["2. Set the environment", "Define the base URLs and auth variables once in your shell or CI secrets."],
+            ["3. Capture, build, run", "Record a trace, create a mutation pack, and execute the first reliability run."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+            <div key={title} className="grid gap-3 border-t border-[--border] pt-4 md:grid-cols-[180px_minmax(0,1fr)]">
               <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+              <p className="text-sm leading-7 text-slate-300">{body}</p>
             </div>
           ))}
         </div>
@@ -123,9 +120,9 @@ export default function DocsPage() {
       <DocsSection
         id="tracks"
         title="Documentation Tracks"
-        description="Choose the guide that matches your role and current milestone."
+        description="Choose the guide that matches your role and the part of the rollout you are working on."
       >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="divide-y divide-[--border]">
           {docTracks.map((track) => (
             <DocsCard key={track.href} href={track.href} title={track.title} description={track.description} />
           ))}
@@ -135,39 +132,50 @@ export default function DocsPage() {
       <DocsSection
         id="resources"
         title="Reference Resources"
-        description="Direct links for deeper implementation and support channels."
+        description="Direct links for implementation detail, schemas, and rollout support."
       >
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-5">
           <a
             href={referenceUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-[--border] bg-white shadow-sm p-5 transition-colors hover:bg-[--surface-2]"
+            className="flex items-start justify-between gap-6 border-t border-[--border] py-5 transition-colors hover:text-[--color-accent]"
           >
-            <p className="text-sm font-semibold text-[--text-primary]">Interactive API Docs</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Swagger-style endpoint documentation for the live hosted API.
-            </p>
+            <div>
+              <p className="text-base font-semibold text-[--text-primary]">Interactive API Docs</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Swagger-style endpoint documentation for the live hosted API.
+              </p>
+            </div>
+            <span className="text-sm text-slate-400">External</span>
           </a>
+
           <a
             href={openApiUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-[--border] bg-white shadow-sm p-5 transition-colors hover:bg-[--surface-2]"
+            className="flex items-start justify-between gap-6 border-t border-[--border] py-5 transition-colors hover:text-[--color-accent]"
           >
-            <p className="text-sm font-semibold text-[--text-primary]">OpenAPI Schema</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Raw schema for client generation and contract validation.
-            </p>
+            <div>
+              <p className="text-base font-semibold text-[--text-primary]">OpenAPI Schema</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Raw schema for client generation and contract validation.
+              </p>
+            </div>
+            <span className="text-sm text-slate-400">External</span>
           </a>
-        </div>
 
-        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-5 text-sm leading-7 text-slate-600">
-          Need help designing a rollout path for your team? Visit <Link href="/book-demo" className="text-[--text-primary] underline underline-offset-4">Book a Demo</Link> or email{" "}
-          <a href={`mailto:${siteConfig.supportEmail}`} className="text-[--text-primary] underline underline-offset-4">
-            {siteConfig.supportEmail}
-          </a>
-          .
+          <div className="border-t border-[--border] py-5 text-sm leading-7 text-slate-300">
+            Need help designing a rollout path for your team? Visit{" "}
+            <Link href="/book-demo" className="text-[--text-primary] underline underline-offset-4">
+              Book a Demo
+            </Link>{" "}
+            or email{" "}
+            <a href={`mailto:${siteConfig.supportEmail}`} className="text-[--text-primary] underline underline-offset-4">
+              {siteConfig.supportEmail}
+            </a>
+            .
+          </div>
         </div>
       </DocsSection>
     </DocsShell>

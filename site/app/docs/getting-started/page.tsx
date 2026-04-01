@@ -258,9 +258,9 @@ export default function GettingStartedPage() {
             ["Project ID", "Use a project-scoped UUID for all /v1 requests."],
             ["Campaign ID", "Create one campaign first, then reuse it in SDK and CI."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+            <div key={title} className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4">
               <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{body}</p>
             </div>
           ))}
         </div>
@@ -318,7 +318,7 @@ with client.trace(
 print(trace.trace_id)
 print(trace.run_id)`}
         />
-        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300">
           Requires <code className="text-[--text-primary]">pip install openai</code>. Records <code className="text-[--text-primary]">llm_call</code> with model, messages, output, and latency. Tool calls returned by the model are automatically recorded as <code className="text-[--text-primary]">tool_call</code> events.
         </div>
       </DocsSection>
@@ -353,7 +353,7 @@ print(handler.run_id)
 with SepuruxCallbackHandler("refund_flow", campaign_id="...") as handler:
     result = chain.invoke(inputs, config={"callbacks": [handler]})`}
         />
-        <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300">
           Requires <code className="text-[--text-primary]">pip install langchain-core</code>. Records LLM calls with latency, tool call/result pairs, and final agent output.
         </div>
       </DocsSection>
