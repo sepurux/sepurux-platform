@@ -10,8 +10,6 @@ WEAK_PACK_WARNING = "Mutation pack may be too weak to detect failures"
 SCHEMA_MUTATION_TYPES = {
     "schema.rename_field",
     "schema.drop_field",
-    "enum_value_change",
-    "nested_field_missing",
 }
 FAILURE_MUTATION_TYPES = {
     "fault.timeout",
@@ -20,18 +18,9 @@ FAILURE_MUTATION_TYPES = {
 }
 LATENCY_MUTATION_TYPES = {
     "latency_delay",
-    "cascading_timeouts",
 }
 SECURITY_MUTATION_TYPES = {
     "poison.inject",
-    "instruction_injection",
-    "tool_output_override",
-}
-DATA_CORRUPTION_MUTATION_TYPES = {
-    "malformed_tool_output",
-    "enum_value_change",
-    "nested_field_missing",
-    "tool_output_override",
 }
 
 RECOMMENDED_SYSTEM_PACK_NAMES = {
@@ -88,12 +77,10 @@ def _categorize_mutation_types(mutation_types: list[str]) -> list[str]:
             categories.add("latency")
         if mutation_type in SECURITY_MUTATION_TYPES:
             categories.add("security")
-        if mutation_type in DATA_CORRUPTION_MUTATION_TYPES:
-            categories.add("data_corruption")
     return sorted(categories)
 
 
-_POINTS_PER_CATEGORY = 20  # 5 categories × 20 = 100 max
+_POINTS_PER_CATEGORY = 20  # 4 implemented categories × 20 = 80 max
 
 
 def coverage_score_for_config(config: Any) -> int:
