@@ -80,7 +80,7 @@ def _categorize_mutation_types(mutation_types: list[str]) -> list[str]:
     return sorted(categories)
 
 
-_POINTS_PER_CATEGORY = 25  # 4 categories × 25 = 100 max
+_POINTS_PER_CATEGORY = 20  # 4 implemented categories × 20 = 80 max
 
 
 def coverage_score_for_config(config: Any) -> int:
