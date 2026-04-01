@@ -439,7 +439,7 @@ def test_weak_custom_pack_returns_warning_and_include_system_filter_works(
     assert create_response.status_code == 201
     created = create_response.json()
     assert created["warning"] == "Mutation pack may be too weak to detect failures"
-    assert created["coverage_score"] == 25
+    assert created["coverage_score"] == 20
     assert (
         "must contain at least one failure mutation (timeout/rate_limit/auth_failure)"
         in created["validation_issues"]
@@ -461,7 +461,7 @@ def test_mutation_pack_coverage_endpoint_returns_expected_score(
     create_response = client.post(
         "/v1/mutation-packs",
         json={
-            "name": "Coverage 100 Pack",
+            "name": "Coverage 80 Pack",
             "description": "Touch all implemented coverage categories",
             "config": {
                 "mutations": [
@@ -480,7 +480,7 @@ def test_mutation_pack_coverage_endpoint_returns_expected_score(
     assert coverage_response.status_code == 200
     payload = coverage_response.json()
     assert payload["mutation_pack_id"] == pack_id
-    assert payload["coverage_score"] == 100
+    assert payload["coverage_score"] == 80
     assert set(payload["categories"]) == {
         "schema",
         "fault",

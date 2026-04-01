@@ -107,9 +107,9 @@ export function CampaignCreateView() {
       (record) => !record.is_system || !recommendedSystemPackNames.has(record.name)
     )
   );
-  // coverage_score is (categories / 4) * 100 — convert back to N/4 for display
+  // coverage_score is currently 20 points per implemented category.
   const selectedPackCategories = selectedMutationPack
-    ? Math.round(selectedMutationPack.coverage_score / 25)
+    ? Math.round(selectedMutationPack.coverage_score / 20)
     : 0;
   const selectedPackWarning =
     selectedMutationPack && selectedPackCategories < 2
