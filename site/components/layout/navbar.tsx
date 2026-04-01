@@ -1,20 +1,19 @@
-// site/components/layout/navbar.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 
 import { buildAppAuthHref, siteConfig } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/product", label: "Product" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
-  { href: "/blog", label: "Blog" },
   { href: "/sandbox", label: "Sandbox" },
-  { href: buildAppAuthHref({ mode: "access", intent: "login" }), label: "Login", external: true },
+  { href: "/company", label: "Company" },
 ];
 
 export function Navbar() {
@@ -26,102 +25,121 @@ export function Navbar() {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-[--border]">
-      <div className="site-container flex h-16 items-center justify-between gap-4">
-        <Link href="/" className="inline-flex items-center gap-3" aria-label="Sepurux home">
-          <img
-            src={siteConfig.logo}
-            alt="Sepurux logo"
-            width={768}
-            height={1024}
-            className="block h-12 w-auto"
-          />
-        </Link>
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+      <div className="site-container">
+        <div className="flex min-h-[78px] items-center justify-between gap-4 py-3">
+          <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Sepurux home">
+              <img
+                src={siteConfig.logo}
+                alt="Sepurux logo"
+                width={768}
+                height={1024}
+                className="block h-10 w-auto shrink-0"
+              />
+            
+            </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
-          {navItems.map((item) => {
-            const isLogin = item.label === "Login";
-            const isActive = !item.external && pathname === item.href;
+          <nav className="hidden items-center gap-1 lg:flex">
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
 
-            if (isLogin) {
               return (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-medium text-gray-700 border border-[--border] rounded-md px-3 py-1.5 transition-colors hover:border-[--color-warm] hover:text-[--color-warm]"
+                  className={cn(
+                    "rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-slate-950 text-white"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                  )}
                 >
                   {item.label}
-                </a>
+                </Link>
               );
-            }
+            })}
+          </nav>
 
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                target={item.external ? "_blank" : undefined}
-                rel={item.external ? "noreferrer" : undefined}
-                className="relative text-sm font-medium text-gray-700 transition-colors hover:text-[--color-warm]"
-              >
-                {item.label}
-                {isActive && (
-                  <span
-                    className="absolute -bottom-0.5 left-0 h-px w-full rounded-full"
-                    style={{ background: "var(--color-warm)" }}
-                  />
-                )}
-              </a>
-            );
-          })}
-        </nav>
-
-        <div className="hidden items-center md:flex">
-          <a
-            href={buildAppAuthHref({ mode: "access", intent: "signup" })}
-            className="inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-medium text-white transition-all duration-200 hover:brightness-110"
-            style={{ background: "var(--color-accent)" }}
-          >
-            Try Sepurux
-          </a>
-        </div>
-
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[--border] bg-white text-gray-700 transition-colors hover:border-[--color-warm] hover:text-[--color-warm] md:hidden"
-          aria-expanded={mobileOpen}
-          aria-controls="site-mobile-menu"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          onClick={() => setMobileOpen((open) => !open)}
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
-
-      {mobileOpen ? (
-        <div id="site-mobile-menu" className="border-t border-[--border] md:hidden">
-          <div className="site-container flex flex-col gap-2 py-4">
-            {navItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                target={item.external ? "_blank" : undefined}
-                rel={item.external ? "noreferrer" : undefined}
-                className="rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-[--surface-2] hover:text-[--color-warm]"
-              >
-                {item.label}
-              </a>
-            ))}
-            <Link
-              href={buildAppAuthHref({ mode: "demo" })}
-              className="mt-2 inline-flex h-11 items-center justify-center rounded-md border border-[--border] bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:border-[--color-warm] hover:text-[--color-warm]"
+          <div className="hidden items-center gap-2 lg:flex">
+            <a
+              href={buildAppAuthHref({ mode: "access", intent: "login" })}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
             >
-              View Demo
+              Login
+            </a>
+            <Link
+              href="/book-demo"
+              className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-slate-600 transition-colors hover:text-slate-950"
+            >
+              Book demo
             </Link>
+            <a
+              href={buildAppAuthHref({ mode: "access", intent: "signup" })}
+              className="teal-glow-btn inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.34)] bg-[var(--color-accent)] px-5 text-sm font-semibold text-white"
+            >
+              Start free
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
           </div>
+
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 lg:hidden"
+            aria-expanded={mobileOpen}
+            aria-controls="site-mobile-menu"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            onClick={() => setMobileOpen((open) => !open)}
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
-      ) : null}
+
+        {mobileOpen ? (
+          <div id="site-mobile-menu" className="border-t border-slate-200 pb-4 pt-4 lg:hidden">
+            <div className="flex flex-col gap-2">
+              {navItems.map((item) => {
+                const isActive =
+                  pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-slate-950 text-white"
+                        : "bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <a
+                  href={buildAppAuthHref({ mode: "access", intent: "login" })}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700"
+                >
+                  Login
+                </a>
+                <a
+                  href={buildAppAuthHref({ mode: "access", intent: "signup" })}
+                  className="teal-glow-btn inline-flex h-11 items-center justify-center rounded-full border border-[rgba(var(--accent-rgb),0.34)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white"
+                >
+                  Start free
+                </a>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </header>
   );
 }

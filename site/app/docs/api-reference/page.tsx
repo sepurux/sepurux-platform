@@ -219,7 +219,7 @@ export default function APIReferencePage() {
         title="Base URL & Auth"
         description="All project-scoped `/v1` endpoints require `X-API-Key` and `X-Project-Id` headers."
       >
-        <div className="rounded-2xl border border-[--border] bg-white shadow-sm px-4 py-3 text-sm text-slate-700">
+        <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm px-4 py-3 text-sm text-slate-300">
           Base URL: <code>{baseUrl}</code>
         </div>
         <DocsCodeBlock code={headersSnippet} label="required headers" />
@@ -231,18 +231,18 @@ export default function APIReferencePage() {
         description="These are the most common endpoints used by product teams and platform engineers."
       >
         <div className="overflow-hidden rounded-2xl border border-[--border]">
-          <table className="min-w-full divide-y divide-slate-200 text-left">
-            <thead className="bg-white shadow-sm">
+          <table className="min-w-full divide-y divide-white/8 text-left">
+            <thead className="bg-white/8 shadow-sm">
               <tr>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Endpoint</th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Purpose</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
+            <tbody className="divide-y divide-white/8 bg-white/4">
               {endpoints.map(([endpoint, purpose]) => (
                 <tr key={endpoint}>
                   <td className="px-4 py-3 font-mono text-xs text-[--text-primary]">{endpoint}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{purpose}</td>
+                  <td className="px-4 py-3 text-sm text-slate-300">{purpose}</td>
                 </tr>
               ))}
             </tbody>
@@ -276,9 +276,9 @@ export default function APIReferencePage() {
             ["min_scenarios", "CI submission is rejected (422) if the registered pool falls below this count. Prevents gating against a trivially small scenario set."],
             ["scenario_coverage_pct", "Returned by the batch endpoint: completed runs / total traces × 100. Use this to verify full coverage before acting on the verdict."],
           ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-[--border] bg-white shadow-sm p-4">
+            <div key={title} className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4">
               <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{body}</p>
             </div>
           ))}
         </div>
@@ -294,7 +294,7 @@ export default function APIReferencePage() {
             href={`${baseUrl}/docs`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-700 transition-colors hover:bg-[--surface-2]"
+            className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300 transition-colors hover:bg-[--surface-2]"
           >
             Interactive Docs: <code>{baseUrl}/docs</code>
           </a>
@@ -302,7 +302,7 @@ export default function APIReferencePage() {
             href={`${baseUrl}/openapi.json`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-2xl border border-[--border] bg-white shadow-sm p-4 text-sm text-slate-700 transition-colors hover:bg-[--surface-2]"
+            className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300 transition-colors hover:bg-[--surface-2]"
           >
             OpenAPI Schema: <code>{baseUrl}/openapi.json</code>
           </a>

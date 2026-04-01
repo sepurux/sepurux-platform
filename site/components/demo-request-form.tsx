@@ -8,10 +8,10 @@ type DemoRole = "Platform Eng" | "Security" | "Product" | "Founder" | "Other";
 const roles: DemoRole[] = ["Platform Eng", "Security", "Product", "Founder", "Other"];
 
 const fieldClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 transition focus:border-[--color-accent] focus:ring-2 focus:ring-[rgba(var(--accent-rgb),0.12)]";
+  "h-11 w-full rounded-2xl border border-[--border] bg-white/8 px-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 transition focus:border-[rgba(var(--accent-rgb),0.32)] focus:ring-2 focus:ring-[rgba(var(--accent-rgb),0.12)]";
 
 const labelClass = "block space-y-1.5 text-sm";
-const labelTextClass = "text-xs font-medium uppercase tracking-[0.14em] text-slate-500";
+const labelTextClass = "text-xs font-semibold uppercase tracking-[0.16em] text-slate-500";
 
 export function DemoRequestForm() {
   const [email, setEmail] = useState("");
@@ -57,7 +57,7 @@ export function DemoRequestForm() {
 
   if (status === "success") {
     return (
-      <div className="accent-panel-soft flex min-h-[360px] flex-col items-center justify-center rounded-[24px] p-10 text-center">
+      <div className="accent-panel-soft flex min-h-[360px] flex-col items-center justify-center rounded-[30px] p-10 text-center">
         <div
           className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border"
           style={{
@@ -68,13 +68,22 @@ export function DemoRequestForm() {
           <CheckCircle2 className="h-7 w-7" style={{ color: "var(--color-accent)" }} />
         </div>
         <h2 className="text-xl font-semibold text-[--text-primary]">Request received</h2>
-        <p className="mt-3 max-w-sm text-sm leading-7 text-slate-600">{message}</p>
+        <p className="mt-3 max-w-sm text-sm leading-7 text-slate-300">{message}</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 rounded-[24px] border border-[--border] bg-white p-6 shadow-panel md:p-8">
+    <form onSubmit={onSubmit} className="page-surface space-y-5 p-6 md:p-8">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Request a walkthrough
+        </p>
+        <p className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[--text-primary]">
+          Tell us what you need to validate.
+        </p>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <label className={labelClass}>
           <span className={labelTextClass}>Work email</span>
@@ -96,7 +105,7 @@ export function DemoRequestForm() {
             className={`${fieldClass} appearance-none`}
           >
             {roles.map((item) => (
-              <option key={item} value={item} className="bg-white text-slate-900">
+              <option key={item} value={item} className="bg-[#0d1629] text-slate-100">
                 {item}
               </option>
             ))}

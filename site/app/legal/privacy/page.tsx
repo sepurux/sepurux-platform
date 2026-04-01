@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="mt-3 text-sm text-slate-500">Last updated: February 27, 2026</p>
-          <div className="mt-8 h-px bg-slate-200" />
+          <div className="mt-8 h-px bg-white/10" />
 
           <div className="mt-8 space-y-10">
             {sections.map((section) => (
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
                   style={{ background: "var(--color-accent)" }}
                 />
                 <h2 className="text-base font-semibold text-[--text-primary]">{section.title}</h2>
-                <p className="mt-2 text-sm leading-7 text-slate-600">
+                <p className="mt-2 text-sm leading-7 text-slate-300">
                   {section.body ?? (
                     <>
                       For privacy inquiries:{" "}
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
             ))}
           </div>
 
-          <div className="mt-14 rounded-[20px] border border-[--border] bg-white px-6 py-5 text-sm text-slate-600 shadow-sm">
+          <div className="mt-14 rounded-[20px] border border-[--border] bg-white/8 px-6 py-5 text-sm text-slate-300 shadow-sm">
             This policy applies to data collected through sepurux.com and the Sepurux application.
             For data processing agreements or enterprise compliance requirements, contact{" "}
             <a

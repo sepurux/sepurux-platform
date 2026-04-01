@@ -85,7 +85,7 @@ export default function PolicySecurityPage() {
       >
         <ul className="space-y-3">
           {checklist.map((item) => (
-            <li key={item} className="rounded-2xl border border-[--border] bg-white shadow-sm px-4 py-3 text-sm text-slate-700">
+            <li key={item} className="rounded-2xl border border-[--border] bg-white/8 shadow-sm px-4 py-3 text-sm text-slate-300">
               {item}
             </li>
           ))}

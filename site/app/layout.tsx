@@ -1,7 +1,7 @@
 // site/app/layout.tsx
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Inter, JetBrains_Mono, Syne } from "next/font/google";
+import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import Script from "next/script";
 
 import { Footer } from "@/components/layout/footer";
@@ -16,10 +16,10 @@ const bodyFont = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
-const headingFont = Syne({
+const headingFont = Manrope({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["500", "600", "700", "800"],
 });
 
 const monoFont = JetBrains_Mono({
@@ -30,11 +30,23 @@ const monoFont = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
+  applicationName: siteConfig.name,
   title: {
-    default: "Sepurux | Chaos Engineering for AI Agents",
+    default: "Sepurux | Reliability Infrastructure For AI Agents",
     template: "%s | Sepurux",
   },
   description: siteConfig.description,
+  keywords: [
+    "AI agent reliability",
+    "AI chaos engineering",
+    "agent trace replay",
+    "mutation testing for AI agents",
+    "AI policy gates",
+    "CI reliability gate",
+    "Sepurux",
+  ],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
   icons: {
     icon: [{ url: `/favicon.png?v=${siteAssetVersion}`, type: "image/png" }],
     shortcut: [{ url: `/favicon.png?v=${siteAssetVersion}`, type: "image/png" }],
@@ -48,7 +60,7 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "Sepurux | Chaos Engineering for AI Agents",
+    title: "Sepurux | Reliability Infrastructure For AI Agents",
     description: siteConfig.description,
     type: "website",
     url: siteConfig.url,
@@ -66,7 +78,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: siteConfig.twitterHandle,
     creator: siteConfig.twitterHandle,
-    title: "Sepurux | Chaos Engineering for AI Agents",
+    title: "Sepurux | Reliability Infrastructure For AI Agents",
     description: siteConfig.description,
     images: [{ url: siteConfig.ogImage, alt: "Sepurux — Chaos Engineering for AI Agents" }],
   },
@@ -111,10 +123,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body
-        className={`${bodyFont.variable} ${headingFont.variable} ${monoFont.variable} min-h-screen bg-background font-sans text-foreground`}
+        className={`${bodyFont.variable} ${headingFont.variable} ${monoFont.variable} min-h-screen overflow-x-hidden bg-background font-sans text-foreground`}
       >
         <Navbar />
-        <main>{children}</main>
+        <main className="relative pt-[78px] sm:pt-[82px]">{children}</main>
         <Footer />
         {process.env.NODE_ENV === "production" && (
           <Script

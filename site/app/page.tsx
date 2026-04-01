@@ -10,14 +10,13 @@ import { HowItWorksSection } from "@/components/sections/how-it-works-section";
 import { CIGateSection } from "@/components/sections/ci-gate-section";
 import { EnterpriseReadinessSection } from "@/components/sections/enterprise-readiness-section";
 import { IncidentProofSection } from "@/components/sections/incident-proof-section";
-import { ScreenshotGallerySection } from "@/components/sections/screenshot-gallery-section";
 import { FinalCtaSection } from "@/components/sections/final-cta-section";
 import { buildPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Sepurux",
   description:
-    "Replay workflows, inject failures, enforce policies, and block regressions before production.",
+    "Record traces, replay workflows under controlled failure, enforce policy gates, and block risky AI agent releases before production.",
   path: "/",
 });
 
@@ -29,11 +28,10 @@ export default function HomePage() {
       <HowItWorksSection />
       <DashboardPreviewSection />
       <FeatureGrid />
+      <IncidentProofSection />
       <CIGateSection />
       <EnterpriseReadinessSection />
-      <IncidentProofSection />
       <IntegrationSection />
-      <ScreenshotGallerySection />
       <FinalCtaSection />
     </>
   );
