@@ -122,48 +122,48 @@ function themeForTier(tier: PricingTierDefinition): TierTheme {
     case "team":
       return {
         cardClassName:
-          "border-emerald-100 bg-[linear-gradient(180deg,#f6fbf6_0%,#ffffff_56%,#f1f8f2_100%)] shadow-[0_18px_40px_rgba(15,23,42,0.08)]",
+          "border-emerald-900/40 bg-[linear-gradient(180deg,rgba(6,78,59,0.3)_0%,rgba(4,47,46,0.25)_56%,rgba(2,44,34,0.3)_100%)] shadow-[0_18px_40px_rgba(0,5,20,0.28)]",
         badgeClassName:
-          "border border-emerald-100 bg-white text-emerald-700",
+          "border border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
         chipClassName:
-          "border border-emerald-100 bg-emerald-50 text-emerald-700",
-        metaClassName: "text-slate-500",
-        headingClassName: "text-slate-950",
-        bodyClassName: "text-slate-600",
-        panelClassName: "border border-slate-200 bg-white/80",
-        listClassName: "text-slate-700",
-        buttonClassName: "border-slate-200 bg-white text-slate-950 hover:border-emerald-200 hover:bg-emerald-50",
+          "border border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+        metaClassName: "text-slate-400",
+        headingClassName: "text-white",
+        bodyClassName: "text-slate-300",
+        panelClassName: "border border-white/10 bg-white/8",
+        listClassName: "text-slate-300",
+        buttonClassName: "border-emerald-500/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/22 hover:text-white",
       };
     case "enterprise":
       return {
         cardClassName:
-          "border-orange-100 bg-[linear-gradient(180deg,#fff8f1_0%,#ffffff_54%,#fff5ed_100%)] shadow-[0_18px_40px_rgba(15,23,42,0.08)]",
+          "border-orange-900/40 bg-[linear-gradient(180deg,rgba(120,53,15,0.3)_0%,rgba(92,38,11,0.25)_54%,rgba(78,33,10,0.3)_100%)] shadow-[0_18px_40px_rgba(0,5,20,0.28)]",
         badgeClassName:
-          "border border-orange-100 bg-white text-orange-700",
+          "border border-orange-500/30 bg-orange-500/15 text-orange-300",
         chipClassName:
-          "border border-orange-100 bg-orange-50 text-orange-700",
-        metaClassName: "text-slate-500",
-        headingClassName: "text-slate-950",
-        bodyClassName: "text-slate-600",
-        panelClassName: "border border-slate-200 bg-white/80",
-        listClassName: "text-slate-700",
-        buttonClassName: "border-slate-200 bg-white text-slate-950 hover:border-orange-200 hover:bg-orange-50",
+          "border border-orange-500/25 bg-orange-500/10 text-orange-300",
+        metaClassName: "text-slate-400",
+        headingClassName: "text-white",
+        bodyClassName: "text-slate-300",
+        panelClassName: "border border-white/10 bg-white/8",
+        listClassName: "text-slate-300",
+        buttonClassName: "border-orange-500/30 bg-orange-500/15 text-orange-200 hover:bg-orange-500/22 hover:text-white",
       };
     case "free":
     default:
       return {
         cardClassName:
-          "border-stone-200 bg-[linear-gradient(180deg,#f7f5f1_0%,#ffffff_62%,#f8f6f2_100%)] shadow-[0_18px_40px_rgba(15,23,42,0.08)]",
+          "border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.6)_0%,rgba(10,17,32,0.7)_62%,rgba(12,20,38,0.6)_100%)] shadow-[0_18px_40px_rgba(0,5,20,0.28)]",
         badgeClassName:
-          "border border-stone-200 bg-white text-stone-700",
+          "border border-white/12 bg-white/8 text-slate-300",
         chipClassName:
-          "border border-stone-200 bg-stone-50 text-stone-700",
-        metaClassName: "text-slate-500",
-        headingClassName: "text-slate-950",
-        bodyClassName: "text-slate-600",
-        panelClassName: "border border-slate-200 bg-white/80",
-        listClassName: "text-slate-700",
-        buttonClassName: "border-slate-200 bg-white text-slate-950 hover:border-stone-300 hover:bg-stone-50",
+          "border border-white/10 bg-white/6 text-slate-300",
+        metaClassName: "text-slate-400",
+        headingClassName: "text-white",
+        bodyClassName: "text-slate-300",
+        panelClassName: "border border-white/10 bg-white/8",
+        listClassName: "text-slate-300",
+        buttonClassName: "border-white/12 bg-white/8 text-slate-200 hover:bg-white/14 hover:text-white",
       };
   }
 }
@@ -249,7 +249,7 @@ export function PricingComparisonSection() {
                     aria-label={mode === "monthly" ? "Monthly billing" : "Yearly billing"}
                     className={cn(
                       "rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-all sm:px-4",
-                      isActive ? "bg-white text-slate-950 shadow-sm" : "text-slate-300 hover:text-white"
+                      isActive ? "bg-white/15 text-white shadow-sm" : "text-slate-300 hover:text-white"
                     )}
                   >
                     {label}

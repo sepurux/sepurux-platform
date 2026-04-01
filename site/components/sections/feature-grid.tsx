@@ -1,139 +1,131 @@
-// site/components/sections/feature-grid.tsx
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
-import { Gauge, Orbit, WandSparkles } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import {
+  FlaskConical,
+  GitBranch,
+  RotateCcw,
+  ShieldCheck,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 
-type VideoFeature = {
+type ModuleCard = {
   title: string;
+  eyebrow: string;
   description: string;
-  mediaType: "video";
-  src: string;
+  bullets: string[];
   icon: LucideIcon;
 };
 
-type ImageFeature = {
-  title: string;
-  description: string;
-  mediaType: "image";
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-  icon: LucideIcon;
-};
-
-type Feature = VideoFeature | ImageFeature;
-
-const features: Feature[] = [
+const modules: ModuleCard[] = [
   {
-    title: "Mutation Testing",
-    description: "Stress your agent with schema drift, timeouts, rate limits, and poisoning before release.",
-    mediaType: "video",
-    src: "/videos/mutation.mp4",
-    icon: WandSparkles,
+    title: "Replay",
+    eyebrow: "Deterministic incident reconstruction",
+    description:
+      "Recreate the original agent path, step-by-step, until the first failure becomes visible and attributable.",
+    bullets: ["Prompt and tool ordering", "Failure reason capture", "Timeline artifacts"],
+    icon: RotateCcw,
   },
   {
-    title: "Trace Replay",
-    description: "Rewind the exact agent execution and inspect the prompt, tool call, and break point.",
-    mediaType: "video",
-    src: "/videos/replay.mp4",
-    icon: Orbit,
+    title: "Mutation Packs",
+    eyebrow: "Controlled chaos injection",
+    description:
+      "Stress the same workflow with schema drift, timeouts, rate limits, and corrupted responses instead of guessing where it is brittle.",
+    bullets: ["Weighted fault sets", "Deterministic seeds", "Per-attempt traces"],
+    icon: FlaskConical,
   },
   {
-    title: "Reliability Score",
-    description: "Turn failures into a report and a score that teams can understand at a glance.",
-    mediaType: "image",
-    src: "/images/reliability.png",
-    alt: "Sepurux reliability score showing agent failure breakdown",
-    width: 1861,
-    height: 959,
-    icon: Gauge,
+    title: "Policy + Security",
+    eyebrow: "Guardrails for irreversible actions",
+    description:
+      "Require approvals, block unsafe tool paths, and add security checks before sensitive actions leave the agent sandbox.",
+    bullets: ["Approval tokens", "Tool zoning", "Unsafe event visibility"],
+    icon: ShieldCheck,
+  },
+  {
+    title: "Counterfactuals",
+    eyebrow: "What-if analysis before rollout",
+    description:
+      "Model alternate retries, policy decisions, and schema adapters before production changes are made permanent.",
+    bullets: ["Retry simulations", "Diff snapshots", "Operator review loops"],
+    icon: Workflow,
+  },
+  {
+    title: "CI Gate",
+    eyebrow: "Release control from evidence",
+    description:
+      "Register the scenario pool once, then let CI decide whether the reliability bar held on every new change set.",
+    bullets: ["Scenario coverage", "Aggregated pass/fail", "Branch protection ready"],
+    icon: GitBranch,
   },
 ];
 
 export function FeatureGrid() {
   return (
-    <section className="bg-white py-24 sm:py-32">
+    <section className="bg-transparent py-20 sm:py-24">
       <div className="site-container">
-        <div className="mx-auto mb-14 max-w-3xl text-center">
-          <p className="section-kicker">Features</p>
-          <h2
-            className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.03em]"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Product surfaces, not icon marketing.
-          </h2>
-        </div>
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.74fr)_minmax(0,1.26fr)] lg:gap-16">
+          <div className="max-w-xl">
+            <p className="section-kicker">Platform surfaces</p>
+            <h2 className="section-heading mt-4 text-[--text-primary]">
+              The product is organized around operational modules, not feature-soup marketing.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-slate-300 md:text-lg">
+              Each surface maps to a real reliability task: record the trace, replay it under
+              fault, enforce safety rules, compare alternatives, then ship a decision.
+            </p>
+          </div>
 
-        <div className="grid gap-5 lg:grid-cols-3">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
+          <div className="space-y-8">
+            {modules.map((module, index) => {
+              const Icon = module.icon;
 
-            return (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.4, ease: "easeOut", delay: index * 0.06 }}
-                className="group relative overflow-hidden rounded-2xl border border-[--border] bg-white transition-all duration-300 hover:border-[--color-accent]/30 hover:shadow-md"
-                style={{ boxShadow: "var(--shadow-card)" }}
-              >
-                {/* warm left-border accent on hover */}
-                <div
-                  className="absolute left-0 top-0 h-full w-0.5 origin-top scale-y-0 rounded-full transition-transform duration-300 group-hover:scale-y-100"
-                  style={{ background: "var(--color-warm)" }}
-                />
-
-                <div className="overflow-hidden">
-                  {feature.mediaType === "video" ? (
-                    <video
-                      className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="auto"
-                    >
-                      <source src={feature.src} type="video/mp4" />
-                    </video>
-                  ) : (
-                    <Image
-                      src={feature.src}
-                      alt={feature.alt}
-                      width={feature.width}
-                      height={feature.height}
-                      priority
-                      className="aspect-video h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                    />
-                  )}
-                </div>
-
-                <div className="p-7">
+              return (
+                <motion.article
+                  key={module.title}
+                  initial={{ opacity: 0, y: 22 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  transition={{ duration: 0.42, delay: index * 0.04, ease: "easeOut" }}
+                  className="grid gap-4 border-t border-[--border] pt-6 md:grid-cols-[56px_minmax(0,1fr)]"
+                >
                   <div
-                    className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border"
                     style={{
-                      borderColor: "rgba(var(--warm-rgb), 0.18)",
-                      background: "rgba(var(--warm-rgb), 0.10)",
+                      borderColor: "rgba(var(--accent-rgb), 0.18)",
+                      background: "rgba(var(--accent-rgb), 0.08)",
                     }}
                   >
-                    <Icon className="h-4 w-4" style={{ color: "var(--color-warm)" }} />
+                    <Icon className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
                   </div>
-                  <h3
-                    className="font-display text-xl font-semibold"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {feature.title}
-                  </h3>
-                  <p className="mt-2.5 text-sm leading-7 text-gray-500">{feature.description}</p>
-                </div>
-              </motion.div>
-            );
-          })}
+
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,0.22fr)]">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        {module.eyebrow}
+                      </p>
+                      <h3 className="mt-3 text-[1.45rem] font-semibold tracking-[-0.04em] text-[--text-primary]">
+                        {module.title}
+                      </h3>
+                      <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+                        {module.description}
+                      </p>
+                    </div>
+
+                    <ul className="space-y-3">
+                      {module.bullets.map((bullet) => (
+                        <li key={bullet} className="flex items-start gap-3 text-sm text-slate-300">
+                          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </motion.article>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

@@ -61,9 +61,9 @@ export default function FAQPage() {
       >
         <div className="space-y-3">
           {faqs.map((faq) => (
-            <div key={faq.question} className="rounded-2xl border border-[--border] bg-white shadow-sm p-5">
+            <div key={faq.question} className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-5">
               <h3 className="text-base font-semibold text-[--text-primary]">{faq.question}</h3>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{faq.answer}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-300">{faq.answer}</p>
             </div>
           ))}
         </div>
@@ -75,17 +75,17 @@ export default function FAQPage() {
         description="Choose the right path based on urgency and scope."
       >
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-5">
+          <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-5">
             <p className="text-sm font-semibold text-[--text-primary]">Product docs</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Use docs for setup, API behavior, and rollout patterns.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">Use docs for setup, API behavior, and rollout patterns.</p>
             <p className="mt-3 text-sm">
               <Link href="/docs" className="text-[--text-primary] underline underline-offset-4">Open docs home</Link>
             </p>
           </div>
 
-          <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-5">
+          <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-5">
             <p className="text-sm font-semibold text-[--text-primary]">Email support</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Use email for account and implementation support.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">Use email for account and implementation support.</p>
             <p className="mt-3 text-sm">
               <a href={`mailto:${siteConfig.supportEmail}`} className="text-[--text-primary] underline underline-offset-4">
                 {siteConfig.supportEmail}
@@ -93,9 +93,9 @@ export default function FAQPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-[--border] bg-white shadow-sm p-5">
+          <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-5">
             <p className="text-sm font-semibold text-[--text-primary]">Architecture review</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Book a walkthrough for CI gate and governance rollout.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">Book a walkthrough for CI gate and governance rollout.</p>
             <p className="mt-3 text-sm">
               <Link href="/book-demo" className="text-[--text-primary] underline underline-offset-4">Book a demo</Link>
             </p>

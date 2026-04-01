@@ -15,59 +15,73 @@ export default function BlogIndexPage() {
   const sorted = [...blogPosts].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
+  const [featured, ...rest] = sorted;
 
   return (
-    <div className="bg-background">
-      <section className="ink-section border-b border-white/10">
-        <div className="site-container py-16 md:py-24">
+    <div className="page-shell bg-background">
+      <section className="page-hero-shell">
+        <div className="site-container relative z-10 py-16 md:py-24">
           <header className="max-w-3xl">
             <p className="section-kicker ink-kicker">Blog</p>
-            <h1 className="page-hero-title mt-3 text-white">
-              Building reliable AI agents.
-            </h1>
-            <p className="mt-5 text-lg text-slate-300">
-              Engineering articles on chaos testing, replay infrastructure, and
-              shipping AI agents with fewer production surprises.
+            <h1 className="page-hero-title mt-3 text-white">Writing about reliable AI systems.</h1>
+            <p className="mt-5 text-lg leading-8 text-slate-300">
+              Essays, implementation notes, and practical guidance on replay, mutation testing, CI
+              gates, and the operational realities of shipping agentic software.
             </p>
           </header>
         </div>
       </section>
 
       <div className="site-container py-12 md:py-16">
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {sorted.map((post) => (
-            <Link
-              key={post.slug}
-              href={`/blog/${post.slug}`}
-              className="group flex flex-col rounded-[24px] border border-[--border] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.07),0_4px_16px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.10)]"
-            >
-              <div className="flex items-center gap-2">
-                <span className="rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em]"
-                  style={{ background: "rgba(79,135,103,0.1)", color: "var(--color-warm)" }}>
-                  {post.category}
-                </span>
-                <span className="text-xs text-[--muted-foreground]">{post.readMinutes} min read</span>
+        <section className="border-b border-[--border] pb-10">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Featured article
+          </p>
+          <Link href={`/blog/${featured.slug}`} className="mt-5 block">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-end">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                <span className="metric-chip-light">{featured.category}</span>
+                <span>{formatBlogDate(featured.date)}</span>
+                <span>{featured.readMinutes} min read</span>
               </div>
-
-              <h2 className="mt-3 text-lg font-semibold leading-snug text-[--text-primary] transition-colors group-hover:text-[--color-accent]">
-                {post.title}
-              </h2>
-
-              <p className="mt-2 flex-1 text-sm leading-7 text-slate-500">
-                {post.description}
-              </p>
-
-              <div className="mt-4 flex items-center justify-between border-t border-[--border] pt-4">
-                <time className="text-xs text-slate-400" dateTime={post.date}>
-                  {formatBlogDate(post.date)}
-                </time>
-                <span className="text-xs font-medium transition-colors" style={{ color: "var(--color-accent)" }}>
-                  Read →
-                </span>
+              <div>
+                <h2 className="text-3xl font-semibold tracking-[-0.05em] text-[--text-primary] md:text-4xl">
+                  {featured.title}
+                </h2>
+                <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
+                  {featured.description}
+                </p>
               </div>
-            </Link>
-          ))}
-        </div>
+            </div>
+          </Link>
+        </section>
+
+        <section className="pt-6">
+          <div className="divide-y divide-[--border]">
+            {rest.map((post) => (
+              <Link key={post.slug} href={`/blog/${post.slug}`} className="block py-6 transition-colors hover:text-[--color-accent]">
+                <div className="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)_140px] lg:items-start lg:gap-8">
+                  <div className="text-sm text-slate-500">
+                    <p>{formatBlogDate(post.date)}</p>
+                    <p className="mt-1">{post.readMinutes} min read</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {post.category}
+                    </p>
+                    <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[--text-primary]">
+                      {post.title}
+                    </h3>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+                      {post.description}
+                    </p>
+                  </div>
+                  <div className="text-sm font-medium text-slate-500 lg:text-right">Read article</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

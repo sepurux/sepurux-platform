@@ -1,5 +1,5 @@
 packageName: sepuruxclient
-packageVersion: 0.5.0
+packageVersion: 0.6.0
 moduleName: github.com/sepurux/sepurux-platform/clients/go
 enumClassPrefix: true
 hideGenerationTimestamp: true
