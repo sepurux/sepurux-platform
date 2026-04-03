@@ -73,6 +73,7 @@ from app.services.internal_queue_service import (
 )
 from app.services.internal_settings_service import (
     get_internal_feature_flags,
+    is_internal_feature_enabled,
     update_internal_feature_flags,
 )
 from app.services.internal_system_service import build_internal_system_overview
@@ -794,6 +795,11 @@ def patch_internal_waitlist(
             to_email=record.email,
             company_name=record.company,
             role=record.role,
+            registration_enabled=is_internal_feature_enabled(
+                db,
+                key="enable_registration",
+                default=True,
+            ),
         )
 
     payload = InternalWaitlistEntry(**serialize_waitlist_entry(record))

@@ -15,6 +15,15 @@ def is_valid_waitlist_email(value: str) -> bool:
     return bool(value) and "@" in value and "." in value.split("@")[-1]
 
 
+def is_waitlist_email_approved(db: Session, *, email: str) -> bool:
+    normalized_email = email.strip().lower()
+    if not normalized_email:
+        return False
+
+    record = db.scalar(select(WaitlistEntry).where(WaitlistEntry.email == normalized_email))
+    return isinstance(record, WaitlistEntry) and record.status == "approved"
+
+
 def serialize_waitlist_entry(entry: WaitlistEntry) -> dict[str, object]:
     return {
         "waitlist_entry_id": entry.waitlist_entry_id,

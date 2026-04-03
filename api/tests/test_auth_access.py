@@ -19,6 +19,7 @@ from app.models import (
     Tenant,
     User,
     UserIdentity,
+    WaitlistEntry,
 )
 from app.services.auth_service import hash_password, verify_password
 from app.services.billing_service import PRO_PLAN_ID, subscribe_user
@@ -179,6 +180,38 @@ def test_signup_is_blocked_when_registration_is_disabled(
     assert response.json() == {
         "detail": "Registration is currently disabled. Join the waitlist for access."
     }
+
+
+def test_signup_is_allowed_for_approved_waitlist_email_when_registration_is_disabled(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = auth_test_context
+
+    with session_factory() as db:
+        db.add(InternalFeatureFlag(key="enable_registration", enabled=False))
+        db.add(
+            WaitlistEntry(
+                waitlist_entry_id=uuid4(),
+                email="approved@example.com",
+                role="Platform Eng",
+                company="Acme",
+                status="approved",
+                source="site",
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": "approved@example.com",
+            "password": "approved-pass-123",
+            "name": "Approved User",
+        },
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["email"] == "approved@example.com"
 
 
 def test_login_returns_project_scoped_session_for_existing_user(
@@ -480,6 +513,80 @@ def test_github_oauth_new_user_is_blocked_when_registration_is_disabled(
     with session_factory() as db:
         user = db.scalar(select(User).where(User.email == "blocked-oauth@example.com"))
         assert user is None
+
+
+def test_github_oauth_new_user_is_allowed_for_approved_waitlist_email_when_registration_is_disabled(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = auth_test_context
+
+    with session_factory() as db:
+        db.add(InternalFeatureFlag(key="enable_registration", enabled=False))
+        db.add(
+            WaitlistEntry(
+                waitlist_entry_id=uuid4(),
+                email="approved-oauth@example.com",
+                role="Security",
+                company="Acme",
+                status="approved",
+                source="site",
+            )
+        )
+        db.commit()
+
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "github-client")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "github-secret")
+    monkeypatch.setenv("SEPURUX_UI_BASE_URL", "http://localhost:3000")
+
+    def fake_post(url: str, data=None, headers=None, timeout=None):
+        assert "github.com/login/oauth/access_token" in url
+        return _MockHttpResponse(200, {"access_token": "gh-access-token"})
+
+    def fake_get(url: str, headers=None, timeout=None):
+        if url.endswith("/user"):
+            return _MockHttpResponse(200, {"id": 7777, "name": "Approved OAuth"})
+        if url.endswith("/user/emails"):
+            return _MockHttpResponse(
+                200,
+                [
+                    {
+                        "email": "approved-oauth@example.com",
+                        "primary": True,
+                        "verified": True,
+                    }
+                ],
+            )
+        raise AssertionError(f"Unexpected OAuth GET URL: {url}")
+
+    monkeypatch.setattr("app.services.oauth_service.httpx.post", fake_post)
+    monkeypatch.setattr("app.services.oauth_service.httpx.get", fake_get)
+
+    start_response = client.get(
+        "/auth/oauth/github/start",
+        params={"next": "/dashboard"},
+        follow_redirects=False,
+    )
+    assert start_response.status_code == 302
+    state = parse_qs(urlparse(start_response.headers["location"]).query)["state"][0]
+
+    callback_response = client.get(
+        "/auth/oauth/github/callback",
+        params={"state": state, "code": "oauth-code"},
+        follow_redirects=False,
+    )
+    assert callback_response.status_code == 303
+    query = parse_qs(urlparse(callback_response.headers["location"]).query)
+    assert "exchange" in query
+    assert "oauth_error" not in query
+
+    exchange_response = client.post(
+        "/auth/oauth/exchange",
+        json={"token": query["exchange"][0]},
+    )
+    assert exchange_response.status_code == 200
+    payload = exchange_response.json()
+    assert payload["email"] == "approved-oauth@example.com"
 
 
 def test_super_admin_login_sets_internal_session_flag(
