@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
-from app.models import CreditTransaction, CreditWallet, Project, SubscriptionPlan, Tenant, User, UserSubscription
+from app.models import CreditWallet, Project, SubscriptionPlan, Tenant, User, UserSubscription
 from app.schemas import (
     InternalBillingAdjustmentResponse,
     InternalBillingSubscriptionUpdateResponse,
@@ -20,7 +20,6 @@ from app.services.billing_service import (
 )
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from datetime import timedelta
 
 
 def _wallet_entry(
@@ -202,8 +201,6 @@ def change_internal_user_subscription(
         raise ValueError("Subscription plan not found")
 
     subscription, wallet, previous_plan = ensure_user_billing(db, user_id=user_id)
-    previous_balance = int(wallet.balance)
-    previous_plan_name = previous_plan.name if isinstance(previous_plan, SubscriptionPlan) else "Unknown"
 
     now = datetime.now(UTC)
     subscription.plan_id = target_plan.plan_id
@@ -217,8 +214,6 @@ def change_internal_user_subscription(
         now if target_plan.monthly_price <= 0 else now + timedelta(days=BILLING_CYCLE_DAYS)
     )
 
-    wallet.monthly_credits = int(target_plan.monthly_credits)
-    wallet.balance = int(wallet.monthly_credits) + int(wallet.topup_credits)
     wallet.updated_at = now
 
     db.add(subscription)
@@ -240,21 +235,6 @@ def change_internal_user_subscription(
         if isinstance(tenant, Tenant) and isinstance(workspace_tier, str):
             tenant.pricing_tier = workspace_tier
             db.add(tenant)
-
-    balance_delta = int(wallet.balance) - previous_balance
-    if balance_delta != 0:
-        db.add(
-            CreditTransaction(
-                credit_transaction_id=uuid4(),
-                user_id=user_id,
-                amount=balance_delta,
-                type="manual_plan_change",
-                reason=(
-                    f"{reason} ({previous_plan_name} -> {target_plan.name})"
-                ),
-                created_at=now,
-            )
-        )
 
     db.commit()
     db.refresh(subscription)

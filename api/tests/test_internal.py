@@ -654,14 +654,22 @@ def test_internal_billing_updates_subscription_plan(
     payload = response.json()
     assert payload["subscription"]["plan_name"] == "Free"
     assert payload["subscription"]["status"] == "free"
-    assert payload["wallet"]["monthly_credits"] == 0
-    assert payload["wallet"]["balance"] == 80
+    assert payload["wallet"]["monthly_credits"] == 120
+    assert payload["wallet"]["balance"] == 200
     assert payload["wallet"]["pricing_tier"] == "starter"
 
     with session_factory() as db:
         tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == UUID(tenant_id)))
         assert isinstance(tenant, Tenant)
         assert tenant.pricing_tier == "starter"
+        wallet = db.scalar(select(CreditWallet).where(CreditWallet.user_id == UUID(user_id)))
+        assert isinstance(wallet, CreditWallet)
+        assert wallet.monthly_credits == 120
+        assert wallet.balance == 200
+        plan_change_transaction = db.scalar(
+            select(CreditTransaction).where(CreditTransaction.type == "manual_plan_change")
+        )
+        assert plan_change_transaction is None
 
 
 def test_internal_billing_rejects_non_super_admin(
