@@ -48,7 +48,7 @@ export function HeroSection() {
       {/* Video background */}
       <video
         ref={videoRef}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover opacity-55"
         src="/videos/hero.mp4"
         autoPlay
         muted
@@ -57,10 +57,11 @@ export function HeroSection() {
         aria-hidden
       />
 
-      {/* Dark overlay — gradient from bottom for text legibility */}
-      <div className="absolute inset-0 bg-[var(--ink-950)]/60" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink-950)] via-[var(--ink-950)]/30 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[var(--ink-950)]/70 via-transparent to-transparent" />
+      {/* Dark overlay tuned to keep the footage visible while pushing the hero back. */}
+      <div className="absolute inset-0 bg-[var(--ink-950)]/92" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink-950)] via-[var(--ink-950)]/86 to-[var(--ink-950)]/62" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[var(--ink-950)]/96 via-[var(--ink-950)]/74 to-[var(--ink-950)]/84" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(5,9,18,0.34)_0%,rgba(5,9,18,0.68)_54%,rgba(5,9,18,0.96)_100%)]" />
 
       {/* Subtle grid texture */}
       <div
