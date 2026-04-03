@@ -4,6 +4,10 @@ const defaultSiteUrl =
   process.env.NODE_ENV === "development" ? "http://localhost:3001" : "https://sepurux.com";
 const defaultAppUrl =
   process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://app.sepurux.dev";
+const defaultApiBaseUrl =
+  process.env.NODE_ENV === "development"
+    ? `${defaultAppUrl}/api/backend`
+    : "https://app.sepurux.dev/api/backend";
 export const siteAssetVersion = process.env.NEXT_PUBLIC_SITE_ASSET_VERSION || "20260330";
 
 export type PricingTier = "starter" | "team" | "enterprise";
@@ -14,6 +18,7 @@ export const siteConfig = {
     "Sepurux is the chaos engineering platform for AI agents. Inject failures, replay traces, and enforce reliability policies before your agents hit production.",
   url: process.env.NEXT_PUBLIC_SITE_URL || defaultSiteUrl,
   appUrl: process.env.NEXT_PUBLIC_APP_URL || defaultAppUrl,
+  apiBaseUrl: process.env.SEPURUX_API_BASE_URL || defaultApiBaseUrl,
   founderEmail: process.env.NEXT_PUBLIC_FOUNDER_EMAIL || "felix.sarpong@sepurux.com",
   founderPhone: process.env.NEXT_PUBLIC_FOUNDER_PHONE || "+16055853783",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@sepurux.com",

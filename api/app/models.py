@@ -64,6 +64,42 @@ class User(Base):
     )
 
 
+class WaitlistEntry(Base):
+    __tablename__ = "waitlist_entries"
+
+    waitlist_entry_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    role: Mapped[str] = mapped_column(Text, nullable=False)
+    company: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="site",
+        server_default=text("'site'"),
+    )
+    status: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="pending",
+        server_default=text("'pending'"),
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    submitted_from_ip: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class UserIdentity(Base):
     __tablename__ = "user_identities"
     __table_args__ = (

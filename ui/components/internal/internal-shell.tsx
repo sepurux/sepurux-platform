@@ -38,6 +38,7 @@ type InternalNavItem = {
 const navItems: InternalNavItem[] = [
   { href: "/internal/dashboard", label: "Overview", icon: Activity },
   { href: "/internal/users", label: "Users", icon: Users },
+  { href: "/internal/waitlist", label: "Waitlist", icon: ListChecks },
   { href: "/internal/projects", label: "Projects", icon: FolderOpen },
   { href: "/internal/campaigns", label: "Campaigns", icon: Layers },
   { href: "/internal/failures", label: "Failures", icon: Zap },

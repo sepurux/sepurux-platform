@@ -841,6 +841,10 @@ class InternalBillingWalletEntry(BaseModel):
     user_id: UUID
     email: str | None = None
     name: str | None = None
+    plan_id: UUID | None = None
+    plan_name: str | None = None
+    pricing_tier: str | None = None
+    subscription_status: str | None = None
     balance: int
     monthly_credits: int
     topup_credits: int
@@ -873,6 +877,17 @@ class InternalBillingAdjustmentRequest(BaseModel):
 class InternalBillingAdjustmentResponse(BaseModel):
     wallet: InternalBillingWalletEntry
     transaction: InternalBillingTransactionEntry
+
+
+class InternalBillingSubscriptionUpdateRequest(BaseModel):
+    user_id: UUID
+    plan_id: UUID
+    reason: str = Field(min_length=1, max_length=200)
+
+
+class InternalBillingSubscriptionUpdateResponse(BaseModel):
+    wallet: InternalBillingWalletEntry
+    subscription: UserSubscriptionMetadata
 
 
 class InternalSystemOverview(BaseModel):
@@ -956,6 +971,63 @@ class InternalTenantApiKeyRevokeResponse(BaseModel):
     tenant_id: UUID
     revoked_count: int
     controls: InternalTenantControls
+
+
+class WaitlistSubmissionRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    role: str = Field(min_length=1, max_length=80)
+    company: str | None = Field(default=None, max_length=160)
+    website: str | None = Field(default=None, max_length=200)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_waitlist_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+    @field_validator("role")
+    @classmethod
+    def normalize_waitlist_role(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("company", "website")
+    @classmethod
+    def normalize_optional_waitlist_field(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+
+class WaitlistSubmissionResponse(BaseModel):
+    message: str
+
+
+class InternalWaitlistEntry(BaseModel):
+    waitlist_entry_id: UUID
+    email: str
+    role: str
+    company: str | None = None
+    source: str
+    status: str
+    notes: str | None = None
+    submitted_from_ip: str | None = None
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class InternalWaitlistUpdateRequest(BaseModel):
+    status: Literal["pending", "contacted", "approved", "rejected"] | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("notes")
+    @classmethod
+    def normalize_waitlist_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
 
 
 class SubscriptionPlanMetadata(BaseModel):

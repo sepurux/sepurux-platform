@@ -24,6 +24,8 @@ from app.schemas import (
     InternalAuditLogEntry,
     InternalBillingAdjustmentRequest,
     InternalBillingAdjustmentResponse,
+    InternalBillingSubscriptionUpdateRequest,
+    InternalBillingSubscriptionUpdateResponse,
     InternalBillingTransactionEntry,
     InternalBillingWalletEntry,
     InternalDashboardOverview,
@@ -47,12 +49,16 @@ from app.schemas import (
     InternalTenantControls,
     InternalTenantControlsUpdateRequest,
     InternalTimeSeriesMetrics,
+    InternalWaitlistEntry,
+    InternalWaitlistUpdateRequest,
+    SubscriptionPlanMetadata,
 )
 from app.services.internal_alert_service import evaluate_internal_alerts, notify_internal_alerts
 from app.services.internal_analytics_service import build_internal_analytics
 from app.services.internal_audit_service import create_audit_log
 from app.services.internal_billing_service import (
     adjust_internal_credits,
+    change_internal_user_subscription,
     list_internal_transactions,
     list_internal_wallets,
 )
@@ -76,6 +82,8 @@ from app.services.tenant_control_service import (
     revoke_tenant_api_keys,
     update_tenant_controls,
 )
+from app.services.billing_service import list_subscription_plans, serialize_subscription_plan
+from app.services.waitlist_service import list_waitlist_entries, serialize_waitlist_entry, update_waitlist_entry
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -603,6 +611,26 @@ def get_internal_billing_transactions(
     return payload
 
 
+@router.get("/billing/plans", response_model=list[SubscriptionPlanMetadata])
+def get_internal_billing_plans(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> list[SubscriptionPlanMetadata]:
+    payload = [
+        SubscriptionPlanMetadata(**serialize_subscription_plan(plan))
+        for plan in list_subscription_plans(db)
+    ]
+    create_audit_log(
+        db,
+        action="internal.billing.plans.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.billing.plans",
+        metadata={"count": len(payload)},
+    )
+    db.commit()
+    return payload
+
+
 @router.post("/billing/adjust", response_model=InternalBillingAdjustmentResponse)
 def post_internal_billing_adjust(
     payload: InternalBillingAdjustmentRequest,
@@ -628,6 +656,38 @@ def post_internal_billing_adjust(
             "amount": payload.amount,
             "reason": payload.reason,
             "transaction_id": str(result.transaction.credit_transaction_id),
+        },
+    )
+    db.commit()
+    return result
+
+
+@router.post("/billing/subscription", response_model=InternalBillingSubscriptionUpdateResponse)
+def post_internal_billing_subscription(
+    payload: InternalBillingSubscriptionUpdateRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalBillingSubscriptionUpdateResponse:
+    try:
+        result = change_internal_user_subscription(
+            db,
+            user_id=payload.user_id,
+            plan_id=payload.plan_id,
+            reason=payload.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    create_audit_log(
+        db,
+        action="internal.billing.subscription.update",
+        actor=_actor_label(db, super_admin),
+        entity=f"user:{payload.user_id}",
+        metadata={
+            "plan_id": str(payload.plan_id),
+            "reason": payload.reason,
+            "plan_name": result.subscription.plan_name,
+            "wallet_balance": result.wallet.balance,
         },
     )
     db.commit()
@@ -681,6 +741,59 @@ def put_internal_settings(
         actor=_actor_label(db, super_admin),
         entity="internal.settings",
         metadata=payload.model_dump(),
+    )
+    db.commit()
+    return payload
+
+
+@router.get("/waitlist", response_model=list[InternalWaitlistEntry])
+def get_internal_waitlist(
+    db: DbSession,
+    super_admin: SuperAdminDep,
+    status: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[InternalWaitlistEntry]:
+    payload = [
+        InternalWaitlistEntry(**serialize_waitlist_entry(entry))
+        for entry in list_waitlist_entries(db, status=status, limit=limit, offset=offset)
+    ]
+    create_audit_log(
+        db,
+        action="internal.waitlist.view",
+        actor=_actor_label(db, super_admin),
+        entity="internal.waitlist",
+        metadata={"status": status, "limit": limit, "offset": offset},
+    )
+    db.commit()
+    return payload
+
+
+@router.patch("/waitlist/{waitlist_entry_id}", response_model=InternalWaitlistEntry)
+def patch_internal_waitlist(
+    waitlist_entry_id: UUID,
+    body: InternalWaitlistUpdateRequest,
+    db: DbSession,
+    super_admin: SuperAdminDep,
+) -> InternalWaitlistEntry:
+    try:
+        record = update_waitlist_entry(
+            db,
+            waitlist_entry_id=waitlist_entry_id,
+            status=body.status,
+            notes=body.notes,
+            reviewed_by=_actor_label(db, super_admin),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    payload = InternalWaitlistEntry(**serialize_waitlist_entry(record))
+    create_audit_log(
+        db,
+        action="internal.waitlist.update",
+        actor=_actor_label(db, super_admin),
+        entity=f"waitlist:{waitlist_entry_id}",
+        metadata={"status": payload.status, "notes": payload.notes},
     )
     db.commit()
     return payload

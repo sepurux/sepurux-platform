@@ -24,6 +24,7 @@ from app.models import (
     Trace,
     User,
 )
+from app.services.billing_service import FREE_PLAN_ID
 from app.services.user_notification_service import build_marketing_unsubscribe_token
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
@@ -622,6 +623,46 @@ def test_internal_billing_adjusts_credits(
     assert payload["transaction"]["type"] == "manual_adjustment"
 
 
+def test_internal_billing_updates_subscription_plan(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+        ops_user = db.scalar(select(User).where(User.email == "ops@sepurux.com"))
+        tenant = db.scalar(select(Tenant).where(Tenant.name == "Sepurux Team"))
+        assert isinstance(ops_user, User)
+        assert isinstance(tenant, Tenant)
+        user_id = str(ops_user.user_id)
+        tenant_id = str(tenant.tenant_id)
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    response = client.post(
+        "/v1/internal/billing/subscription",
+        json={
+            "user_id": user_id,
+            "plan_id": str(FREE_PLAN_ID),
+            "reason": "Early access downgrade",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["subscription"]["plan_name"] == "Free"
+    assert payload["subscription"]["status"] == "free"
+    assert payload["wallet"]["monthly_credits"] == 0
+    assert payload["wallet"]["balance"] == 80
+    assert payload["wallet"]["pricing_tier"] == "starter"
+
+    with session_factory() as db:
+        tenant = db.scalar(select(Tenant).where(Tenant.tenant_id == UUID(tenant_id)))
+        assert isinstance(tenant, Tenant)
+        assert tenant.pricing_tier == "starter"
+
+
 def test_internal_billing_rejects_non_super_admin(
     internal_test_context: tuple[TestClient, sessionmaker[Session]],
 ) -> None:
@@ -637,6 +678,47 @@ def test_internal_billing_rejects_non_super_admin(
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Super admin access required"}
+
+
+def test_waitlist_submission_and_internal_review(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = internal_test_context
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    public_response = client.post(
+        "/waitlist",
+        json={
+            "email": "early-access@example.com",
+            "role": "Platform Eng",
+            "company": "Acme",
+            "website": "",
+        },
+    )
+    assert public_response.status_code == 200
+    assert public_response.json() == {"message": "Thanks! You are on the waitlist."}
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    list_response = client.get("/v1/internal/waitlist")
+    assert list_response.status_code == 200
+    payload = list_response.json()
+    assert len(payload) == 1
+    assert payload[0]["email"] == "early-access@example.com"
+    assert payload[0]["status"] == "pending"
+
+    update_response = client.patch(
+        f"/v1/internal/waitlist/{payload[0]['waitlist_entry_id']}",
+        json={"status": "approved", "notes": "Strong first-cohort fit"},
+    )
+    assert update_response.status_code == 200
+    updated = update_response.json()
+    assert updated["status"] == "approved"
+    assert updated["notes"] == "Strong first-cohort fit"
 
 
 def test_internal_system_overview_returns_metrics(
