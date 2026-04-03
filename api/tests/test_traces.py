@@ -310,6 +310,117 @@ def test_post_trace_captures_sdk_header(
         assert row.sdk_meta == "py/0.4.0"
 
 
+def test_post_trace_persists_upload_time_replay_profile(
+    trace_test_context: tuple[TestClient, sessionmaker[Session], dict[str, object]],
+) -> None:
+    client, testing_session_local, _ = trace_test_context
+    payload = {
+        "trace_version": "0.2",
+        "source": "py-sdk",
+        "task": {"name": "refund_customer"},
+        "events": [
+            {
+                "type": "tool_call",
+                "tool": "orders.lookup",
+                "args": {"order_id": "ord_123"},
+            },
+            {
+                "type": "tool_result",
+                "tool": "orders.lookup",
+                "result": {"order_id": "ord_123", "status": "paid"},
+            },
+            {
+                "type": "tool_call",
+                "tool": "payments.refund",
+                "args": {"payment_id": "pay_123", "amount": 120},
+            },
+            {
+                "type": "retry",
+                "tool": "payments.refund",
+                "result": {"attempt": 2, "backoff_ms": 900},
+            },
+            {
+                "type": "tool_call",
+                "tool": "payments.refund",
+                "args": {"payment_id": "pay_123", "amount": 120, "retry_count": 1},
+            },
+            {
+                "type": "tool_result",
+                "tool": "payments.refund",
+                "result": {"state": "succeeded", "refund_id": "rf_123"},
+            },
+            {
+                "type": "agent_output",
+                "name": "refund_normalized",
+                "result": {"source_field": "state", "normalized_status": "succeeded"},
+            },
+            {
+                "type": "tool_call",
+                "tool": "notifications.send_email",
+                "args": {"to": "user@example.com", "template": "refund"},
+            },
+        ],
+    }
+
+    response = client.post("/v1/traces", json=payload)
+
+    assert response.status_code == 201
+    trace_id = UUID(response.json()["trace_id"])
+
+    with testing_session_local() as db:
+        row = db.execute(select(Trace).where(Trace.trace_id == trace_id)).scalar_one()
+
+    assert isinstance(row.normalized_payload, dict)
+    sepurux = row.normalized_payload.get("sepurux")
+    assert isinstance(sepurux, dict)
+    replay_profile = sepurux.get("replay_profile")
+    assert isinstance(replay_profile, dict)
+    assert replay_profile["tool_inventory"] == [
+        "orders.lookup",
+        "payments.refund",
+        "notifications.send_email",
+    ]
+    assert replay_profile["baseline_candidates"] == [
+        {
+            "mutation_id": "baseline.orders.lookup",
+            "tool": "orders.lookup",
+            "args": {"order_id": "ord_123"},
+        },
+        {
+            "mutation_id": "baseline.payments.refund",
+            "tool": "payments.refund",
+            "args": {
+                "payment_id": "pay_123",
+                "amount": 120,
+                "confirmation_token": "approved",
+            },
+        },
+        {
+            "mutation_id": "baseline.notifications.send_email",
+            "tool": "notifications.send_email",
+            "args": {
+                "to": "user@example.com",
+                "template": "refund",
+                "confirmation_token": "approved",
+            },
+        },
+    ]
+    assert replay_profile["primary_mutation"] == {
+        "mutation_id": "baseline.payments.refund",
+        "tool": "payments.refund",
+        "args": {
+            "payment_id": "pay_123",
+            "amount": 120,
+            "confirmation_token": "approved",
+        },
+    }
+    assert replay_profile["trace_hardening"] == {
+        "retry_policy": {"max_retries": 1, "backoff_ms": 900},
+        "schema_adapter": {"mappings": {"status": "state"}},
+        "source": "trace_inference_v1",
+    }
+
+
 def test_post_trace_auto_bootstraps_policy_security_and_campaign_bundle(
     trace_test_context: tuple[TestClient, sessionmaker[Session], dict[str, object]],
 ) -> None:

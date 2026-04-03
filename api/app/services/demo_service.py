@@ -487,21 +487,18 @@ def _ensure_demo_attempts_for_run(db: Session, *, run: Run, seed_index: int) -> 
     if int(existing_count or 0) > 0:
         return
 
-    tools = [
-        "jira.create_issue",
-        "payments.refund",
-        "slack.send_message",
-        "mcp.search",
-        "github.create_pr",
-    ]
     now = datetime.now(UTC)
     failed_budget = min(3, 1 + (seed_index % 3))
 
     seeded_attempts: list[ReplayAttempt] = []
-    for attempt_index in range(DEMO_SEEDED_ATTEMPTS_PER_RUN):
-        tool = tools[(attempt_index + seed_index) % len(tools)]
-        failed = attempt_index < failed_budget
-        mutation_id = f"demo.seed.{(attempt_index % 4) + 1}"
+    for attempt_index, blueprint in enumerate(
+        _demo_seeded_attempt_blueprints(seed_index=seed_index, failed_budget=failed_budget)
+    ):
+        tool = str(blueprint["tool"])
+        failed = bool(blueprint["failed"])
+        mutation_id = str(blueprint["mutation_id"])
+        mutation_details = blueprint.get("details")
+        args = blueprint.get("args")
         attempt_id = uuid4()
         created_at = now - timedelta(minutes=seed_index * 7, seconds=attempt_index * 9)
         attempt = ReplayAttempt(
@@ -510,22 +507,24 @@ def _ensure_demo_attempts_for_run(db: Session, *, run: Run, seed_index: int) -> 
             run_id=run.run_id,
             mutation_id=mutation_id,
             result="failed" if failed else "passed",
-            failure_reason=(
-                "timeout"
-                if failed and attempt_index % 2 == 0
-                else ("unsafe_blocked" if failed else None)
-            ),
+            failure_reason=str(blueprint["failure_reason"]) if failed else None,
             first_failure_event_index=3 if failed else None,
             first_failure_tool=tool if failed else None,
             seed=10_000 + seed_index * 100 + attempt_index,
             mutation_trace={
                 "seed": 10_000 + seed_index * 100 + attempt_index,
                 "applied": [
-                    {"mutation_id": mutation_id, "tool": tool, "event_index": 3},
+                    {
+                        "mutation_id": mutation_id,
+                        "tool": tool,
+                        "event_index": 3,
+                        **({"details": mutation_details} if isinstance(mutation_details, dict) else {}),
+                        **({"args": args} if isinstance(args, dict) else {}),
+                    },
                 ],
             },
             tools_touched=[tool],
-            tool_call_counts={tool: 1 + (attempt_index % 2)},
+            tool_call_counts={tool: int(blueprint.get("call_count", 1))},
             artifacts_s3_key=f"attempts/demo-{attempt_id.hex}.json",
             created_at=created_at,
         )
@@ -566,3 +565,51 @@ def _ensure_demo_attempts_for_run(db: Session, *, run: Run, seed_index: int) -> 
                         created_at=first_failed.created_at,
                     )
                 )
+
+
+def _demo_seeded_attempt_blueprints(*, seed_index: int, failed_budget: int) -> list[dict[str, Any]]:
+    other_tools = [
+        "jira.create_issue",
+        "slack.send_message",
+        "mcp.search",
+        "github.create_pr",
+    ]
+    tail_tool = other_tools[seed_index % len(other_tools)]
+    refund_args = {
+        "payment_id": f"pay_demo_{seed_index + 1:02d}",
+        "amount": 4200 + (seed_index * 100),
+        "currency": "USD",
+        "reason": "duplicate_charge",
+    }
+    refund_timeout = {
+        "type": "fault.timeout",
+        "timeout_ms": 3000,
+        "min_backoff_ms": 300,
+    }
+
+    attempts: list[dict[str, Any]] = []
+    for attempt_index in range(DEMO_SEEDED_ATTEMPTS_PER_RUN - 1):
+        attempts.append(
+            {
+                "tool": "payments.refund",
+                "mutation_id": "fault.timeout",
+                "failed": attempt_index < failed_budget,
+                "failure_reason": "timeout",
+                "details": refund_timeout,
+                "args": refund_args,
+                "call_count": 1,
+            }
+        )
+
+    attempts.append(
+        {
+            "tool": tail_tool,
+            "mutation_id": "demo.baseline",
+            "failed": False,
+            "failure_reason": None,
+            "details": None,
+            "args": {"seed_index": seed_index, "tail_tool": tail_tool},
+            "call_count": 1,
+        }
+    )
+    return attempts

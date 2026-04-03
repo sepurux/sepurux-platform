@@ -23,6 +23,7 @@ from app.models import (
     Trace,
     User,
 )
+from app.services.trace_replay_profile import enrich_normalized_trace_for_replay
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -1053,6 +1054,556 @@ def test_ci_post_run_uses_eval_set_trace_ids_batch(
         assert batch_id is not None
         run_trace_ids = {str(r.trace_id) for r in runs}
         assert run_trace_ids == {str(t) for t in trace_ids}
+
+
+def test_ci_post_run_scopes_mutation_set_to_each_trace_tools(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    refund_trace_id = uuid4()
+    security_trace_id = uuid4()
+    dispatch_trace_id = uuid4()
+    campaign_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add_all(
+            [
+                Trace(
+                    trace_id=refund_trace_id,
+                    project_id=project_id,
+                    source="test",
+                    normalized_payload={
+                        "events": [
+                            {"type": "tool_call", "tool": "payments.refund", "args": {"amount": 10}},
+                            {"type": "tool_result", "tool": "payments.refund", "result": {"ok": True}},
+                        ]
+                    },
+                    s3_key=f"traces/{refund_trace_id}.json",
+                ),
+                Trace(
+                    trace_id=security_trace_id,
+                    project_id=project_id,
+                    source="test",
+                    normalized_payload={
+                        "events": [
+                            {"type": "tool_call", "tool": "iam.revoke_token", "args": {"token_id": "tok-1"}},
+                            {"type": "tool_result", "tool": "iam.revoke_token", "result": {"ok": True}},
+                        ]
+                    },
+                    s3_key=f"traces/{security_trace_id}.json",
+                ),
+                Trace(
+                    trace_id=dispatch_trace_id,
+                    project_id=project_id,
+                    source="test",
+                    normalized_payload={
+                        "events": [
+                            {"type": "tool_call", "tool": "dispatch.create_visit", "args": {"slot": "2026-04-02T12:00:00Z"}},
+                            {"type": "tool_result", "tool": "dispatch.create_visit", "result": {"ok": True}},
+                        ]
+                    },
+                    s3_key=f"traces/{dispatch_trace_id}.json",
+                ),
+                Campaign(
+                    campaign_id=campaign_id,
+                    project_id=project_id,
+                    name="Scoped Batch Campaign",
+                    mutation_set=[
+                        {
+                            "mutation_id": "refund",
+                            "tool": "payments.refund",
+                            "args": {"amount": 10, "confirmation_token": "approved"},
+                        },
+                        {
+                            "mutation_id": "security",
+                            "tool": "iam.revoke_token",
+                            "args": {"token_id": "tok-1", "confirmation_token": "approved"},
+                        },
+                        {
+                            "mutation_id": "dispatch",
+                            "tool": "dispatch.create_visit",
+                            "args": {
+                                "slot": "2026-04-02T12:00:00Z",
+                                "confirmation_token": "approved",
+                            },
+                        },
+                    ],
+                    eval_set={
+                        "checks": ["status"],
+                        "trace_ids": [
+                            str(refund_trace_id),
+                            str(security_trace_id),
+                            str(dispatch_trace_id),
+                        ],
+                    },
+                ),
+            ]
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+
+    expected_tools = {
+        str(refund_trace_id): "payments.refund",
+        str(security_trace_id): "iam.revoke_token",
+        str(dispatch_trace_id): "dispatch.create_visit",
+    }
+    with testing_session_local() as db:
+        runs = db.scalars(select(Run).order_by(Run.created_at.asc(), Run.run_id.asc())).all()
+        assert len(runs) == 3
+        for run in runs:
+            assert isinstance(run.summary, dict)
+            resolved = run.summary.get("resolved_mutation_set")
+            assert isinstance(resolved, list)
+            assert len(resolved) == 1
+            assert resolved[0]["tool"] == expected_tools[str(run.trace_id)]
+
+
+def test_ci_post_run_reuses_same_replay_seed_basis_for_same_trace_and_config(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, fake_queue, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {"type": "tool_call", "tool": "payments.refund", "args": {"payment_id": "pay_1"}},
+                        {"type": "tool_result", "tool": "payments.refund", "result": {"ok": True}},
+                    ]
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Stable CI Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund",
+                        "tool": "payments.refund",
+                        "args": {"payment_id": "pay_1", "confirmation_token": "approved"},
+                    },
+                    {
+                        "mutation_id": "dispatch",
+                        "tool": "dispatch.create_visit",
+                        "args": {"slot": "2026-04-02T12:00:00Z", "confirmation_token": "approved"},
+                    },
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.commit()
+
+    payload = {
+        "trace_id": str(trace_id),
+        "campaign_id": str(campaign_id),
+        "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+    }
+
+    first_response = client.post("/v1/ci/runs", json=payload)
+    second_response = client.post("/v1/ci/runs", json=payload)
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+    assert len(fake_queue.calls) == 2
+
+    with testing_session_local() as db:
+        runs = list(db.scalars(select(Run).order_by(Run.created_at.asc(), Run.run_id.asc())))
+
+    assert len(runs) == 2
+    replay_seed_bases: set[str] = set()
+    for run in runs:
+        assert isinstance(run.summary, dict)
+        resolved = run.summary.get("resolved_mutation_set")
+        assert isinstance(resolved, list)
+        assert len(resolved) == 1
+        assert resolved[0]["tool"] == "payments.refund"
+        replay_seed_basis = run.summary.get("replay_seed_basis")
+        assert isinstance(replay_seed_basis, str)
+        replay_seed_bases.add(replay_seed_basis)
+
+    assert len(replay_seed_bases) == 1
+
+
+def test_ci_post_run_infers_trace_hardening_from_retry_and_schema_events(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {"type": "tool_call", "tool": "payments.refund", "args": {"payment_id": "pay_1"}},
+                        {"type": "error", "tool": "payments.refund", "error": {"type": "RateLimitError"}},
+                        {"type": "retry", "tool": "payments.refund", "result": {"attempt": 2, "backoff_ms": 900}},
+                        {
+                            "type": "tool_call",
+                            "tool": "payments.refund",
+                            "args": {"payment_id": "pay_1", "retry_count": 1},
+                        },
+                        {"type": "error", "tool": "payments.refund", "error": {"type": "TimeoutError"}},
+                        {"type": "retry", "tool": "payments.refund", "result": {"attempt": 3, "backoff_ms": 1800}},
+                        {
+                            "type": "tool_call",
+                            "tool": "payments.refund",
+                            "args": {"payment_id": "pay_1", "retry_count": 2},
+                        },
+                        {"type": "error", "tool": "payments.refund", "error": {"type": "RateLimitError"}},
+                        {"type": "retry", "tool": "payments.refund", "result": {"attempt": 4, "backoff_ms": 2700}},
+                        {
+                            "type": "tool_call",
+                            "tool": "payments.refund",
+                            "args": {"payment_id": "pay_1", "retry_count": 3},
+                        },
+                        {
+                            "type": "tool_result",
+                            "tool": "payments.refund",
+                            "result": {"state": "succeeded", "refund_id": "rf_1"},
+                        },
+                        {
+                            "type": "agent_output",
+                            "name": "refund_normalized",
+                            "result": {"source_field": "state", "normalized_status": "succeeded"},
+                        },
+                    ]
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Trace Hardening Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund",
+                        "tool": "payments.refund",
+                        "args": {"payment_id": "pay_1", "confirmation_token": "approved"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+
+    with testing_session_local() as db:
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert isinstance(run.summary, dict)
+    assert run.summary.get("trace_hardening") == {
+        "retry_policy": {"max_retries": 3, "backoff_ms": 2700},
+        "schema_adapter": {"mappings": {"status": "state"}},
+        "source": "trace_inference_v1",
+    }
+
+
+def test_ci_post_run_uses_required_tool_coverage_as_baseline_fallback(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    contract_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {
+                            "type": "tool_call",
+                            "tool": "payments.refund",
+                            "args": {"payment_id": "pay_1", "amount": 120},
+                        },
+                        {
+                            "type": "tool_result",
+                            "tool": "payments.refund",
+                            "result": {"status": "succeeded"},
+                        },
+                    ]
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Contract Fallback Campaign",
+                mutation_set=[{"mutation_id": "baseline"}],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            QualityContract(
+                contract_id=contract_id,
+                project_id=project_id,
+                campaign_id=campaign_id,
+                required_pack_ids=[],
+                required_tools=["payments.refund"],
+                min_attempts_per_pack=1,
+                version=1,
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+
+    with testing_session_local() as db:
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert isinstance(run.summary, dict)
+    resolved = run.summary.get("resolved_mutation_set")
+    assert isinstance(resolved, list)
+    assert resolved == [
+        {
+            "mutation_id": "baseline.payments.refund",
+            "tool": "payments.refund",
+            "args": {
+                "payment_id": "pay_1",
+                "amount": 120,
+                "confirmation_token": "approved",
+            },
+        }
+    ]
+
+
+def test_ci_post_run_uses_upload_time_primary_replay_profile_for_placeholder_baseline(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload=enrich_normalized_trace_for_replay(
+                    {
+                        "events": [
+                            {
+                                "type": "tool_call",
+                                "tool": "orders.lookup",
+                                "args": {"order_id": "ord_1"},
+                            },
+                            {
+                                "type": "tool_call",
+                                "tool": "payments.refund",
+                                "args": {"payment_id": "pay_1", "amount": 120},
+                            },
+                            {
+                                "type": "tool_call",
+                                "tool": "notifications.send_email",
+                                "args": {"to": "user@example.com"},
+                            },
+                        ]
+                    }
+                ),
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Upload Replay Profile Campaign",
+                mutation_set=[{"mutation_id": "baseline"}],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+
+    with testing_session_local() as db:
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert isinstance(run.summary, dict)
+    assert run.summary.get("resolved_mutation_set") == [
+        {
+            "mutation_id": "baseline.payments.refund",
+            "tool": "payments.refund",
+            "args": {
+                "payment_id": "pay_1",
+                "amount": 120,
+                "confirmation_token": "approved",
+            },
+        }
+    ]
+
+
+def test_ci_post_run_prefers_uploaded_primary_mutation_over_required_tool_coverage(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    contract_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload=enrich_normalized_trace_for_replay(
+                    {
+                        "events": [
+                            {
+                                "type": "tool_call",
+                                "tool": "orders.lookup",
+                                "args": {"order_id": "ord_1"},
+                            },
+                            {
+                                "type": "tool_call",
+                                "tool": "payments.refund",
+                                "args": {"payment_id": "pay_1", "amount": 120},
+                            },
+                            {
+                                "type": "tool_call",
+                                "tool": "notifications.send_email",
+                                "args": {"to": "user@example.com"},
+                            },
+                        ]
+                    }
+                ),
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Primary Replay Profile Campaign",
+                mutation_set=[{"mutation_id": "baseline"}],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            QualityContract(
+                contract_id=contract_id,
+                project_id=project_id,
+                campaign_id=campaign_id,
+                required_pack_ids=[],
+                required_tools=[
+                    "orders.lookup",
+                    "payments.refund",
+                    "notifications.send_email",
+                ],
+                min_attempts_per_pack=1,
+                version=1,
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "trace_id": str(trace_id),
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+
+    assert response.status_code == 201
+    run_id = UUID(response.json()["run_id"])
+
+    with testing_session_local() as db:
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert isinstance(run.summary, dict)
+    assert run.summary.get("resolved_mutation_set") == [
+        {
+            "mutation_id": "baseline.payments.refund",
+            "tool": "payments.refund",
+            "args": {
+                "payment_id": "pay_1",
+                "amount": 120,
+                "confirmation_token": "approved",
+            },
+        }
+    ]
 
 
 def test_ci_post_run_rejects_when_below_min_scenarios(

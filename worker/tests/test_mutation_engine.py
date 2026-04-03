@@ -158,6 +158,59 @@ def test_apply_mutation_pack_seed_is_stable_for_run_id_and_attempt_index() -> No
     assert first.timeline_artifact == second.timeline_artifact
 
 
+def test_apply_mutation_pack_seed_basis_is_stable_across_run_ids() -> None:
+    config = {
+        "max_mutations_per_attempt": 1,
+        "mutations": [
+            {
+                "mutation_id": "drop-status",
+                "type": "schema.drop_field",
+                "target": {"tool": "jira.*"},
+                "params": {"field": "status"},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+            {
+                "mutation_id": "timeout-tool-call",
+                "type": "fault.timeout",
+                "target": {"tool": "jira.*"},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+            {
+                "mutation_id": "delay-tool-call",
+                "type": "latency_delay",
+                "target": {"tool": "jira.*"},
+                "params": {"min_ms": 100, "max_ms": 500},
+                "probability": 1.0,
+                "weight": 1.0,
+            },
+        ],
+    }
+    timeline = _timeline_fixture()
+
+    first = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=3,
+        timeline_artifact=copy.deepcopy(timeline),
+        seed_basis="ci:stable-trace-basis",
+    )
+    second = apply_mutation_pack(
+        config,
+        run_id=uuid4(),
+        attempt_id=uuid4(),
+        attempt_index=3,
+        timeline_artifact=copy.deepcopy(timeline),
+        seed_basis="ci:stable-trace-basis",
+    )
+
+    assert first.seed == second.seed
+    assert first.mutation_trace == second.mutation_trace
+    assert first.timeline_artifact == second.timeline_artifact
+
+
 def test_apply_mutation_pack_uses_seed_to_vary_selection() -> None:
     config = {
         "max_mutations_per_attempt": 1,
@@ -503,9 +556,8 @@ def test_latency_delay_samples_within_range_not_always_max() -> None:
     raw_events = timeline["events"]
     assert isinstance(raw_events, list)
     for seed in range(50):
-        random.seed(seed)
         events: list[dict[str, Any]] = copy.deepcopy(raw_events)
-        result = _apply_latency_delay(definition, events)
+        result = _apply_latency_delay(definition, events, rng=random.Random(seed))
         assert result is not None
         delay = result["details"]["latency_ms"]
         assert 100 <= delay <= 500, f"delay {delay} out of range"

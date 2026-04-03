@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from fnmatch import fnmatchcase
+import hashlib
+import json
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -17,7 +20,17 @@ from app.models import (
 )
 from app.queue import get_run_queue
 from app.services.audit_service import create_audit_event
+from app.services.contract_service import get_contract
 from app.services.policy_service import get_policy_pack_active_version, update_policy_pack
+from app.services.trace_replay_profile import (
+    choose_primary_baseline_candidate,
+    derive_trace_baseline_candidates,
+    get_uploaded_trace_primary_mutation,
+    get_uploaded_trace_hardening,
+    infer_trace_hardening_from_payload,
+    resolve_uploaded_trace_baseline_candidates,
+    tool_likely_requires_confirmation,
+)
 from app.services.tenant_control_service import assert_project_runs_allowed
 from app.services.trace_bootstrap_service import (
     build_bootstrap_policy_document,
@@ -313,7 +326,26 @@ def create_ci_run_and_enqueue(
         actor=actor,
     )
 
-    summary: dict[str, Any] = {"ci_thresholds": thresholds, "campaign_name": campaign.name}
+    contract = get_contract(db, campaign_id=campaign.campaign_id)
+    required_tools = list(contract.required_tools or []) if contract is not None else []
+    resolved_mutation_set = _resolve_ci_mutation_set(
+        campaign,
+        trace=trace,
+        required_tools=required_tools,
+    )
+    trace_hardening = _infer_trace_hardening(trace)
+    summary: dict[str, Any] = {
+        "ci_thresholds": thresholds,
+        "campaign_name": campaign.name,
+        "resolved_mutation_set": resolved_mutation_set,
+        "replay_seed_basis": _ci_replay_seed_basis(
+            trace=trace,
+            campaign=campaign,
+            resolved_mutation_set=resolved_mutation_set,
+        ),
+    }
+    if trace_hardening is not None:
+        summary["trace_hardening"] = trace_hardening
     if isinstance(github_context, dict):
         summary["github_context"] = github_context
     if batch_id is not None:
@@ -362,18 +394,34 @@ def create_ci_batch_and_enqueue(
     )
 
     runs: list[Run] = []
+    contract = get_contract(db, campaign_id=campaign.campaign_id)
+    required_tools = list(contract.required_tools or []) if contract is not None else []
     for trace_id in trace_ids:
         trace = db.scalar(select(Trace).where(Trace.trace_id == trace_id))
         if trace is None:
             raise RelatedRecordNotFoundError(f"Trace {trace_id} not found")
         if trace.project_id != project_id:
             raise ValueError(f"Trace {trace_id} does not belong to this project")
+        resolved_mutation_set = _resolve_ci_mutation_set(
+            campaign,
+            trace=trace,
+            required_tools=required_tools,
+        )
+        trace_hardening = _infer_trace_hardening(trace)
 
         summary: dict[str, Any] = {
             "ci_thresholds": thresholds,
             "ci_batch_id": str(batch_id),
             "campaign_name": campaign.name,
+            "resolved_mutation_set": resolved_mutation_set,
+            "replay_seed_basis": _ci_replay_seed_basis(
+                trace=trace,
+                campaign=campaign,
+                resolved_mutation_set=resolved_mutation_set,
+            ),
         }
+        if trace_hardening is not None:
+            summary["trace_hardening"] = trace_hardening
         if isinstance(github_context, dict):
             summary["github_context"] = github_context
 
@@ -392,6 +440,213 @@ def create_ci_batch_and_enqueue(
         runs.append(run)
 
     return runs
+
+
+def _extract_replay_tool_name(mutation: Any) -> str | None:
+    mutation_obj = mutation if isinstance(mutation, dict) else {}
+
+    tool = mutation_obj.get("tool")
+    if isinstance(tool, str) and tool.strip():
+        return tool.strip()
+
+    event_obj = mutation_obj.get("event")
+    if isinstance(event_obj, dict):
+        event_tool = event_obj.get("tool")
+        if isinstance(event_tool, str) and event_tool.strip():
+            return event_tool.strip()
+
+    return None
+
+
+def _extract_trace_scope_ids(mutation: Any) -> set[str]:
+    mutation_obj = mutation if isinstance(mutation, dict) else {}
+    values: list[object] = []
+
+    trace_ids_obj = mutation_obj.get("trace_ids")
+    if isinstance(trace_ids_obj, list):
+        values.extend(trace_ids_obj)
+
+    trace_id_obj = mutation_obj.get("trace_id")
+    if trace_id_obj is not None:
+        values.append(trace_id_obj)
+
+    scoped_ids: set[str] = set()
+    for value in values:
+        try:
+            scoped_ids.add(str(UUID(str(value))))
+        except (TypeError, ValueError, AttributeError):
+            continue
+    return scoped_ids
+
+
+def _mutation_matches_trace_tools(
+    mutation: Any,
+    *,
+    trace_id: UUID,
+    trace_tools: list[str],
+) -> bool:
+    scoped_trace_ids = _extract_trace_scope_ids(mutation)
+    if scoped_trace_ids:
+        return str(trace_id) in scoped_trace_ids
+
+    tool_name = _extract_replay_tool_name(mutation)
+    if tool_name is None:
+        return True
+
+    return any(
+        tool_name == trace_tool or fnmatchcase(trace_tool, tool_name)
+        for trace_tool in trace_tools
+    )
+
+
+def _resolve_trace_scoped_mutation_set(
+    campaign: Campaign,
+    *,
+    trace: Trace,
+) -> list[Any]:
+    mutation_set = campaign.mutation_set
+    if isinstance(mutation_set, list):
+        mutation_items = mutation_set or [{"mutation_id": "baseline"}]
+    elif isinstance(mutation_set, dict):
+        nested = mutation_set.get("mutations")
+        if isinstance(nested, list):
+            mutation_items = nested or [{"mutation_id": "baseline"}]
+        else:
+            mutation_items = [mutation_set]
+    elif mutation_set is None:
+        mutation_items = [{"mutation_id": "baseline"}]
+    else:
+        mutation_items = [mutation_set]
+
+    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    trace_tools = extract_tools_from_trace_payload(payload)
+
+    matched = [
+        mutation
+        for mutation in mutation_items
+        if _mutation_matches_trace_tools(
+            mutation,
+            trace_id=trace.trace_id,
+            trace_tools=trace_tools,
+        )
+    ]
+    if matched:
+        return matched
+    return mutation_items
+
+
+def _resolve_ci_mutation_set(
+    campaign: Campaign,
+    *,
+    trace: Trace,
+    required_tools: list[str],
+) -> list[Any]:
+    resolved = _resolve_trace_scoped_mutation_set(campaign, trace=trace)
+    if not _mutation_set_needs_contract_fallback(resolved):
+        return resolved
+
+    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    uploaded_primary = get_uploaded_trace_primary_mutation(payload)
+    if uploaded_primary is not None:
+        return [uploaded_primary]
+
+    fallback_candidates = derive_trace_baseline_candidates(payload)
+    primary_candidate = choose_primary_baseline_candidate(fallback_candidates)
+    if primary_candidate is not None:
+        return [primary_candidate]
+
+    uploaded_candidates = resolve_uploaded_trace_baseline_candidates(payload)
+    if uploaded_candidates:
+        return uploaded_candidates
+
+    synthesized = _synthesize_trace_scoped_mutations_from_required_tools(
+        trace=trace,
+        required_tools=required_tools,
+    )
+    synthesized_primary = choose_primary_baseline_candidate(synthesized)
+    if synthesized_primary is not None:
+        return [synthesized_primary]
+    return resolved
+
+
+def _mutation_set_needs_contract_fallback(mutation_set: list[Any]) -> bool:
+    if not mutation_set:
+        return True
+    return all(_extract_replay_tool_name(item) is None for item in mutation_set)
+
+
+def _synthesize_trace_scoped_mutations_from_required_tools(
+    *,
+    trace: Trace,
+    required_tools: list[str],
+) -> list[dict[str, Any]]:
+    if not required_tools:
+        return []
+
+    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return []
+
+    synthesized: list[dict[str, Any]] = []
+    seen_tools: set[str] = set()
+    for required_tool in required_tools:
+        if required_tool in seen_tools:
+            continue
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") != "tool_call":
+                continue
+            tool = event.get("tool")
+            if not isinstance(tool, str) or tool != required_tool:
+                continue
+            args = event.get("args")
+            if not isinstance(args, dict):
+                continue
+
+            mutation_args = dict(args)
+            if tool_likely_requires_confirmation(required_tool):
+                mutation_args.setdefault("confirmation_token", "approved")
+
+            synthesized.append(
+                {
+                    "mutation_id": f"baseline.{required_tool}",
+                    "tool": required_tool,
+                    "args": mutation_args,
+                }
+            )
+            seen_tools.add(required_tool)
+            break
+
+    return synthesized
+
+def _ci_replay_seed_basis(
+    *,
+    trace: Trace,
+    campaign: Campaign,
+    resolved_mutation_set: list[Any],
+) -> str:
+    payload = {
+        "trace_id": str(trace.trace_id),
+        "campaign_id": str(campaign.campaign_id),
+        "mutation_pack_id": (
+            str(campaign.mutation_pack_id) if campaign.mutation_pack_id is not None else None
+        ),
+        "resolved_mutation_set": resolved_mutation_set,
+    }
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
+    ).hexdigest()
+    return f"ci:{digest}"
+
+
+def _infer_trace_hardening(trace: Trace) -> dict[str, Any] | None:
+    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    uploaded_hardening = get_uploaded_trace_hardening(payload)
+    if uploaded_hardening is not None:
+        return uploaded_hardening
+    return infer_trace_hardening_from_payload(payload)
 
 
 def get_run(db: Session, *, project_id: UUID, run_id: UUID) -> Run | None:

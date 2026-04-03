@@ -206,6 +206,46 @@ def test_demo_session_returns_project_scoped_key(
         assert int(attempts_count or 0) >= 1
 
 
+def test_demo_seeded_run_surfaces_refund_retry_insight(
+    rbac_test_context: tuple[TestClient, sessionmaker[Session], UUID],
+) -> None:
+    client, session_factory, _ = rbac_test_context
+    demo_tenant_id = uuid4()
+    demo_project_id = uuid4()
+    demo_owner_id = uuid4()
+    with session_factory() as db:
+        db.add(Tenant(tenant_id=demo_tenant_id, name="Demo Tenant"))
+        db.add(User(user_id=demo_owner_id, email="demo-owner@example.com"))
+        db.add(
+            Project(
+                project_id=demo_project_id,
+                tenant_id=demo_tenant_id,
+                owner_id=demo_owner_id,
+                name="Sepurux Demo Project",
+            )
+        )
+        db.commit()
+
+    session_response = client.post("/demo/session")
+    assert session_response.status_code == 201
+    session_payload = session_response.json()
+    headers = auth_headers(api_key=session_payload["api_key"], project_id=demo_project_id)
+
+    with session_factory() as db:
+        run_id = db.scalar(
+            select(Run.run_id)
+            .where(Run.project_id == demo_project_id)
+            .order_by(Run.created_at.desc(), Run.run_id.desc())
+        )
+        assert isinstance(run_id, UUID)
+
+    stats_response = client.get(f"/v1/runs/{run_id}/stats", headers=headers)
+    assert stats_response.status_code == 200
+    insights = stats_response.json()["insights"]
+    titles = [item["title"] for item in insights]
+    assert "Add bounded retries/backoff for payments.refund" in titles
+
+
 def test_viewer_role_cannot_create_campaign(
     rbac_test_context: tuple[TestClient, sessionmaker[Session], UUID],
 ) -> None:

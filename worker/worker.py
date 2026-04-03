@@ -1525,6 +1525,8 @@ def execute_run(run_id: str) -> None:
             raise ValueError(f"Campaign not found for run {run_id}")
         tool_zones = _load_tool_zones(db, project_id=run.project_id)
 
+        prior_summary = run.summary if isinstance(run.summary, dict) else {}
+
         templates = _load_run_templates(db, run=run)
         applied_templates_summary = [
             {
@@ -1563,6 +1565,17 @@ def execute_run(run_id: str) -> None:
         retry_policy = RetryPolicyConfig()
         adapter_config: ReplayAdapterConfig | None = None
         sanitizer_config: dict[str, Any] | None = None
+        trace_hardening = prior_summary.get("trace_hardening")
+        if isinstance(trace_hardening, dict):
+            retry_config = trace_hardening.get("retry_policy")
+            if isinstance(retry_config, dict):
+                retry_policy = _merge_retry_policy(current=retry_policy, config=retry_config)
+            schema_adapter_config = trace_hardening.get("schema_adapter")
+            if isinstance(schema_adapter_config, dict):
+                adapter_config = _merge_adapter_config(
+                    current=adapter_config,
+                    config=schema_adapter_config,
+                )
 
         for template in templates:
             config = _template_config_dict(template)
@@ -1610,8 +1623,17 @@ def execute_run(run_id: str) -> None:
         run.status = "running"
         db.commit()
 
-        baseline_mutations = iter_mutations(campaign.mutation_set)
-        if _campaign_mutation_set_is_empty(campaign.mutation_set):
+        resolved_mutation_set = prior_summary.get("resolved_mutation_set")
+        replay_seed_basis = prior_summary.get("replay_seed_basis")
+        if not isinstance(replay_seed_basis, str) or not replay_seed_basis.strip():
+            replay_seed_basis = None
+
+        baseline_mutations = (
+            iter_mutations(resolved_mutation_set)
+            if resolved_mutation_set is not None
+            else iter_mutations(campaign.mutation_set)
+        )
+        if resolved_mutation_set is None and _campaign_mutation_set_is_empty(campaign.mutation_set):
             seeded_baseline = _seed_baseline_mutations_from_trace(trace)
             if seeded_baseline:
                 baseline_mutations = seeded_baseline
@@ -1797,6 +1819,7 @@ def execute_run(run_id: str) -> None:
                         attempt_id=attempt_id,
                         attempt_index=attempt_index,
                         timeline_artifact=timeline_artifact,
+                        seed_basis=replay_seed_basis,
                     )
                     mutation_seed = mutation_result.seed
                     mutation_trace = mutation_result.mutation_trace
@@ -2023,6 +2046,7 @@ def execute_run(run_id: str) -> None:
         ci_batch_id = prior_summary.get("ci_batch_id")
         github_context = prior_summary.get("github_context")
         github_reporting = prior_summary.get("github_reporting")
+        resolved_mutation_set = prior_summary.get("resolved_mutation_set")
         reliability = calculate_reliability_score(
             critical=severity_counts.get("critical", 0),
             high=severity_counts.get("high", 0),
@@ -2081,6 +2105,12 @@ def execute_run(run_id: str) -> None:
             run.summary["github_context"] = github_context
         if isinstance(github_reporting, dict):
             run.summary["github_reporting"] = github_reporting
+        if isinstance(resolved_mutation_set, list):
+            run.summary["resolved_mutation_set"] = resolved_mutation_set
+        if replay_seed_basis is not None:
+            run.summary["replay_seed_basis"] = replay_seed_basis
+        if isinstance(trace_hardening, dict):
+            run.summary["trace_hardening"] = trace_hardening
         template_application = prior_summary.get("template_application")
         if isinstance(template_application, dict):
             run.summary["template_application"] = template_application
