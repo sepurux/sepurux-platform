@@ -89,13 +89,14 @@ def update_waitlist_entry(
     status: str | None = None,
     notes: str | None = None,
     reviewed_by: str | None = None,
-) -> WaitlistEntry:
+) -> tuple[WaitlistEntry, bool]:
     record = db.scalar(
         select(WaitlistEntry).where(WaitlistEntry.waitlist_entry_id == waitlist_entry_id)
     )
     if not isinstance(record, WaitlistEntry):
         raise ValueError("Waitlist entry not found")
 
+    previous_status = record.status
     changed = False
     if status is not None:
         normalized_status = status.strip().lower()
@@ -116,4 +117,4 @@ def update_waitlist_entry(
         db.commit()
         db.refresh(record)
 
-    return record
+    return record, previous_status != "approved" and record.status == "approved"
