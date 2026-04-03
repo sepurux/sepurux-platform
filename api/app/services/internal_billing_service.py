@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from app.models import CreditWallet, Project, SubscriptionPlan, Tenant, User, UserSubscription
+from app.models import CreditTransaction, CreditWallet, Project, SubscriptionPlan, Tenant, User, UserSubscription
 from app.schemas import (
     InternalBillingAdjustmentResponse,
     InternalBillingSubscriptionUpdateResponse,
@@ -200,7 +200,7 @@ def change_internal_user_subscription(
     if not isinstance(target_plan, SubscriptionPlan):
         raise ValueError("Subscription plan not found")
 
-    subscription, wallet, previous_plan = ensure_user_billing(db, user_id=user_id)
+    subscription, wallet, _previous_plan = ensure_user_billing(db, user_id=user_id)
 
     now = datetime.now(UTC)
     subscription.plan_id = target_plan.plan_id
