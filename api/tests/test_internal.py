@@ -15,6 +15,7 @@ from app.models import (
     CreditTransaction,
     CreditWallet,
     Failure,
+    InternalFeatureFlag,
     NewsletterCampaign,
     Project,
     ProjectMembership,
@@ -695,12 +696,14 @@ def test_waitlist_submission_and_internal_review(
         to_email: str,
         company_name: str | None = None,
         role: str | None = None,
+        registration_enabled: bool,
     ) -> bool:
         approval_emails.append(
             {
                 "to_email": to_email,
                 "company_name": company_name,
                 "role": role,
+                "registration_enabled": registration_enabled,
             }
         )
         return True
@@ -746,6 +749,7 @@ def test_waitlist_submission_and_internal_review(
             "to_email": "early-access@example.com",
             "company_name": "Acme",
             "role": "Platform Eng",
+            "registration_enabled": True,
         }
     ]
 
@@ -798,6 +802,62 @@ def test_waitlist_non_approval_update_does_not_send_email(
     updated = update_response.json()
     assert updated["status"] == "contacted"
     assert approval_email_calls == 0
+
+
+def test_waitlist_approval_email_respects_closed_registration(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = internal_test_context
+    approval_emails: list[dict[str, object]] = []
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+        db.add(InternalFeatureFlag(key="enable_registration", enabled=False))
+        db.commit()
+
+    def _send_waitlist_approval_email_stub(**kwargs: object) -> bool:
+        approval_emails.append(dict(kwargs))
+        return True
+
+    monkeypatch.setattr(
+        "app.routes.internal.send_waitlist_approval_email",
+        _send_waitlist_approval_email_stub,
+    )
+
+    public_response = client.post(
+        "/waitlist",
+        json={
+            "email": "closed-reg@example.com",
+            "role": "Product",
+            "company": "Closed Corp",
+            "website": "",
+        },
+    )
+    assert public_response.status_code == 200
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    list_response = client.get("/v1/internal/waitlist")
+    assert list_response.status_code == 200
+    payload = list_response.json()
+    assert len(payload) == 1
+
+    update_response = client.patch(
+        f"/v1/internal/waitlist/{payload[0]['waitlist_entry_id']}",
+        json={"status": "approved", "notes": "Approved but gated"},
+    )
+    assert update_response.status_code == 200
+    assert approval_emails == [
+        {
+            "to_email": "closed-reg@example.com",
+            "company_name": "Closed Corp",
+            "role": "Product",
+            "registration_enabled": False,
+        }
+    ]
 
 
 def test_internal_system_overview_returns_metrics(

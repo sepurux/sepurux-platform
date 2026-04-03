@@ -23,6 +23,7 @@ from app.services.auth_service import (
 from app.services.billing_service import ensure_user_billing, grant_signup_credits
 from app.services.internal_settings_service import is_internal_feature_enabled
 from app.services.user_notification_service import send_welcome_email
+from app.services.waitlist_service import is_waitlist_email_approved
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
@@ -510,7 +511,9 @@ def _resolve_user_for_identity(db: Session, *, identity: OAuthIdentity) -> User:
         _ensure_workspace_for_user(db, user=existing_user)
         return existing_user
 
-    if not is_internal_feature_enabled(db, key="enable_registration", default=True):
+    if not is_internal_feature_enabled(
+        db, key="enable_registration", default=True
+    ) and not is_waitlist_email_approved(db, email=identity.email):
         raise OAuthFlowError("Registration is currently disabled. Join the waitlist for access.")
 
     user = User(

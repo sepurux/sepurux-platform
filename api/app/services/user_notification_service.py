@@ -38,7 +38,7 @@ def _api_base_url() -> str:
 
 
 def _docs_url() -> str:
-    raw = os.getenv("SEPURUX_DOCS_URL") or "https://docs.sepurux.com"
+    raw = os.getenv("SEPURUX_DOCS_URL") or f"{(os.getenv('SITE_PUBLIC_URL') or 'https://sepurux.com').rstrip('/')}/docs"
     return raw.rstrip("/")
 
 
@@ -557,13 +557,18 @@ def send_waitlist_approval_email(
     to_email: str,
     company_name: str | None = None,
     role: str | None = None,
+    registration_enabled: bool,
 ) -> bool:
     docs_url = f"{_docs_url()}/getting-started"
+    signup_url = f"{_ui_base_url()}/auth?mode=access&intent=signup"
     company_label = _clean_optional_text(company_name)
     role_label = _clean_optional_text(role)
 
     subtitle = "Your Sepurux early-access request has been approved."
-    intro_line = "We approved your waitlist request and will help you get your first reliability workflow live."
+    if registration_enabled:
+        intro_line = "We approved your waitlist request. You can create your account and start onboarding now."
+    else:
+        intro_line = "We approved your waitlist request. Public registration is closed, but your approved email can create an account now."
 
     detail_lines = []
     if company_label:
@@ -575,10 +580,20 @@ def send_waitlist_approval_email(
             f'<p style="margin:0 0 14px;color:#223127;"><strong>Role:</strong> {html.escape(role_label)}</p>'
         )
 
+    if registration_enabled:
+        access_copy = (
+            "Create your account to open your workspace, then review the getting-started guide before you send your first traces."
+        )
+    else:
+        access_copy = (
+            "Public registration is still closed generally, but your approved email has been cleared to create an account now. "
+            "Use the button below, then review the getting-started guide before you send your first traces."
+        )
     body_html = "".join(detail_lines) + (
         '<p style="margin:0 0 14px;color:#223127;">Your request is now in the approved cohort. '
-        "We will follow up with onboarding and workspace access guidance shortly.</p>"
-        '<p style="margin:0;color:#5f6d63;">If you want to prepare ahead of time, review the getting-started guide and reply to this email with the workflow you want to validate first.</p>'
+        f"{html.escape(access_copy)}</p>"
+        f'<p style="margin:0;color:#5f6d63;">Getting started: <a href="{html.escape(docs_url, quote=True)}" '
+        f'style="color:{html.escape(_secondary_color(), quote=True)};text-decoration:underline;">{html.escape(docs_url)}</a></p>'
     )
 
     subject = "You’re approved for Sepurux early access"
@@ -595,9 +610,27 @@ def send_waitlist_approval_email(
     text_lines.extend(
         [
             "You are now in the approved cohort.",
-            "We will follow up with onboarding and workspace access guidance shortly.",
             "",
             f"Getting started: {docs_url}",
+        ]
+    )
+    if registration_enabled:
+        text_lines.extend(
+            [
+                f"Create your account: {signup_url}",
+                "After signup, you can open your workspace and start onboarding immediately.",
+            ]
+        )
+    else:
+        text_lines.extend(
+            [
+                f"Create your account: {signup_url}",
+                "Public registration is closed generally, but your approved email has been cleared to sign up now.",
+            ]
+        )
+    text_lines.extend(
+        [
+            "",
             f"Reply for help: {_support_email()}",
         ]
     )
@@ -607,8 +640,8 @@ def send_waitlist_approval_email(
         subtitle=subtitle,
         intro_line=intro_line,
         body_html=body_html,
-        cta_label="Review Getting Started",
-        cta_url=docs_url,
+        cta_label="Create Your Account",
+        cta_url=signup_url,
         preheader="Your Sepurux early-access request is approved.",
         eyebrow="Early Access",
     )
