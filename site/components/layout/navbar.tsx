@@ -10,9 +10,9 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/product", label: "Product" },
-  { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
   { href: "/sandbox", label: "Sandbox" },
+  { href: "/waitlist", label: "Waitlist" },
   { href: "/company", label: "Company" },
 ];
 
@@ -71,10 +71,10 @@ export function Navbar() {
               Login
             </a>
             <Link
-              href="/book-demo"
+              href="/waitlist"
               className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-slate-600 transition-colors hover:text-slate-950"
             >
-              Book demo
+              Waitlist
             </Link>
             <a
               href={buildAppAuthHref({ mode: "access", intent: "signup" })}
@@ -121,6 +121,12 @@ export function Navbar() {
               })}
 
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <Link
+                  href="/waitlist"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700"
+                >
+                  Join waitlist
+                </Link>
                 <a
                   href={buildAppAuthHref({ mode: "access", intent: "login" })}
                   target="_blank"
@@ -131,7 +137,7 @@ export function Navbar() {
                 </a>
                 <a
                   href={buildAppAuthHref({ mode: "access", intent: "signup" })}
-                  className="teal-glow-btn inline-flex h-11 items-center justify-center rounded-full border border-[rgba(var(--accent-rgb),0.34)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white"
+                  className="teal-glow-btn inline-flex h-11 items-center justify-center rounded-full border border-[rgba(var(--accent-rgb),0.34)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white sm:col-span-2"
                 >
                   Start free
                 </a>

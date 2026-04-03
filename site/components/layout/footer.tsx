@@ -14,7 +14,7 @@ const platformLinks = [
   { href: "/product", label: "Product" },
   { href: "/pricing", label: "Pricing" },
   { href: "/sandbox", label: "Sandbox" },
-  { href: "/book-demo", label: "Book demo" },
+  { href: "/waitlist", label: "Waitlist" },
 ];
 
 const resourceLinks = [
@@ -54,10 +54,10 @@ export function Footer() {
                 <ArrowUpRight className="h-4 w-4" />
               </a>
               <Link
-                href="/book-demo"
+                href="/waitlist"
                 className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
               >
-                Book architecture review
+                Join waitlist
               </Link>
             </div>
           </div>

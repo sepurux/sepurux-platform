@@ -58,10 +58,10 @@ export default function PricingPage() {
 
           <div className="mt-10 flex flex-wrap gap-3">
             <Link
-              href="/book-demo"
+              href="/waitlist"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.28)] bg-[var(--color-accent)] px-6 text-sm font-semibold text-white transition hover:brightness-110"
             >
-              Book a demo
+              Join waitlist
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
@@ -140,10 +140,10 @@ export default function PricingPage() {
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link
-                    href="/book-demo"
+                    href="/waitlist"
                     className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(var(--accent-rgb),0.24)] bg-[var(--color-accent)] px-6 text-sm font-semibold text-white transition hover:brightness-110"
                   >
-                    Book a demo
+                    Join waitlist
                   </Link>
                   <Link
                     href="/product"

@@ -15,9 +15,8 @@ export function FinalCtaSection() {
             Treat agent reliability like release engineering, not postmortem cleanup.
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-            Start free if you want to record traces and run experiments now. Book an architecture
-            review if you need to design a governed rollout around policy, audit, or private
-            deployment constraints.
+            Start free if you want to record traces and run experiments now. Join the waitlist if
+            you want a guided rollout around policy, audit, or private deployment constraints.
           </p>
         </div>
 
@@ -42,21 +41,21 @@ export function FinalCtaSection() {
           </a>
 
           <Link
-            href="/book-demo"
+            href="/waitlist"
             className="rounded-[32px] border border-white/10 bg-white/[0.05] p-7 text-left backdrop-blur-sm transition-colors hover:bg-white/[0.08]"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Architecture review
+              Guided access
             </p>
             <h3 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
-              Walk through your rollout with policy, CI, and governance in scope.
+              Join the waitlist for a guided rollout with policy, CI, and governance in scope.
             </h3>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-300">
               Best for security-conscious or enterprise teams deciding how Sepurux should fit into
-              an existing platform program.
+              an existing platform program before broader self-serve onboarding opens.
             </p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
-              Book demo
+              Join waitlist
               <ArrowRight className="h-4 w-4" />
             </span>
           </Link>
@@ -68,6 +67,12 @@ export function FinalCtaSection() {
             className="inline-flex h-11 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
           >
             Read docs
+          </Link>
+          <Link
+            href="/waitlist"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            Join waitlist
           </Link>
           <Link
             href="/pricing"
