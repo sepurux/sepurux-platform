@@ -12,7 +12,7 @@ const socialLinks = [
 
 const platformLinks = [
   { href: "/product", label: "Product" },
-  { href: "/pricing", label: "Pricing" },
+  // { href: "/pricing", label: "Pricing" },
   { href: "/sandbox", label: "Sandbox" },
   { href: "/waitlist", label: "Waitlist" },
 ];
