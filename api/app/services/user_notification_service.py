@@ -559,7 +559,7 @@ def send_waitlist_approval_email(
     role: str | None = None,
     registration_enabled: bool,
 ) -> bool:
-    docs_url = f"{_docs_url()}/getting-started"
+    docs_url = _docs_url()
     signup_url = f"{_ui_base_url()}/auth?mode=access&intent=signup"
     company_label = _clean_optional_text(company_name)
     role_label = _clean_optional_text(role)
@@ -582,17 +582,17 @@ def send_waitlist_approval_email(
 
     if registration_enabled:
         access_copy = (
-            "Create your account to open your workspace, then review the getting-started guide before you send your first traces."
+            "Create your account to open your workspace, then review the docs before you send your first traces."
         )
     else:
         access_copy = (
             "Public registration is still closed generally, but your approved email has been cleared to create an account now. "
-            "Use the button below, then review the getting-started guide before you send your first traces."
+            "Use the button below, then review the docs before you send your first traces."
         )
     body_html = "".join(detail_lines) + (
         '<p style="margin:0 0 14px;color:#223127;">Your request is now in the approved cohort. '
         f"{html.escape(access_copy)}</p>"
-        f'<p style="margin:0;color:#5f6d63;">Getting started: <a href="{html.escape(docs_url, quote=True)}" '
+        f'<p style="margin:0;color:#5f6d63;">Docs: <a href="{html.escape(docs_url, quote=True)}" '
         f'style="color:{html.escape(_secondary_color(), quote=True)};text-decoration:underline;">{html.escape(docs_url)}</a></p>'
     )
 
@@ -611,7 +611,7 @@ def send_waitlist_approval_email(
         [
             "You are now in the approved cohort.",
             "",
-            f"Getting started: {docs_url}",
+            f"Docs: {docs_url}",
         ]
     )
     if registration_enabled:
