@@ -73,9 +73,6 @@ const firstCallSnippet = `curl -X POST ${siteConfig.appUrl}/api/backend/v1/trace
     ]
   }'`;
 
-const openApiUrl = `${siteConfig.appUrl}/api/backend/openapi.json`;
-const referenceUrl = `${siteConfig.appUrl}/api/backend/docs`;
-
 export default function DocsPage() {
   return (
     <DocsShell
@@ -89,8 +86,8 @@ export default function DocsPage() {
       ]}
       actions={[
         { href: "/docs/getting-started", label: "Open quickstart" },
-        { href: referenceUrl, label: "API docs", external: true },
-        { href: openApiUrl, label: "OpenAPI schema", external: true },
+        { href: "/docs/api-reference", label: "API reference" },
+        { href: "/docs/ci-cd", label: "CI guide" },
       ]}
     >
       <DocsSection
@@ -132,38 +129,31 @@ export default function DocsPage() {
       <DocsSection
         id="resources"
         title="Reference Resources"
-        description="Direct links for implementation detail, schemas, and rollout support."
+        description="Direct links for implementation detail, rollout support, and the public integration surface."
       >
         <div className="space-y-5">
-          <a
-            href={referenceUrl}
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href="/docs/api-reference"
             className="flex items-start justify-between gap-6 border-t border-[--border] py-5 transition-colors hover:text-[--color-accent]"
           >
             <div>
-              <p className="text-base font-semibold text-[--text-primary]">Interactive API Docs</p>
+              <p className="text-base font-semibold text-[--text-primary]">API Reference Guide</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                Swagger-style endpoint documentation for the live hosted API.
+                Public request examples, headers, and the core endpoints most teams need to wire traces, runs, and CI.
               </p>
             </div>
-            <span className="text-sm text-slate-400">External</span>
-          </a>
+            <span className="text-sm text-slate-400">Guide</span>
+          </Link>
 
-          <a
-            href={openApiUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-start justify-between gap-6 border-t border-[--border] py-5 transition-colors hover:text-[--color-accent]"
-          >
+          <div className="flex items-start justify-between gap-6 border-t border-[--border] py-5">
             <div>
-              <p className="text-base font-semibold text-[--text-primary]">OpenAPI Schema</p>
+              <p className="text-base font-semibold text-[--text-primary]">Full Explorer Access</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                Raw schema for client generation and contract validation.
+                The full interactive explorer and raw OpenAPI schema live inside the authenticated product workspace so project-scoped and administrative routes stay protected.
               </p>
             </div>
-            <span className="text-sm text-slate-400">External</span>
-          </a>
+            <span className="text-sm text-slate-400">In-app</span>
+          </div>
 
           <div className="border-t border-[--border] py-5 text-sm leading-7 text-slate-300">
             Need help designing a rollout path for your team? Visit{" "}

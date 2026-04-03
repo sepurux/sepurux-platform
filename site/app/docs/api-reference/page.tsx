@@ -192,8 +192,6 @@ const endpoints = [
   ["POST /v1/ci/runs", "Create a CI evaluation run (or batch when eval-set traces are registered)."],
   ["GET /v1/ci/runs/{run_id}", "Poll single CI run pass/fail decision and dashboard URL."],
   ["GET /v1/ci/batch/{batch_id}", "Aggregate pass/fail verdict across a batch of scenario runs."],
-  ["PATCH /v1/mutation-packs/{id}", "Update name, description, or config on a custom mutation pack."],
-  ["DELETE /v1/mutation-packs/{id}", "Delete a custom (non-system) mutation pack."],
 ];
 
 export default function APIReferencePage() {
@@ -210,8 +208,8 @@ export default function APIReferencePage() {
         { href: "#schema", label: "Schema & Explorer" },
       ]}
       actions={[
-        { href: `${baseUrl}/docs`, label: "Open API explorer", external: true },
-        { href: `${baseUrl}/openapi.json`, label: "Download OpenAPI", external: true },
+        { href: "/docs/getting-started", label: "Getting started" },
+        { href: "/docs/ci-cd", label: "CI guide" },
       ]}
     >
       <DocsSection
@@ -228,7 +226,7 @@ export default function APIReferencePage() {
       <DocsSection
         id="endpoints"
         title="Core Endpoints"
-        description="These are the most common endpoints used by product teams and platform engineers."
+        description="These are the public integration endpoints most teams need first. Administrative and destructive management routes stay inside the authenticated product workspace."
       >
         <div className="overflow-hidden rounded-2xl border border-[--border]">
           <table className="min-w-full divide-y divide-white/8 text-left">
@@ -287,25 +285,15 @@ export default function APIReferencePage() {
       <DocsSection
         id="schema"
         title="Schema & Explorer"
-        description="Use the interactive docs for request/response validation and the OpenAPI file for client generation."
+        description="Public docs stay focused on the core integration surface. Full interactive explorer access is available inside the authenticated product workspace."
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <a
-            href={`${baseUrl}/docs`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300 transition-colors hover:bg-[--surface-2]"
-          >
-            Interactive Docs: <code>{baseUrl}/docs</code>
-          </a>
-          <a
-            href={`${baseUrl}/openapi.json`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300 transition-colors hover:bg-[--surface-2]"
-          >
-            OpenAPI Schema: <code>{baseUrl}/openapi.json</code>
-          </a>
+          <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300">
+            Interactive explorer and full schema download are available after login so project-scoped and administrative routes are not exposed on the public site.
+          </div>
+          <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4 text-sm text-slate-300">
+            Use the SDKs and request examples above as the public integration contract. Reach the in-app explorer from your workspace when you need the full surface.
+          </div>
         </div>
       </DocsSection>
     </DocsShell>
