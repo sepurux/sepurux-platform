@@ -30,6 +30,7 @@ from app.services.user_notification_service import (
     send_password_reset_email,
     send_welcome_email,
 )
+from app.services.waitlist_service import is_waitlist_email_approved
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -123,15 +124,16 @@ def signup_user(
     project_name: str | None,
     pricing_tier: str | None,
 ) -> dict[str, object]:
-    if not is_internal_feature_enabled(db, key="enable_registration", default=True):
+    normalized_email = normalize_email(email)
+    if not normalized_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
+
+    registration_enabled = is_internal_feature_enabled(db, key="enable_registration", default=True)
+    if not registration_enabled and not is_waitlist_email_approved(db, email=normalized_email):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Registration is currently disabled. Join the waitlist for access.",
         )
-
-    normalized_email = normalize_email(email)
-    if not normalized_email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
 
     existing = db.scalar(select(User).where(User.email == normalized_email))
     if isinstance(existing, User):
