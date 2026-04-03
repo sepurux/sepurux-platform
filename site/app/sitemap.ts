@@ -16,7 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/docs/faq",
     "/blog",
     "/company",
-    "/book-demo",
+    "/waitlist",
     "/legal/privacy",
     "/legal/terms",
   ];

@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 
 import { HeroSection } from "@/components/sections/hero-section";
 import { SocialProofSection } from "@/components/sections/social-proof-section";
-import { DashboardPreviewSection } from "@/components/sections/dashboard-preview-section";
 import { FeatureGrid } from "@/components/sections/feature-grid";
 import { IntegrationSection } from "@/components/sections/integration-section";
 import { HowItWorksSection } from "@/components/sections/how-it-works-section";
@@ -26,7 +25,6 @@ export default function HomePage() {
       <HeroSection />
       <SocialProofSection />
       <HowItWorksSection />
-      <DashboardPreviewSection />
       <FeatureGrid />
       <IncidentProofSection />
       <CIGateSection />

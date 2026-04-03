@@ -167,8 +167,8 @@ export default function DocsPage() {
 
           <div className="border-t border-[--border] py-5 text-sm leading-7 text-slate-300">
             Need help designing a rollout path for your team? Visit{" "}
-            <Link href="/book-demo" className="text-[--text-primary] underline underline-offset-4">
-              Book a Demo
+            <Link href="/waitlist" className="text-[--text-primary] underline underline-offset-4">
+              Join the waitlist
             </Link>{" "}
             or email{" "}
             <a href={`mailto:${siteConfig.supportEmail}`} className="text-[--text-primary] underline underline-offset-4">

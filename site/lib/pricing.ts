@@ -62,8 +62,8 @@ export const pricingTiers: PricingTierDefinition[] = [
       "Policy packs and security configuration",
       "Member invites, webhooks, and audit require higher tiers",
     ],
-    cta: "Book a demo",
-    href: "/book-demo",
+    cta: "Join waitlist",
+    href: "/waitlist",
     featured: true,
   },
   {
@@ -86,8 +86,8 @@ export const pricingTiers: PricingTierDefinition[] = [
       "Policy and security controls",
       "Audit visibility reserved for Enterprise",
     ],
-    cta: "Book a demo",
-    href: "/book-demo",
+    cta: "Join waitlist",
+    href: "/waitlist",
   },
   {
     tier: "enterprise",
@@ -108,7 +108,7 @@ export const pricingTiers: PricingTierDefinition[] = [
       "Webhook integrations and full audit visibility",
       "Policy/security controls at enterprise scale",
     ],
-    cta: "Contact sales",
-    href: "/book-demo",
+    cta: "Join waitlist",
+    href: "/waitlist",
   },
 ];

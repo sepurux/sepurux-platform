@@ -30,6 +30,7 @@ from app.routes.scheduled_campaigns import router as scheduled_campaigns_router
 from app.routes.templates import router as templates_router
 from app.routes.tools import router as tools_router
 from app.routes.traces import router as traces_router
+from app.routes.waitlist import public_router as public_waitlist_router
 from app.routes.webhooks import router as webhooks_router
 
 app = FastAPI(title="Sepurux API")
@@ -125,6 +126,7 @@ app.include_router(webhooks_router)
 app.include_router(demo_router)
 app.include_router(public_auth_router)
 app.include_router(public_email_router)
+app.include_router(public_waitlist_router)
 app.include_router(internal_router)
 
 

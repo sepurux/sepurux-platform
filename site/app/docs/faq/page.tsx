@@ -35,7 +35,7 @@ const faqs = [
   {
     question: "How do we get enterprise support?",
     answer:
-      "Use the Book Demo path for architecture review, private deployment options, and governance/compliance planning.",
+      "Join the waitlist for architecture review, private deployment options, and governance/compliance planning.",
   },
 ];
 
@@ -51,7 +51,7 @@ export default function FAQPage() {
       ]}
       actions={[
         { href: "/docs/getting-started", label: "Getting started" },
-        { href: "/book-demo", label: "Book demo" },
+        { href: "/waitlist", label: "Join waitlist" },
       ]}
     >
       <DocsSection
@@ -95,9 +95,9 @@ export default function FAQPage() {
 
           <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-5">
             <p className="text-sm font-semibold text-[--text-primary]">Architecture review</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">Book a walkthrough for CI gate and governance rollout.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">Join the waitlist for guided rollout support around CI gates and governance.</p>
             <p className="mt-3 text-sm">
-              <Link href="/book-demo" className="text-[--text-primary] underline underline-offset-4">Book a demo</Link>
+              <Link href="/waitlist" className="text-[--text-primary] underline underline-offset-4">Join waitlist</Link>
             </p>
           </div>
         </div>

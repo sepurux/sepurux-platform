@@ -35,10 +35,10 @@ export function EnterpriseReadinessSection() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/book-demo"
+                href="/waitlist"
                 className="inline-flex h-11 items-center justify-center rounded-full border border-[rgba(var(--accent-rgb),0.24)] bg-[var(--color-accent)] px-5 text-sm font-semibold text-white transition hover:brightness-110"
               >
-                Book enterprise demo
+                Join enterprise waitlist
               </Link>
               <Link
                 href="/docs/policy-security"
