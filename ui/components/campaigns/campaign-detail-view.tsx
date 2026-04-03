@@ -272,16 +272,16 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       {/* Run result banner */}
       {runResult && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
             <span>
               Batch triggered — <span className="font-mono">{runResult.trace_count}</span> scenario{runResult.trace_count !== 1 ? "s" : ""} queued.
             </span>
             <div className="flex items-center gap-3">
-              <span className="font-mono text-xs text-emerald-400">{runResult.batch_id}</span>
+              <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{runResult.batch_id}</span>
               <Button size="sm" variant="outline" onClick={() => router.push("/runs")}>
                 View Runs
               </Button>
-              <button onClick={() => setRunResult(null)} className="text-emerald-400 hover:text-emerald-200">
+              <button onClick={() => setRunResult(null)} className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -289,9 +289,9 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
           {runResult.warnings.length > 0 && (
             <div className="space-y-1">
               {runResult.warnings.map((w) => (
-                <div key={w.code} className="rounded-md border border-amber-400/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+                <div key={w.code} className="rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
                   <span className="font-medium">{w.message}</span>
-                  {w.hint && <span className="ml-2 text-amber-300/70">{w.hint}</span>}
+                  {w.hint && <span className="ml-2 text-amber-800/80 dark:text-amber-300/70">{w.hint}</span>}
                 </div>
               ))}
             </div>
@@ -302,13 +302,13 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       {/* Run modal */}
       {runModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="w-full max-w-sm rounded-xl border border-border/60 bg-card p-6 shadow-xl">
+          <div className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-border/60 bg-card p-6 shadow-xl">
             <h2 className="mb-1 text-base font-semibold text-foreground">Run Campaign</h2>
             <p className="mb-4 text-xs text-muted-foreground">
               Set pass thresholds. The run will use the campaign's eval set and mutation pack.
             </p>
             {runError && (
-              <div className="mb-3 rounded border border-rose-400/20 bg-rose-500/10 p-2.5 text-xs text-rose-200">
+              <div className="mb-3 rounded border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
                 {runError}
               </div>
             )}
@@ -343,7 +343,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
             </div>
             <div className="mt-4 space-y-2">
               {parsedThresholds === null ? (
-                <div className="rounded border border-amber-400/20 bg-amber-500/10 p-2.5 text-xs text-amber-200">
+                <div className="rounded border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
                   Use valid numeric thresholds to run CI preflight checks.
                 </div>
               ) : preflightLoading ? (
@@ -351,7 +351,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
                   Running CI preflight checks…
                 </div>
               ) : preflightError ? (
-                <div className="rounded border border-rose-400/20 bg-rose-500/10 p-2.5 text-xs text-rose-200">
+                <div className="rounded border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
                   {preflightError}
                 </div>
               ) : preflight ? (
@@ -362,30 +362,30 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
                     <span className="font-medium text-foreground">{preflight.estimated_attempts_total} total attempts</span>
                   </div>
                   {preflight.blockers.length > 0 ? (
-                    <div className="rounded border border-rose-400/20 bg-rose-500/10 p-2.5 text-xs text-rose-200">
-                      <p className="font-semibold text-rose-100">Run blocked until these are fixed:</p>
+                    <div className="rounded border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+                      <p className="font-semibold text-rose-950 dark:text-rose-100">Run blocked until these are fixed:</p>
                       <ul className="mt-1 list-disc space-y-1 pl-4">
                         {preflight.blockers.map((issue) => (
                           <li key={`${issue.code}-${issue.message}`}>
                             {issue.message}
-                            {issue.hint ? <span className="block text-rose-300/90">{issue.hint}</span> : null}
+                            {issue.hint ? <span className="block text-rose-800/90 dark:text-rose-300/90">{issue.hint}</span> : null}
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : (
-                    <div className="rounded border border-emerald-400/20 bg-emerald-500/10 p-2.5 text-xs text-emerald-200">
+                    <div className="rounded border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
                       Preflight passed. This campaign is ready to run.
                     </div>
                   )}
                   {preflight.warnings.length > 0 ? (
-                    <div className="rounded border border-amber-400/20 bg-amber-500/10 p-2.5 text-xs text-amber-200">
-                      <p className="font-semibold text-amber-100">Warnings:</p>
+                    <div className="rounded border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
+                      <p className="font-semibold text-amber-950 dark:text-amber-100">Warnings:</p>
                       <ul className="mt-1 list-disc space-y-1 pl-4">
                         {preflight.warnings.map((issue) => (
                           <li key={`${issue.code}-${issue.message}`}>
                             {issue.message}
-                            {issue.hint ? <span className="block text-amber-300/90">{issue.hint}</span> : null}
+                            {issue.hint ? <span className="block text-amber-800/90 dark:text-amber-300/90">{issue.hint}</span> : null}
                           </li>
                         ))}
                       </ul>

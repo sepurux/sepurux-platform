@@ -7,6 +7,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Filter, RefreshCcw, Search } fr
 
 import { api, type CIBatchStatus, type RunMetadata } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
+import { celebratePassesOnce } from "@/lib/pass-confetti";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +95,45 @@ function batchCoveragePct(runs: RunMetadata[]): number {
   return runs.length > 0 ? Math.round((done / runs.length) * 100) : 0;
 }
 
+function runDecision(run: RunMetadata): "pass" | "fail" | "pending" {
+  const normalizedStatus = run.status.toLowerCase();
+  if (!["completed", "failed", "done"].includes(normalizedStatus)) {
+    return "pending";
+  }
+
+  const summary = (run.summary ?? {}) as Record<string, unknown>;
+  const passRate = runPassRate(run);
+  const failedCount = numberFromUnknown(summary.failed_count) ?? 0;
+  const unsafeCount = numberFromUnknown(run.unsafe_count) ?? numberFromUnknown(summary.unsafe_count) ?? 0;
+  const rawThresholds = summary.ci_thresholds;
+
+  if (rawThresholds && typeof rawThresholds === "object") {
+    const thresholds = rawThresholds as Record<string, unknown>;
+    const minPassRate = numberFromUnknown(thresholds.min_pass_rate);
+    const maxUnsafe = numberFromUnknown(thresholds.max_unsafe);
+    const maxFailures = thresholds.max_failures == null ? null : numberFromUnknown(thresholds.max_failures);
+
+    if (passRate === null || minPassRate === null || maxUnsafe === null) {
+      return "pending";
+    }
+    if (passRate < minPassRate) {
+      return "fail";
+    }
+    if (unsafeCount > maxUnsafe) {
+      return "fail";
+    }
+    if (maxFailures !== null && failedCount > maxFailures) {
+      return "fail";
+    }
+    return "pass";
+  }
+
+  if (passRate === null) {
+    return "pending";
+  }
+  return failedCount === 0 && unsafeCount === 0 ? "pass" : "fail";
+}
+
 function getCampaignName(run: RunMetadata): string | null {
   const s = (run.summary ?? {}) as Record<string, unknown>;
   return typeof s.campaign_name === "string" ? s.campaign_name : null;
@@ -109,6 +149,10 @@ function runPassRate(run: RunMetadata): number | null {
 function runAttemptCount(run: RunMetadata): number | null {
   const s = (run.summary ?? {}) as Record<string, unknown>;
   return typeof s.attempt_count === "number" ? s.attempt_count : null;
+}
+
+function numberFromUnknown(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function runTypeForRun(run: RunMetadata): RunType {
@@ -169,6 +213,66 @@ export function RunsListView() {
   }, [state, searchQuery]);
 
   const batchGroups = useMemo(() => groupByBatch(filteredRuns), [filteredRuns]);
+  const missingBatchIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const group of batchGroups) {
+      if (group.batchId && !(group.batchId in batchStatuses)) {
+        ids.add(group.batchId);
+      }
+    }
+    return Array.from(ids);
+  }, [batchGroups, batchStatuses]);
+
+  useEffect(() => {
+    if (missingBatchIds.length === 0) return;
+
+    let cancelled = false;
+
+    void Promise.allSettled(
+      missingBatchIds.map(async (batchId) => [batchId, await api.getCiBatch(batchId)] as const)
+    ).then((results) => {
+      if (cancelled) return;
+
+      setBatchStatuses((prev) => {
+        const next = { ...prev };
+        for (const result of results) {
+          if (result.status !== "fulfilled") continue;
+          const [batchId, status] = result.value;
+          next[batchId] = status;
+        }
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [missingBatchIds]);
+
+  const passCelebrationIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const group of batchGroups) {
+      if (group.batchId) {
+        if (batchStatuses[group.batchId]?.decision === "pass") {
+          ids.push(`batch:${group.batchId}`);
+        }
+        continue;
+      }
+
+      const run = group.runs[0];
+      if (run && runDecision(run) === "pass") {
+        ids.push(`run:${run.run_id}`);
+      }
+    }
+    return ids;
+  }, [batchGroups, batchStatuses]);
+
+  useEffect(() => {
+    if (passCelebrationIds.length === 0) {
+      return;
+    }
+    celebratePassesOnce(passCelebrationIds);
+  }, [passCelebrationIds]);
 
   function toggleBatch(batchId: string) {
     setExpandedBatches((prev) => {
@@ -270,10 +374,12 @@ export function RunsListView() {
                   ) : (
                     batchGroups.map((group) => {
                       const { batchId, runs } = group;
-                      const aggStatus = batchAggStatus(runs);
-                      const passRate = batchPassRate(runs);
-                      const coveragePct = batchCoveragePct(runs);
-                      const decision = batchDecision(runs);
+                      const batchStatus = batchId ? batchStatuses[batchId] : undefined;
+                      const aggStatus = batchStatus?.status ?? batchAggStatus(runs);
+                      const passRate = batchStatus?.pass_rate ?? batchPassRate(runs);
+                      const coveragePct = batchStatus?.scenario_coverage_pct ?? batchCoveragePct(runs);
+                      const decision = batchStatus?.decision ?? (batchId ? "pending" : batchDecision(runs));
+                      const traceCount = batchStatus?.trace_count ?? runs.length;
                       const earliest = runs.reduce(
                         (min, r) => (r.created_at < min ? r.created_at : min),
                         runs[0].created_at
@@ -307,7 +413,7 @@ export function RunsListView() {
                               {batchId ? shortId(batchId, 10) : shortId(runs[0].run_id, 10)}
                             </span>
                             <span className="ml-2 text-xs text-muted-foreground">
-                              {runs.length} trace{runs.length !== 1 ? "s" : ""}
+                              {traceCount} trace{traceCount !== 1 ? "s" : ""}
                             </span>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{campaignName}</TableCell>

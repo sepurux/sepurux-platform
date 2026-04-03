@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from app.models import Trace
 from app.services.audit_service import create_audit_event
+from app.services.trace_replay_profile import enrich_normalized_trace_for_replay
 from app.services.trace_step_service import create_trace_steps_for_trace
 from app.services.trace_validation import normalized_trace_summary
 from app.storage import get_json_object, put_json_object
@@ -27,6 +28,7 @@ def create_trace(
 ) -> Trace:
     trace_id = uuid4()
     s3_key = f"traces/{trace_id}.json"
+    normalized_payload = enrich_normalized_trace_for_replay(normalized_payload)
 
     put_json_object(s3_key, payload)
 

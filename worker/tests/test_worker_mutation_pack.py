@@ -238,6 +238,230 @@ def test_execute_run_autoseeds_baseline_when_campaign_mutation_set_empty(
     assert seeded_tool_calls
 
 
+def test_execute_run_prefers_resolved_mutation_set_from_run_summary(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, artifacts = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {"type": "tool_call", "tool": "payments.refund", "args": {"payment_id": "pay_1"}},
+                        {"type": "tool_result", "tool": "payments.refund", "result": {"ok": True}},
+                    ],
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Resolved Mutation Campaign",
+                mutation_set=[
+                    {"mutation_id": "refund", "tool": "payments.refund", "args": {"payment_id": "pay_1"}},
+                    {"mutation_id": "dispatch", "tool": "dispatch.create_visit", "args": {"slot": "2026-04-02T12:00:00Z"}},
+                ],
+                eval_set={"checks": ["ok"], "attempts_count": 1},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary={
+                    "resolved_mutation_set": [
+                        {
+                            "mutation_id": "refund",
+                            "tool": "payments.refund",
+                            "args": {"payment_id": "pay_1"},
+                        }
+                    ]
+                },
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempts = list(db.scalars(select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)))
+        run = db.scalar(select(Run).where(Run.run_id == run_id))
+
+    assert len(attempts) == 1
+    assert attempts[0].mutation_id == "refund"
+    assert isinstance(run, Run)
+    assert isinstance(run.summary, dict)
+    assert run.summary.get("attempt_count") == 1
+    resolved = run.summary.get("resolved_mutation_set")
+    assert isinstance(resolved, list)
+    assert len(resolved) == 1
+    assert resolved[0]["tool"] == "payments.refund"
+
+    assert artifacts
+    artifact_payload = next(iter(artifacts.values()))
+    events = artifact_payload.get("events")
+    assert isinstance(events, list)
+    replayed_tools = [
+        event.get("tool")
+        for event in events
+        if event.get("type") == "tool_call" and event.get("tool") not in {"trace.load"}
+    ]
+    assert replayed_tools == ["payments.refund"]
+
+
+def test_execute_run_reuses_replay_seed_basis_for_deterministic_ci_sampling(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    first_run_id = uuid4()
+    second_run_id = uuid4()
+    replay_seed_basis = "ci:payments-refund-stable"
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {"type": "tool_call", "tool": "payments.refund", "args": {"payment_id": "pay_1"}},
+                        {"type": "tool_result", "tool": "payments.refund", "result": {"ok": True, "status": "ok"}},
+                    ],
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Deterministic CI Pack",
+                description="Multiple replay mutations to verify stable sampling",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "rename-status",
+                            "type": "schema.rename_field",
+                            "target": {"tool": "payments.*"},
+                            "params": {"from": "status", "to": "state"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        },
+                        {
+                            "mutation_id": "timeout-refund",
+                            "type": "fault.timeout",
+                            "target": {"tool": "payments.*"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        },
+                        {
+                            "mutation_id": "delay-refund",
+                            "type": "latency_delay",
+                            "target": {"tool": "payments.*"},
+                            "params": {"min_ms": 100, "max_ms": 500},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        },
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Deterministic CI Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline.refund",
+                        "tool": "payments.refund",
+                        "args": {"payment_id": "pay_1"},
+                    }
+                ],
+                eval_set={"checks": ["status"], "attempts_count": 6},
+            )
+        )
+        db.add_all(
+            [
+                Run(
+                    run_id=first_run_id,
+                    project_id=project_id,
+                    trace_id=trace_id,
+                    campaign_id=campaign_id,
+                    mutation_pack_id=mutation_pack_id,
+                    status="queued",
+                    summary={"replay_seed_basis": replay_seed_basis},
+                ),
+                Run(
+                    run_id=second_run_id,
+                    project_id=project_id,
+                    trace_id=trace_id,
+                    campaign_id=campaign_id,
+                    mutation_pack_id=mutation_pack_id,
+                    status="queued",
+                    summary={"replay_seed_basis": replay_seed_basis},
+                ),
+            ]
+        )
+        db.commit()
+
+    worker_module.execute_run(str(first_run_id))
+    worker_module.execute_run(str(second_run_id))
+
+    with testing_session_local() as db:
+        first_attempts = list(
+            db.scalars(
+                select(ReplayAttempt)
+                .where(ReplayAttempt.run_id == first_run_id)
+                .order_by(ReplayAttempt.seed.asc(), ReplayAttempt.attempt_id.asc())
+            )
+        )
+        second_attempts = list(
+            db.scalars(
+                select(ReplayAttempt)
+                .where(ReplayAttempt.run_id == second_run_id)
+                .order_by(ReplayAttempt.seed.asc(), ReplayAttempt.attempt_id.asc())
+            )
+        )
+        first_run = db.scalar(select(Run).where(Run.run_id == first_run_id))
+        second_run = db.scalar(select(Run).where(Run.run_id == second_run_id))
+
+    assert [attempt.seed for attempt in first_attempts] == [attempt.seed for attempt in second_attempts]
+    assert [attempt.mutation_id for attempt in first_attempts] == [
+        attempt.mutation_id for attempt in second_attempts
+    ]
+    assert [attempt.result for attempt in first_attempts] == [attempt.result for attempt in second_attempts]
+    assert [attempt.failure_reason for attempt in first_attempts] == [
+        attempt.failure_reason for attempt in second_attempts
+    ]
+    assert isinstance(first_run, Run)
+    assert isinstance(second_run, Run)
+    assert isinstance(first_run.summary, dict)
+    assert isinstance(second_run.summary, dict)
+    assert first_run.summary.get("replay_seed_basis") == replay_seed_basis
+    assert second_run.summary.get("replay_seed_basis") == replay_seed_basis
+
+
 def test_run_completion_records_audit_event_and_delivers_webhook(
     worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
     monkeypatch: pytest.MonkeyPatch,
@@ -775,6 +999,194 @@ def test_execute_run_status_check_fails_on_schema_rename(
     assert isinstance(summary, dict)
     assert summary["failed_count"] == 1
     assert summary["pass_rate"] == 0.0
+
+
+def test_execute_run_uses_trace_hardening_schema_adapter_from_summary(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Strict Status Pack",
+                description="Always rename status to state",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "rename-status",
+                            "type": "schema.rename_field",
+                            "target": {"tool": "jira.*"},
+                            "params": {"from": "status", "to": "state"},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Trace Adapter Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary={
+                    "trace_hardening": {
+                        "schema_adapter": {"mappings": {"status": "state"}},
+                        "source": "trace_inference_v1",
+                    }
+                },
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert attempt.result == "passed"
+    assert attempt.failure_reason is None
+    summary = run.summary
+    assert isinstance(summary, dict)
+    assert summary["pass_rate"] == 1.0
+    assert summary["trace_hardening"] == {
+        "schema_adapter": {"mappings": {"status": "state"}},
+        "source": "trace_inference_v1",
+    }
+
+
+def test_execute_run_uses_trace_hardening_retry_policy_from_summary(
+    worker_db_context: tuple[sessionmaker[Session], dict[str, dict[str, object]]],
+) -> None:
+    testing_session_local, _ = worker_db_context
+    project_id = uuid4()
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    mutation_pack_id = uuid4()
+    run_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="Rate Limit Pack",
+                description="Always inject a rate limit failure",
+                config={
+                    "max_mutations_per_attempt": 1,
+                    "mutations": [
+                        {
+                            "mutation_id": "rate-limit",
+                            "type": "fault.rate_limit",
+                            "target": {"tool": "jira.*"},
+                            "params": {"min_backoff_ms": 300},
+                            "probability": 1.0,
+                            "weight": 1.0,
+                        }
+                    ],
+                },
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                mutation_pack_id=mutation_pack_id,
+                name="Trace Retry Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "baseline",
+                        "tool": "jira.create_issue",
+                        "args": {"title": "Demo"},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="queued",
+                summary={
+                    "trace_hardening": {
+                        "retry_policy": {"max_retries": 3, "backoff_ms": 900},
+                        "source": "trace_inference_v1",
+                    }
+                },
+            )
+        )
+        db.commit()
+
+    worker_module.execute_run(str(run_id))
+
+    with testing_session_local() as db:
+        attempt = db.execute(
+            select(ReplayAttempt).where(ReplayAttempt.run_id == run_id)
+        ).scalar_one()
+        run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
+
+    assert attempt.result == "passed"
+    assert attempt.failure_reason is None
+    summary = run.summary
+    assert isinstance(summary, dict)
+    assert summary["pass_rate"] == 1.0
+    template_overrides = summary.get("template_overrides")
+    assert isinstance(template_overrides, dict)
+    retry_policy = template_overrides.get("retry_policy")
+    assert retry_policy == {"max_retries": 3, "backoff_ms": 900}
+    assert summary["trace_hardening"] == {
+        "retry_policy": {"max_retries": 3, "backoff_ms": 900},
+        "source": "trace_inference_v1",
+    }
 
 
 def test_execute_run_status_check_fails_on_poisoned_status(
