@@ -74,12 +74,14 @@ export function FinalCtaSection() {
           >
             Join waitlist
           </Link>
+          {/*
           <Link
             href="/pricing"
             className="inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-medium text-slate-300 transition-colors hover:text-white"
           >
             Review pricing
           </Link>
+          */}
           <Link
             href="/sandbox"
             className="inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-medium text-slate-300 transition-colors hover:text-white"
