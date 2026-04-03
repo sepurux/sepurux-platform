@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 
-import { siteConfig } from "@/lib/site";
-
 const ciSnippet = `name: Sepurux Reliability Gate
 
 on:
@@ -94,14 +92,12 @@ export function CIGateSection() {
               >
                 Read full CI guide
               </Link>
-              <a
-                href={`${siteConfig.appUrl}/api/backend/docs`}
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/docs/api-reference"
                 className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
               >
                 API reference
-              </a>
+              </Link>
             </div>
           </div>
         </div>

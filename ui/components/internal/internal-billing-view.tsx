@@ -169,7 +169,7 @@ export function InternalBillingView() {
         <div className="md:col-span-4">
           <p className="text-sm font-semibold text-foreground">Subscription override</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Change the user&apos;s active plan immediately. This is the right control for early-access upgrades and downgrades when billing checkout is disabled.
+            Change the user&apos;s active plan immediately without adding or removing credits. Use credit adjustments separately when you need to top up or correct wallet balances.
           </p>
         </div>
 
