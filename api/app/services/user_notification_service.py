@@ -550,3 +550,71 @@ def send_password_changed_email(*, to_email: str, recipient_name: str | None) ->
         eyebrow="Account Security",
     )
     return send_email(to_email=to_email, subject=subject, text_body=text_body, html_body=html_body)
+
+
+def send_waitlist_approval_email(
+    *,
+    to_email: str,
+    company_name: str | None = None,
+    role: str | None = None,
+) -> bool:
+    docs_url = f"{_docs_url()}/getting-started"
+    company_label = _clean_optional_text(company_name)
+    role_label = _clean_optional_text(role)
+
+    subtitle = "Your Sepurux early-access request has been approved."
+    intro_line = "We approved your waitlist request and will help you get your first reliability workflow live."
+
+    detail_lines = []
+    if company_label:
+        detail_lines.append(
+            f'<p style="margin:0 0 10px;color:#223127;"><strong>Company:</strong> {html.escape(company_label)}</p>'
+        )
+    if role_label:
+        detail_lines.append(
+            f'<p style="margin:0 0 14px;color:#223127;"><strong>Role:</strong> {html.escape(role_label)}</p>'
+        )
+
+    body_html = "".join(detail_lines) + (
+        '<p style="margin:0 0 14px;color:#223127;">Your request is now in the approved cohort. '
+        "We will follow up with onboarding and workspace access guidance shortly.</p>"
+        '<p style="margin:0;color:#5f6d63;">If you want to prepare ahead of time, review the getting-started guide and reply to this email with the workflow you want to validate first.</p>'
+    )
+
+    subject = "You’re approved for Sepurux early access"
+    text_lines = [
+        "Your Sepurux early-access request has been approved.",
+        "",
+    ]
+    if company_label:
+        text_lines.append(f"Company: {company_label}")
+    if role_label:
+        text_lines.append(f"Role: {role_label}")
+    if company_label or role_label:
+        text_lines.append("")
+    text_lines.extend(
+        [
+            "You are now in the approved cohort.",
+            "We will follow up with onboarding and workspace access guidance shortly.",
+            "",
+            f"Getting started: {docs_url}",
+            f"Reply for help: {_support_email()}",
+        ]
+    )
+
+    html_body = _email_layout(
+        title="Early Access Approved",
+        subtitle=subtitle,
+        intro_line=intro_line,
+        body_html=body_html,
+        cta_label="Review Getting Started",
+        cta_url=docs_url,
+        preheader="Your Sepurux early-access request is approved.",
+        eyebrow="Early Access",
+    )
+    return send_email(
+        to_email=to_email,
+        subject=subject,
+        text_body="\n".join(text_lines),
+        html_body=html_body,
+    )

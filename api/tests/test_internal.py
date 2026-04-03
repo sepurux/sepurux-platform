@@ -682,11 +682,33 @@ def test_internal_billing_rejects_non_super_admin(
 
 def test_waitlist_submission_and_internal_review(
     internal_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client, session_factory = internal_test_context
+    approval_emails: list[dict[str, str | None]] = []
 
     with session_factory() as db:
         fixture = _seed_internal_fixture(db)
+
+    def _send_waitlist_approval_email_stub(
+        *,
+        to_email: str,
+        company_name: str | None = None,
+        role: str | None = None,
+    ) -> bool:
+        approval_emails.append(
+            {
+                "to_email": to_email,
+                "company_name": company_name,
+                "role": role,
+            }
+        )
+        return True
+
+    monkeypatch.setattr(
+        "app.routes.internal.send_waitlist_approval_email",
+        _send_waitlist_approval_email_stub,
+    )
 
     public_response = client.post(
         "/waitlist",
@@ -719,6 +741,63 @@ def test_waitlist_submission_and_internal_review(
     updated = update_response.json()
     assert updated["status"] == "approved"
     assert updated["notes"] == "Strong first-cohort fit"
+    assert approval_emails == [
+        {
+            "to_email": "early-access@example.com",
+            "company_name": "Acme",
+            "role": "Platform Eng",
+        }
+    ]
+
+
+def test_waitlist_non_approval_update_does_not_send_email(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = internal_test_context
+    approval_email_calls = 0
+
+    with session_factory() as db:
+        fixture = _seed_internal_fixture(db)
+
+    def _send_waitlist_approval_email_stub(**_: object) -> bool:
+        nonlocal approval_email_calls
+        approval_email_calls += 1
+        return True
+
+    monkeypatch.setattr(
+        "app.routes.internal.send_waitlist_approval_email",
+        _send_waitlist_approval_email_stub,
+    )
+
+    public_response = client.post(
+        "/waitlist",
+        json={
+            "email": "contacted-only@example.com",
+            "role": "Security",
+            "company": "Bravo",
+            "website": "",
+        },
+    )
+    assert public_response.status_code == 200
+
+    client.headers.update(
+        auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
+    )
+
+    list_response = client.get("/v1/internal/waitlist")
+    assert list_response.status_code == 200
+    payload = list_response.json()
+    assert len(payload) == 1
+
+    update_response = client.patch(
+        f"/v1/internal/waitlist/{payload[0]['waitlist_entry_id']}",
+        json={"status": "contacted", "notes": "Reached out"},
+    )
+    assert update_response.status_code == 200
+    updated = update_response.json()
+    assert updated["status"] == "contacted"
+    assert approval_email_calls == 0
 
 
 def test_internal_system_overview_returns_metrics(

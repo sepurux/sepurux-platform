@@ -49,6 +49,20 @@ def get_internal_feature_flags(db: Session) -> InternalFeatureFlags:
     return _to_payload(flags_by_key)
 
 
+def is_internal_feature_enabled(
+    db: Session,
+    *,
+    key: str,
+    default: bool | None = None,
+) -> bool:
+    flags_by_key = _ensure_feature_flags(db)
+    if key in flags_by_key:
+        return bool(flags_by_key[key].enabled)
+    if default is not None:
+        return bool(default)
+    return bool(DEFAULT_INTERNAL_FLAGS.get(key, False))
+
+
 def update_internal_feature_flags(
     db: Session,
     payload: InternalFeatureFlagsUpdate,

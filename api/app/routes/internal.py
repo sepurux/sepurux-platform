@@ -83,6 +83,7 @@ from app.services.tenant_control_service import (
     update_tenant_controls,
 )
 from app.services.billing_service import list_subscription_plans, serialize_subscription_plan
+from app.services.user_notification_service import send_waitlist_approval_email
 from app.services.waitlist_service import list_waitlist_entries, serialize_waitlist_entry, update_waitlist_entry
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
@@ -777,7 +778,7 @@ def patch_internal_waitlist(
     super_admin: SuperAdminDep,
 ) -> InternalWaitlistEntry:
     try:
-        record = update_waitlist_entry(
+        record, approval_email_triggered = update_waitlist_entry(
             db,
             waitlist_entry_id=waitlist_entry_id,
             status=body.status,
@@ -787,13 +788,26 @@ def patch_internal_waitlist(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    approval_email_sent = False
+    if approval_email_triggered:
+        approval_email_sent = send_waitlist_approval_email(
+            to_email=record.email,
+            company_name=record.company,
+            role=record.role,
+        )
+
     payload = InternalWaitlistEntry(**serialize_waitlist_entry(record))
     create_audit_log(
         db,
         action="internal.waitlist.update",
         actor=_actor_label(db, super_admin),
         entity=f"waitlist:{waitlist_entry_id}",
-        metadata={"status": payload.status, "notes": payload.notes},
+        metadata={
+            "status": payload.status,
+            "notes": payload.notes,
+            "approval_email_triggered": approval_email_triggered,
+            "approval_email_sent": approval_email_sent,
+        },
     )
     db.commit()
     return payload
