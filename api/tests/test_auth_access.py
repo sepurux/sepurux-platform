@@ -11,6 +11,7 @@ from app.main import app
 from app.models import (
     ApiKey,
     Base,
+    InternalFeatureFlag,
     PasswordResetToken,
     Project,
     ProjectMembership,
@@ -156,6 +157,28 @@ def test_signup_with_starter_plan_still_gets_full_access(
     assert payload["permissions"]["can_manage_policy_packs"] is False
     assert payload["permissions"]["can_manage_security_config"] is False
     assert payload["permissions"]["can_manage_workspace"] is False
+
+
+def test_signup_is_blocked_when_registration_is_disabled(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = auth_test_context
+
+    with session_factory() as db:
+        db.add(InternalFeatureFlag(key="enable_registration", enabled=False))
+        db.commit()
+
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": "blocked@example.com",
+            "password": "blocked-pass-123",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "Registration is currently disabled. Join the waitlist for access."
+    }
 
 
 def test_login_returns_project_scoped_session_for_existing_user(
@@ -397,6 +420,66 @@ def test_github_oauth_bootstraps_workspace_and_exchanges_session(
         )
         assert isinstance(identity, UserIdentity)
         assert identity.user_id == user.user_id
+
+
+def test_github_oauth_new_user_is_blocked_when_registration_is_disabled(
+    auth_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, session_factory = auth_test_context
+
+    with session_factory() as db:
+        db.add(InternalFeatureFlag(key="enable_registration", enabled=False))
+        db.commit()
+
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "github-client")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "github-secret")
+    monkeypatch.setenv("SEPURUX_UI_BASE_URL", "http://localhost:3000")
+
+    def fake_post(url: str, data=None, headers=None, timeout=None):
+        assert "github.com/login/oauth/access_token" in url
+        return _MockHttpResponse(200, {"access_token": "gh-access-token"})
+
+    def fake_get(url: str, headers=None, timeout=None):
+        if url.endswith("/user"):
+            return _MockHttpResponse(200, {"id": 9999, "name": "Blocked OAuth"})
+        if url.endswith("/user/emails"):
+            return _MockHttpResponse(
+                200,
+                [
+                    {
+                        "email": "blocked-oauth@example.com",
+                        "primary": True,
+                        "verified": True,
+                    }
+                ],
+            )
+        raise AssertionError(f"Unexpected OAuth GET URL: {url}")
+
+    monkeypatch.setattr("app.services.oauth_service.httpx.post", fake_post)
+    monkeypatch.setattr("app.services.oauth_service.httpx.get", fake_get)
+
+    start_response = client.get(
+        "/auth/oauth/github/start",
+        params={"next": "/dashboard"},
+        follow_redirects=False,
+    )
+    assert start_response.status_code == 302
+    state = parse_qs(urlparse(start_response.headers["location"]).query)["state"][0]
+
+    callback_response = client.get(
+        "/auth/oauth/github/callback",
+        params={"state": state, "code": "oauth-code"},
+        follow_redirects=False,
+    )
+    assert callback_response.status_code == 303
+    query = parse_qs(urlparse(callback_response.headers["location"]).query)
+    assert query["oauth_error"] == ["Registration is currently disabled. Join the waitlist for access."]
+    assert "exchange" not in query
+
+    with session_factory() as db:
+        user = db.scalar(select(User).where(User.email == "blocked-oauth@example.com"))
+        assert user is None
 
 
 def test_super_admin_login_sets_internal_session_flag(
