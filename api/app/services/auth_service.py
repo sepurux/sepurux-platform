@@ -18,6 +18,7 @@ from app.services.billing_service import (
     get_billing_snapshot_for_context,
     grant_signup_credits,
 )
+from app.services.internal_settings_service import is_internal_feature_enabled
 from app.services.mutation_pack_service import ensure_system_mutation_packs
 from app.services.pricing_service import (
     DEFAULT_PRICING_TIER,
@@ -122,6 +123,12 @@ def signup_user(
     project_name: str | None,
     pricing_tier: str | None,
 ) -> dict[str, object]:
+    if not is_internal_feature_enabled(db, key="enable_registration", default=True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is currently disabled. Join the waitlist for access.",
+        )
+
     normalized_email = normalize_email(email)
     if not normalized_email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
