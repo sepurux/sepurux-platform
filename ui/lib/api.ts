@@ -759,6 +759,10 @@ export type InternalBillingWalletEntry = {
   user_id: string;
   email: string | null;
   name: string | null;
+  plan_id: string | null;
+  plan_name: string | null;
+  pricing_tier: string | null;
+  subscription_status: string | null;
   balance: number;
   monthly_credits: number;
   topup_credits: number;
@@ -778,6 +782,11 @@ export type InternalBillingTransactionEntry = {
 export type InternalBillingAdjustmentResponse = {
   wallet: InternalBillingWalletEntry;
   transaction: InternalBillingTransactionEntry;
+};
+
+export type InternalBillingSubscriptionUpdateResponse = {
+  wallet: InternalBillingWalletEntry;
+  subscription: UserSubscriptionMetadata;
 };
 
 export type InternalSystemOverview = {
@@ -813,6 +822,21 @@ export type InternalTenantApiKeyRevokeResponse = {
   tenant_id: string;
   revoked_count: number;
   controls: InternalTenantControls;
+};
+
+export type InternalWaitlistEntry = {
+  waitlist_entry_id: string;
+  email: string;
+  role: string;
+  company: string | null;
+  source: string;
+  status: string;
+  notes: string | null;
+  submitted_from_ip: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type SocialOAuthProvider = "github" | "google" | "microsoft";
@@ -1346,9 +1370,23 @@ export const api = {
       },
       { requireProjectHeader: false }
     ),
+  listInternalBillingPlans: () =>
+    requestJson<SubscriptionPlanMetadata[]>("/v1/internal/billing/plans", undefined, {
+      requireProjectHeader: false,
+    }),
   adjustInternalBillingCredits: (payload: { user_id: string; amount: number; reason: string }) =>
     postJson<InternalBillingAdjustmentResponse, typeof payload>(
       "/v1/internal/billing/adjust",
+      payload,
+      { requireProjectHeader: false }
+    ),
+  updateInternalBillingSubscription: (payload: {
+    user_id: string;
+    plan_id: string;
+    reason: string;
+  }) =>
+    postJson<InternalBillingSubscriptionUpdateResponse, typeof payload>(
+      "/v1/internal/billing/subscription",
       payload,
       { requireProjectHeader: false }
     ),
@@ -1363,6 +1401,25 @@ export const api = {
   updateInternalFeatureFlags: (payload: InternalFeatureFlags) =>
     putJson<InternalFeatureFlags, InternalFeatureFlags>(
       "/v1/internal/settings",
+      payload,
+      { requireProjectHeader: false }
+    ),
+  listInternalWaitlist: (options?: { status?: string; limit?: number; offset?: number }) =>
+    requestJson<InternalWaitlistEntry[]>(
+      "/v1/internal/waitlist",
+      {
+        status: options?.status,
+        limit: clampLimit(options?.limit, 100),
+        offset: options?.offset ?? 0,
+      },
+      { requireProjectHeader: false }
+    ),
+  updateInternalWaitlist: (
+    waitlistEntryId: string,
+    payload: { status?: "pending" | "contacted" | "approved" | "rejected"; notes?: string | null }
+  ) =>
+    patchJson<InternalWaitlistEntry, typeof payload>(
+      `/v1/internal/waitlist/${encodeURIComponent(waitlistEntryId)}`,
       payload,
       { requireProjectHeader: false }
     ),
