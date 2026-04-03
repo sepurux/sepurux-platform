@@ -48,8 +48,13 @@ def apply_mutation_pack(
     attempt_index: int,
     timeline_artifact: dict[str, Any],
     seed: int | None = None,
+    seed_basis: UUID | str | None = None,
 ) -> MutationApplicationResult:
-    seed_value = seed if isinstance(seed, int) else derive_seed(run_id, attempt_id, attempt_index)
+    seed_value = (
+        seed
+        if isinstance(seed, int)
+        else derive_seed(seed_basis or run_id, attempt_id, attempt_index)
+    )
     rng = random.Random(seed_value)
 
     artifact = copy.deepcopy(timeline_artifact)
@@ -71,7 +76,7 @@ def apply_mutation_pack(
     first_failure_tool: str | None = None
 
     for definition in selected:
-        applied_event, forced_failure = _apply_single_mutation(definition, events)
+        applied_event, forced_failure = _apply_single_mutation(definition, events, rng=rng)
         if applied_event is None:
             continue
         applied.append(applied_event)
@@ -240,7 +245,10 @@ def _select_mutations(
 
 
 def _apply_single_mutation(
-    definition: _MutationDefinition, events: list[dict[str, Any]]
+    definition: _MutationDefinition,
+    events: list[dict[str, Any]],
+    *,
+    rng: random.Random,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     mutation_type = definition.mutation_type
     if mutation_type == "schema.rename_field":
@@ -250,7 +258,7 @@ def _apply_single_mutation(
     if mutation_type == "poison.inject":
         return _apply_poison_inject(definition, events), None
     if mutation_type == "latency_delay":
-        return _apply_latency_delay(definition, events), None
+        return _apply_latency_delay(definition, events, rng=rng), None
     if mutation_type == "fault.timeout":
         return _apply_fault(
             definition,
@@ -367,7 +375,10 @@ def _apply_poison_inject(
 
 
 def _apply_latency_delay(
-    definition: _MutationDefinition, events: list[dict[str, Any]]
+    definition: _MutationDefinition,
+    events: list[dict[str, Any]],
+    *,
+    rng: random.Random,
 ) -> dict[str, Any] | None:
     min_ms = definition.params.get("min_ms")
     max_ms = definition.params.get("max_ms")
@@ -383,7 +394,7 @@ def _apply_latency_delay(
     if max_ms_value < min_ms_value:
         max_ms_value = min_ms_value
 
-    injected_delay_ms = random.randint(min_ms_value, max_ms_value)
+    injected_delay_ms = rng.randint(min_ms_value, max_ms_value)
 
     for event in _iter_matching_events(
         events, event_type="tool_result", tool_pattern=definition.target_tool_pattern
