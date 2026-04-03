@@ -67,14 +67,15 @@ export function InternalBillingView() {
   );
 
   useEffect(() => {
+    if (!plans.length) return;
+
     if (selectedWallet?.plan_id) {
       setPlanId(selectedWallet.plan_id);
       return;
     }
-    if (!planId && plans.length) {
-      setPlanId(plans[0].plan_id);
-    }
-  }, [planId, plans, selectedWallet]);
+
+    setPlanId((current) => current || plans[0].plan_id);
+  }, [plans, selectedWallet?.plan_id, selectedWallet?.user_id]);
 
   async function submitAdjustment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
