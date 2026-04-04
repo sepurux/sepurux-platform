@@ -48,7 +48,7 @@ const themeBootScript = `
 `;
 
 export const metadata: Metadata = {
-  title: "Sepurux UI",
+  title: "Sepurux",
   description: "Agent Sepurux dashboard",
   icons: {
     icon: [
