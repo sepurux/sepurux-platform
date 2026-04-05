@@ -7,6 +7,7 @@ import { ArrowUpRight, CheckCircle2, Plus, Trash2 } from "lucide-react";
 
 import {
   api,
+  ApiError,
   type AuthSessionMetadata,
   type CreditTransactionMetadata,
   type CreditWalletMetadata,
@@ -28,11 +29,46 @@ type PageState =
   | { status: "error"; message: string }
   | {
       status: "ready";
+      billingEnabled: boolean;
       session: AuthSessionMetadata;
       subscription: UserSubscriptionMetadata;
       wallet: CreditWalletMetadata;
       transactions: CreditTransactionMetadata[];
     };
+
+function isBillingDisabledError(error: unknown) {
+  return error instanceof ApiError && error.status === 503 && /billing is currently disabled/i.test(error.message);
+}
+
+function buildFallbackSubscription(session: AuthSessionMetadata): UserSubscriptionMetadata {
+  const now = new Date().toISOString();
+  return {
+    subscription_id: `billing-disabled:${session.project_id}`,
+    plan_id: "billing-disabled",
+    plan_name: session.billing_plan_name ?? session.plan_name ?? "Free",
+    monthly_price: null,
+    monthly_credits: session.monthly_credits ?? 0,
+    queue_priority: session.queue_priority ?? "normal",
+    status: "inactive",
+    billing_provider: null,
+    portal_available: false,
+    start_date: now,
+    renewal_date: now,
+  };
+}
+
+function buildFallbackWallet(session: AuthSessionMetadata): CreditWalletMetadata {
+  return {
+    wallet_id: `billing-disabled:${session.project_id}`,
+    balance: session.credits_balance ?? 0,
+    monthly_credits: session.monthly_credits ?? 0,
+    topup_credits: session.topup_credits ?? 0,
+    queue_priority: session.queue_priority ?? "normal",
+    low_credit_threshold: session.low_credit_threshold ?? 0,
+    is_low_credit: session.is_low_credit,
+    updated_at: new Date().toISOString(),
+  };
+}
 
 function initialsFor(session: AuthSessionMetadata) {
   const source = session.name || session.email || "U";
@@ -133,7 +169,9 @@ export function ProfileView() {
   const [topupCredits, setTopupCredits] = useState(1000);
   const [topupBusy, setTopupBusy] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
 
   const [projects, setProjects] = useState<ProjectMetadata[]>([]);
@@ -165,15 +203,34 @@ export function ProfileView() {
 
   const load = useCallback(async () => {
     try {
-      const [session, subscription, wallet, transactions, projectList, memberList] = await Promise.all([
+      const [session, projectList, memberList] = await Promise.all([
         api.getAuthSession(),
-        api.getBillingSubscription(),
-        api.getBillingCredits(),
-        api.listCreditTransactions({ limit: 200 }).catch(() => []),
         api.listProjects().catch(() => []),
         api.listMembers().catch(() => []),
       ]);
-      setState({ status: "ready", session, subscription, wallet, transactions });
+
+      let billingEnabled = true;
+      let subscription = buildFallbackSubscription(session);
+      let wallet = buildFallbackWallet(session);
+      let transactions: CreditTransactionMetadata[] = [];
+
+      try {
+        const [loadedSubscription, loadedWallet, loadedTransactions] = await Promise.all([
+          api.getBillingSubscription(),
+          api.getBillingCredits(),
+          api.listCreditTransactions({ limit: 200 }).catch(() => []),
+        ]);
+        subscription = loadedSubscription;
+        wallet = loadedWallet;
+        transactions = loadedTransactions;
+      } catch (error) {
+        if (!isBillingDisabledError(error)) {
+          throw error;
+        }
+        billingEnabled = false;
+      }
+
+      setState({ status: "ready", billingEnabled, session, subscription, wallet, transactions });
       setProjects(projectList);
       setMembers(memberList);
     } catch (error) {
@@ -208,6 +265,10 @@ export function ProfileView() {
       setActiveTab("settings");
       window.history.replaceState(null, "", "/profile");
     }
+    if (activeTab === "billing" && !state.billingEnabled) {
+      setActiveTab("settings");
+      window.history.replaceState(null, "", "/profile");
+    }
   }, [activeTab, state]);
 
   async function handleTopup(event: FormEvent<HTMLFormElement>) {
@@ -227,6 +288,7 @@ export function ProfileView() {
   async function handleOpenPortal() {
     setPortalBusy(true);
     setActionError(null);
+    setActionMessage(null);
     try {
       const redirect = await api.openBillingPortal();
       window.location.assign(redirect.url);
@@ -234,6 +296,21 @@ export function ProfileView() {
       setActionError(error instanceof Error ? error.message : "Failed to open billing portal");
     } finally {
       setPortalBusy(false);
+    }
+  }
+
+  async function handleSendPasswordReset(email: string | null) {
+    if (!email || passwordBusy) return;
+    setPasswordBusy(true);
+    setActionError(null);
+    setActionMessage(null);
+    try {
+      const response = await api.requestPasswordReset({ email });
+      setActionMessage(response.message);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to send password reset email");
+    } finally {
+      setPasswordBusy(false);
     }
   }
 
@@ -314,7 +391,7 @@ export function ProfileView() {
     );
   }
 
-  const { session, subscription, wallet, transactions } = state;
+  const { billingEnabled, session, subscription, wallet, transactions } = state;
   const initials = initialsFor(session);
   const canManageWorkspace = session.permissions.can_manage_workspace;
   const billingEmail = session.email ?? "workspace@sepurux.local";
@@ -340,7 +417,7 @@ export function ProfileView() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "settings", label: "Settings" },
-    { id: "billing", label: "Plans & Billing" },
+    ...(billingEnabled ? [{ id: "billing" as Tab, label: "Plans & Billing" }] : []),
     ...(canAccessTeamWorkspaceFeatures ? [{ id: "members" as Tab, label: "Members" }] : []),
     ...(canManageWorkspace ? [{ id: "projects" as Tab, label: "Projects" }] : []),
   ];
@@ -402,6 +479,16 @@ export function ProfileView() {
             {actionError}
           </p>
         ) : null}
+        {actionMessage ? (
+          <p className="rounded-md border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+            {actionMessage}
+          </p>
+        ) : null}
+        {!billingEnabled ? (
+          <p className="rounded-md border border-amber-300 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100">
+            Billing is currently disabled. Account settings and workspace management are still available.
+          </p>
+        ) : null}
       </div>
 
       {/* ── Settings tab ── */}
@@ -424,6 +511,24 @@ export function ProfileView() {
           </Row>
           <Row label="Queue priority">
             <span className="capitalize text-sm text-foreground">{session.queue_priority ?? "normal"}</span>
+          </Row>
+          <Row label="Password">
+            {session.email ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Send a reset link to {session.email}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={passwordBusy}
+                  onClick={() => void handleSendPasswordReset(session.email)}
+                >
+                  {passwordBusy ? "Sending..." : "Change password"}
+                </Button>
+              </div>
+            ) : (
+              <span className="text-sm text-muted-foreground">No email is attached to this account.</span>
+            )}
           </Row>
         </div>
       ) : null}
@@ -779,7 +884,7 @@ export function ProfileView() {
         </div>
       ) : null}
 
-      {creditsModalOpen ? (
+      {creditsModalOpen && billingEnabled ? (
         <GetCreditsModal
           currentPlanName={session.billing_plan_name ?? null}
           onClose={() => setCreditsModalOpen(false)}
