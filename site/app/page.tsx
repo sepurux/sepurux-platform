@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 
 import { HeroSection } from "@/components/sections/hero-section";
+import { WalkthroughSection } from "@/components/sections/walkthrough-section";
 import { SocialProofSection } from "@/components/sections/social-proof-section";
 import { FeatureGrid } from "@/components/sections/feature-grid";
 import { IntegrationSection } from "@/components/sections/integration-section";
@@ -23,6 +24,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
+      <WalkthroughSection />
       <SocialProofSection />
       <HowItWorksSection />
       <FeatureGrid />
