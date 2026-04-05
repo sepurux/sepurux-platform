@@ -46,6 +46,11 @@ def _support_email() -> str:
     return EMAIL_REPLY_TO or "support@sepurux.com"
 
 
+def _waitlist_alert_email() -> str:
+    raw = os.getenv("WAITLIST_SUPPORT_EMAIL", "").strip()
+    return raw or _support_email()
+
+
 def _logo_url() -> str:
     explicit = EMAIL_LOGO_URL.strip()
     if explicit:
@@ -650,4 +655,79 @@ def send_waitlist_approval_email(
         subject=subject,
         text_body="\n".join(text_lines),
         html_body=html_body,
+    )
+
+
+def send_waitlist_support_notification(
+    *,
+    entrant_email: str,
+    role: str,
+    company_name: str | None = None,
+    source: str | None = None,
+    submitted_from_ip: str | None = None,
+) -> bool:
+    support_recipient = _waitlist_alert_email()
+    if not support_recipient:
+        return False
+
+    normalized_email = entrant_email.strip().lower()
+    role_label = _clean_optional_text(role) or "Unknown"
+    company_label = _clean_optional_text(company_name)
+    source_label = _clean_optional_text(source) or "site"
+    ip_label = _clean_optional_text(submitted_from_ip)
+
+    detail_lines = [
+        f"Email: {normalized_email}",
+        f"Role: {role_label}",
+    ]
+    if company_label:
+        detail_lines.append(f"Company: {company_label}")
+    detail_lines.append(f"Source: {source_label}")
+    if ip_label:
+        detail_lines.append(f"IP: {ip_label}")
+
+    subject = f"New Sepurux waitlist signup: {normalized_email}"
+    text_body = "\n".join(
+        [
+            "A new waitlist request was submitted.",
+            "",
+            *detail_lines,
+            "",
+            f"Review in internal waitlist: {_ui_base_url()}/internal/waitlist",
+        ]
+    )
+
+    body_html = (
+        '<p style="margin:0 0 14px;color:#223127;">A new waitlist request was submitted.</p>'
+        '<div style="margin:0 0 16px;padding:14px;border:1px solid #e8ddd0;border-radius:16px;background:#f7f1ea;color:#223127;">'
+        f'<p style="margin:0 0 8px;"><strong>Email:</strong> {html.escape(normalized_email)}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Role:</strong> {html.escape(role_label)}</p>'
+        + (
+            f'<p style="margin:0 0 8px;"><strong>Company:</strong> {html.escape(company_label)}</p>'
+            if company_label
+            else ""
+        )
+        + f'<p style="margin:0 0 8px;"><strong>Source:</strong> {html.escape(source_label)}</p>'
+        + (
+            f'<p style="margin:0;"><strong>IP:</strong> {html.escape(ip_label)}</p>'
+            if ip_label
+            else ""
+        )
+        + "</div>"
+    )
+
+    return send_email(
+        to_email=support_recipient,
+        subject=subject,
+        text_body=text_body,
+        html_body=_email_layout(
+            title="New Waitlist Signup",
+            subtitle="A new early-access request needs review.",
+            intro_line="A new waitlist request was submitted and is ready for internal review.",
+            body_html=body_html,
+            cta_label="Open Waitlist",
+            cta_url=f"{_ui_base_url()}/internal/waitlist",
+            preheader=f"New waitlist request from {normalized_email}",
+            eyebrow="Waitlist Intake",
+        ),
     )

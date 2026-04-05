@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import logging
 from time import time
 
 from app.db import get_db
 from app.schemas import WaitlistSubmissionRequest, WaitlistSubmissionResponse
+from app.services.user_notification_service import send_waitlist_support_notification
 from app.services.waitlist_service import create_waitlist_entry
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 public_router = APIRouter(prefix="/waitlist", tags=["waitlist"])
+logger = logging.getLogger(__name__)
 
 RATE_WINDOW_SECONDS = 10 * 60
 RATE_LIMIT_MAX = 5
@@ -60,6 +63,18 @@ def post_waitlist_entry(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if created:
+        try:
+            send_waitlist_support_notification(
+                entrant_email=payload.email,
+                role=payload.role,
+                company_name=payload.company,
+                source="site",
+                submitted_from_ip=ip,
+            )
+        except Exception:
+            logger.exception("Failed to send support notification for waitlist entry")
 
     return WaitlistSubmissionResponse(
         message="Thanks! You are on the waitlist."
