@@ -695,6 +695,7 @@ def test_waitlist_submission_and_internal_review(
 ) -> None:
     client, session_factory = internal_test_context
     approval_emails: list[dict[str, str | None]] = []
+    support_notifications: list[dict[str, str | None]] = []
 
     with session_factory() as db:
         fixture = _seed_internal_fixture(db)
@@ -720,6 +721,10 @@ def test_waitlist_submission_and_internal_review(
         "app.routes.internal.send_waitlist_approval_email",
         _send_waitlist_approval_email_stub,
     )
+    monkeypatch.setattr(
+        "app.routes.waitlist.send_waitlist_support_notification",
+        lambda **kwargs: support_notifications.append(dict(kwargs)) or True,
+    )
 
     public_response = client.post(
         "/waitlist",
@@ -732,6 +737,15 @@ def test_waitlist_submission_and_internal_review(
     )
     assert public_response.status_code == 200
     assert public_response.json() == {"message": "Thanks! You are on the waitlist."}
+    assert support_notifications == [
+        {
+            "entrant_email": "early-access@example.com",
+            "role": "Platform Eng",
+            "company_name": "Acme",
+            "source": "site",
+            "submitted_from_ip": "unknown",
+        }
+    ]
 
     client.headers.update(
         auth_headers(api_key=fixture["super_api_key"], project_id=fixture["project_id"])
@@ -758,6 +772,52 @@ def test_waitlist_submission_and_internal_review(
             "company_name": "Acme",
             "role": "Platform Eng",
             "registration_enabled": True,
+        }
+    ]
+
+
+def test_waitlist_duplicate_submission_does_not_notify_support_twice(
+    internal_test_context: tuple[TestClient, sessionmaker[Session]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _ = internal_test_context
+    support_notifications: list[dict[str, str | None]] = []
+
+    monkeypatch.setattr(
+        "app.routes.waitlist.send_waitlist_support_notification",
+        lambda **kwargs: support_notifications.append(dict(kwargs)) or True,
+    )
+
+    first = client.post(
+        "/waitlist",
+        json={
+            "email": "repeat@example.com",
+            "role": "Security",
+            "company": "Bravo",
+            "website": "",
+        },
+    )
+    second = client.post(
+        "/waitlist",
+        json={
+            "email": "repeat@example.com",
+            "role": "Security",
+            "company": "Bravo",
+            "website": "",
+        },
+    )
+
+    assert first.status_code == 200
+    assert first.json() == {"message": "Thanks! You are on the waitlist."}
+    assert second.status_code == 200
+    assert second.json() == {"message": "You are already on the waitlist."}
+    assert support_notifications == [
+        {
+            "entrant_email": "repeat@example.com",
+            "role": "Security",
+            "company_name": "Bravo",
+            "source": "site",
+            "submitted_from_ip": "unknown",
         }
     ]
 
