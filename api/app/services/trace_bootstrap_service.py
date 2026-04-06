@@ -4,9 +4,13 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from app.models import Campaign, PolicyPack, ToolRegistry, Trace
+from app.models import Campaign, MutationPack, PolicyPack, ToolRegistry, Trace
 from app.services.campaign_service import create_campaign
-from app.services.mutation_pack_service import ensure_registered_mutation_pack
+from app.services.mutation_pack_service import (
+    create_mutation_pack,
+    ensure_registered_mutation_pack,
+    get_mutation_pack_by_name,
+)
 from app.services.policy_service import create_policy_pack
 from app.services.tool_registry_service import create_or_update_tool_registry_entry
 from sqlalchemy import select
@@ -14,11 +18,12 @@ from sqlalchemy.orm import Session
 
 INTERNAL_TOOLS = frozenset({"trace.load", "campaign.load", "agent.run_agent"})
 BOOTSTRAP_POLICY_NAME = "trace.bootstrap.default"
-BOOTSTRAP_CAMPAIGN_BUNDLE: tuple[tuple[str, str], ...] = (
-    ("tool-chaos", "Bootstrap · Tool Chaos"),
-    ("latency-chaos", "Bootstrap · Latency Chaos"),
-    ("prompt-security", "Bootstrap · Prompt Security"),
+BOOTSTRAP_SYSTEM_CAMPAIGN_BUNDLE: tuple[tuple[str, str], ...] = (
+    ("sepurux.core.reliability", "Bootstrap · Base Reliability"),
+    ("prompt-security", "Bootstrap · Policy & Security"),
 )
+BOOTSTRAP_DOMAIN_PACK_NAME = "trace.domain.default"
+BOOTSTRAP_DOMAIN_CAMPAIGN_NAME = "Bootstrap · Domain Pack"
 READ_TOOL_HINTS = (
     "get",
     "list",
@@ -241,16 +246,27 @@ def _bootstrap_campaign_bundle(
         }
     ]
     results: list[TraceBootstrapCampaignResult] = []
+    campaign_specs: list[tuple[MutationPack, str]] = []
 
-    for pack_name, campaign_name in BOOTSTRAP_CAMPAIGN_BUNDLE:
-        pack = ensure_registered_mutation_pack(
-            db,
-            project_id=project_id,
-            pack_name=pack_name,
+    for pack_name, campaign_name in BOOTSTRAP_SYSTEM_CAMPAIGN_BUNDLE:
+        pack = ensure_registered_mutation_pack(db, project_id=project_id, pack_name=pack_name)
+        if pack is not None:
+            campaign_specs.append((pack, campaign_name))
+
+    domain_pack = _ensure_trace_domain_mutation_pack(
+        db,
+        project_id=project_id,
+        tools=tools,
+    )
+    if domain_pack is not None:
+        campaign_specs.append(
+            (
+                domain_pack,
+                BOOTSTRAP_DOMAIN_CAMPAIGN_NAME,
+            )
         )
-        if pack is None:
-            continue
 
+    for pack, campaign_name in campaign_specs:
         existing = existing_by_name.get(campaign_name)
         if isinstance(existing, Campaign):
             results.append(
@@ -291,6 +307,124 @@ def _bootstrap_campaign_bundle(
         )
 
     return results
+
+
+def _ensure_trace_domain_mutation_pack(
+    db: Session,
+    *,
+    project_id: UUID,
+    tools: list[str],
+) -> MutationPack | None:
+    if not tools:
+        return None
+
+    existing = get_mutation_pack_by_name(
+        db,
+        project_id=project_id,
+        name=BOOTSTRAP_DOMAIN_PACK_NAME,
+    )
+    if existing is not None:
+        return existing
+
+    return create_mutation_pack(
+        db,
+        project_id=project_id,
+        name=BOOTSTRAP_DOMAIN_PACK_NAME,
+        description=(
+            "Trace-derived domain pack seeded from observed tools. "
+            "Use this as the customer- or workflow-specific layer on top of base reliability "
+            "and policy/security coverage."
+        ),
+        config=_build_trace_domain_mutation_pack_config(tools),
+    )
+
+
+def _build_trace_domain_mutation_pack_config(tools: list[str]) -> dict[str, Any]:
+    normalized_tools = [tool for tool in tools if isinstance(tool, str) and tool.strip()]
+    primary_tool = normalized_tools[0] if normalized_tools else "tool.default"
+    secondary_tool = normalized_tools[1] if len(normalized_tools) > 1 else primary_tool
+    tertiary_tool = normalized_tools[2] if len(normalized_tools) > 2 else primary_tool
+
+    mutations: list[dict[str, Any]] = [
+        {
+            "mutation_id": f"{_slug_tool_name(primary_tool)}-schema-drop",
+            "type": "schema.drop_field",
+            "target": {"tool": primary_tool},
+            "params": {"field": _guess_schema_field(primary_tool)},
+            "probability": 0.35,
+            "weight": 1.2,
+        },
+        {
+            "mutation_id": f"{_slug_tool_name(secondary_tool)}-timeout",
+            "type": "fault.timeout",
+            "target": {"tool": secondary_tool},
+            "params": {
+                "timeout_ms": 3500,
+                "error_message": "simulated timeout from trace-derived domain pack",
+            },
+            "probability": 0.3,
+            "weight": 1.6,
+        },
+        {
+            "mutation_id": f"{_slug_tool_name(secondary_tool)}-rate-limit",
+            "type": "fault.rate_limit",
+            "target": {"tool": secondary_tool},
+            "probability": 0.2,
+            "weight": 1.1,
+        },
+        {
+            "mutation_id": f"{_slug_tool_name(tertiary_tool)}-latency-spike",
+            "type": "latency_delay",
+            "target": {"tool": tertiary_tool},
+            "params": {"min_ms": 1500, "max_ms": 6000},
+            "probability": 0.5,
+            "weight": 1.3,
+        },
+    ]
+
+    for extra_tool in normalized_tools[3:6]:
+        mutations.append(
+            {
+                "mutation_id": f"{_slug_tool_name(extra_tool)}-timeout",
+                "type": "fault.timeout",
+                "target": {"tool": extra_tool},
+                "params": {
+                    "timeout_ms": 3500,
+                    "error_message": "simulated timeout from trace-derived domain pack",
+                },
+                "probability": 0.3,
+                "weight": 1.0,
+            }
+        )
+
+    return {
+        "version": "0.1",
+        "suggested_attempts": 50,
+        "max_mutations_per_attempt": 2,
+        "mutations": mutations,
+    }
+
+
+def _slug_tool_name(tool_name: str) -> str:
+    return "-".join(
+        segment
+        for segment in "".join(
+            character.lower() if character.isalnum() else "-"
+            for character in tool_name.strip()
+        ).split("-")
+        if segment
+    )[:40] or "tool-default"
+
+
+def _guess_schema_field(tool_name: str) -> str:
+    lowered = tool_name.lower()
+    if any(hint in lowered for hint in ("search", "doc", "kb")):
+        return "hits"
+    if any(hint in lowered for hint in ("ticket", "case", "issue")):
+        return "ticket_id"
+    if any(hint in lowered for hint in ("slack", "email", "message", "notify")):
+        return "message_id"
+    return "status"
 
 
 def _build_policy_document(tools: list[str]) -> dict[str, Any]:
