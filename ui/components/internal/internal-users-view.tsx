@@ -70,7 +70,7 @@ export function InternalUsersView() {
   }, [wallets]);
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
+    <section className="mx-auto w-full max-w-[88rem] space-y-6 px-4 py-6 md:px-6">
       <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-primary">Users</h1>
