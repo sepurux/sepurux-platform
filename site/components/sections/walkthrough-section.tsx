@@ -13,25 +13,6 @@ export function WalkthroughSection() {
               repeatable campaign inside Sepurux. The walkthrough shows the exact handoff from SDK
               instrumentation into the reliability workflow.
             </p>
-
-            <div className="mt-8 rounded-[22px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Featured on Product Hunt
-              </p>
-              <a
-                href="https://www.producthunt.com/products/sepurux?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-sepurux"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex"
-              >
-                <img
-                  alt="Sepurux - Chaos engineering & reliability testing for AI agents | Product Hunt"
-                  width="250"
-                  height="54"
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1116114&theme=light&t=1775377656509"
-                />
-              </a>
-            </div>
           </div>
 
           <div className="rounded-[24px] border border-white/10 bg-[rgba(255,255,255,0.03)] p-3 shadow-[0_18px_60px_rgba(0,4,15,0.4)] sm:p-4">

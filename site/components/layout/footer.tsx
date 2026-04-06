@@ -123,19 +123,35 @@ export function Footer() {
         </div>
 
         <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap gap-3">
-            {socialLinks.map(({ href, label, Icon }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={label}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/6 text-slate-300 transition-colors hover:border-white/20 hover:text-white"
-              >
-                <Icon className="h-4 w-4" />
-              </a>
-            ))}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap gap-3">
+              {socialLinks.map(({ href, label, Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/6 text-slate-300 transition-colors hover:border-white/20 hover:text-white"
+                >
+                  <Icon className="h-4 w-4" />
+                </a>
+              ))}
+            </div>
+
+            <a
+              href="https://www.producthunt.com/products/sepurux?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-sepurux"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit"
+            >
+              <img
+                alt="Sepurux - Chaos engineering & reliability testing for AI agents | Product Hunt"
+                width="250"
+                height="54"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1116114&theme=light&t=1775377656509"
+              />
+            </a>
           </div>
 
           <div className="flex flex-col gap-2 text-xs tracking-[0.14em] text-slate-500 md:items-end">
