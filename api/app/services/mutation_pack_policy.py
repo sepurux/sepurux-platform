@@ -27,6 +27,7 @@ RECOMMENDED_SYSTEM_PACK_NAMES = {
     "sepurux.max_chaos",
     "sepurux.core.reliability",
     "core.reliability",
+    "prompt-security",
     "prompt.injection",
     "tool.schema.break",
     "core.latency",

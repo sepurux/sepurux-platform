@@ -40,9 +40,9 @@ const PRESET_DEFINITIONS: Record<PresetId, PresetDefinition> = {
   incident_response: {
     label: "Incident Response",
     summary: "Runbook lookup, ticketing, and team notification flows.",
-    defaultName: "incident.reliability.gate",
+    defaultName: "incident.domain.pack",
     defaultDescription:
-      "Reliability mutations for incident workflows across docs lookup, ticket creation, and notification tools.",
+      "Domain-specific reliability pack for incident workflows across docs lookup, ticket creation, and notification tools.",
     defaultTools: ["search_docs", "create_ticket", "send_slack"],
     includeSecurityByDefault: true,
     defaultMaxMutationsPerAttempt: 2,
@@ -50,7 +50,7 @@ const PRESET_DEFINITIONS: Record<PresetId, PresetDefinition> = {
   customer_support: {
     label: "Customer Support",
     summary: "Knowledge lookup, case updates, and customer messaging.",
-    defaultName: "support.workflow.resilience",
+    defaultName: "support.domain.pack",
     defaultDescription:
       "Timeout, schema drift, and latency scenarios for customer support automation pipelines.",
     defaultTools: ["search_kb", "update_case", "send_email"],
@@ -60,7 +60,7 @@ const PRESET_DEFINITIONS: Record<PresetId, PresetDefinition> = {
   payments_ops: {
     label: "Payments Ops",
     summary: "Invoice retrieval, charge/refund operations, and confirmations.",
-    defaultName: "payments.workflow.resilience",
+    defaultName: "payments.domain.pack",
     defaultDescription:
       "Mutation coverage for payment operations to surface retry, fallback, and schema handling gaps.",
     defaultTools: ["fetch_invoice", "create_charge", "send_receipt"],
@@ -424,10 +424,11 @@ export function MutationPackCreateView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Create Mutation Pack
+            Create Domain Pack
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Start with presets in Basic mode, then switch to Advanced mode for full JSON control.
+            Sepurux already ships with base reliability and policy/security packs. Use this
+            builder for workflow- or customer-specific domain packs.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -447,9 +448,10 @@ export function MutationPackCreateView() {
       {canManageMutationPacks ? (
         <Card>
           <CardHeader>
-            <CardTitle>Custom Mutation Pack</CardTitle>
+            <CardTitle>Custom Domain Pack</CardTitle>
             <CardDescription>
-              Preset-driven builder for faster onboarding with an escape hatch for expert JSON.
+              Start from domain presets, tune tool-specific failures, then switch to raw JSON only
+              when you need full control.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -482,7 +484,7 @@ export function MutationPackCreateView() {
                 className="space-y-4"
               >
                 <TabsList>
-                  <TabsTrigger value="basic">Basic Builder</TabsTrigger>
+                  <TabsTrigger value="basic">Domain Builder</TabsTrigger>
                   <TabsTrigger value="advanced">Advanced JSON</TabsTrigger>
                 </TabsList>
 
