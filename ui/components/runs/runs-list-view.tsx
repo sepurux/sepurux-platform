@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, RefreshCcw, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, History, RefreshCcw, Search } from "lucide-react";
 
 import { api, type CIBatchStatus, type RunMetadata } from "@/lib/api";
 import { formatPercent, formatRelativeDate, shortId } from "@/lib/format";
 import { celebratePassesOnce } from "@/lib/pass-confetti";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DataTableHeader } from "@/components/ui/data-table-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -293,7 +294,7 @@ export function RunsListView() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-[88rem] space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Runs</h1>
@@ -334,12 +335,21 @@ export function RunsListView() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Run Catalog</CardTitle>
-          <CardDescription>Server-paginated run history with clear run type labels.</CardDescription>
+      <Card className="overflow-hidden rounded-[30px] border border-slate-200/90 bg-white/96 shadow-[0_24px_80px_rgba(148,163,184,0.18),inset_0_1px_0_rgba(255,255,255,0.95)] dark:border-white/8 dark:bg-[#171e2f]/96 dark:shadow-[0_24px_80px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <CardHeader className="border-b border-slate-200/90 pb-6 dark:border-white/8">
+          <DataTableHeader
+            icon={History}
+            accent="violet"
+            title="Run Catalog"
+            description="Server-paginated run history with clearer batch grouping, stronger state color, and a denser operator view."
+            badge={
+              searchQuery
+                ? `${batchGroups.length} visible`
+                : `${state.status === "ready" ? batchGroups.length : 0} groups`
+            }
+          />
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 pt-6">
           {state.status === "loading" ? (
             <RunsTableSkeleton />
           ) : state.status === "error" ? (

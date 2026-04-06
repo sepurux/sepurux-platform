@@ -40,7 +40,7 @@ export function InternalAuditLogsView() {
   }, []);
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
+    <section className="mx-auto w-full max-w-[88rem] space-y-6 px-4 py-6 md:px-6">
       <div className="border-b border-border/70 pb-4">
         <h1 className="text-2xl font-semibold text-primary">Audit Logs</h1>
         <p className="mt-1 text-sm text-muted-foreground">Internal action history across user, admin, and system activity.</p>
