@@ -162,7 +162,7 @@ export function InternalEmailView() {
   const audience = overview?.audience;
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
+    <section className="mx-auto w-full max-w-[88rem] space-y-6 px-4 py-6 md:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border/70 pb-4">
         <div>
           <h1 className="text-2xl font-semibold text-primary">Email</h1>

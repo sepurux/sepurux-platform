@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { FileSearch, Search } from "lucide-react";
 
 import { api, type TraceMetadata } from "@/lib/api";
 import { formatRelativeDate } from "@/lib/format";
 import { resolveTraceSdkLabel } from "@/lib/trace-display";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DataTableHeader } from "@/components/ui/data-table-header";
 import { IdPill } from "@/components/ui/id-pill";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,7 +68,7 @@ export function TracesListView() {
   }, [state, searchQuery]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-[88rem] space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Traces</h1>
@@ -97,16 +98,21 @@ export function TracesListView() {
           <CardContent className="p-5 text-sm text-rose-100">{state.message}</CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Trace Catalog</CardTitle>
-            <CardDescription>
-              {searchQuery
-                ? `${filteredTraces.length} match${filteredTraces.length === 1 ? "" : "es"} on this page`
-                : `${state.traces.length} trace(s) in current project scope for this page.`}
-            </CardDescription>
+        <Card className="overflow-hidden rounded-[30px] border border-slate-200/90 bg-white/96 shadow-[0_24px_80px_rgba(148,163,184,0.18),inset_0_1px_0_rgba(255,255,255,0.95)] dark:border-white/8 dark:bg-[#171e2f]/96 dark:shadow-[0_24px_80px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <CardHeader className="border-b border-slate-200/90 pb-6 dark:border-white/8">
+            <DataTableHeader
+              icon={FileSearch}
+              accent="blue"
+              title="Trace Catalog"
+              description="Review uploaded scenarios, source metadata, and validation state before turning traces into replayable campaign coverage."
+              badge={
+                searchQuery
+                  ? `${filteredTraces.length} visible`
+                  : `${state.status === "ready" ? state.traces.length : 0} traces`
+              }
+            />
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5 pt-6">
             <Table>
               <TableHeader>
                 <TableRow>

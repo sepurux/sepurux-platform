@@ -1,7 +1,7 @@
 // ui/components/layout/top-bar.tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import Link from "next/link";
@@ -67,6 +67,7 @@ function initialsForSession(authSession: AuthSessionMetadata | null) {
 export function TopBar({ authSession }: { authSession: AuthSessionMetadata | null }) {
   const pathname = usePathname();
   const router = useRouter();
+  const notificationsMenuRef = useRef<HTMLDivElement | null>(null);
   const [projects, setProjects] = useState<ProjectMetadata[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
   const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const [markingAllNotifications, setMarkingAllNotifications] = useState(false);
   const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
+  const [notificationsMenuOpen, setNotificationsMenuOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +152,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
       setNotificationsLoading(true);
     }
     try {
-      const payload = await api.getNotifications({ limit: 10 });
+      const payload = await api.getNotifications({ limit: 10, unread_only: true });
       setNotifications(payload.items);
       setNotificationsUnreadCount(payload.unread_count);
       setNotificationsError(null);
@@ -162,6 +164,35 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
       }
     }
   }, []);
+
+  const closeNotificationsMenu = useCallback(() => {
+    setNotificationsMenuOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsMenuOpen) {
+      return;
+    }
+
+    function handleOutsidePointerDown(event: MouseEvent) {
+      if (!notificationsMenuRef.current?.contains(event.target as Node)) {
+        setNotificationsMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setNotificationsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsidePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsidePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [notificationsMenuOpen]);
 
   useEffect(() => {
     void loadNotifications(false);
@@ -175,14 +206,26 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
   async function handleMarkNotificationRead(notificationId: string) {
     if (markingNotificationId) return;
+    const existing = notifications.find(
+      (item) => item.notification_id === notificationId
+    );
+    const wasUnread = existing ? existing.read_at === null : true;
+
+    if (wasUnread) {
+      setNotifications((current) =>
+        current.filter((item) => item.notification_id !== notificationId)
+      );
+      setNotificationsUnreadCount((current) => Math.max(0, current - 1));
+    }
+
     setMarkingNotificationId(notificationId);
     try {
       await api.markNotificationRead(notificationId);
-      await loadNotifications(true);
     } catch (error) {
       setNotificationsError(
         error instanceof Error ? error.message : "Failed to update notification"
       );
+      await loadNotifications(true);
     } finally {
       setMarkingNotificationId(null);
     }
@@ -190,16 +233,41 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
   async function handleMarkAllNotificationsRead() {
     if (markingAllNotifications || notificationsUnreadCount === 0) return;
+    const previousNotifications = notifications;
+    const previousUnreadCount = notificationsUnreadCount;
     setMarkingAllNotifications(true);
+    setNotifications([]);
+    setNotificationsUnreadCount(0);
+    closeNotificationsMenu();
     try {
       await api.markAllNotificationsRead();
-      await loadNotifications(true);
     } catch (error) {
       setNotificationsError(
         error instanceof Error ? error.message : "Failed to mark notifications as read"
       );
+      setNotifications(previousNotifications);
+      setNotificationsUnreadCount(previousUnreadCount);
+      await loadNotifications(true);
     } finally {
       setMarkingAllNotifications(false);
+    }
+  }
+
+  function navigateToNotification(linkUrl: string) {
+    if (/^https?:\/\//i.test(linkUrl)) {
+      window.location.assign(linkUrl);
+      return;
+    }
+    router.push(linkUrl);
+  }
+
+  function handleNotificationClick(item: UserNotificationMetadata) {
+    closeNotificationsMenu();
+    if (!item.read_at) {
+      void handleMarkNotificationRead(item.notification_id);
+    }
+    if (item.link_url) {
+      navigateToNotification(item.link_url);
     }
   }
 
@@ -362,15 +430,22 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         <ThemeToggle />
 
         {/* bell */}
-        <details className="group relative">
-          <summary className="glass-surface relative inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-foreground">
+        <div ref={notificationsMenuRef} className="relative">
+          <button
+            type="button"
+            aria-label="Notifications"
+            aria-expanded={notificationsMenuOpen}
+            onClick={() => setNotificationsMenuOpen((currentValue) => !currentValue)}
+            className="glass-surface relative inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-foreground"
+          >
             <Bell className="h-4 w-4" />
             {notificationsUnreadCount > 0 ? (
               <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
                 {notificationsUnreadCount > 99 ? "99+" : notificationsUnreadCount}
               </span>
             ) : null}
-          </summary>
+          </button>
+          {notificationsMenuOpen ? (
           <div className="absolute right-0 mt-2 w-[360px] overflow-hidden rounded-xl border border-border/75 bg-card/95 shadow-panel backdrop-blur-xl">
             <div className="flex items-center justify-between px-4 py-3">
               <p className="text-sm font-semibold text-foreground">Notifications</p>
@@ -424,28 +499,12 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                     </div>
                   );
 
-                  if (item.link_url) {
-                    return (
-                      <Link
-                        key={item.notification_id}
-                        href={item.link_url}
-                        onClick={() => {
-                          if (!item.read_at) {
-                            void handleMarkNotificationRead(item.notification_id);
-                          }
-                        }}
-                      >
-                        {content}
-                      </Link>
-                    );
-                  }
-
                   return (
                     <button
                       key={item.notification_id}
                       type="button"
                       disabled={markingNotificationId === item.notification_id}
-                      onClick={() => void handleMarkNotificationRead(item.notification_id)}
+                      onClick={() => handleNotificationClick(item)}
                       className="w-full"
                     >
                       {content}
@@ -466,7 +525,8 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
               </button>
             </div>
           </div>
-        </details>
+          ) : null}
+        </div>
 
         {/* user menu */}
         <details className="group relative">

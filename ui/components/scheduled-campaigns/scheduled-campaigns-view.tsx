@@ -57,7 +57,7 @@ export function ScheduledCampaignsView() {
   }, [page]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-[88rem] space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Scheduled Campaigns</h1>
         <p className="mt-1 text-sm text-muted-foreground">
