@@ -17,6 +17,8 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; mutationPacks: MutationPackMetadata[] };
 
+type PackLayer = "base" | "policy_security" | "domain" | "stress";
+
 const MIN_ATTEMPTS = 1;
 const MAX_ATTEMPTS = 50;
 
@@ -26,6 +28,38 @@ function clampAttempts(value: number): number {
   }
   const normalized = Math.trunc(value);
   return Math.min(MAX_ATTEMPTS, Math.max(MIN_ATTEMPTS, normalized));
+}
+
+function getPackLayer(record: MutationPackMetadata): PackLayer {
+  if (!record.is_system) {
+    return "domain";
+  }
+
+  const normalized = record.name.toLowerCase();
+  if (normalized.includes("prompt-security") || normalized.includes("prompt.injection")) {
+    return "policy_security";
+  }
+  if (
+    normalized.includes("max_chaos") ||
+    normalized.includes("tool-chaos") ||
+    normalized.includes("latency-chaos")
+  ) {
+    return "stress";
+  }
+  return "base";
+}
+
+function getPackLayerLabel(layer: PackLayer): string {
+  switch (layer) {
+    case "base":
+      return "Base Reliability";
+    case "policy_security":
+      return "Policy & Security";
+    case "domain":
+      return "Domain";
+    case "stress":
+      return "Stress / Advanced";
+  }
 }
 
 export function CampaignCreateView() {
@@ -42,18 +76,6 @@ export function CampaignCreateView() {
   const [baselineTool, setBaselineTool] = useState("");
 
   const canCreateCampaigns = authSession?.permissions.can_create_campaigns ?? false;
-  const recommendedSystemPackNames = useMemo(
-    () =>
-      new Set([
-        "sepurux.max_chaos",
-        "sepurux.core.reliability",
-        "core.reliability",
-        "prompt.injection",
-        "core.latency",
-      ]),
-    []
-  );
-
   useEffect(() => {
     let cancelled = false;
 
@@ -97,20 +119,26 @@ export function CampaignCreateView() {
   const selectedMutationPack = mutationPacks.find(
     (record) => record.mutation_pack_id === mutationPackId
   );
-  const recommendedMutationPacks = sortPacksForDisplay(
-    mutationPacks.filter(
-      (record) => record.is_system && recommendedSystemPackNames.has(record.name)
-    )
-  );
-  const advancedMutationPacks = sortPacksForDisplay(
-    mutationPacks.filter(
-      (record) => !record.is_system || !recommendedSystemPackNames.has(record.name)
-    )
+  const packGroups = useMemo(
+    () => ({
+      base: sortPacksForDisplay(mutationPacks.filter((record) => getPackLayer(record) === "base")),
+      policy_security: sortPacksForDisplay(
+        mutationPacks.filter((record) => getPackLayer(record) === "policy_security")
+      ),
+      domain: sortPacksForDisplay(
+        mutationPacks.filter((record) => getPackLayer(record) === "domain")
+      ),
+      stress: sortPacksForDisplay(
+        mutationPacks.filter((record) => getPackLayer(record) === "stress")
+      ),
+    }),
+    [mutationPacks]
   );
   // coverage_score is currently 20 points per implemented category.
   const selectedPackCategories = selectedMutationPack
     ? Math.round(selectedMutationPack.coverage_score / 20)
     : 0;
+  const selectedPackLayer = selectedMutationPack ? getPackLayer(selectedMutationPack) : null;
   const selectedPackWarning =
     selectedMutationPack && selectedPackCategories < 2
       ? "This pack covers only 1 mutation category — it may miss many failure types."
@@ -159,7 +187,8 @@ export function CampaignCreateView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Create Campaign</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create a new campaign from a baseline replay and an optional mutation pack.
+            Start from a baseline replay, then layer in base reliability, policy/security, or
+            domain-specific mutation coverage.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -190,7 +219,8 @@ export function CampaignCreateView() {
           <CardHeader>
             <CardTitle>Campaign Setup</CardTitle>
             <CardDescription>
-              Separate creation from the catalog so campaign configuration stays focused.
+              Choose the layer that matches the gate you want to run: base reliability,
+              policy/security, or a custom domain pack.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -226,18 +256,36 @@ export function CampaignCreateView() {
                   disabled={creating}
                 >
                   <option value="">None</option>
-                  {recommendedMutationPacks.length > 0 ? (
-                    <optgroup label="Recommended">
-                      {recommendedMutationPacks.map((record) => (
+                  {packGroups.base.length > 0 ? (
+                    <optgroup label="Base Reliability">
+                      {packGroups.base.map((record) => (
                         <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
                           {record.name}
                         </option>
                       ))}
                     </optgroup>
                   ) : null}
-                  {advancedMutationPacks.length > 0 ? (
-                    <optgroup label="Advanced">
-                      {advancedMutationPacks.map((record) => (
+                  {packGroups.policy_security.length > 0 ? (
+                    <optgroup label="Policy & Security">
+                      {packGroups.policy_security.map((record) => (
+                        <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
+                          {record.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {packGroups.domain.length > 0 ? (
+                    <optgroup label="Domain Packs">
+                      {packGroups.domain.map((record) => (
+                        <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
+                          {record.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {packGroups.stress.length > 0 ? (
+                    <optgroup label="Stress / Advanced">
+                      {packGroups.stress.map((record) => (
                         <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
                           {record.name}
                         </option>
@@ -249,7 +297,15 @@ export function CampaignCreateView() {
 
               {selectedMutationPack ? (
                 <div className="rounded-md border border-border/70 bg-background/70 p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Pack layer</span>
+                    {selectedPackLayer ? (
+                      <Badge variant={selectedPackLayer === "base" ? "neutral" : selectedPackLayer === "domain" ? "default" : "warning"}>
+                        {getPackLayerLabel(selectedPackLayer)}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
                     <span className="text-muted-foreground">Category breadth</span>
                     <Badge variant={selectedPackCategories < 2 ? "default" : selectedPackCategories < 4 ? "warning" : "neutral"}>
                       {selectedPackCategories}/4 categories

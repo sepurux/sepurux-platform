@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from app.db import get_db
 from app.main import app
-from app.models import Base, Campaign, PolicyPack, ToolRegistry, Trace, TraceStep
+from app.models import Base, Campaign, MutationPack, PolicyPack, ToolRegistry, Trace, TraceStep
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -472,15 +472,17 @@ def test_post_trace_auto_bootstraps_policy_security_and_campaign_bundle(
                 select(Campaign).where(
                     Campaign.name.in_(
                         [
-                            "Bootstrap · Tool Chaos",
-                            "Bootstrap · Latency Chaos",
-                            "Bootstrap · Prompt Security",
+                            "Bootstrap · Base Reliability",
+                            "Bootstrap · Policy & Security",
+                            "Bootstrap · Domain Pack",
                         ]
                     )
                 )
             )
         )
         assert len(campaigns) == 3
+        domain_pack = db.scalar(select(MutationPack).where(MutationPack.name == "trace.domain.default"))
+        assert isinstance(domain_pack, MutationPack)
 
     bootstrap_response = client.post(f"/v1/traces/{trace_id}/bootstrap")
     assert bootstrap_response.status_code == 200
@@ -492,9 +494,9 @@ def test_post_trace_auto_bootstraps_policy_security_and_campaign_bundle(
     assert data["policy_pack_name"] == "trace.bootstrap.default"
     assert data["policy_pack_created"] is False
     assert {item["name"] for item in data["campaigns"]} == {
-        "Bootstrap · Tool Chaos",
-        "Bootstrap · Latency Chaos",
-        "Bootstrap · Prompt Security",
+        "Bootstrap · Base Reliability",
+        "Bootstrap · Policy & Security",
+        "Bootstrap · Domain Pack",
     }
     assert all(item["created"] is False for item in data["campaigns"])
 
