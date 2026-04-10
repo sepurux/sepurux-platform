@@ -36,10 +36,26 @@ const categories: Array<{
   label: string;
   helper: string;
 }> = [
-  { id: "platform", label: "Platform", helper: "General platform error" },
-  { id: "project", label: "Project", helper: "Workspace or project issue" },
-  { id: "taxonomy", label: "Taxonomy", helper: "Classification or labeling issue" },
-  { id: "task", label: "Task", helper: "Task-level execution issue" },
+  {
+    id: "platform",
+    label: "UI & Navigation",
+    helper: "Layout, styling, responsiveness, or broken page interactions",
+  },
+  {
+    id: "project",
+    label: "Campaign & Runs",
+    helper: "Run setup, CI batch decisions, campaign flow, or replay behavior",
+  },
+  {
+    id: "taxonomy",
+    label: "Traces & Packs",
+    helper: "Trace ingestion, mutation pack mapping, or policy pack alignment",
+  },
+  {
+    id: "task",
+    label: "Account & Access",
+    helper: "Auth, workspace membership, billing, permissions, or role access",
+  },
 ];
 
 export function ReportBugModal({ authSession, onClose }: Props) {
@@ -159,14 +175,14 @@ export function ReportBugModal({ authSession, onClose }: Props) {
   return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onMouseDown={(event) => {
         if (event.target === backdropRef.current && !submitting) {
           onClose();
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-border/80 bg-card/95 shadow-[0_28px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+      <div className="panel-surface w-full max-w-2xl overflow-hidden rounded-[24px] border border-border/80 bg-[hsl(var(--card)/0.96)] backdrop-blur-2xl">
         <div className="flex items-start justify-between border-b border-border/70 px-5 py-4 sm:px-6">
           <div className="flex items-start gap-3">
             <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[linear-gradient(180deg,rgba(249,115,22,0.95),rgba(251,146,60,0.88))] text-white shadow-[0_12px_30px_rgba(249,115,22,0.3)]">
@@ -183,14 +199,14 @@ export function ReportBugModal({ authSession, onClose }: Props) {
             type="button"
             aria-label="Close report bug dialog"
             onClick={onClose}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-[#d7843b]/12 hover:text-[#d7843b]"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="space-y-5 px-5 py-5 sm:px-6">
-          <div className="rounded-2xl border border-border/70 bg-background/30 p-4">
+          <div className="rounded-2xl border border-border/70 bg-card/45 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Automatically captured information
             </p>
@@ -224,11 +240,11 @@ export function ReportBugModal({ authSession, onClose }: Props) {
                     className={cn(
                       "rounded-2xl border px-4 py-3 text-left transition-all duration-150",
                       active
-                        ? "border-primary/60 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.26)]"
-                        : "border-border/75 bg-background/20 hover:border-border hover:bg-accent/25"
+                        ? "border-[#d7843b]/70 bg-[#d7843b]/14 shadow-[0_0_0_1px_rgba(215,132,59,0.35)]"
+                        : "border-border/70 bg-card/35 hover:border-[#d7843b]/45 hover:bg-[#d7843b]/10"
                     )}
                   >
-                    <p className={cn("text-sm font-semibold", active ? "text-primary" : "text-foreground")}>
+                    <p className={cn("text-sm font-semibold", active ? "text-[#d7843b]" : "text-foreground")}>
                       {item.label}
                     </p>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.helper}</p>
@@ -247,7 +263,7 @@ export function ReportBugModal({ authSession, onClose }: Props) {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Brief description of the issue..."
-              className="h-11 w-full rounded-2xl border border-border/75 bg-background/25 px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/80 focus:border-primary/55"
+              className="h-11 w-full rounded-2xl border border-border/70 bg-card/40 px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/80 focus:border-[#d7843b]/70"
             />
           </div>
 
@@ -261,7 +277,7 @@ export function ReportBugModal({ authSession, onClose }: Props) {
               onChange={(event) => setDescription(event.target.value.slice(0, 5000))}
               rows={5}
               placeholder="Describe the issue in as much detail as possible: what you were doing, what you expected to happen, what actually happened..."
-              className="min-h-[140px] w-full rounded-2xl border border-border/75 bg-background/25 px-4 py-3 text-sm leading-6 text-foreground outline-none transition-colors placeholder:text-muted-foreground/80 focus:border-primary/55"
+              className="min-h-[140px] w-full rounded-2xl border border-border/70 bg-card/40 px-4 py-3 text-sm leading-6 text-foreground outline-none transition-colors placeholder:text-muted-foreground/80 focus:border-[#d7843b]/70"
             />
             <div className="text-right text-xs text-muted-foreground">{descriptionCount}/5000</div>
           </div>
@@ -276,7 +292,7 @@ export function ReportBugModal({ authSession, onClose }: Props) {
               onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)}
             />
             {screenshotDataUrl ? (
-              <div className="relative overflow-hidden rounded-2xl border border-border/75 bg-background/20">
+              <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/40">
                 <img
                   src={screenshotDataUrl}
                   alt="Bug report screenshot preview"
@@ -291,7 +307,7 @@ export function ReportBugModal({ authSession, onClose }: Props) {
                       fileInputRef.current.value = "";
                     }
                   }}
-                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg transition-colors hover:bg-rose-400"
+                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#d7843b] text-white shadow-lg transition-colors hover:bg-[#e29a57]"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -300,7 +316,7 @@ export function ReportBugModal({ authSession, onClose }: Props) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex min-h-[112px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border/80 bg-background/20 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/45 hover:bg-accent/20 hover:text-foreground"
+                className="flex min-h-[112px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border/75 bg-card/35 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-[#d7843b]/60 hover:bg-[#d7843b]/8 hover:text-[#d7843b]"
               >
                 <ImagePlus className="h-4 w-4" />
                 Add screenshot
@@ -309,25 +325,30 @@ export function ReportBugModal({ authSession, onClose }: Props) {
           </div>
 
           {error ? (
-            <p className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            <p className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
               {error}
             </p>
           ) : null}
           {success ? (
-            <p className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            <p className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
               {success}
             </p>
           ) : null}
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-border/70 px-5 py-4 sm:px-6">
-          <Button variant="ghost" onClick={onClose} disabled={submitting}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-2xl border-[#d7843b]/45 text-[#d7843b] hover:bg-[#d7843b]/10 hover:text-[#d7843b]"
+          >
             Cancel
           </Button>
           <Button
             onClick={() => void handleSubmit()}
             disabled={submitting}
-            className="min-w-[148px] rounded-2xl bg-[linear-gradient(180deg,rgba(249,115,22,0.96),rgba(251,146,60,0.92))] text-white shadow-[0_0_0_1px_rgba(249,115,22,0.34),0_14px_30px_rgba(249,115,22,0.28)] hover:brightness-110"
+            className="min-w-[148px] rounded-2xl bg-[linear-gradient(180deg,rgba(249,115,22,0.98),rgba(245,130,48,0.94))] text-white shadow-[0_0_0_1px_rgba(215,132,59,0.4),0_14px_30px_rgba(215,132,59,0.32)] hover:brightness-110"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Submit report
