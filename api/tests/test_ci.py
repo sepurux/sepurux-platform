@@ -1170,6 +1170,110 @@ def test_ci_post_run_scopes_mutation_set_to_each_trace_tools(
             assert resolved[0]["tool"] == expected_tools[str(run.trace_id)]
 
 
+def test_ci_post_run_falls_back_to_trace_profile_when_campaign_mutations_do_not_match_trace(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    refund_trace_id = uuid4()
+    revoke_trace_id = uuid4()
+    campaign_id = uuid4()
+
+    with testing_session_local() as db:
+        db.add_all(
+            [
+                Trace(
+                    trace_id=refund_trace_id,
+                    project_id=project_id,
+                    source="test",
+                    normalized_payload={
+                        "events": [
+                            {
+                                "type": "tool_call",
+                                "tool": "payments.refund",
+                                "args": {"payment_id": "pay_1", "amount": 120},
+                            },
+                            {
+                                "type": "tool_result",
+                                "tool": "payments.refund",
+                                "result": {"ok": True},
+                            },
+                        ]
+                    },
+                    s3_key=f"traces/{refund_trace_id}.json",
+                ),
+                Trace(
+                    trace_id=revoke_trace_id,
+                    project_id=project_id,
+                    source="test",
+                    normalized_payload={
+                        "events": [
+                            {
+                                "type": "tool_call",
+                                "tool": "iam.revoke_token",
+                                "args": {"token_id": "tok_1"},
+                            },
+                            {
+                                "type": "tool_result",
+                                "tool": "iam.revoke_token",
+                                "result": {"ok": True},
+                            },
+                        ]
+                    },
+                    s3_key=f"traces/{revoke_trace_id}.json",
+                ),
+                Campaign(
+                    campaign_id=campaign_id,
+                    project_id=project_id,
+                    name="Mixed Scenario Campaign",
+                    mutation_set=[
+                        {
+                            "mutation_id": "refund",
+                            "tool": "payments.refund",
+                            "args": {
+                                "payment_id": "pay_1",
+                                "amount": 120,
+                                "confirmation_token": "approved",
+                            },
+                        }
+                    ],
+                    eval_set={
+                        "checks": ["status"],
+                        "trace_ids": [str(refund_trace_id), str(revoke_trace_id)],
+                    },
+                ),
+            ]
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/runs",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+    assert response.status_code == 201
+
+    with testing_session_local() as db:
+        runs = db.scalars(select(Run).order_by(Run.created_at.asc(), Run.run_id.asc())).all()
+        assert len(runs) == 2
+
+        resolved_by_trace: dict[str, list[dict[str, object]]] = {}
+        for run in runs:
+            assert isinstance(run.summary, dict)
+            resolved = run.summary.get("resolved_mutation_set")
+            assert isinstance(resolved, list)
+            assert len(resolved) == 1
+            resolved_by_trace[str(run.trace_id)] = resolved
+
+    assert resolved_by_trace[str(refund_trace_id)][0]["tool"] == "payments.refund"
+    assert resolved_by_trace[str(revoke_trace_id)][0]["tool"] == "iam.revoke_token"
+    assert resolved_by_trace[str(revoke_trace_id)][0]["mutation_id"] == "baseline.iam.revoke_token"
+
+
 def test_ci_post_run_reuses_same_replay_seed_basis_for_same_trace_and_config(
     ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
     monkeypatch: pytest.MonkeyPatch,
@@ -1497,17 +1601,16 @@ def test_ci_post_run_uses_upload_time_primary_replay_profile_for_placeholder_bas
         run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
 
     assert isinstance(run.summary, dict)
-    assert run.summary.get("resolved_mutation_set") == [
-        {
-            "mutation_id": "baseline.payments.refund",
-            "tool": "payments.refund",
-            "args": {
-                "payment_id": "pay_1",
-                "amount": 120,
-                "confirmation_token": "approved",
-            },
-        }
-    ]
+    resolved = run.summary.get("resolved_mutation_set")
+    assert isinstance(resolved, list)
+    assert len(resolved) == 3
+    assert resolved[0]["tool"] == "payments.refund"
+    resolved_tools = {item["tool"] for item in resolved if isinstance(item, dict) and "tool" in item}
+    assert resolved_tools == {
+        "orders.lookup",
+        "payments.refund",
+        "notifications.send_email",
+    }
 
 
 def test_ci_post_run_prefers_uploaded_primary_mutation_over_required_tool_coverage(
@@ -1593,17 +1696,84 @@ def test_ci_post_run_prefers_uploaded_primary_mutation_over_required_tool_covera
         run = db.execute(select(Run).where(Run.run_id == run_id)).scalar_one()
 
     assert isinstance(run.summary, dict)
-    assert run.summary.get("resolved_mutation_set") == [
-        {
-            "mutation_id": "baseline.payments.refund",
-            "tool": "payments.refund",
-            "args": {
-                "payment_id": "pay_1",
-                "amount": 120,
-                "confirmation_token": "approved",
-            },
-        }
-    ]
+    resolved = run.summary.get("resolved_mutation_set")
+    assert isinstance(resolved, list)
+    assert len(resolved) == 3
+    assert resolved[0]["tool"] == "payments.refund"
+    resolved_tools = {item["tool"] for item in resolved if isinstance(item, dict) and "tool" in item}
+    assert resolved_tools == {
+        "orders.lookup",
+        "payments.refund",
+        "notifications.send_email",
+    }
+
+
+def test_ci_preflight_treats_contract_pack_preference_as_warning_only(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.delenv("CI_TOKEN", raising=False)
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {
+                            "type": "tool_call",
+                            "tool": "orders.lookup",
+                            "args": {"order_id": "ord_1"},
+                        },
+                        {
+                            "type": "tool_result",
+                            "tool": "orders.lookup",
+                            "result": {"ok": True},
+                        },
+                    ]
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Pack Preference Campaign",
+                mutation_set=[{"mutation_id": "baseline"}],
+                eval_set={"checks": ["status"], "trace_ids": [str(trace_id)]},
+            )
+        )
+        db.add(
+            QualityContract(
+                contract_id=uuid4(),
+                project_id=project_id,
+                campaign_id=campaign_id,
+                required_pack_ids=[str(uuid4())],
+                required_tools=["orders.lookup"],
+                min_attempts_per_pack=1,
+                version=1,
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/ci/preflight",
+        json={
+            "campaign_id": str(campaign_id),
+            "thresholds": {"min_pass_rate": 0.8, "max_unsafe": 0},
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ready"] is True
+    assert all(issue["code"] != "contract_wrong_pack" for issue in payload["blockers"])
+    assert any(issue["code"] == "contract_wrong_pack" for issue in payload["warnings"])
 
 
 def test_ci_post_run_rejects_when_below_min_scenarios(
@@ -1903,6 +2073,93 @@ def test_get_ci_batch_contract_tool_coverage_uses_normalized_trace_events(
     assert payload["contract_report"] is not None
     assert payload["contract_report"]["passed"] is True
     assert required_tool in payload["contract_report"]["covered_tools"]
+
+
+def test_get_ci_batch_contract_pack_preference_mismatch_is_advisory(
+    ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session_local, _, project_id = ci_test_context
+    monkeypatch.setenv("CI_TOKEN", "secret-token")
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    batch_id = uuid4()
+    run_id = uuid4()
+    required_tool = "payments.refund"
+
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {"type": "tool_call", "tool": required_tool, "args": {"amount": 10}},
+                        {"type": "tool_result", "tool": required_tool, "output": {"ok": True}},
+                    ]
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Contract Pack Preference Campaign",
+                mutation_set=[],
+                eval_set={},
+            )
+        )
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="completed",
+                mutation_pack_id=None,
+                summary={
+                    "ci_thresholds": {"min_pass_rate": 0.5, "max_unsafe": 0},
+                    "ci_batch_id": str(batch_id),
+                },
+            )
+        )
+        db.add(
+            ReplayAttempt(
+                attempt_id=uuid4(),
+                project_id=project_id,
+                run_id=run_id,
+                mutation_id="baseline",
+                result="passed",
+                failure_reason=None,
+                first_failure_event_index=None,
+                first_failure_tool=None,
+                artifacts_s3_key=None,
+            )
+        )
+        db.add(
+            QualityContract(
+                contract_id=uuid4(),
+                project_id=project_id,
+                campaign_id=campaign_id,
+                required_pack_ids=[str(uuid4())],
+                required_tools=[required_tool],
+                min_attempts_per_pack=1,
+                version=1,
+            )
+        )
+        db.commit()
+
+    headers = {"X-Sepurux-Token": "secret-token"}
+    response = client.get(f"/v1/ci/batch/{batch_id}", headers=headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["contract_report"] is not None
+    assert payload["contract_report"]["passed"] is True
+    assert payload["decision"] == "pass"
+    assert payload["contract_report"]["violations"] == []
 
 
 def test_get_ci_batch_fails_when_any_run_fails(

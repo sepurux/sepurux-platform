@@ -72,8 +72,6 @@ export function CampaignCreateView() {
   const [name, setName] = useState("");
   const [mutationPackId, setMutationPackId] = useState("");
   const [attemptsCount, setAttemptsCount] = useState(50);
-  const [baselineMutationId, setBaselineMutationId] = useState("baseline");
-  const [baselineTool, setBaselineTool] = useState("");
 
   const canCreateCampaigns = authSession?.permissions.can_create_campaigns ?? false;
   useEffect(() => {
@@ -150,18 +148,13 @@ export function CampaignCreateView() {
     setCreateError(null);
 
     const normalizedAttemptsCount = clampAttempts(attemptsCount);
-    const normalizedMutationId = baselineMutationId.trim() || "baseline";
-    const normalizedBaselineTool = baselineTool.trim();
     const mutationSet: CampaignMutation[] = [
       {
-        mutation_id: normalizedMutationId,
-        ...(normalizedBaselineTool ? { tool: normalizedBaselineTool } : {}),
+        mutation_id: "baseline",
       },
     ];
 
     setAttemptsCount(normalizedAttemptsCount);
-    setBaselineMutationId(normalizedMutationId);
-    setBaselineTool(normalizedBaselineTool);
 
     try {
       await api.createCampaign({
@@ -187,8 +180,7 @@ export function CampaignCreateView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Create Campaign</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Start from a baseline replay, then layer in base reliability, policy/security, or
-            domain-specific mutation coverage.
+            Keep setup simple: pick traces in the campaign, set attempts, and optionally attach a pack for extra chaos overlays.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -219,8 +211,7 @@ export function CampaignCreateView() {
           <CardHeader>
             <CardTitle>Campaign Setup</CardTitle>
             <CardDescription>
-              Choose the layer that matches the gate you want to run: base reliability,
-              policy/security, or a custom domain pack.
+              Campaigns auto-cover trace tools at run time. Mutation packs are optional overlays, not required for baseline replay coverage.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -338,51 +329,6 @@ export function CampaignCreateView() {
                   Allowed range: {MIN_ATTEMPTS}-{MAX_ATTEMPTS}.
                 </p>
               </label>
-
-              <div className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-4">
-                <div className="space-y-1">
-                  <h2 className="text-sm font-medium text-foreground">Explicit Baseline Mutation</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Persist a baseline mutation now so CI does not auto-seed one later. Add a tool
-                    if you want the baseline pinned to a specific operation.
-                  </p>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="block space-y-1 text-sm">
-                    <span className="text-muted-foreground">Mutation ID</span>
-                    <input
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                      placeholder="baseline"
-                      value={baselineMutationId}
-                      onChange={(event) => setBaselineMutationId(event.target.value)}
-                      disabled={creating}
-                    />
-                  </label>
-                  <label className="block space-y-1 text-sm">
-                    <span className="text-muted-foreground">Tool (optional)</span>
-                    <input
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-                      placeholder="jira.create_issue"
-                      value={baselineTool}
-                      onChange={(event) => setBaselineTool(event.target.value)}
-                      disabled={creating}
-                    />
-                  </label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Stored as{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
-                    {JSON.stringify(
-                      {
-                        mutation_id: baselineMutationId.trim() || "baseline",
-                        ...(baselineTool.trim() ? { tool: baselineTool.trim() } : {}),
-                      },
-                      null,
-                      0
-                    )}
-                  </code>
-                </p>
-              </div>
 
               {createError ? (
                 <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-sm text-rose-200">

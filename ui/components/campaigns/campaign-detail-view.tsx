@@ -690,7 +690,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
           <div className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-border/60 bg-card p-6 shadow-xl">
             <h2 className="mb-1 text-base font-semibold text-foreground">Run Campaign</h2>
             <p className="mb-4 text-xs text-muted-foreground">
-              Set pass thresholds. The run will use the campaign's eval set and mutation pack.
+              Set pass thresholds. The run will auto-cover tools from every trace and apply mutation-pack overlays if selected.
             </p>
             {runError && (
               <div className="mb-3 rounded border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
@@ -941,7 +941,7 @@ function ScenariosTab({
             <CardTitle>Registered Scenarios</CardTitle>
             <CardDescription>
               Traces registered here are automatically run as one CI batch — no need to pass{" "}
-              <span className="font-mono">trace_id</span> per call.
+              <span className="font-mono">trace_id</span> per call. Each trace gets automatic baseline replay coverage across its observed tools.
             </CardDescription>
           </div>
           <Button size="sm" onClick={() => setShowPicker(true)}>
@@ -1447,7 +1447,7 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
             </CardTitle>
             <CardDescription>
               Define what must be tested before a CI batch is allowed to pass. Missing required
-              packs, tools, or insufficient attempts will fail the gate — regardless of pass rate.
+              tools or insufficient attempts will fail the gate — regardless of pass rate.
             </CardDescription>
           </div>
           {state.status === "ready" && (
@@ -1475,8 +1475,8 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
               Required mutation packs
             </p>
             <p className="text-xs text-muted-foreground">
-              The pack used in the CI run must be one of these. Zero attempts with a required
-              pack = hard fail.
+              Preferred pack overlays. Runs still execute with automatic trace-tool baseline
+              coverage even when the selected pack differs.
             </p>
             <div className="flex flex-wrap gap-2">
               {packs.map((p) => {
@@ -1579,7 +1579,7 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
       {/* Violation legend */}
       <div className="grid gap-3 md:grid-cols-3">
         {([
-          ["wrong_pack", "Pack not in required list. Run was tested with an unapproved mutation pack — replace it with one of the required packs."],
+          ["wrong_pack", "Pack preference mismatch. Run still executes; switch packs only when you want specific chaos overlays."],
           ["untested_tool", "Required tool never exercised. No trace in the batch called this tool — add a scenario that covers it."],
           ["insufficient_attempts", "Too few mutation attempts. Increase run budget or lower the minimum to match your credit allocation."],
         ] as [string, string][]).map(([type, desc]) => (

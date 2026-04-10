@@ -375,21 +375,21 @@ def _build_ci_preflight(
     # Quality contract pre-run validation
     contract = get_contract(db, campaign_id=campaign.campaign_id)
     if contract is not None:
-        # Check required pack IDs
+        # Check required pack IDs (advisory only)
         required_pack_ids: list[str] = list(contract.required_pack_ids or [])
         if required_pack_ids:
             pack_id_str = str(campaign.mutation_pack_id) if campaign.mutation_pack_id else None
             if pack_id_str not in required_pack_ids:
-                blockers.append(
+                warnings.append(
                     CIRunPreflightIssue(
                         code="contract_wrong_pack",
                         message=(
-                            f"Quality contract requires one of {len(required_pack_ids)} approved "
+                            f"Quality contract prefers one of {len(required_pack_ids)} configured "
                             f"pack(s), but campaign uses "
                             f"{'no pack' if pack_id_str is None else pack_id_str[:8] + '…'}."
                         ),
                         hint=(
-                            "Update the campaign to use one of the required mutation packs: "
+                            "Run will proceed with auto trace-tool coverage. Optional: switch to one of these packs for preferred chaos overlays: "
                             + ", ".join(p[:8] + "…" for p in required_pack_ids[:4])
                         ),
                     )
