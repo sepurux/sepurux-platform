@@ -526,7 +526,7 @@ def _resolve_trace_scoped_mutation_set(
     campaign: Campaign,
     *,
     trace: Trace,
-) -> list[Any]:
+) -> tuple[list[Any], bool]:
     mutation_set = campaign.mutation_set
     if isinstance(mutation_set, list):
         mutation_items = mutation_set or [{"mutation_id": "baseline"}]
@@ -554,8 +554,48 @@ def _resolve_trace_scoped_mutation_set(
         )
     ]
     if matched:
-        return matched
-    return mutation_items
+        return matched, True
+    return mutation_items, False
+
+
+def _mutation_set_covers_trace_tool(
+    mutation_set: list[Any],
+    *,
+    trace_tool: str,
+) -> bool:
+    for mutation in mutation_set:
+        mutation_tool = _extract_replay_tool_name(mutation)
+        if not mutation_tool:
+            continue
+        if mutation_tool == trace_tool or fnmatchcase(trace_tool, mutation_tool):
+            return True
+    return False
+
+
+def _augment_mutation_set_with_trace_baselines(
+    *,
+    resolved_mutation_set: list[Any],
+    trace_payload: dict[str, Any],
+) -> list[Any]:
+    uploaded_candidates = resolve_uploaded_trace_baseline_candidates(trace_payload)
+    baseline_candidates = (
+        uploaded_candidates if uploaded_candidates else derive_trace_baseline_candidates(trace_payload)
+    )
+    if not baseline_candidates:
+        return resolved_mutation_set
+
+    merged = list(resolved_mutation_set)
+    for candidate in baseline_candidates:
+        tool_name_obj = candidate.get("tool")
+        if not isinstance(tool_name_obj, str):
+            continue
+        trace_tool = tool_name_obj.strip()
+        if not trace_tool:
+            continue
+        if _mutation_set_covers_trace_tool(merged, trace_tool=trace_tool):
+            continue
+        merged.append(candidate)
+    return merged
 
 
 def _resolve_run_replay_plan(
@@ -566,10 +606,12 @@ def _resolve_run_replay_plan(
     effective_mutation_pack_id: UUID | None,
     seed_namespace: str,
 ) -> ResolvedRunReplayPlan:
-    resolved = _resolve_trace_scoped_mutation_set(campaign, trace=trace)
-    resolved_mutation_set = resolved
-    if _mutation_set_needs_contract_fallback(resolved_mutation_set):
-        payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    resolved_mutation_set, had_trace_match = _resolve_trace_scoped_mutation_set(
+        campaign,
+        trace=trace,
+    )
+    if _mutation_set_needs_contract_fallback(resolved_mutation_set) or not had_trace_match:
         uploaded_primary = get_uploaded_trace_primary_mutation(payload)
         if uploaded_primary is not None:
             resolved_mutation_set = [uploaded_primary]
@@ -590,6 +632,11 @@ def _resolve_run_replay_plan(
                     synthesized_primary = choose_primary_baseline_candidate(synthesized)
                     if synthesized_primary is not None:
                         resolved_mutation_set = [synthesized_primary]
+
+    resolved_mutation_set = _augment_mutation_set_with_trace_baselines(
+        resolved_mutation_set=resolved_mutation_set,
+        trace_payload=payload,
+    )
 
     replay_seed_basis = _build_replay_seed_basis(
         trace=trace,

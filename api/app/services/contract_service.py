@@ -78,28 +78,16 @@ def evaluate_contract(
     """Evaluate a quality contract against a completed CI batch.
 
     Checks:
-    - required_pack_ids: the pack used must be in the required list
     - required_tools: each required tool must appear in at least one batch trace
     - min_attempts_per_pack: total attempts must meet the minimum
     """
     violations: list[ContractViolation] = []
 
-    # 1. Pack requirement — pack used must be in required_pack_ids
+    # 1. Pack preferences are advisory and are not enforced as hard failures.
+    # Keep required_pack_ids in reports for operator visibility, but do not
+    # append wrong_pack violations so campaign outcomes focus on behavior
+    # coverage and execution quality.
     required_pack_ids: list[str] = list(contract.required_pack_ids or [])
-    if required_pack_ids and batch_runs:
-        pack_id = batch_runs[0].mutation_pack_id
-        pack_id_str = str(pack_id) if pack_id else None
-        if pack_id_str not in required_pack_ids:
-            violations.append(
-                ContractViolation(
-                    type="wrong_pack",
-                    detail=(
-                        f"Pack used ({pack_id_str or 'none'}) is not in the required pack list."
-                    ),
-                    missing=required_pack_ids,
-                    actual=pack_id_str,
-                )
-            )
 
     # 2. Tool coverage — collect all tool calls across batch traces
     covered_tools: set[str] = set()
