@@ -617,6 +617,37 @@ class OperationMessageResponse(BaseModel):
     message: str
 
 
+class BugReportCreateRequest(BaseModel):
+    category: Literal["platform", "project", "taxonomy", "task"]
+    title: str = Field(min_length=3, max_length=160)
+    description: str = Field(min_length=10, max_length=5000)
+    page_url: str = Field(min_length=1, max_length=2000)
+    reported_at: datetime
+    viewport_width: int = Field(ge=1, le=10_000)
+    viewport_height: int = Field(ge=1, le=10_000)
+    screenshot_data_url: str | None = Field(default=None, max_length=2_000_000)
+
+    @field_validator("page_url")
+    @classmethod
+    def validate_page_url(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Page URL is required")
+        return normalized
+
+    @field_validator("screenshot_data_url")
+    @classmethod
+    def validate_screenshot_data_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if not normalized.startswith("data:image/"):
+            raise ValueError("Screenshot must be an image")
+        return normalized
+
+
 class NewsletterUnsubscribeRequest(BaseModel):
     token: str = Field(min_length=1, max_length=4096)
 
