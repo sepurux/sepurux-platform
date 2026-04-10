@@ -4,14 +4,13 @@ export function WalkthroughSection() {
       <div className="site-container">
         <div className="grid gap-10 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,17,32,0.94),rgba(7,13,26,0.96))] p-6 shadow-[0_28px_90px_rgba(0,4,15,0.42)] sm:p-8 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:items-start lg:gap-12 lg:p-10">
           <div className="max-w-xl">
-            <p className="section-kicker">Walking Through The Product</p>
+            <p className="section-kicker">Product walkthrough</p>
             <h2 className="section-heading mt-4 text-[--text-primary]">
-              See the trace-to-campaign flow the way an operator actually uses it.
+              See the full trace-to-campaign flow in one short walkthrough.
             </h2>
             <p className="mt-5 text-base leading-8 text-slate-300 md:text-lg">
-              Run a real agent path, capture the trace, inspect the scenario, and turn it into a
-              repeatable campaign inside Sepurux. The walkthrough shows the exact handoff from SDK
-              instrumentation into the reliability workflow.
+              Watch a real agent run become a trace, then a campaign, then a release verdict inside
+              Sepurux.
             </p>
           </div>
 

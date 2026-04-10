@@ -1,9 +1,10 @@
 // ui/components/layout/sidebar.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
   Bug,
@@ -12,6 +13,7 @@ import {
   FileSearch,
   FlaskConical,
   Home,
+  LogOut,
   PlayCircle,
   ScrollText,
   Settings,
@@ -19,9 +21,18 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
-import type { AuthPermissionSet, AuthSessionMetadata } from "@/lib/api";
+import { api, type AuthPermissionSet, type AuthSessionMetadata, type UserNotificationMetadata } from "@/lib/api";
+import { clearStoredAuthSession } from "@/lib/auth-session";
 import { uiBrandIconUrl } from "@/lib/brand";
+import { formatRelativeDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { ReportBugModal } from "@/components/layout/report-bug-modal";
+import {
+  clearStoredApiBaseUrl,
+  clearStoredApiKey,
+  clearStoredProjectId,
+} from "@/lib/tenant-settings";
 
 type NavLinkItem = {
   href: string;
@@ -42,6 +53,16 @@ type NavGroup = {
   icon: React.ComponentType<{ className?: string }>;
   children: NavGroupChild[];
 };
+
+function initialsForSession(authSession: AuthSessionMetadata | null) {
+  const source = authSession?.name || authSession?.email || "Sepurux";
+  return source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((segment) => segment[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 const primaryItems: NavLinkItem[] = [
   { href: "/dashboard", label: "Dashboard", section: "dashboard", icon: Home },
@@ -107,12 +128,28 @@ const groupedItems: NavGroup[] = [
 
 export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | null }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
+  const notificationsMenuRef = useRef<HTMLDivElement | null>(null);
   const visibleSections = useMemo(
     () => new Set(authSession?.permissions.visible_sections ?? []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [authSession?.permissions.visible_sections?.join(",")]
   );
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [notifications, setNotifications] = useState<UserNotificationMetadata[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
+  const [markingAllNotifications, setMarkingAllNotifications] = useState(false);
+  const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
+  const [notificationsMenuOpen, setNotificationsMenuOpen] = useState(false);
+  const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [notificationMenuPosition, setNotificationMenuPosition] = useState<{
+    left: number;
+    bottom: number;
+    width: number;
+  } | null>(null);
 
   const items = primaryItems.filter(
     (item) => visibleSections.size === 0 || visibleSections.has(item.section)
@@ -133,6 +170,162 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         .filter((group) => group.children.length > 0),
     [authSession?.permissions, visibleSections]
   );
+  const userInitials = initialsForSession(authSession);
+  const userLabel = authSession?.name || authSession?.email || "Workspace User";
+  const roleLabel = authSession?.role_name || "User";
+
+  const loadNotifications = useCallback(async (silent = false) => {
+    if (!silent) {
+      setNotificationsLoading(true);
+    }
+    try {
+      const payload = await api.getNotifications({ limit: 10, unread_only: true });
+      setNotifications(payload.items);
+      setNotificationsUnreadCount(payload.unread_count);
+      setNotificationsError(null);
+    } catch (error) {
+      setNotificationsError(error instanceof Error ? error.message : "Failed to load notifications");
+    } finally {
+      if (!silent) {
+        setNotificationsLoading(false);
+      }
+    }
+  }, []);
+
+  const closeNotificationsMenu = useCallback(() => {
+    setNotificationsMenuOpen(false);
+  }, []);
+
+  useEffect(() => {
+    void loadNotifications(false);
+    const timer = window.setInterval(() => {
+      void loadNotifications(true);
+    }, 60_000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [loadNotifications, authSession?.project_id]);
+
+  useEffect(() => {
+    if (!notificationsMenuOpen) {
+      return;
+    }
+
+    function updateNotificationMenuPosition() {
+      const buttonRect = notificationButtonRef.current?.getBoundingClientRect();
+      if (!buttonRect) {
+        return;
+      }
+
+      const width = 320;
+      const left = Math.min(
+        Math.max(16, buttonRect.left),
+        window.innerWidth - width - 16
+      );
+      const bottom = window.innerHeight - buttonRect.top + 12;
+      setNotificationMenuPosition({ left, bottom, width });
+    }
+
+    updateNotificationMenuPosition();
+
+    function handleOutsidePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (
+        !notificationsMenuRef.current?.contains(target) &&
+        !notificationButtonRef.current?.contains(target)
+      ) {
+        setNotificationsMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setNotificationsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsidePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", updateNotificationMenuPosition);
+    window.addEventListener("scroll", updateNotificationMenuPosition, true);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsidePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", updateNotificationMenuPosition);
+      window.removeEventListener("scroll", updateNotificationMenuPosition, true);
+    };
+  }, [notificationsMenuOpen]);
+
+  async function handleMarkNotificationRead(notificationId: string) {
+    if (markingNotificationId) return;
+    const existing = notifications.find((item) => item.notification_id === notificationId);
+    const wasUnread = existing ? existing.read_at === null : true;
+
+    if (wasUnread) {
+      setNotifications((current) => current.filter((item) => item.notification_id !== notificationId));
+      setNotificationsUnreadCount((current) => Math.max(0, current - 1));
+    }
+
+    setMarkingNotificationId(notificationId);
+    try {
+      await api.markNotificationRead(notificationId);
+    } catch (error) {
+      setNotificationsError(
+        error instanceof Error ? error.message : "Failed to update notification"
+      );
+      await loadNotifications(true);
+    } finally {
+      setMarkingNotificationId(null);
+    }
+  }
+
+  async function handleMarkAllNotificationsRead() {
+    if (markingAllNotifications || notificationsUnreadCount === 0) return;
+    const previousNotifications = notifications;
+    const previousUnreadCount = notificationsUnreadCount;
+    setMarkingAllNotifications(true);
+    setNotifications([]);
+    setNotificationsUnreadCount(0);
+    closeNotificationsMenu();
+    try {
+      await api.markAllNotificationsRead();
+    } catch (error) {
+      setNotificationsError(
+        error instanceof Error ? error.message : "Failed to mark notifications as read"
+      );
+      setNotifications(previousNotifications);
+      setNotificationsUnreadCount(previousUnreadCount);
+      await loadNotifications(true);
+    } finally {
+      setMarkingAllNotifications(false);
+    }
+  }
+
+  function navigateToNotification(linkUrl: string) {
+    if (/^https?:\/\//i.test(linkUrl)) {
+      window.location.assign(linkUrl);
+      return;
+    }
+    router.push(linkUrl);
+  }
+
+  function handleNotificationClick(item: UserNotificationMetadata) {
+    closeNotificationsMenu();
+    if (!item.read_at) {
+      void handleMarkNotificationRead(item.notification_id);
+    }
+    if (item.link_url) {
+      navigateToNotification(item.link_url);
+    }
+  }
+
+  function handleSignOut() {
+    clearStoredAuthSession();
+    clearStoredApiKey();
+    clearStoredProjectId();
+    clearStoredApiBaseUrl();
+    router.push("/auth?mode=access&intent=login");
+  }
 
   useEffect(() => {
     setExpandedGroups((currentValue) => {
@@ -295,6 +488,169 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         })}
       </nav>
 
+      <div className="mt-4 border-t border-border/70 px-1 pt-4">
+        <Link
+          href="/profile"
+          className="flex items-center gap-3 rounded-[24px] border border-border/70 bg-card/60 p-3 shadow-insetSoft transition-colors duration-150 hover:bg-accent/35"
+        >
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[20px] bg-[linear-gradient(180deg,rgba(148,163,184,0.34),rgba(100,116,139,0.28))] text-[1.9rem] font-semibold text-white">
+            {userInitials}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[1.05rem] font-semibold tracking-[-0.03em] text-foreground">
+              {userLabel}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">{roleLabel}</p>
+          </div>
+        </Link>
+
+        <div className="mt-3 flex items-center gap-2">
+          <div className="relative">
+            <button
+              ref={notificationButtonRef}
+              type="button"
+              aria-label="Notifications"
+              aria-expanded={notificationsMenuOpen}
+              onClick={() => setNotificationsMenuOpen((currentValue) => !currentValue)}
+              className={cn(
+                "relative inline-flex h-11 w-11 items-center justify-center rounded-[18px] text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-foreground",
+                notificationsMenuOpen && "bg-violet-500/14 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]"
+              )}
+            >
+              <Bell className="h-5 w-5" />
+              {notificationsUnreadCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[22px] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">
+                  {notificationsUnreadCount > 99 ? "99+" : notificationsUnreadCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+
+          <ThemeToggle
+            iconOnly
+            className="h-11 w-11 rounded-[18px] text-muted-foreground hover:text-foreground"
+            activeClassName="bg-violet-500/14 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]"
+          />
+
+          <button
+            type="button"
+            aria-label="Report bug"
+            onClick={() => setBugReportOpen(true)}
+            className={cn(
+              "inline-flex h-11 w-11 items-center justify-center rounded-[18px] text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-rose-300",
+              bugReportOpen && "bg-violet-500/14 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]"
+            )}
+          >
+            <Bug className="h-5 w-5" />
+          </button>
+
+          <button
+            type="button"
+            aria-label="Sign out"
+            onClick={handleSignOut}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-[18px] text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-slate-100"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {notificationsMenuOpen && notificationMenuPosition
+        ? createPortal(
+            <div
+              ref={notificationsMenuRef}
+              className="fixed z-[70] overflow-hidden rounded-2xl border border-border/75 bg-card/95 shadow-panel backdrop-blur-xl"
+              style={{
+                left: notificationMenuPosition.left,
+                bottom: notificationMenuPosition.bottom,
+                width: notificationMenuPosition.width,
+              }}
+            >
+              <div className="flex items-center justify-between px-4 py-3">
+                <p className="text-sm font-semibold text-foreground">Notifications</p>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground"
+                  onClick={() => void loadNotifications(false)}
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="border-t border-border" />
+
+              <div className="max-h-[340px] overflow-y-auto">
+                {notificationsLoading ? (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    Loading notifications...
+                  </div>
+                ) : notificationsError ? (
+                  <div className="px-4 py-8 text-center text-sm text-rose-500">
+                    {notificationsError}
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No notifications yet.
+                  </div>
+                ) : (
+                  notifications.map((item) => (
+                    <button
+                      key={item.notification_id}
+                      type="button"
+                      disabled={markingNotificationId === item.notification_id}
+                      onClick={() => handleNotificationClick(item)}
+                      className="w-full"
+                    >
+                      <div className="w-full px-4 py-3 text-left transition-colors hover:bg-accent">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-medium text-foreground">{item.title}</p>
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              notificationSeverityStyles(item.severity)
+                            )}
+                          >
+                            {item.severity}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          {formatRelativeDate(item.created_at)}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="border-t border-border p-2">
+                <button
+                  type="button"
+                  className="w-full rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={markingAllNotifications || notificationsUnreadCount === 0}
+                  onClick={() => void handleMarkAllNotificationsRead()}
+                >
+                  {markingAllNotifications ? "Marking..." : "Mark All Read"}
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {bugReportOpen ? (
+        <ReportBugModal authSession={authSession} onClose={() => setBugReportOpen(false)} />
+      ) : null}
+
     </aside>
   );
+}
+
+function notificationSeverityStyles(severity: UserNotificationMetadata["severity"]) {
+  if (severity === "critical") {
+    return "bg-rose-500/15 text-rose-500";
+  }
+  if (severity === "warning") {
+    return "bg-amber-500/15 text-amber-500";
+  }
+  return "bg-sky-500/15 text-sky-500";
 }

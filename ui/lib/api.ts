@@ -551,6 +551,8 @@ export type OperationMessageResponse = {
   message: string;
 };
 
+export type BugReportCategory = "platform" | "project" | "taxonomy" | "task";
+
 export type NewsletterUnsubscribeResponse = {
   message: string;
   email: string | null;
@@ -1668,6 +1670,16 @@ export const api = {
       "/v1/notifications/read-all",
       {}
     ),
+  submitBugReport: (payload: {
+    category: BugReportCategory;
+    title: string;
+    description: string;
+    page_url: string;
+    reported_at: string;
+    viewport_width: number;
+    viewport_height: number;
+    screenshot_data_url?: string | null;
+  }) => postJson<OperationMessageResponse, typeof payload>("/v1/support/bug-reports", payload),
   listWebhooks: () => requestJson<WebhookMetadata[]>("/v1/webhooks"),
   createWebhook: (payload: {
     url: string;

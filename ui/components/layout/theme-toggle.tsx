@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 
 type ThemeToggleProps = {
   className?: string;
+  iconOnly?: boolean;
+  activeClassName?: string;
 };
 
 function currentDomThemeMode(): ThemeMode | null {
@@ -22,7 +24,11 @@ function currentDomThemeMode(): ThemeMode | null {
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
-export function ThemeToggle({ className }: ThemeToggleProps) {
+export function ThemeToggle({
+  className,
+  iconOnly = false,
+  activeClassName,
+}: ThemeToggleProps) {
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
 
   useEffect(() => {
@@ -45,14 +51,17 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       type="button"
       onClick={handleToggleTheme}
       className={cn(
-        "glass-surface inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent/45",
+        iconOnly
+          ? "glass-surface inline-flex h-11 w-11 items-center justify-center rounded-[18px] text-foreground transition-colors hover:bg-accent/45"
+          : "glass-surface inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent/45",
+        activeClassName,
         className
       )}
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
       title={isDark ? "Switch to light theme" : "Switch to dark theme"}
     >
       {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-      <span className="hidden sm:inline">{isDark ? "Light" : "Dark"}</span>
+      {iconOnly ? null : <span className="hidden sm:inline">{isDark ? "Light" : "Dark"}</span>}
     </button>
   );
 }

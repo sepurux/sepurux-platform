@@ -12,11 +12,11 @@ export function FinalCtaSection() {
         <div className="mx-auto max-w-4xl text-center">
           <p className="section-kicker ink-kicker">Next step</p>
           <h2 className="section-heading mt-4 text-white">
-            Treat agent reliability like release engineering, not postmortem cleanup.
+            Ready to see how reliable your AI workflows really are?
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-            Start free if you want to record traces and run experiments now. Join the waitlist if
-            you want a guided rollout around policy, audit, or private deployment constraints.
+            Start free if you want to upload traces and test workflows now. Join the waitlist if
+            you want a guided rollout for policy, governance, or private deployment needs.
           </p>
         </div>
 
@@ -29,10 +29,10 @@ export function FinalCtaSection() {
               Start free
             </p>
             <h3 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
-              Create a Sepurux workspace and start tracing workflows.
+              Create a workspace and start testing real agent workflows.
             </h3>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-200">
-              Best for engineering teams that already know the first workflow they want to harden.
+              Best for teams that already know the first workflow they want to validate.
             </p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
               Create workspace
@@ -48,11 +48,11 @@ export function FinalCtaSection() {
               Guided access
             </p>
             <h3 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
-              Join the waitlist for a guided rollout with policy, CI, and governance in scope.
+              Join the waitlist if you want help rolling Sepurux out across your team.
             </h3>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-300">
-              Best for security-conscious or enterprise teams deciding how Sepurux should fit into
-              an existing platform program before broader self-serve onboarding opens.
+              Best for security-conscious or enterprise teams that want onboarding help before
+              broader self-serve rollout.
             </p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
               Join waitlist
