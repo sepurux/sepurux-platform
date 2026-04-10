@@ -99,6 +99,65 @@ def seed_trace_and_campaign(db: Session, *, project_id: UUID) -> tuple[UUID, UUI
     return trace_id, campaign_id
 
 
+def seed_trace_and_campaign_with_replay_profile(
+    db: Session,
+    *,
+    project_id: UUID,
+) -> tuple[UUID, UUID]:
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    normalized_payload = {
+        "trace_version": "0.1",
+        "source": "sdk",
+        "events": [
+            {
+                "type": "tool_call",
+                "tool": "payments.refund",
+                "args": {"payment_id": "pay_123", "amount": 1500},
+            }
+        ],
+        "sepurux": {
+            "replay_profile": {
+                "version": 1,
+                "tool_inventory": ["payments.refund"],
+                "baseline_candidates": [
+                    {
+                        "mutation_id": "baseline.payments.refund",
+                        "tool": "payments.refund",
+                        "args": {"payment_id": "pay_123", "amount": 1500},
+                    }
+                ],
+                "primary_mutation": {
+                    "mutation_id": "baseline.payments.refund",
+                    "tool": "payments.refund",
+                    "args": {"payment_id": "pay_123", "amount": 1500},
+                },
+            }
+        },
+    }
+    db.add(
+        Trace(
+            trace_id=trace_id,
+            project_id=project_id,
+            source="sdk",
+            trace_version="0.1",
+            normalized_payload=normalized_payload,
+            s3_key=f"traces/{trace_id}.json",
+        )
+    )
+    db.add(
+        Campaign(
+            campaign_id=campaign_id,
+            project_id=project_id,
+            name="Replay Profile Campaign",
+            mutation_set=[{"mutation_id": "baseline"}],
+            eval_set={"checks": ["status"], "attempts_count": 20},
+        )
+    )
+    db.commit()
+    return trace_id, campaign_id
+
+
 def seed_policy_pack(
     db: Session,
     *,
@@ -152,7 +211,13 @@ def test_post_run_queues_job_and_persists_queued_status(
     assert data["trace_id"] == str(trace_id)
     assert data["campaign_id"] == str(campaign_id)
     assert data["status"] == "queued"
-    assert data["summary"] is None
+    summary = data["summary"]
+    assert isinstance(summary, dict)
+    assert summary.get("campaign_name") == "Seed Campaign"
+    assert summary.get("resolved_mutation_set") == [{"type": "noop"}]
+    replay_seed_basis = summary.get("replay_seed_basis")
+    assert isinstance(replay_seed_basis, str)
+    assert replay_seed_basis.startswith("manual:")
     assert fake_queue.calls == [(("worker.execute_run", str(run_id)), {})]
 
     with testing_session_local() as db:
@@ -161,6 +226,11 @@ def test_post_run_queues_job_and_persists_queued_status(
         assert row.status == "queued"
         assert row.trace_id == trace_id
         assert row.campaign_id == campaign_id
+        assert isinstance(row.summary, dict)
+        assert row.summary.get("resolved_mutation_set") == [{"type": "noop"}]
+        replay_seed_basis = row.summary.get("replay_seed_basis")
+        assert isinstance(replay_seed_basis, str)
+        assert replay_seed_basis.startswith("manual:")
         audit_events = list(
             db.scalars(
                 select(AuditEvent).where(
@@ -211,6 +281,51 @@ def test_post_run_uses_bootstrap_policy_pack_by_default(
         assert isinstance(run, Run)
         assert run.policy_pack_id == bootstrap_policy_pack_id
         assert run.effective_policy_pack_version_id == bootstrap_version_id
+
+
+def test_post_run_resolves_replay_profile_mutation_and_stable_seed_basis(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, _, project_id = run_test_context
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = seed_trace_and_campaign_with_replay_profile(
+            db, project_id=project_id
+        )
+
+    first_response = client.post(
+        "/v1/runs", json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)}
+    )
+    second_response = client.post(
+        "/v1/runs", json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)}
+    )
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+
+    with testing_session_local() as db:
+        first_run = db.scalar(
+            select(Run).where(Run.run_id == UUID(first_response.json()["run_id"]))
+        )
+        second_run = db.scalar(
+            select(Run).where(Run.run_id == UUID(second_response.json()["run_id"]))
+        )
+        assert isinstance(first_run, Run)
+        assert isinstance(second_run, Run)
+        assert isinstance(first_run.summary, dict)
+        assert isinstance(second_run.summary, dict)
+        assert first_run.summary.get("resolved_mutation_set") == [
+            {
+                "mutation_id": "baseline.payments.refund",
+                "tool": "payments.refund",
+                "args": {"payment_id": "pay_123", "amount": 1500},
+            }
+        ]
+        first_seed_basis = first_run.summary.get("replay_seed_basis")
+        second_seed_basis = second_run.summary.get("replay_seed_basis")
+        assert isinstance(first_seed_basis, str)
+        assert first_seed_basis.startswith("manual:")
+        assert first_seed_basis == second_seed_basis
 
 
 def test_post_run_prefers_explicit_policy_pack_over_bootstrap_default(

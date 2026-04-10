@@ -104,13 +104,17 @@ def apply_template_and_enqueue(
             )
         )
 
-    new_run.summary = {
-        "template_application": {
-            "source_run_id": str(source_run.run_id),
-            "trigger_template_id": str(template.template_id),
-            "applied_template_ids": [str(item) for item in sorted(existing_template_ids, key=str)],
-        }
+    summary = dict(new_run.summary) if isinstance(new_run.summary, dict) else {}
+    source_summary = dict(source_run.summary) if isinstance(source_run.summary, dict) else {}
+    for key in ("resolved_mutation_set", "replay_seed_basis", "trace_hardening"):
+        if key in source_summary:
+            summary[key] = source_summary[key]
+    summary["template_application"] = {
+        "source_run_id": str(source_run.run_id),
+        "trigger_template_id": str(template.template_id),
+        "applied_template_ids": [str(item) for item in sorted(existing_template_ids, key=str)],
     }
+    new_run.summary = summary
     db.add(new_run)
     db.commit()
 

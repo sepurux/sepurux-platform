@@ -1517,9 +1517,18 @@ export const api = {
   }) => postJson<CampaignMetadata, typeof payload>("/v1/campaigns", payload),
   updateCampaignMutationSet: (campaignId: string, payload: { mutation_set: CampaignMutation[] }) =>
     patchJson<CampaignMetadata, typeof payload>(`/v1/campaigns/${campaignId}/mutation-set`, payload),
+  updateCampaignMutationPack: (
+    campaignId: string,
+    payload: { mutation_pack_id?: string | null }
+  ) => patchJson<CampaignMetadata, typeof payload>(`/v1/campaigns/${campaignId}/mutation-pack`, payload),
   updateCampaignEvalSet: (
     campaignId: string,
-    payload: { add_trace_ids?: string[]; remove_trace_ids?: string[]; min_scenarios?: number }
+    payload: {
+      add_trace_ids?: string[];
+      remove_trace_ids?: string[];
+      min_scenarios?: number;
+      attempts_count?: number;
+    }
   ) => patchJson<CampaignMetadata, typeof payload>(`/v1/campaigns/${campaignId}/eval-set`, payload),
   getContract: (campaignId: string) =>
     requestJson<QualityContract>(`/v1/campaigns/${campaignId}/contract`),

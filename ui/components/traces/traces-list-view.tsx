@@ -102,7 +102,7 @@ export function TracesListView() {
           <CardHeader className="border-b border-slate-200/90 pb-6 dark:border-white/8">
             <DataTableHeader
               icon={FileSearch}
-              accent="blue"
+              accent="amber"
               title="Trace Catalog"
               description="Review uploaded scenarios, source metadata, and validation state before turning traces into replayable campaign coverage."
               badge={
