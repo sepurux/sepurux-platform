@@ -329,6 +329,68 @@ def test_post_run_resolves_replay_profile_mutation_and_stable_seed_basis(
         assert first_seed_basis == second_seed_basis
 
 
+def test_post_run_falls_back_to_trace_profile_when_campaign_mutations_do_not_match_trace(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, _, project_id = run_test_context
+
+    trace_id = uuid4()
+    campaign_id = uuid4()
+    with testing_session_local() as db:
+        db.add(
+            Trace(
+                trace_id=trace_id,
+                project_id=project_id,
+                source="test",
+                normalized_payload={
+                    "events": [
+                        {
+                            "type": "tool_call",
+                            "tool": "iam.revoke_token",
+                            "args": {"token_id": "tok_1"},
+                        },
+                        {
+                            "type": "tool_result",
+                            "tool": "iam.revoke_token",
+                            "result": {"ok": True},
+                        },
+                    ]
+                },
+                s3_key=f"traces/{trace_id}.json",
+            )
+        )
+        db.add(
+            Campaign(
+                campaign_id=campaign_id,
+                project_id=project_id,
+                name="Cross Scenario Campaign",
+                mutation_set=[
+                    {
+                        "mutation_id": "refund",
+                        "tool": "payments.refund",
+                        "args": {"payment_id": "pay_1", "amount": 120},
+                    }
+                ],
+                eval_set={"checks": ["status"]},
+            )
+        )
+        db.commit()
+
+    response = client.post(
+        "/v1/runs",
+        json={"trace_id": str(trace_id), "campaign_id": str(campaign_id)},
+    )
+    assert response.status_code == 201
+    summary = response.json()["summary"]
+    assert summary["resolved_mutation_set"] == [
+        {
+            "mutation_id": "baseline.iam.revoke_token",
+            "tool": "iam.revoke_token",
+            "args": {"token_id": "tok_1", "confirmation_token": "approved"},
+        }
+    ]
+
+
 def test_post_run_prefers_explicit_policy_pack_over_bootstrap_default(
     run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
 ) -> None:
