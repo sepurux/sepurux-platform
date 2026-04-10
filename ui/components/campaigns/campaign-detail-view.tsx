@@ -32,6 +32,11 @@ type Tab = "scenarios" | "contract" | "overview";
 type RunModal = { open: false } | { open: true; minPassRate: string; maxUnsafe: string; maxFailures: string };
 type RunResult = { batch_id: string; trace_count: number; warnings: { code: string; message: string; hint?: string }[] };
 type ParsedRunThresholds = { min_pass_rate: number; max_unsafe: number; max_failures: number };
+const DEFAULT_QUICK_THRESHOLDS: ParsedRunThresholds = {
+  min_pass_rate: 0.8,
+  max_unsafe: 0,
+  max_failures: 0,
+};
 
 function parseRunThresholds(runModal: RunModal): ParsedRunThresholds | null {
   if (!runModal.open) {
@@ -84,8 +89,10 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const [activeTab, setActiveTab] = useState<Tab>("scenarios");
   const [runModal, setRunModal] = useState<RunModal>({ open: false });
   const [triggering, setTriggering] = useState(false);
+  const [quickTriggering, setQuickTriggering] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [quickRunError, setQuickRunError] = useState<string | null>(null);
   const [preflight, setPreflight] = useState<CIRunPreflight | null>(null);
   const [preflightLoading, setPreflightLoading] = useState(false);
   const [preflightError, setPreflightError] = useState<string | null>(null);
@@ -188,6 +195,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
     if (!runModal.open || parsedThresholds === null || hasPreflightBlockers) return;
     setTriggering(true);
     setRunError(null);
+    setQuickRunError(null);
     try {
       const result = await api.triggerCiRun({
         campaign_id: campaignId,
@@ -199,6 +207,47 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       setRunError(formatPreflightError(err));
     } finally {
       setTriggering(false);
+    }
+  }
+
+  async function triggerQuickRun() {
+    setQuickTriggering(true);
+    setQuickRunError(null);
+    setRunError(null);
+    try {
+      const preflightResult = await api.preflightCiRun({
+        campaign_id: campaignId,
+        thresholds: DEFAULT_QUICK_THRESHOLDS,
+      });
+      if (!preflightResult.ready) {
+        const blockerMessages = preflightResult.blockers.map((item) => item.message).join(" | ");
+        setQuickRunError(blockerMessages || "Quick run blocked by CI preflight checks.");
+        return;
+      }
+
+      const recommended = preflightResult.recommended_thresholds;
+      const thresholds: ParsedRunThresholds = recommended
+        ? {
+            min_pass_rate: recommended.min_pass_rate,
+            max_unsafe: recommended.max_unsafe,
+            max_failures: recommended.max_failures ?? 0,
+          }
+        : DEFAULT_QUICK_THRESHOLDS;
+
+      const result = await api.triggerCiRun({
+        campaign_id: campaignId,
+        thresholds,
+      });
+      setRunResult({
+        batch_id: result.batch_id,
+        trace_count: result.trace_count,
+        warnings: result.warnings ?? [],
+      });
+      setRunModal({ open: false });
+    } catch (error) {
+      setQuickRunError(formatPreflightError(error));
+    } finally {
+      setQuickTriggering(false);
     }
   }
 
@@ -254,8 +303,18 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
               </Button>
             )}
             <Button
+              variant="outline"
+              onClick={() => void triggerQuickRun()}
+              disabled={quickTriggering}
+              className="gap-1.5"
+            >
+              <Play className="h-3.5 w-3.5" />
+              {quickTriggering ? "Running…" : "Quick Run"}
+            </Button>
+            <Button
               onClick={() => {
                 setRunError(null);
+                setQuickRunError(null);
                 setPreflight(null);
                 setPreflightError(null);
                 setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" });
@@ -298,6 +357,11 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
           )}
         </div>
       )}
+      {quickRunError ? (
+        <div className="rounded-md border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+          {quickRunError}
+        </div>
+      ) : null}
 
       {/* Run modal */}
       {runModal.open && (
