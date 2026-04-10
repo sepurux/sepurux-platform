@@ -12,6 +12,7 @@ from app.schemas import (
     CampaignFailureBreakdownItem,
     CampaignFailureRecord,
     CampaignMetadata,
+    CampaignMutationPackPatch,
     CampaignMutationSetPatch,
     CampaignReliabilityResponse,
     CampaignRunPackRequest,
@@ -230,6 +231,8 @@ def patch_campaign_eval_set(
     eval_set["trace_ids"] = updated_ids
     if payload.min_scenarios is not None:
         eval_set["min_scenarios"] = payload.min_scenarios
+    if payload.attempts_count is not None:
+        eval_set["attempts_count"] = payload.attempts_count
 
     campaign.eval_set = eval_set
     db.add(campaign)
@@ -254,6 +257,36 @@ def patch_campaign_mutation_set(
     _ensure_replay_mutation_set(payload.mutation_set, mutation_pack_id=campaign.mutation_pack_id)
 
     campaign.mutation_set = payload.mutation_set
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    return _to_campaign_metadata(campaign)
+
+
+@router.patch("/{campaign_id}/mutation-pack", response_model=CampaignMetadata)
+def patch_campaign_mutation_pack(
+    campaign_id: UUID,
+    payload: CampaignMutationPackPatch,
+    db: DbSession,
+    project_scope: ProjectScopeDep,
+    tenant_auth: DeveloperAuth,
+) -> CampaignMetadata:
+    del tenant_auth
+    campaign = get_campaign_record(db, project_id=project_scope.project_id, campaign_id=campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    if payload.mutation_pack_id is not None and (
+        get_mutation_pack(
+            db,
+            project_id=project_scope.project_id,
+            mutation_pack_id=payload.mutation_pack_id,
+        )
+        is None
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mutation pack not found")
+
+    campaign.mutation_pack_id = payload.mutation_pack_id
     db.add(campaign)
     db.commit()
     db.refresh(campaign)

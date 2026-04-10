@@ -74,10 +74,15 @@ class CampaignEvalSetPatch(BaseModel):
     add_trace_ids: list[UUID] = Field(default_factory=list)
     remove_trace_ids: list[UUID] = Field(default_factory=list)
     min_scenarios: int | None = Field(default=None, ge=1)
+    attempts_count: int | None = Field(default=None, ge=1, le=50)
 
 
 class CampaignMutationSetPatch(BaseModel):
     mutation_set: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class CampaignMutationPackPatch(BaseModel):
+    mutation_pack_id: UUID | None = None
 
 
 class CampaignMetadata(BaseModel):

@@ -291,3 +291,67 @@ def test_patch_campaign_mutation_set_returns_404_for_missing_campaign(
     )
     assert response.status_code == 404
     assert response.json() == {"detail": "Campaign not found"}
+
+
+def test_patch_campaign_eval_set_updates_attempts_count(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _ = campaign_test_context
+    create_response = client.post(
+        "/v1/campaigns",
+        json={
+            "name": "Attempt Tunable",
+            "mutation_set": [{"mutation_id": "baseline"}],
+            "eval_set": {"checks": ["status"], "attempts_count": 10},
+        },
+    )
+    assert create_response.status_code == 201
+    campaign_id = create_response.json()["campaign_id"]
+
+    patch_response = client.patch(
+        f"/v1/campaigns/{campaign_id}/eval-set",
+        json={"attempts_count": 37},
+    )
+    assert patch_response.status_code == 200
+    payload = patch_response.json()
+    assert payload["campaign_id"] == campaign_id
+    assert payload["eval_set"]["attempts_count"] == 37
+
+
+def test_patch_campaign_mutation_pack_updates_campaign(
+    campaign_test_context: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, testing_session_local = campaign_test_context
+    create_response = client.post(
+        "/v1/campaigns",
+        json={
+            "name": "Pack Mutable Campaign",
+            "mutation_set": [{"mutation_id": "baseline"}],
+            "eval_set": {"checks": ["status"]},
+        },
+    )
+    assert create_response.status_code == 201
+    campaign_id = create_response.json()["campaign_id"]
+
+    mutation_pack_id = uuid4()
+    with testing_session_local() as db:
+        project_id = UUID(client.headers["X-Project-Id"])
+        db.add(
+            MutationPack(
+                mutation_pack_id=mutation_pack_id,
+                project_id=project_id,
+                name="pack.mutable",
+                description="test pack",
+                config={"mutations": []},
+            )
+        )
+        db.commit()
+
+    patch_response = client.patch(
+        f"/v1/campaigns/{campaign_id}/mutation-pack",
+        json={"mutation_pack_id": str(mutation_pack_id)},
+    )
+    assert patch_response.status_code == 200
+    payload = patch_response.json()
+    assert payload["campaign_id"] == campaign_id
+    assert payload["mutation_pack_id"] == str(mutation_pack_id)

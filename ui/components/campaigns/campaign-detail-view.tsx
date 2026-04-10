@@ -9,6 +9,8 @@ import {
   ApiError,
   api,
   type CIRunPreflight,
+  type CIRunPreflightIssue,
+  type CampaignMutation,
   type CampaignMetadata,
   type MutationPackMetadata,
   type QualityContract,
@@ -83,6 +85,186 @@ function formatPreflightError(error: unknown): string {
   return error instanceof Error ? error.message : "Failed to trigger run";
 }
 
+function toPreflightIssueList(value: unknown): CIRunPreflightIssue[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const issues: CIRunPreflightIssue[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const codeValue = (item as { code?: unknown }).code;
+    const messageValue = (item as { message?: unknown }).message;
+    if (typeof codeValue !== "string" || typeof messageValue !== "string") {
+      continue;
+    }
+    const hintValue = (item as { hint?: unknown }).hint;
+    issues.push({
+      code: codeValue,
+      message: messageValue,
+      hint: typeof hintValue === "string" ? hintValue : null,
+    });
+  }
+  return issues;
+}
+
+function extractPreflightIssues(error: unknown): {
+  blockers: CIRunPreflightIssue[];
+  warnings: CIRunPreflightIssue[];
+} {
+  if (!(error instanceof ApiError) || !error.body || typeof error.body !== "object") {
+    return { blockers: [], warnings: [] };
+  }
+  const detail = (error.body as { detail?: unknown }).detail;
+  if (!detail || typeof detail !== "object") {
+    return { blockers: [], warnings: [] };
+  }
+  return {
+    blockers: toPreflightIssueList((detail as { blockers?: unknown }).blockers),
+    warnings: toPreflightIssueList((detail as { warnings?: unknown }).warnings),
+  };
+}
+
+function parseRequiredAttemptsFromBlockers(blockers: CIRunPreflightIssue[]): number | null {
+  for (const blocker of blockers) {
+    const messageMatch = blocker.message.match(/at least\s+(\d+)\s+attempt/i);
+    if (messageMatch) {
+      return Number.parseInt(messageMatch[1], 10);
+    }
+    if (typeof blocker.hint === "string") {
+      const hintMatch = blocker.hint.match(/at least\s+(\d+)\s+attempt/i);
+      if (hintMatch) {
+        return Number.parseInt(hintMatch[1], 10);
+      }
+    }
+  }
+  return null;
+}
+
+function campaignMutationItemsCount(mutationSet: CampaignMetadata["mutation_set"]): number {
+  if (Array.isArray(mutationSet)) {
+    return Math.max(1, mutationSet.length);
+  }
+  if (mutationSet && typeof mutationSet === "object") {
+    const nested = (mutationSet as { mutations?: unknown }).mutations;
+    if (Array.isArray(nested)) {
+      return Math.max(1, nested.length);
+    }
+    return 1;
+  }
+  return 1;
+}
+
+function mutationHasApprovalToken(args: unknown): boolean {
+  if (!args || typeof args !== "object" || Array.isArray(args)) {
+    return false;
+  }
+  const argsRecord = args as Record<string, unknown>;
+  const confirmation = argsRecord.confirmation_token;
+  const approval = argsRecord.approval_token;
+  return Boolean(
+    (typeof confirmation === "string" && confirmation.trim().length > 0) ||
+      (typeof approval === "string" && approval.trim().length > 0)
+  );
+}
+
+function parseMutationIdsFromHint(hint: string | null | undefined): Set<string> {
+  if (!hint) {
+    return new Set();
+  }
+  const afterColon = hint.includes(":") ? hint.split(":").slice(1).join(":") : hint;
+  const entries = afterColon
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  const ids = new Set<string>();
+  for (const entry of entries) {
+    const arrowIndex = entry.includes("→") ? entry.indexOf("→") : entry.indexOf("->");
+    if (arrowIndex <= 0) {
+      continue;
+    }
+    const id = entry.slice(0, arrowIndex).trim();
+    if (id) {
+      ids.add(id);
+    }
+  }
+  return ids;
+}
+
+function applyConfirmationTokenFix(
+  mutationSet: CampaignMetadata["mutation_set"],
+  blocker?: CIRunPreflightIssue,
+): { mutationSet: CampaignMutation[] | null; changed: boolean } {
+  let sourceMutations: CampaignMutation[] | null = null;
+  if (Array.isArray(mutationSet)) {
+    sourceMutations = mutationSet;
+  } else if (mutationSet && typeof mutationSet === "object") {
+    const nested = (mutationSet as { mutations?: unknown }).mutations;
+    if (Array.isArray(nested)) {
+      sourceMutations = nested as CampaignMutation[];
+    } else {
+      sourceMutations = [mutationSet as CampaignMutation];
+    }
+  }
+
+  if (!sourceMutations || sourceMutations.length === 0) {
+    return { mutationSet: null, changed: false };
+  }
+
+  const targetedMutationIds = parseMutationIdsFromHint(blocker?.hint);
+  let changed = false;
+
+  const patched = sourceMutations.map((mutation, index) => {
+    const rawMutationId =
+      (typeof mutation.mutation_id === "string" ? mutation.mutation_id : null) ??
+      (typeof mutation.id === "string" ? mutation.id : null) ??
+      (typeof mutation.tool === "string" ? mutation.tool : null) ??
+      `mutation-${index + 1}`;
+
+    if (targetedMutationIds.size > 0 && !targetedMutationIds.has(rawMutationId)) {
+      return mutation;
+    }
+
+    const existingArgs =
+      mutation.args && typeof mutation.args === "object" && !Array.isArray(mutation.args)
+        ? mutation.args
+        : {};
+
+    if (mutationHasApprovalToken(existingArgs)) {
+      return mutation;
+    }
+
+    changed = true;
+    return {
+      ...mutation,
+      args: {
+        ...existingArgs,
+        confirmation_token: "approved",
+      },
+    };
+  });
+
+  return { mutationSet: patched, changed };
+}
+
+function quickFixActionLabel(code: string): string | null {
+  if (code === "contract_wrong_pack") {
+    return "Use required pack";
+  }
+  if (code === "contract_insufficient_attempts") {
+    return "Increase attempts";
+  }
+  if (code === "missing_confirmation_token") {
+    return "Add confirmation token";
+  }
+  if (code === "contract_untested_tool" || code === "trace_not_found" || code === "trace_resolution_failed") {
+    return "Open scenarios";
+  }
+  return null;
+}
+
 export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -93,6 +275,10 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [quickRunError, setQuickRunError] = useState<string | null>(null);
+  const [quickRunBlockers, setQuickRunBlockers] = useState<CIRunPreflightIssue[]>([]);
+  const [quickRunWarnings, setQuickRunWarnings] = useState<CIRunPreflightIssue[]>([]);
+  const [quickRunPreflight, setQuickRunPreflight] = useState<CIRunPreflight | null>(null);
+  const [quickFixingCode, setQuickFixingCode] = useState<string | null>(null);
   const [preflight, setPreflight] = useState<CIRunPreflight | null>(null);
   const [preflightLoading, setPreflightLoading] = useState(false);
   const [preflightError, setPreflightError] = useState<string | null>(null);
@@ -196,6 +382,9 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
     setTriggering(true);
     setRunError(null);
     setQuickRunError(null);
+    setQuickRunBlockers([]);
+    setQuickRunWarnings([]);
+    setQuickRunPreflight(null);
     try {
       const result = await api.triggerCiRun({
         campaign_id: campaignId,
@@ -213,15 +402,19 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   async function triggerQuickRun() {
     setQuickTriggering(true);
     setQuickRunError(null);
+    setQuickRunBlockers([]);
+    setQuickRunWarnings([]);
     setRunError(null);
     try {
       const preflightResult = await api.preflightCiRun({
         campaign_id: campaignId,
         thresholds: DEFAULT_QUICK_THRESHOLDS,
       });
+      setQuickRunPreflight(preflightResult);
       if (!preflightResult.ready) {
-        const blockerMessages = preflightResult.blockers.map((item) => item.message).join(" | ");
-        setQuickRunError(blockerMessages || "Quick run blocked by CI preflight checks.");
+        setQuickRunBlockers(preflightResult.blockers);
+        setQuickRunWarnings(preflightResult.warnings);
+        setQuickRunError("Quick run blocked by CI preflight checks.");
         return;
       }
 
@@ -243,11 +436,85 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         trace_count: result.trace_count,
         warnings: result.warnings ?? [],
       });
+      setQuickRunBlockers([]);
+      setQuickRunWarnings([]);
       setRunModal({ open: false });
     } catch (error) {
+      const issues = extractPreflightIssues(error);
+      if (issues.blockers.length > 0 || issues.warnings.length > 0) {
+        setQuickRunBlockers(issues.blockers);
+        setQuickRunWarnings(issues.warnings);
+      }
       setQuickRunError(formatPreflightError(error));
     } finally {
       setQuickTriggering(false);
+    }
+  }
+
+  async function applyQuickFix(issue: CIRunPreflightIssue) {
+    if (state.status !== "ready") {
+      return;
+    }
+
+    setQuickFixingCode(issue.code);
+    try {
+      if (issue.code === "contract_wrong_pack") {
+        const contract = await api.getContract(campaignId);
+        const nextPackId = contract.required_pack_ids[0];
+        if (!nextPackId) {
+          throw new Error("Contract has no required mutation packs to apply.");
+        }
+        const updated = await api.updateCampaignMutationPack(campaignId, {
+          mutation_pack_id: nextPackId,
+        });
+        onCampaignUpdated(updated);
+      } else if (issue.code === "contract_insufficient_attempts") {
+        const contract = await api.getContract(campaignId);
+        const requiredAttempts =
+          parseRequiredAttemptsFromBlockers([issue]) ??
+          (typeof contract.min_attempts_per_pack === "number" ? contract.min_attempts_per_pack : 1);
+        const traceCount =
+          quickRunPreflight?.trace_count ??
+          (Array.isArray(state.campaign.eval_set?.trace_ids) ? state.campaign.eval_set.trace_ids.length : 0);
+        if (traceCount <= 0) {
+          setActiveTab("scenarios");
+          throw new Error("No scenarios found. Add scenarios before increasing attempts.");
+        }
+        const mutationCount = campaignMutationItemsCount(state.campaign.mutation_set);
+        const attemptsPerTrace = Math.ceil(requiredAttempts / Math.max(traceCount * mutationCount, 1));
+        const clampedAttempts = Math.max(1, Math.min(50, attemptsPerTrace));
+        const updated = await api.updateCampaignEvalSet(campaignId, {
+          attempts_count: clampedAttempts,
+        });
+        onCampaignUpdated(updated);
+      } else if (issue.code === "missing_confirmation_token") {
+        const fixed = applyConfirmationTokenFix(state.campaign.mutation_set, issue);
+        if (!fixed.mutationSet || !fixed.changed) {
+          throw new Error("No mutation entries were eligible for confirmation token updates.");
+        }
+        const updated = await api.updateCampaignMutationSet(campaignId, {
+          mutation_set: fixed.mutationSet,
+        });
+        onCampaignUpdated(updated);
+      } else if (
+        issue.code === "contract_untested_tool" ||
+        issue.code === "trace_not_found" ||
+        issue.code === "trace_resolution_failed"
+      ) {
+        setActiveTab("scenarios");
+        setQuickRunError("Open Scenarios to add or replace traces, then run Quick Run again.");
+        return;
+      } else {
+        setQuickRunError("No automatic fix is available for this blocker yet.");
+        return;
+      }
+
+      setQuickRunError("Fix applied. Re-running checks…");
+      await triggerQuickRun();
+    } catch (error) {
+      setQuickRunError(error instanceof Error ? error.message : "Failed to apply quick fix");
+    } finally {
+      setQuickFixingCode(null);
     }
   }
 
@@ -315,6 +582,9 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
               onClick={() => {
                 setRunError(null);
                 setQuickRunError(null);
+                setQuickRunBlockers([]);
+                setQuickRunWarnings([]);
+                setQuickRunPreflight(null);
                 setPreflight(null);
                 setPreflightError(null);
                 setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" });
@@ -358,8 +628,59 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         </div>
       )}
       {quickRunError ? (
-        <div className="rounded-md border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
-          {quickRunError}
+        <div className="space-y-3 rounded-md border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+          <p className="font-medium">{quickRunError}</p>
+          {quickRunPreflight ? (
+            <p className="text-xs text-rose-800/80 dark:text-rose-300/90">
+              {quickRunPreflight.trace_count} trace{quickRunPreflight.trace_count === 1 ? "" : "s"} ×{" "}
+              {quickRunPreflight.attempts_per_trace} attempts/trace = {quickRunPreflight.estimated_attempts_total} total attempts
+            </p>
+          ) : null}
+          {quickRunBlockers.length > 0 ? (
+            <div className="space-y-2">
+              {quickRunBlockers.map((issue) => {
+                const actionLabel = quickFixActionLabel(issue.code);
+                const fixingThisIssue = quickFixingCode === issue.code;
+                return (
+                  <div
+                    key={`${issue.code}-${issue.message}`}
+                    className="rounded border border-rose-400/25 bg-rose-100/50 px-3 py-2 dark:border-rose-400/20 dark:bg-black/15"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 dark:text-rose-200">
+                      {issue.code.replaceAll("_", " ")}
+                    </p>
+                    <p className="mt-1 text-sm text-rose-900 dark:text-rose-100">{issue.message}</p>
+                    {issue.hint ? (
+                      <p className="mt-1 text-xs text-rose-800/80 dark:text-rose-300/90">{issue.hint}</p>
+                    ) : null}
+                    {actionLabel ? (
+                      <div className="mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void applyQuickFix(issue)}
+                          disabled={quickTriggering || Boolean(quickFixingCode)}
+                        >
+                          {fixingThisIssue ? "Applying…" : actionLabel}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          {quickRunWarnings.length > 0 ? (
+            <div className="space-y-1 rounded border border-amber-300/60 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
+              <p className="font-semibold">Warnings</p>
+              {quickRunWarnings.map((issue) => (
+                <p key={`${issue.code}-${issue.message}`}>
+                  {issue.message}
+                  {issue.hint ? <span className="ml-1 opacity-80">{issue.hint}</span> : null}
+                </p>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
