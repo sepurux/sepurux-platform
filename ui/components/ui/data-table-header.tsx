@@ -13,18 +13,18 @@ const accentToneClasses: Record<AccentTone, string> = {
   emerald:
     "border-emerald-300/70 bg-[linear-gradient(180deg,rgba(209,250,229,0.98),rgba(167,243,208,0.62))] text-emerald-700 shadow-[0_10px_24px_rgba(5,150,105,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] dark:border-emerald-400/20 dark:bg-[linear-gradient(180deg,rgba(52,211,153,0.28),rgba(6,95,70,0.18))] dark:text-emerald-200 dark:shadow-[0_10px_24px_rgba(5,150,105,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]",
   amber:
-    "border-amber-300/70 bg-[linear-gradient(180deg,rgba(254,243,199,0.98),rgba(253,230,138,0.62))] text-amber-700 shadow-[0_10px_24px_rgba(217,119,6,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] dark:border-amber-400/20 dark:bg-[linear-gradient(180deg,rgba(251,191,36,0.32),rgba(180,83,9,0.18))] dark:text-amber-200 dark:shadow-[0_10px_24px_rgba(217,119,6,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]",
+    "border-[#d7843b]/55 bg-[linear-gradient(180deg,rgba(255,236,215,0.98),rgba(253,218,180,0.72))] text-[#8b4b17] shadow-[0_10px_24px_rgba(215,132,59,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] dark:border-[#d7843b]/45 dark:bg-[linear-gradient(180deg,rgba(215,132,59,0.28),rgba(165,88,20,0.18))] dark:text-[#ffd8b3] dark:shadow-[0_10px_24px_rgba(215,132,59,0.24),inset_0_1px_0_rgba(255,255,255,0.08)]",
 };
 
-const accentBadgeClasses: Record<AccentTone, string> = {
+const badgeToneClasses: Record<AccentTone, string> = {
   violet:
-    "border-violet-300/75 bg-violet-50 text-violet-700 dark:border-violet-400/12 dark:bg-violet-500/12 dark:text-violet-200",
+    "border-violet-300/55 bg-violet-100/85 text-violet-700 dark:border-violet-400/45 dark:bg-violet-500/30 dark:text-violet-100",
   blue:
-    "border-sky-300/75 bg-sky-50 text-sky-700 dark:border-sky-400/12 dark:bg-sky-500/12 dark:text-sky-200",
+    "border-sky-300/55 bg-sky-100/85 text-sky-700 dark:border-sky-400/45 dark:bg-sky-500/30 dark:text-sky-100",
   emerald:
-    "border-emerald-300/75 bg-emerald-50 text-emerald-700 dark:border-emerald-400/12 dark:bg-emerald-500/12 dark:text-emerald-200",
+    "border-emerald-300/55 bg-emerald-100/85 text-emerald-700 dark:border-emerald-400/45 dark:bg-emerald-500/30 dark:text-emerald-100",
   amber:
-    "border-amber-300/75 bg-amber-50 text-amber-700 dark:border-amber-400/12 dark:bg-amber-500/12 dark:text-amber-200",
+    "border-[#d7843b]/55 bg-[#fff3e6] text-[#8b4b17] dark:border-[#d7843b]/55 dark:bg-[#d7843b]/30 dark:text-[#fff0df]",
 };
 
 type DataTableHeaderProps = {
@@ -69,12 +69,12 @@ export function DataTableHeader({
           <p className="max-w-2xl text-[15px] leading-6 text-slate-500 dark:text-slate-400">{description}</p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2 text-foreground">
         {badge ? (
           <div
             className={cn(
               "inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
-              accentBadgeClasses[accent]
+              badgeToneClasses[accent]
             )}
           >
             {badge}
@@ -85,7 +85,7 @@ export function DataTableHeader({
             type="button"
             onClick={onToggle}
             aria-label={isOpen ? "Collapse" : "Expand"}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/70 bg-white/60 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-slate-200"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300/70 bg-slate-100/65 text-slate-500 transition-colors hover:bg-slate-200/90 hover:text-slate-700 dark:border-white/20 dark:bg-white/[0.09] dark:text-slate-100 dark:hover:bg-white/[0.16] dark:hover:text-white"
           >
             <ChevronDown
               className={cn("h-4 w-4 transition-transform duration-200", isOpen ? "rotate-180" : "")}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from fnmatch import fnmatchcase
 import hashlib
 import json
@@ -47,6 +48,13 @@ class RelatedRecordNotFoundError(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class ResolvedRunReplayPlan:
+    resolved_mutation_set: list[Any]
+    replay_seed_basis: str
+    trace_hardening: dict[str, Any] | None
+
+
 def create_run(
     db: Session,
     *,
@@ -63,10 +71,13 @@ def create_run(
     policy_pack: PolicyPack | None = None
     effective_policy_pack_version_id: UUID | None = None
 
-    if (
-        db.scalar(select(Trace).where(Trace.trace_id == trace_id, Trace.project_id == project_id))
-        is None
-    ):
+    trace = db.scalar(
+        select(Trace).where(
+            Trace.trace_id == trace_id,
+            Trace.project_id == project_id,
+        )
+    )
+    if trace is None:
         raise RelatedRecordNotFoundError("Trace not found")
     campaign = db.scalar(
         select(Campaign).where(
@@ -125,6 +136,24 @@ def create_run(
         if isinstance(active_version, PolicyPackVersion):
             effective_policy_pack_version_id = active_version.version_id
 
+    contract = get_contract(db, campaign_id=campaign.campaign_id)
+    required_tools = list(contract.required_tools or []) if contract is not None else []
+    replay_plan = _resolve_run_replay_plan(
+        campaign=campaign,
+        trace=trace,
+        required_tools=required_tools,
+        effective_mutation_pack_id=effective_mutation_pack_id,
+        seed_namespace="manual",
+    )
+
+    summary: dict[str, Any] = {
+        "campaign_name": campaign.name,
+        "resolved_mutation_set": replay_plan.resolved_mutation_set,
+        "replay_seed_basis": replay_plan.replay_seed_basis,
+    }
+    if replay_plan.trace_hardening is not None:
+        summary["trace_hardening"] = replay_plan.trace_hardening
+
     return _create_run_record(
         db,
         project_id=project_id,
@@ -133,7 +162,7 @@ def create_run(
         mutation_pack_id=effective_mutation_pack_id,
         policy_pack_id=effective_policy_pack_id,
         effective_policy_pack_version_id=effective_policy_pack_version_id,
-        summary=None,
+        summary=summary,
         actor=actor,
     )
 
@@ -328,24 +357,21 @@ def create_ci_run_and_enqueue(
 
     contract = get_contract(db, campaign_id=campaign.campaign_id)
     required_tools = list(contract.required_tools or []) if contract is not None else []
-    resolved_mutation_set = _resolve_ci_mutation_set(
+    replay_plan = _resolve_run_replay_plan(
         campaign,
         trace=trace,
         required_tools=required_tools,
+        effective_mutation_pack_id=campaign.mutation_pack_id,
+        seed_namespace="ci",
     )
-    trace_hardening = _infer_trace_hardening(trace)
     summary: dict[str, Any] = {
         "ci_thresholds": thresholds,
         "campaign_name": campaign.name,
-        "resolved_mutation_set": resolved_mutation_set,
-        "replay_seed_basis": _ci_replay_seed_basis(
-            trace=trace,
-            campaign=campaign,
-            resolved_mutation_set=resolved_mutation_set,
-        ),
+        "resolved_mutation_set": replay_plan.resolved_mutation_set,
+        "replay_seed_basis": replay_plan.replay_seed_basis,
     }
-    if trace_hardening is not None:
-        summary["trace_hardening"] = trace_hardening
+    if replay_plan.trace_hardening is not None:
+        summary["trace_hardening"] = replay_plan.trace_hardening
     if isinstance(github_context, dict):
         summary["github_context"] = github_context
     if batch_id is not None:
@@ -402,26 +428,23 @@ def create_ci_batch_and_enqueue(
             raise RelatedRecordNotFoundError(f"Trace {trace_id} not found")
         if trace.project_id != project_id:
             raise ValueError(f"Trace {trace_id} does not belong to this project")
-        resolved_mutation_set = _resolve_ci_mutation_set(
+        replay_plan = _resolve_run_replay_plan(
             campaign,
             trace=trace,
             required_tools=required_tools,
+            effective_mutation_pack_id=campaign.mutation_pack_id,
+            seed_namespace="ci",
         )
-        trace_hardening = _infer_trace_hardening(trace)
 
         summary: dict[str, Any] = {
             "ci_thresholds": thresholds,
             "ci_batch_id": str(batch_id),
             "campaign_name": campaign.name,
-            "resolved_mutation_set": resolved_mutation_set,
-            "replay_seed_basis": _ci_replay_seed_basis(
-                trace=trace,
-                campaign=campaign,
-                resolved_mutation_set=resolved_mutation_set,
-            ),
+            "resolved_mutation_set": replay_plan.resolved_mutation_set,
+            "replay_seed_basis": replay_plan.replay_seed_basis,
         }
-        if trace_hardening is not None:
-            summary["trace_hardening"] = trace_hardening
+        if replay_plan.trace_hardening is not None:
+            summary["trace_hardening"] = replay_plan.trace_hardening
         if isinstance(github_context, dict):
             summary["github_context"] = github_context
 
@@ -535,38 +558,66 @@ def _resolve_trace_scoped_mutation_set(
     return mutation_items
 
 
+def _resolve_run_replay_plan(
+    campaign: Campaign,
+    *,
+    trace: Trace,
+    required_tools: list[str],
+    effective_mutation_pack_id: UUID | None,
+    seed_namespace: str,
+) -> ResolvedRunReplayPlan:
+    resolved = _resolve_trace_scoped_mutation_set(campaign, trace=trace)
+    resolved_mutation_set = resolved
+    if _mutation_set_needs_contract_fallback(resolved_mutation_set):
+        payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+        uploaded_primary = get_uploaded_trace_primary_mutation(payload)
+        if uploaded_primary is not None:
+            resolved_mutation_set = [uploaded_primary]
+        else:
+            fallback_candidates = derive_trace_baseline_candidates(payload)
+            primary_candidate = choose_primary_baseline_candidate(fallback_candidates)
+            if primary_candidate is not None:
+                resolved_mutation_set = [primary_candidate]
+            else:
+                uploaded_candidates = resolve_uploaded_trace_baseline_candidates(payload)
+                if uploaded_candidates:
+                    resolved_mutation_set = uploaded_candidates
+                else:
+                    synthesized = _synthesize_trace_scoped_mutations_from_required_tools(
+                        trace=trace,
+                        required_tools=required_tools,
+                    )
+                    synthesized_primary = choose_primary_baseline_candidate(synthesized)
+                    if synthesized_primary is not None:
+                        resolved_mutation_set = [synthesized_primary]
+
+    replay_seed_basis = _build_replay_seed_basis(
+        trace=trace,
+        campaign=campaign,
+        resolved_mutation_set=resolved_mutation_set,
+        effective_mutation_pack_id=effective_mutation_pack_id,
+        seed_namespace=seed_namespace,
+    )
+    return ResolvedRunReplayPlan(
+        resolved_mutation_set=resolved_mutation_set,
+        replay_seed_basis=replay_seed_basis,
+        trace_hardening=_infer_trace_hardening(trace),
+    )
+
+
 def _resolve_ci_mutation_set(
     campaign: Campaign,
     *,
     trace: Trace,
     required_tools: list[str],
 ) -> list[Any]:
-    resolved = _resolve_trace_scoped_mutation_set(campaign, trace=trace)
-    if not _mutation_set_needs_contract_fallback(resolved):
-        return resolved
-
-    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
-    uploaded_primary = get_uploaded_trace_primary_mutation(payload)
-    if uploaded_primary is not None:
-        return [uploaded_primary]
-
-    fallback_candidates = derive_trace_baseline_candidates(payload)
-    primary_candidate = choose_primary_baseline_candidate(fallback_candidates)
-    if primary_candidate is not None:
-        return [primary_candidate]
-
-    uploaded_candidates = resolve_uploaded_trace_baseline_candidates(payload)
-    if uploaded_candidates:
-        return uploaded_candidates
-
-    synthesized = _synthesize_trace_scoped_mutations_from_required_tools(
+    return _resolve_run_replay_plan(
+        campaign,
         trace=trace,
         required_tools=required_tools,
-    )
-    synthesized_primary = choose_primary_baseline_candidate(synthesized)
-    if synthesized_primary is not None:
-        return [synthesized_primary]
-    return resolved
+        effective_mutation_pack_id=campaign.mutation_pack_id,
+        seed_namespace="ci",
+    ).resolved_mutation_set
 
 
 def _mutation_set_needs_contract_fallback(mutation_set: list[Any]) -> bool:
@@ -621,24 +672,47 @@ def _synthesize_trace_scoped_mutations_from_required_tools(
 
     return synthesized
 
-def _ci_replay_seed_basis(
+def _build_replay_seed_basis(
     *,
     trace: Trace,
     campaign: Campaign,
     resolved_mutation_set: list[Any],
+    effective_mutation_pack_id: UUID | None,
+    seed_namespace: str,
 ) -> str:
     payload = {
         "trace_id": str(trace.trace_id),
         "campaign_id": str(campaign.campaign_id),
         "mutation_pack_id": (
-            str(campaign.mutation_pack_id) if campaign.mutation_pack_id is not None else None
+            str(effective_mutation_pack_id)
+            if effective_mutation_pack_id is not None
+            else (
+                str(campaign.mutation_pack_id)
+                if campaign.mutation_pack_id is not None
+                else None
+            )
         ),
         "resolved_mutation_set": resolved_mutation_set,
     }
     digest = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
     ).hexdigest()
-    return f"ci:{digest}"
+    return f"{seed_namespace}:{digest}"
+
+
+def _ci_replay_seed_basis(
+    *,
+    trace: Trace,
+    campaign: Campaign,
+    resolved_mutation_set: list[Any],
+) -> str:
+    return _build_replay_seed_basis(
+        trace=trace,
+        campaign=campaign,
+        resolved_mutation_set=resolved_mutation_set,
+        effective_mutation_pack_id=campaign.mutation_pack_id,
+        seed_namespace="ci",
+    )
 
 
 def _infer_trace_hardening(trace: Trace) -> dict[str, Any] | None:
