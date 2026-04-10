@@ -488,6 +488,32 @@ def post_apply_template(
             except Exception:
                 logger.exception("Failed to refund credits after template lookup failure")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except RelatedRecordNotFoundError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:template_related_record_missing",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after template related-record failure")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        if charged_amount is not None and charged_reason is not None:
+            try:
+                refund_credits_for_context(
+                    db,
+                    tenant_auth=tenant_auth,
+                    project_id=project_scope.project_id,
+                    amount=charged_amount,
+                    reason=f"refund:{charged_reason}:template_validation_failed",
+                )
+            except Exception:
+                logger.exception("Failed to refund credits after template validation failure")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except TenantControlViolationError as exc:
         if charged_amount is not None and charged_reason is not None:
             try:
