@@ -427,10 +427,10 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
           </Link>
         ) : null}
 
-        <ThemeToggle />
-
         {/* bell */}
-        <div ref={notificationsMenuRef} className="relative">
+        <ThemeToggle className="xl:hidden" />
+
+        <div ref={notificationsMenuRef} className="relative xl:hidden">
           <button
             type="button"
             aria-label="Notifications"
@@ -529,7 +529,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         </div>
 
         {/* user menu */}
-        <details className="group relative">
+        <details className="group relative xl:hidden">
           <summary
             className="glass-surface flex cursor-pointer list-none items-center gap-2 px-2.5 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45"
             data-tour="account-menu"
