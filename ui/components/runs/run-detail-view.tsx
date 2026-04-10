@@ -22,6 +22,7 @@ import {
   buildTemplateFromInsightEvidence,
   compareFailureReasonShift,
   getInsightAutoFixAvailability,
+  rankAttemptsForInsight,
   selectAttemptForInsight,
 } from "@/lib/run-fixes";
 import { Badge } from "@/components/ui/badge";
@@ -288,19 +289,44 @@ function RunStatsCards({
     setApplyError(null);
     setApplyingInsightId(insight.id);
     try {
-      const matchedAttempt = selectAttemptForInsight(insight, attempts);
-      const [attemptDetail, attemptTimeline] = await loadAttemptEvidence(matchedAttempt);
-      const { template, reason } = buildTemplateFromInsightEvidence(insight, {
-        attempt: matchedAttempt,
-        detail: attemptDetail,
-        timeline: attemptTimeline,
-      });
-      if (!template) {
-        setApplyError(reason ?? "No hardening template mapping available for this insight yet.");
+      const rankedAttempts =
+        insight.id.startsWith("insight.schema_adapter.")
+          ? rankAttemptsForInsight(insight, attempts).slice(0, 8)
+          : [selectAttemptForInsight(insight, attempts)];
+      const candidateAttempts =
+        rankedAttempts.length > 0 ? rankedAttempts : [null];
+
+      let selectedTemplate: Awaited<
+        ReturnType<typeof buildTemplateFromInsightEvidence>
+      >["template"] = null;
+      let selectedReason: string | null = null;
+
+      for (const candidateAttempt of candidateAttempts) {
+        const [attemptDetail, attemptTimeline] =
+          await loadAttemptEvidence(candidateAttempt);
+        const { template, reason } = buildTemplateFromInsightEvidence(insight, {
+          attempt: candidateAttempt,
+          detail: attemptDetail,
+          timeline: attemptTimeline,
+        });
+        if (template) {
+          selectedTemplate = template;
+          break;
+        }
+        if (reason) {
+          selectedReason = reason;
+        }
+      }
+
+      if (!selectedTemplate) {
+        setApplyError(
+          selectedReason ??
+            "No hardening template mapping available for this insight yet.",
+        );
         return;
       }
 
-      const createdTemplate = await api.createTemplate(template);
+      const createdTemplate = await api.createTemplate(selectedTemplate);
       const result = await api.applyTemplateToRun(runId, createdTemplate.template_id);
       onNavigateToRun(result.new_run_id);
     } catch (error) {

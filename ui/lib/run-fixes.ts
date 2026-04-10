@@ -54,6 +54,13 @@ export function getInsightAutoFixAvailability(
     return { supported: true, reason: null };
   }
   if (insight.id.startsWith("insight.schema_adapter.")) {
+    if (!hasConcreteSchemaRenameEvidence(insight)) {
+      return {
+        supported: false,
+        reason:
+          "This schema insight is advisory only for now: no concrete rename-field evidence was found to auto-map safely.",
+      };
+    }
     return { supported: true, reason: null };
   }
   if (insight.id.startsWith("insight.output_sanitizer.")) {
@@ -82,11 +89,18 @@ export function selectAttemptForInsight(
   insight: RunInsight,
   attempts: ReplayAttemptListItem[],
 ): ReplayAttemptListItem | null {
+  return rankAttemptsForInsight(insight, attempts).at(0) ?? null;
+}
+
+export function rankAttemptsForInsight(
+  insight: RunInsight,
+  attempts: ReplayAttemptListItem[],
+): ReplayAttemptListItem[] {
   const failedAttempts = attempts.filter((attempt) =>
     attempt.result.toLowerCase().startsWith("fail"),
   );
   if (failedAttempts.length === 0) {
-    return null;
+    return [];
   }
 
   const topTools = new Set(insight.evidence.top_tools.map((item) => item.tool));
@@ -112,7 +126,7 @@ export function selectAttemptForInsight(
       ),
     }))
     .sort((left, right) => right.score - left.score)
-    .at(0)?.attempt ?? null;
+    .map((item) => item.attempt);
 }
 
 export function buildTemplateFromInsightEvidence(
@@ -227,7 +241,7 @@ function buildSchemaAdapterTemplate(
     return {
       template: null,
       reason:
-        "This schema insight does not yet include a concrete field rename to map automatically.",
+        "No concrete rename-field evidence was found for this schema insight, so this one needs a manual schema fix.",
     };
   }
 
@@ -366,6 +380,18 @@ function scoreAttemptForInsight(
   ) {
     score += 20;
   }
+  if (insight.id.startsWith("insight.schema_adapter.")) {
+    const mutationId = attempt.mutation_id.toLowerCase();
+    if (
+      mutationId.includes("schema.rename_field") ||
+      mutationId.includes("rename_field") ||
+      mutationId.includes("rename")
+    ) {
+      score += 35;
+    } else if (mutationId.includes("schema")) {
+      score += 15;
+    }
+  }
 
   return score;
 }
@@ -427,6 +453,29 @@ function inferRetryableReason(insight: RunInsight): string | null {
     return "timeout";
   }
   return null;
+}
+
+function hasConcreteSchemaRenameEvidence(insight: RunInsight): boolean {
+  const topMutations = insight.evidence.top_mutations.map((item) =>
+    item.mutation_id.toLowerCase(),
+  );
+  if (
+    topMutations.some(
+      (mutationId) =>
+        mutationId.includes("schema.rename_field") ||
+        mutationId.includes("rename_field") ||
+        mutationId.includes("rename"),
+    )
+  ) {
+    return true;
+  }
+
+  const topReasons = insight.evidence.top_reasons.map((item) =>
+    item.reason.toLowerCase(),
+  );
+  return topReasons.some(
+    (reason) => reason.includes("schema.rename_field") || reason.includes("rename"),
+  );
 }
 
 function isRetryableReason(reason: string | null | undefined): reason is string {
