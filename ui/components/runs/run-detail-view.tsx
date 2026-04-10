@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCcw, ShieldCheck } from "lucide-react";
 
 import {
+  ApiError,
   api,
   type CampaignFailure,
   type CampaignReliability,
@@ -303,7 +304,23 @@ function RunStatsCards({
       const result = await api.applyTemplateToRun(runId, createdTemplate.template_id);
       onNavigateToRun(result.new_run_id);
     } catch (error) {
-      setApplyError(error instanceof Error ? error.message : "Failed to apply template");
+      if (error instanceof ApiError) {
+        const detail =
+          error.body && typeof error.body === "object"
+            ? (error.body as { detail?: unknown }).detail
+            : null;
+        if (typeof detail === "string" && detail.trim().length > 0) {
+          setApplyError(detail);
+        } else if (error.status >= 500) {
+          setApplyError(
+            "Auto-apply hit a server error. Retry once, or apply the recommended manual fix."
+          );
+        } else {
+          setApplyError(`Auto-apply failed (${error.status}).`);
+        }
+      } else {
+        setApplyError(error instanceof Error ? error.message : "Failed to apply template");
+      }
     } finally {
       setApplyingInsightId(null);
     }

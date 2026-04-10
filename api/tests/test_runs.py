@@ -11,6 +11,7 @@ from app.models import (
     AuditEvent,
     Base,
     Campaign,
+    HardeningTemplate,
     PolicyPack,
     PolicyPackVersion,
     Project,
@@ -560,4 +561,50 @@ def test_post_run_returns_404_when_related_records_missing(
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Trace not found"}
+    assert fake_queue.calls == []
+
+
+def test_apply_template_returns_404_when_source_campaign_is_archived(
+    run_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
+) -> None:
+    client, testing_session_local, fake_queue, project_id = run_test_context
+
+    with testing_session_local() as db:
+        trace_id, campaign_id = seed_trace_and_campaign(db, project_id=project_id)
+        run_id = uuid4()
+        template_id = uuid4()
+        db.add(
+            Run(
+                run_id=run_id,
+                project_id=project_id,
+                trace_id=trace_id,
+                campaign_id=campaign_id,
+                status="done",
+                summary={},
+            )
+        )
+        db.add(
+            HardeningTemplate(
+                template_id=template_id,
+                project_id=project_id,
+                name="Retry Template",
+                type="retry_policy",
+                config={"max_retries": 3, "backoff_ms": 400},
+            )
+        )
+        campaign = db.scalar(
+            select(Campaign).where(
+                Campaign.campaign_id == campaign_id,
+                Campaign.project_id == project_id,
+            )
+        )
+        assert isinstance(campaign, Campaign)
+        campaign.status = "archived"
+        db.add(campaign)
+        db.commit()
+
+    response = client.post(f"/v1/runs/{run_id}/apply-template/{template_id}")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Campaign not found"}
     assert fake_queue.calls == []
