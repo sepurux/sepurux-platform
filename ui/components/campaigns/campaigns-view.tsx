@@ -33,6 +33,7 @@ export function CampaignsView() {
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [packNames, setPackNames] = useState<Record<string, string>>({});
+  const [isOpen, setIsOpen] = useState(true);
 
   const canCreateCampaigns = authSession?.permissions.can_create_campaigns ?? false;
 
@@ -159,16 +160,19 @@ export function CampaignsView() {
         </Card>
       ) : (
         <Card className="overflow-hidden rounded-[30px] border border-slate-200/90 bg-white/96 shadow-[0_24px_80px_rgba(148,163,184,0.18),inset_0_1px_0_rgba(255,255,255,0.95)] dark:border-white/8 dark:bg-[#171e2f]/96 dark:shadow-[0_24px_80px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <CardHeader className="border-b border-slate-200/90 pb-6 dark:border-white/8">
+          <CardHeader className={`pb-6 ${isOpen ? "border-b border-slate-200/90 dark:border-white/8" : ""}`}>
             <DataTableHeader
               icon={Layers3}
               accent="emerald"
               title="Campaign Catalog"
               description="Track campaign definitions, attached mutation packs, and bootstrap coverage without leaving the operator flow."
-              badge={`${state.campaigns.length} campaign${state.campaigns.length === 1 ? "" : "s"}`}
+              badge={`${state.status === "ready" ? state.campaigns.length : 0} campaign${state.status === "ready" && state.campaigns.length === 1 ? "" : "s"}`}
+              collapsible
+              isOpen={isOpen}
+              onToggle={() => setIsOpen((v) => !v)}
             />
           </CardHeader>
-          <CardContent className="space-y-5 pt-6">
+          {isOpen && <CardContent className="space-y-5 pt-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -277,7 +281,7 @@ export function CampaignsView() {
               onPrev={() => setPage((currentValue) => Math.max(0, currentValue - 1))}
               onNext={() => setPage((currentValue) => currentValue + 1)}
             />
-          </CardContent>
+          </CardContent>}
         </Card>
       )}
     </div>

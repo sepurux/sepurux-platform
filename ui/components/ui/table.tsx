@@ -4,15 +4,12 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.TableHTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-hidden rounded-[24px] border border-slate-200/90 bg-white/96 shadow-[0_18px_40px_rgba(148,163,184,0.18),inset_0_1px_0_rgba(255,255,255,0.92)] dark:border-white/8 dark:bg-[#1c2336]/92 dark:shadow-[0_18px_40px_rgba(2,6,23,0.24),inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="absolute inset-x-0 top-0 h-px bg-slate-200/90 dark:bg-white/7" />
-      <div className="overflow-auto">
-        <table
-          ref={ref}
-          className={cn("w-full caption-bottom border-separate border-spacing-0 text-sm", className)}
-          {...props}
-        />
-      </div>
+    <div className="overflow-auto">
+      <table
+        ref={ref}
+        className={cn("w-full caption-bottom border-separate border-spacing-0 text-sm", className)}
+        {...props}
+      />
     </div>
   )
 );
@@ -22,7 +19,7 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttribut
   ({ className, ...props }, ref) => (
     <thead
       ref={ref}
-      className={cn("bg-slate-50/95 dark:bg-[#232c42]/88 [&_tr]:border-b-0", className)}
+      className={cn("bg-slate-50/95 dark:bg-transparent border-b border-slate-200/90 dark:border-white/8 [&_tr]:border-b-0", className)}
       {...props}
     />
   )

@@ -177,6 +177,7 @@ export function RunsListView() {
   const [hasNext, setHasNext] = useState(false);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [batchStatuses, setBatchStatuses] = useState<Record<string, CIBatchStatus>>({});
+  const [isOpen, setIsOpen] = useState(true);
 
   async function load() {
     setState({ status: "loading" });
@@ -336,7 +337,7 @@ export function RunsListView() {
       </div>
 
       <Card className="overflow-hidden rounded-[30px] border border-slate-200/90 bg-white/96 shadow-[0_24px_80px_rgba(148,163,184,0.18),inset_0_1px_0_rgba(255,255,255,0.95)] dark:border-white/8 dark:bg-[#171e2f]/96 dark:shadow-[0_24px_80px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(255,255,255,0.04)]">
-        <CardHeader className="border-b border-slate-200/90 pb-6 dark:border-white/8">
+        <CardHeader className={`pb-6 ${isOpen ? "border-b border-slate-200/90 dark:border-white/8" : ""}`}>
           <DataTableHeader
             icon={History}
             accent="violet"
@@ -347,9 +348,12 @@ export function RunsListView() {
                 ? `${batchGroups.length} visible`
                 : `${state.status === "ready" ? batchGroups.length : 0} groups`
             }
+            collapsible
+            isOpen={isOpen}
+            onToggle={() => setIsOpen((v) => !v)}
           />
         </CardHeader>
-        <CardContent className="space-y-5 pt-6">
+        {isOpen && <CardContent className="space-y-5 pt-6">
           {state.status === "loading" ? (
             <RunsTableSkeleton />
           ) : state.status === "error" ? (
@@ -541,7 +545,7 @@ export function RunsListView() {
               </div>
             </>
           )}
-        </CardContent>
+        </CardContent>}
       </Card>
     </div>
   );

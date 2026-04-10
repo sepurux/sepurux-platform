@@ -51,6 +51,11 @@ def _waitlist_alert_email() -> str:
     return raw or _support_email()
 
 
+def _bug_report_alert_email() -> str:
+    raw = os.getenv("BUG_REPORT_SUPPORT_EMAIL", "").strip()
+    return raw or _support_email()
+
+
 def _logo_url() -> str:
     explicit = EMAIL_LOGO_URL.strip()
     if explicit:
@@ -729,5 +734,103 @@ def send_waitlist_support_notification(
             cta_url=f"{_ui_base_url()}/internal/waitlist",
             preheader=f"New waitlist request from {normalized_email}",
             eyebrow="Waitlist Intake",
+        ),
+    )
+
+
+def send_bug_report_notification(
+    *,
+    reporter_name: str | None,
+    reporter_email: str | None,
+    reporter_role: str | None,
+    project_name: str | None,
+    category: str,
+    title: str,
+    description: str,
+    page_url: str,
+    reported_at: str,
+    viewport_width: int,
+    viewport_height: int,
+    screenshot_data_url: str | None = None,
+) -> bool:
+    support_recipient = _bug_report_alert_email()
+    if not support_recipient:
+        return False
+
+    name_label = _clean_optional_text(reporter_name) or "Unknown reporter"
+    email_label = _clean_optional_text(reporter_email) or "Unknown email"
+    role_label = _clean_optional_text(reporter_role) or "Unknown role"
+    project_label = _clean_optional_text(project_name) or "Unknown project"
+    category_label = _clean_optional_text(category) or "platform"
+    title_label = _clean_optional_text(title) or "Untitled bug report"
+    description_label = description.strip()
+    page_label = _clean_optional_text(page_url) or "Unknown page"
+    reported_label = _clean_optional_text(reported_at) or "Unknown time"
+    viewport_label = f"{viewport_width}x{viewport_height}"
+    screenshot_label = screenshot_data_url.strip() if isinstance(screenshot_data_url, str) else None
+    screenshot_html = ""
+    screenshot_text = ""
+    if screenshot_label and screenshot_label.startswith("data:image/"):
+        screenshot_html = (
+            '<div style="margin:18px 0 0;">'
+            '<p style="margin:0 0 10px;color:#5f6d63;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Screenshot</p>'
+            f'<img src="{html.escape(screenshot_label, quote=True)}" alt="Bug report screenshot" '
+            'style="display:block;max-width:100%;border-radius:18px;border:1px solid #e8ddd0;" />'
+            "</div>"
+        )
+        screenshot_text = "\nScreenshot: included"
+
+    text_body = "\n".join(
+        [
+            "A new in-app bug report was submitted.",
+            "",
+            f"Reporter: {name_label} ({email_label})",
+            f"Role: {role_label}",
+            f"Project: {project_label}",
+            f"Category: {category_label}",
+            f"Title: {title_label}",
+            f"Time: {reported_label}",
+            f"Page: {page_label}",
+            f"Viewport: {viewport_label}",
+            screenshot_text,
+            "",
+            "Description:",
+            description_label,
+        ]
+    ).replace("\n\n\n", "\n\n")
+
+    body_html = (
+        '<p style="margin:0 0 14px;color:#223127;">A new in-app bug report was submitted.</p>'
+        '<div style="margin:0 0 16px;padding:14px;border:1px solid #e8ddd0;border-radius:16px;background:#f7f1ea;color:#223127;">'
+        f'<p style="margin:0 0 8px;"><strong>Reporter:</strong> {html.escape(name_label)} ({html.escape(email_label)})</p>'
+        f'<p style="margin:0 0 8px;"><strong>Role:</strong> {html.escape(role_label)}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Project:</strong> {html.escape(project_label)}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Category:</strong> {html.escape(category_label)}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Time:</strong> {html.escape(reported_label)}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Page:</strong> {html.escape(page_label)}</p>'
+        f'<p style="margin:0;"><strong>Viewport:</strong> {html.escape(viewport_label)}</p>'
+        "</div>"
+        '<div style="margin:0 0 16px;padding:16px;border:1px solid #e8ddd0;border-radius:18px;background:#fffdfa;">'
+        f'<p style="margin:0 0 10px;color:#5f6d63;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">{html.escape(category_label)}</p>'
+        f'<p style="margin:0 0 10px;color:#142117;font-size:18px;font-weight:700;line-height:1.4;">{html.escape(title_label)}</p>'
+        f'<p style="margin:0;color:#223127;font-size:15px;line-height:1.75;white-space:pre-wrap;">{html.escape(description_label)}</p>'
+        "</div>"
+        f"{screenshot_html}"
+    )
+
+    subject = f"Sepurux bug report: {title_label}"
+    return send_email(
+        to_email=support_recipient,
+        subject=subject,
+        text_body=text_body,
+        html_body=_email_layout(
+            title="New Bug Report",
+            subtitle="An in-app bug report needs review.",
+            intro_line="A signed-in user submitted a structured bug report from the Sepurux application.",
+            body_html=body_html,
+            cta_label="Open Sepurux",
+            cta_url=_ui_base_url(),
+            preheader=f"Bug report from {name_label}: {title_label}",
+            eyebrow="Bug Intake",
         ),
     )

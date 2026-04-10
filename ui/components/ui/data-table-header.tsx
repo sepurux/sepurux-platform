@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,9 @@ type DataTableHeaderProps = {
   accent?: AccentTone;
   badge?: string;
   className?: string;
+  collapsible?: boolean;
+  isOpen?: boolean;
+  onToggle?: () => void;
 };
 
 export function DataTableHeader({
@@ -42,6 +46,9 @@ export function DataTableHeader({
   accent = "blue",
   badge,
   className,
+  collapsible = false,
+  isOpen = true,
+  onToggle,
 }: DataTableHeaderProps) {
   return (
     <div className={cn("flex flex-col gap-5 md:flex-row md:items-start md:justify-between", className)}>
@@ -62,16 +69,30 @@ export function DataTableHeader({
           <p className="max-w-2xl text-[15px] leading-6 text-slate-500 dark:text-slate-400">{description}</p>
         </div>
       </div>
-      {badge ? (
-        <div
-          className={cn(
-            "inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
-            accentBadgeClasses[accent]
-          )}
-        >
-          {badge}
-        </div>
-      ) : null}
+      <div className="flex shrink-0 items-center gap-2">
+        {badge ? (
+          <div
+            className={cn(
+              "inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+              accentBadgeClasses[accent]
+            )}
+          >
+            {badge}
+          </div>
+        ) : null}
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={isOpen ? "Collapse" : "Expand"}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/70 bg-white/60 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-slate-200"
+          >
+            <ChevronDown
+              className={cn("h-4 w-4 transition-transform duration-200", isOpen ? "rotate-180" : "")}
+            />
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

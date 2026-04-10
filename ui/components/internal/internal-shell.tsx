@@ -7,9 +7,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
-  AlertTriangle,
   BarChart2,
   Bell,
+  Bug,
   CreditCard,
   FolderOpen,
   Layers,
@@ -104,6 +104,16 @@ export function InternalShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="px-1 pb-1">
+          <div className="mb-2 space-y-2">
+            <ThemeToggle className="w-full justify-start px-3 py-2.5 text-sm font-medium" />
+            <a
+              href="mailto:support@sepurux.com?subject=Sepurux%20internal%20console%20bug%20report"
+              className="glass-surface flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent/40"
+            >
+              <Bug className="h-4 w-4 text-muted-foreground" />
+              Report bug
+            </a>
+          </div>
           <button
             type="button"
             onClick={handleSignOut}
@@ -123,7 +133,6 @@ export function InternalShell({ children }: { children: ReactNode }) {
               <p className="text-xs text-muted-foreground">Super admin workspace</p>
             </div>
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <Link
                 href="/internal/search"
                 className="inline-flex rounded-md border border-primary/45 bg-primary/12 px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/18"

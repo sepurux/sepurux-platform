@@ -86,7 +86,7 @@ export function HeroSection() {
             transition={{ duration: 0.45, ease: "easeOut" }}
             className="accent-badge inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]"
           >
-            Reliability infrastructure for AI agents
+            Reliability testing for AI agents
           </motion.div>
 
           <motion.h1
@@ -106,8 +106,8 @@ export function HeroSection() {
             transition={{ duration: 0.48, ease: "easeOut" }}
             className="mt-6 max-w-2xl text-lg leading-8 text-slate-300 md:text-xl"
           >
-            Record production-like traces, replay them under controlled failure, enforce policy
-            gates, and let CI block brittle agent behavior before it reaches customers.
+            Record a real agent workflow, test it under controlled failure, and turn the result
+            into a clear pass-or-fail release decision before customers feel the break.
           </motion.p>
 
           <motion.div
