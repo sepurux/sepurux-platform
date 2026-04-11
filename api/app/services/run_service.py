@@ -22,6 +22,10 @@ from app.models import (
 from app.queue import get_run_queue
 from app.services.audit_service import create_audit_event
 from app.services.contract_service import get_contract
+from app.services.mutation_pack_service import (
+    ensure_registered_mutation_pack,
+    get_mutation_pack_by_name,
+)
 from app.services.policy_service import get_policy_pack_active_version, update_policy_pack
 from app.services.trace_replay_profile import (
     choose_primary_baseline_candidate,
@@ -36,6 +40,7 @@ from app.services.tenant_control_service import assert_project_runs_allowed
 from app.services.trace_bootstrap_service import (
     build_bootstrap_policy_document,
     extract_tools_from_trace_payload,
+    trace_domain_pack_name_for_tools,
 )
 from app.services.trace_intake import create_trace
 from sqlalchemy import select
@@ -53,6 +58,13 @@ class ResolvedRunReplayPlan:
     resolved_mutation_set: list[Any]
     replay_seed_basis: str
     trace_hardening: dict[str, Any] | None
+
+
+@dataclass(frozen=True)
+class ResolvedMutationPackOverlay:
+    primary_mutation_pack_id: UUID | None
+    merged_config: dict[str, Any] | None
+    resolved_packs_payload: list[dict[str, Any]]
 
 
 def create_run(
@@ -89,21 +101,6 @@ def create_run(
     if campaign is None:
         raise RelatedRecordNotFoundError("Campaign not found")
 
-    effective_mutation_pack_id = (
-        mutation_pack_id if mutation_pack_id is not None else campaign.mutation_pack_id
-    )
-    if effective_mutation_pack_id is not None and (
-        db.scalar(
-            select(MutationPack).where(
-                MutationPack.mutation_pack_id == effective_mutation_pack_id,
-                MutationPack.project_id == project_id,
-                MutationPack.is_archived.is_(False),
-            )
-        )
-        is None
-    ):
-        raise RelatedRecordNotFoundError("Mutation pack not found")
-
     if effective_policy_pack_id is None:
         policy_pack = db.scalar(
             select(PolicyPack)
@@ -138,6 +135,14 @@ def create_run(
 
     contract = get_contract(db, campaign_id=campaign.campaign_id)
     required_tools = list(contract.required_tools or []) if contract is not None else []
+    resolved_pack_overlay = _resolve_trace_mutation_pack_overlay(
+        db,
+        project_id=project_id,
+        campaign=campaign,
+        trace=trace,
+        mutation_pack_id_override=mutation_pack_id,
+    )
+    effective_mutation_pack_id = resolved_pack_overlay.primary_mutation_pack_id
     replay_plan = _resolve_run_replay_plan(
         campaign=campaign,
         trace=trace,
@@ -153,6 +158,15 @@ def create_run(
     }
     if replay_plan.trace_hardening is not None:
         summary["trace_hardening"] = replay_plan.trace_hardening
+    if resolved_pack_overlay.merged_config is not None:
+        summary["resolved_mutation_pack_config"] = resolved_pack_overlay.merged_config
+    if resolved_pack_overlay.resolved_packs_payload:
+        summary["resolved_mutation_packs"] = resolved_pack_overlay.resolved_packs_payload
+        summary["resolved_mutation_pack_ids"] = [
+            item["mutation_pack_id"]
+            for item in resolved_pack_overlay.resolved_packs_payload
+            if isinstance(item, dict) and isinstance(item.get("mutation_pack_id"), str)
+        ]
 
     return _create_run_record(
         db,
@@ -331,6 +345,7 @@ def create_ci_run_and_enqueue(
     thresholds: dict[str, Any],
     github_context: dict[str, Any] | None = None,
     batch_id: UUID | None = None,
+    mutation_pack_id_override: UUID | None = None,
     actor: str | None = "ci",
 ) -> Run:
     trace = db.scalar(select(Trace).where(Trace.trace_id == trace_id))
@@ -357,11 +372,19 @@ def create_ci_run_and_enqueue(
 
     contract = get_contract(db, campaign_id=campaign.campaign_id)
     required_tools = list(contract.required_tools or []) if contract is not None else []
+    resolved_pack_overlay = _resolve_trace_mutation_pack_overlay(
+        db,
+        project_id=project_id,
+        campaign=campaign,
+        trace=trace,
+        mutation_pack_id_override=mutation_pack_id_override,
+    )
+    effective_mutation_pack_id = resolved_pack_overlay.primary_mutation_pack_id
     replay_plan = _resolve_run_replay_plan(
         campaign,
         trace=trace,
         required_tools=required_tools,
-        effective_mutation_pack_id=campaign.mutation_pack_id,
+        effective_mutation_pack_id=effective_mutation_pack_id,
         seed_namespace="ci",
     )
     summary: dict[str, Any] = {
@@ -372,6 +395,15 @@ def create_ci_run_and_enqueue(
     }
     if replay_plan.trace_hardening is not None:
         summary["trace_hardening"] = replay_plan.trace_hardening
+    if resolved_pack_overlay.merged_config is not None:
+        summary["resolved_mutation_pack_config"] = resolved_pack_overlay.merged_config
+    if resolved_pack_overlay.resolved_packs_payload:
+        summary["resolved_mutation_packs"] = resolved_pack_overlay.resolved_packs_payload
+        summary["resolved_mutation_pack_ids"] = [
+            item["mutation_pack_id"]
+            for item in resolved_pack_overlay.resolved_packs_payload
+            if isinstance(item, dict) and isinstance(item.get("mutation_pack_id"), str)
+        ]
     if isinstance(github_context, dict):
         summary["github_context"] = github_context
     if batch_id is not None:
@@ -382,7 +414,7 @@ def create_ci_run_and_enqueue(
         project_id=project_id,
         trace_id=trace_id,
         campaign_id=campaign_id,
-        mutation_pack_id=campaign.mutation_pack_id,
+        mutation_pack_id=effective_mutation_pack_id,
         policy_pack_id=effective_policy_pack_id,
         effective_policy_pack_version_id=effective_policy_pack_version_id,
         summary=summary,
@@ -400,6 +432,7 @@ def create_ci_batch_and_enqueue(
     thresholds: dict[str, Any],
     batch_id: UUID,
     github_context: dict[str, Any] | None = None,
+    mutation_pack_id_override: UUID | None = None,
     actor: str | None = "ci",
 ) -> list[Run]:
     """Create one CI run per trace_id and tag them all with the same batch_id."""
@@ -428,11 +461,19 @@ def create_ci_batch_and_enqueue(
             raise RelatedRecordNotFoundError(f"Trace {trace_id} not found")
         if trace.project_id != project_id:
             raise ValueError(f"Trace {trace_id} does not belong to this project")
+        resolved_pack_overlay = _resolve_trace_mutation_pack_overlay(
+            db,
+            project_id=project_id,
+            campaign=campaign,
+            trace=trace,
+            mutation_pack_id_override=mutation_pack_id_override,
+        )
+        effective_mutation_pack_id = resolved_pack_overlay.primary_mutation_pack_id
         replay_plan = _resolve_run_replay_plan(
             campaign,
             trace=trace,
             required_tools=required_tools,
-            effective_mutation_pack_id=campaign.mutation_pack_id,
+            effective_mutation_pack_id=effective_mutation_pack_id,
             seed_namespace="ci",
         )
 
@@ -445,6 +486,15 @@ def create_ci_batch_and_enqueue(
         }
         if replay_plan.trace_hardening is not None:
             summary["trace_hardening"] = replay_plan.trace_hardening
+        if resolved_pack_overlay.merged_config is not None:
+            summary["resolved_mutation_pack_config"] = resolved_pack_overlay.merged_config
+        if resolved_pack_overlay.resolved_packs_payload:
+            summary["resolved_mutation_packs"] = resolved_pack_overlay.resolved_packs_payload
+            summary["resolved_mutation_pack_ids"] = [
+                item["mutation_pack_id"]
+                for item in resolved_pack_overlay.resolved_packs_payload
+                if isinstance(item, dict) and isinstance(item.get("mutation_pack_id"), str)
+            ]
         if isinstance(github_context, dict):
             summary["github_context"] = github_context
 
@@ -453,7 +503,7 @@ def create_ci_batch_and_enqueue(
             project_id=project_id,
             trace_id=trace_id,
             campaign_id=campaign_id,
-            mutation_pack_id=campaign.mutation_pack_id,
+            mutation_pack_id=effective_mutation_pack_id,
             policy_pack_id=effective_policy_pack_id,
             effective_policy_pack_version_id=effective_policy_pack_version_id,
             summary=summary,
@@ -463,6 +513,143 @@ def create_ci_batch_and_enqueue(
         runs.append(run)
 
     return runs
+
+
+def _resolve_trace_mutation_pack_overlay(
+    db: Session,
+    *,
+    project_id: UUID,
+    campaign: Campaign,
+    trace: Trace,
+    mutation_pack_id_override: UUID | None = None,
+) -> ResolvedMutationPackOverlay:
+    candidates: list[tuple[MutationPack, str]] = []
+    seen_pack_ids: set[UUID] = set()
+
+    def add_candidate(pack: MutationPack | None, source: str) -> None:
+        if pack is None:
+            return
+        if pack.project_id != project_id:
+            return
+        if bool(pack.is_archived):
+            return
+        if pack.mutation_pack_id in seen_pack_ids:
+            return
+        seen_pack_ids.add(pack.mutation_pack_id)
+        candidates.append((pack, source))
+
+    # System layers are always included.
+    base_pack = ensure_registered_mutation_pack(
+        db,
+        project_id=project_id,
+        pack_name="sepurux.core.reliability",
+    )
+    add_candidate(base_pack, "system.base")
+
+    policy_security_pack = ensure_registered_mutation_pack(
+        db,
+        project_id=project_id,
+        pack_name="prompt-security",
+    )
+    add_candidate(policy_security_pack, "system.policy_security")
+
+    campaign_pack_id = (
+        mutation_pack_id_override
+        if mutation_pack_id_override is not None
+        else campaign.mutation_pack_id
+    )
+    campaign_pack: MutationPack | None = None
+    if campaign_pack_id is not None:
+        campaign_pack = db.scalar(
+            select(MutationPack).where(
+                MutationPack.mutation_pack_id == campaign_pack_id,
+                MutationPack.project_id == project_id,
+                MutationPack.is_archived.is_(False),
+            )
+        )
+        if campaign_pack is None:
+            raise RelatedRecordNotFoundError("Mutation pack not found")
+        add_candidate(campaign_pack, "campaign.selected")
+
+    payload = trace.normalized_payload if isinstance(trace.normalized_payload, dict) else {}
+    trace_tools = extract_tools_from_trace_payload(payload)
+    domain_pack_name = trace_domain_pack_name_for_tools(trace_tools)
+    domain_pack: MutationPack | None = None
+    if domain_pack_name is not None:
+        domain_pack = get_mutation_pack_by_name(
+            db,
+            project_id=project_id,
+            name=domain_pack_name,
+        )
+        add_candidate(domain_pack, "domain.auto")
+
+    merged_config = _merge_resolved_mutation_pack_configs([pack for pack, _ in candidates])
+    primary_pack_id: UUID | None = None
+    if campaign_pack is not None:
+        primary_pack_id = campaign_pack.mutation_pack_id
+    elif domain_pack is not None:
+        primary_pack_id = domain_pack.mutation_pack_id
+    elif candidates:
+        primary_pack_id = candidates[0][0].mutation_pack_id
+
+    resolved_packs_payload = [
+        {
+            "mutation_pack_id": str(pack.mutation_pack_id),
+            "name": pack.name,
+            "is_system": bool(pack.is_system),
+            "source": source,
+            "coverage_score": int(pack.coverage_score or 0),
+        }
+        for pack, source in candidates
+    ]
+    return ResolvedMutationPackOverlay(
+        primary_mutation_pack_id=primary_pack_id,
+        merged_config=merged_config,
+        resolved_packs_payload=resolved_packs_payload,
+    )
+
+
+def _merge_resolved_mutation_pack_configs(packs: list[MutationPack]) -> dict[str, Any] | None:
+    merged_mutations: list[dict[str, Any]] = []
+    seen_mutation_ids: set[str] = set()
+    max_mutations_per_attempt = 1
+    suggested_attempts = 1
+
+    for pack in packs:
+        config = pack.config if isinstance(pack.config, dict) else {}
+        mutations_obj = config.get("mutations")
+        if isinstance(mutations_obj, list):
+            for item in mutations_obj:
+                if not isinstance(item, dict):
+                    continue
+                mutation_id = item.get("mutation_id")
+                if isinstance(mutation_id, str) and mutation_id in seen_mutation_ids:
+                    continue
+                if isinstance(mutation_id, str):
+                    seen_mutation_ids.add(mutation_id)
+                merged_mutations.append(dict(item))
+
+        max_per_attempt_obj = config.get("max_mutations_per_attempt")
+        if isinstance(max_per_attempt_obj, int):
+            max_mutations_per_attempt = max(
+                max_mutations_per_attempt, max(1, min(max_per_attempt_obj, 5))
+            )
+
+        suggested_attempts_obj = config.get("suggested_attempts")
+        if isinstance(suggested_attempts_obj, int):
+            suggested_attempts = max(suggested_attempts, max(1, min(suggested_attempts_obj, 200)))
+
+    if not merged_mutations:
+        return None
+
+    return {
+        "version": "0.1",
+        "source": "resolved_multi_pack_overlay",
+        "source_pack_ids": [str(pack.mutation_pack_id) for pack in packs],
+        "max_mutations_per_attempt": max_mutations_per_attempt,
+        "suggested_attempts": suggested_attempts,
+        "mutations": merged_mutations,
+    }
 
 
 def _extract_replay_tool_name(mutation: Any) -> str | None:
