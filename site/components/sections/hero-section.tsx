@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BadgeCheck } from "lucide-react";
 
 import { buildAppAuthHref } from "@/lib/site";
 
@@ -74,67 +74,111 @@ export function HeroSection() {
         }}
       />
 
-      <div className="site-container relative z-10 py-28 sm:py-36">
+      <div className="site-container relative z-10 py-24 sm:py-32">
         <motion.div
           initial="hidden"
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.1 } } }}
-          className="max-w-3xl"
+          className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.82fr)] lg:items-end"
         >
-          <motion.div
-            variants={fadeUp}
-            transition={{ duration: 0.45, ease: "easeOut" }}
-            className="accent-badge inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]"
-          >
-            Reliability testing for AI agents
-          </motion.div>
-
-          <motion.h1
-            variants={fadeUp}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-            className="hero-title mt-7 text-white"
-            aria-label={heroHeadline}
-          >
-            <span>{typedHeadline}</span>
-            {typedHeadline.length < heroHeadline.length ? (
-              <span className="terminal-caret ml-1 align-[-0.08em]" aria-hidden />
-            ) : null}
-          </motion.h1>
-
-          <motion.p
-            variants={fadeUp}
-            transition={{ duration: 0.48, ease: "easeOut" }}
-            className="mt-6 max-w-2xl text-lg leading-8 text-slate-300 md:text-xl"
-          >
-            Record a real agent workflow, test it under controlled failure, and turn the result
-            into a clear pass-or-fail release decision before customers feel the break.
-          </motion.p>
-
-          <motion.div
-            variants={fadeUp}
-            transition={{ duration: 0.45, ease: "easeOut" }}
-            className="mt-10 flex flex-wrap gap-3"
-          >
-            <a
-              href={buildAppAuthHref({ mode: "access", intent: "signup" })}
-              className="teal-glow-btn inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.34)] bg-[var(--color-accent)] px-6 text-sm font-semibold text-white"
+          <div className="max-w-3xl">
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              className="accent-badge inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]"
             >
-              Start free
-              <ArrowRight className="h-4 w-4" />
-            </a>
-            <Link
-              href="/waitlist"
-              className="inline-flex h-12 items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 text-sm font-medium text-slate-100 backdrop-blur-sm transition-colors hover:bg-white/16 hover:text-white"
+              Reliability testing for AI agents
+            </motion.div>
+
+            <motion.h1
+              variants={fadeUp}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+              className="hero-title mt-7 text-white"
+              aria-label={heroHeadline}
             >
-              Join waitlist
-            </Link>
-            <Link
-              href="/sandbox"
-              className="inline-flex h-12 items-center justify-center px-2 text-sm font-medium text-slate-300 transition-colors hover:text-white"
+              <span>{typedHeadline}</span>
+              {typedHeadline.length < heroHeadline.length ? (
+                <span className="terminal-caret ml-1 align-[-0.08em]" aria-hidden />
+              ) : null}
+            </motion.h1>
+
+            <motion.p
+              variants={fadeUp}
+              transition={{ duration: 0.48, ease: "easeOut" }}
+              className="mt-6 max-w-2xl text-lg leading-8 text-slate-300 md:text-xl"
             >
-              Explore sandbox
-            </Link>
-          </motion.div>
+              Record production-like traces, replay them under controlled failure, enforce policy
+              gates, and let CI block brittle agent behavior before it reaches customers.
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              className="mt-10 flex flex-wrap gap-3"
+            >
+              <a
+                href={buildAppAuthHref({ mode: "access", intent: "signup" })}
+                className="teal-glow-btn inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.34)] bg-[var(--color-accent)] px-6 text-sm font-semibold text-white"
+              >
+                Start free
+                <ArrowRight className="h-4 w-4" />
+              </a>
+              <Link
+                href="/waitlist"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 text-sm font-medium text-slate-100 backdrop-blur-sm transition-colors hover:bg-white/16 hover:text-white"
+              >
+                Join waitlist
+              </Link>
+              <Link
+                href="/docs/getting-started"
+                className="inline-flex h-12 items-center justify-center px-2 text-sm font-medium text-slate-300 transition-colors hover:text-white"
+              >
+                Read quickstart
+              </Link>
+            </motion.div>
+          </div>
+
+          <motion.aside
+            variants={fadeUp}
+            transition={{ duration: 0.52, ease: "easeOut" }}
+            className="proof-panel p-5 sm:p-6"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Release signal
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">
+              One pass/fail verdict your team can trust.
+            </h2>
+
+            <div className="mt-6 space-y-3">
+              <div className="proof-row">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Trace replay</p>
+                  <p className="mt-1 text-sm font-medium text-slate-200">Replay from real production flow</p>
+                </div>
+                <span className="metric-chip">Deterministic</span>
+              </div>
+              <div className="proof-row">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Mutation pressure</p>
+                  <p className="mt-1 text-sm font-medium text-slate-200">Failures injected on critical tools</p>
+                </div>
+                <span className="metric-chip">Targeted</span>
+              </div>
+              <div className="proof-row">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Policy gate</p>
+                  <p className="mt-1 text-sm font-medium text-slate-200">Unsafe runs block release</p>
+                </div>
+                <span className="metric-chip">Enforced</span>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3.5 py-3 text-sm text-emerald-100">
+              <BadgeCheck className="h-4 w-4 shrink-0" />
+              CI output is deterministic and auditable per run.
+            </div>
+          </motion.aside>
         </motion.div>
       </div>
 

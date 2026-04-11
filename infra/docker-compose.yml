@@ -74,6 +74,7 @@ services:
       STRIPE_PRICE_ENTERPRISE_MONTHLY: ${STRIPE_PRICE_ENTERPRISE_MONTHLY:-}
       STRIPE_CURRENCY: ${STRIPE_CURRENCY:-usd}
       STRIPE_TOPUP_CENTS_PER_CREDIT: ${STRIPE_TOPUP_CENTS_PER_CREDIT:-10}
+    command: sh -lc 'alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000'
     ports:
       - "8000:8000"
     depends_on:

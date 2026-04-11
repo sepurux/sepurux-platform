@@ -23,7 +23,7 @@ export function FinalCtaSection() {
         <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-2">
           <a
             href={buildAppAuthHref({ mode: "access", intent: "signup" })}
-            className="teal-glow-btn rounded-[32px] border border-[rgba(var(--accent-rgb),0.28)] bg-[linear-gradient(135deg,rgba(var(--accent-rgb),0.2),rgba(var(--warm-rgb),0.12)_48%,rgba(255,255,255,0.06))] p-7 text-left"
+            className="teal-glow-btn rounded-[32px] border border-[rgba(var(--accent-rgb),0.28)] bg-[linear-gradient(150deg,rgba(var(--accent-rgb),0.26),rgba(var(--warm-rgb),0.16)_48%,rgba(255,255,255,0.08))] p-7 text-left"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-100">
               Start free
@@ -61,33 +61,24 @@ export function FinalCtaSection() {
           </Link>
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/docs"
-            className="inline-flex h-11 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            Read docs
-          </Link>
-          <Link
-            href="/waitlist"
-            className="inline-flex h-11 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            Join waitlist
-          </Link>
-          {/*
-          <Link
-            href="/pricing"
-            className="inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-medium text-slate-300 transition-colors hover:text-white"
-          >
-            Review pricing
-          </Link>
-          */}
-          <Link
-            href="/sandbox"
-            className="inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-medium text-slate-300 transition-colors hover:text-white"
-          >
-            Explore sandbox
-          </Link>
+        <div className="mx-auto mt-8 flex max-w-5xl flex-wrap items-center justify-between gap-4 rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4">
+          <p className="text-sm text-slate-300">
+            Need implementation detail first? Start with docs, then run the sandbox.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/docs"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-white/10 bg-white/6 px-4 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Read docs
+            </Link>
+            <Link
+              href="/sandbox"
+              className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-slate-300 transition-colors hover:text-white"
+            >
+              Explore sandbox
+            </Link>
+          </div>
         </div>
       </div>
     </section>

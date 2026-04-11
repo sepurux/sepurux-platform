@@ -190,7 +190,7 @@ body::before {
     font-family: var(--font-display), sans-serif;
     font-size: clamp(2.9rem, 6vw, 6.2rem);
     font-weight: 600;
-    line-height: 0.9;
+    line-height: 0.92;
     letter-spacing: -0.05em;
   }
 
@@ -254,6 +254,26 @@ body::before {
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(237, 246, 248, 0.82);
+  }
+
+  .section-lead {
+    @apply text-base leading-8 text-slate-300 md:text-lg;
+  }
+
+  .section-shell {
+    @apply rounded-[28px] border border-white/10;
+    background: linear-gradient(180deg, rgba(12, 21, 36, 0.92), rgba(8, 14, 26, 0.94));
+    box-shadow: 0 26px 72px rgba(1, 6, 18, 0.42);
+  }
+
+  .proof-panel {
+    @apply rounded-[24px] border border-white/10;
+    background: linear-gradient(160deg, rgba(14, 26, 44, 0.92), rgba(8, 14, 26, 0.94));
+    box-shadow: 0 24px 64px rgba(0, 5, 16, 0.5);
+  }
+
+  .proof-row {
+    @apply flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3;
   }
 
   .metric-chip-light {

@@ -12,7 +12,6 @@ const navItems = [
   { href: "/product", label: "Product" },
   { href: "/docs", label: "Docs" },
   { href: "/sandbox", label: "Sandbox" },
-  { href: "/waitlist", label: "Waitlist" },
   { href: "/company", label: "Company" },
 ];
 
@@ -25,19 +24,18 @@ export function Navbar() {
   }, [pathname]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_12px_34px_rgba(15,23,42,0.05)] backdrop-blur-xl">
       <div className="site-container">
         <div className="flex min-h-[78px] items-center justify-between gap-4 py-3">
           <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Sepurux home">
-              <img
-                src={siteConfig.logo}
-                alt="Sepurux logo"
-                width={768}
-                height={1024}
-                className="block h-10 w-auto shrink-0"
-              />
-            
-            </Link>
+            <img
+              src={siteConfig.logo}
+              alt="Sepurux logo"
+              width={768}
+              height={1024}
+              className="block h-10 w-auto shrink-0"
+            />
+          </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
             {navItems.map((item) => {
@@ -51,7 +49,7 @@ export function Navbar() {
                   className={cn(
                     "rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-slate-950 text-white"
+                      ? "bg-slate-900 text-white"
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                   )}
                 >

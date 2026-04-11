@@ -11,7 +11,7 @@ import { buildPageMetadata } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Sepurux",
   description:
-    "Sepurux helps teams record real AI agent workflows, test them under failure, and stop risky releases before they reach customers.",
+    "Sepurux records real AI agent workflows, tests them under controlled failure, and gives teams a clear release gate before customers are impacted.",
   path: "/",
 });
 
@@ -20,8 +20,8 @@ export default function HomePage() {
     <>
       <HeroSection />
       <HowItWorksSection />
-      <WalkthroughSection />
       <IntegrationSection />
+      <WalkthroughSection />
       <FinalCtaSection />
     </>
   );
