@@ -8,6 +8,7 @@ import pytest
 from app.db import get_db
 from app.main import app
 from app.models import Base, Campaign, MutationPack, PolicyPack, ToolRegistry, Trace, TraceStep
+from app.services.trace_bootstrap_service import trace_domain_pack_name_for_tools
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -461,6 +462,10 @@ def test_post_trace_auto_bootstraps_policy_security_and_campaign_bundle(
     create_response = client.post("/v1/traces", json=payload)
     assert create_response.status_code == 201
     trace_id = create_response.json()["trace_id"]
+    expected_domain_pack_name = trace_domain_pack_name_for_tools(
+        ["search_docs", "create_ticket", "send_slack"]
+    )
+    assert isinstance(expected_domain_pack_name, str)
 
     with testing_session_local() as db:
         tools = list(db.scalars(select(ToolRegistry)))
@@ -474,14 +479,15 @@ def test_post_trace_auto_bootstraps_policy_security_and_campaign_bundle(
                         [
                             "Bootstrap · Base Reliability",
                             "Bootstrap · Policy & Security",
-                            "Bootstrap · Domain Pack",
                         ]
                     )
                 )
             )
         )
-        assert len(campaigns) == 3
-        domain_pack = db.scalar(select(MutationPack).where(MutationPack.name == "trace.domain.default"))
+        assert len(campaigns) == 2
+        domain_pack = db.scalar(
+            select(MutationPack).where(MutationPack.name == expected_domain_pack_name)
+        )
         assert isinstance(domain_pack, MutationPack)
 
     bootstrap_response = client.post(f"/v1/traces/{trace_id}/bootstrap")
@@ -496,7 +502,6 @@ def test_post_trace_auto_bootstraps_policy_security_and_campaign_bundle(
     assert {item["name"] for item in data["campaigns"]} == {
         "Bootstrap · Base Reliability",
         "Bootstrap · Policy & Security",
-        "Bootstrap · Domain Pack",
     }
     assert all(item["created"] is False for item in data["campaigns"])
 

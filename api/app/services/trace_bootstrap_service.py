@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 from typing import Any
 from uuid import UUID
 
 from app.models import Campaign, MutationPack, PolicyPack, ToolRegistry, Trace
 from app.services.campaign_service import create_campaign
+from app.services.mutation_pack_policy import coverage_score_for_config
 from app.services.mutation_pack_service import (
     create_mutation_pack,
     ensure_registered_mutation_pack,
@@ -22,8 +24,7 @@ BOOTSTRAP_SYSTEM_CAMPAIGN_BUNDLE: tuple[tuple[str, str], ...] = (
     ("sepurux.core.reliability", "Bootstrap · Base Reliability"),
     ("prompt-security", "Bootstrap · Policy & Security"),
 )
-BOOTSTRAP_DOMAIN_PACK_NAME = "trace.domain.default"
-BOOTSTRAP_DOMAIN_CAMPAIGN_NAME = "Bootstrap · Domain Pack"
+BOOTSTRAP_DOMAIN_PACK_PREFIX = "trace.domain"
 READ_TOOL_HINTS = (
     "get",
     "list",
@@ -95,6 +96,12 @@ def bootstrap_project_from_trace(
         actor=actor,
     )
 
+    _ensure_trace_domain_mutation_pack(
+        db,
+        project_id=trace.project_id,
+        tools=tools,
+    )
+
     campaign_results = _bootstrap_campaign_bundle(
         db,
         project_id=trace.project_id,
@@ -143,6 +150,14 @@ def _extract_tools_from_trace_payload(payload: dict[str, Any]) -> list[str]:
 def extract_tools_from_trace_payload(payload: dict[str, Any]) -> list[str]:
     """Public helper for deriving replay tools from a normalized trace payload."""
     return _extract_tools_from_trace_payload(payload)
+
+
+def trace_domain_pack_name_for_tools(tools: list[str]) -> str | None:
+    normalized = _normalize_tools_for_fingerprint(tools)
+    if not normalized:
+        return None
+    fingerprint = _tool_fingerprint(normalized)
+    return f"{BOOTSTRAP_DOMAIN_PACK_PREFIX}.{fingerprint[:12]}"
 
 
 def build_bootstrap_policy_document(tools: list[str]) -> dict[str, Any]:
@@ -253,19 +268,6 @@ def _bootstrap_campaign_bundle(
         if pack is not None:
             campaign_specs.append((pack, campaign_name))
 
-    domain_pack = _ensure_trace_domain_mutation_pack(
-        db,
-        project_id=project_id,
-        tools=tools,
-    )
-    if domain_pack is not None:
-        campaign_specs.append(
-            (
-                domain_pack,
-                BOOTSTRAP_DOMAIN_CAMPAIGN_NAME,
-            )
-        )
-
     for pack, campaign_name in campaign_specs:
         existing = existing_by_name.get(campaign_name)
         if isinstance(existing, Campaign):
@@ -315,39 +317,60 @@ def _ensure_trace_domain_mutation_pack(
     project_id: UUID,
     tools: list[str],
 ) -> MutationPack | None:
-    if not tools:
+    pack_name = trace_domain_pack_name_for_tools(tools)
+    if pack_name is None:
         return None
+
+    normalized_tools = _normalize_tools_for_fingerprint(tools)
+    desired_config = _build_trace_domain_mutation_pack_config(normalized_tools)
+    desired_description = (
+        "Trace-derived domain pack seeded from observed tools. "
+        "Editable: keep custom mutations; auto-generated mutations refresh when matching "
+        "tool fingerprints are uploaded again."
+    )
 
     existing = get_mutation_pack_by_name(
         db,
         project_id=project_id,
-        name=BOOTSTRAP_DOMAIN_PACK_NAME,
+        name=pack_name,
     )
     if existing is not None:
+        merged_config = _merge_existing_domain_pack_config(
+            existing_config=existing.config if isinstance(existing.config, dict) else None,
+            auto_config=desired_config,
+        )
+        has_changes = (
+            existing.description != desired_description
+            or existing.config != merged_config
+            or int(existing.coverage_score or 0) != int(coverage_score_for_config(merged_config))
+        )
+        if has_changes:
+            existing.description = desired_description
+            existing.config = merged_config
+            existing.coverage_score = coverage_score_for_config(merged_config)
+            db.add(existing)
+            db.commit()
+            db.refresh(existing)
         return existing
 
     return create_mutation_pack(
         db,
         project_id=project_id,
-        name=BOOTSTRAP_DOMAIN_PACK_NAME,
-        description=(
-            "Trace-derived domain pack seeded from observed tools. "
-            "Use this as the customer- or workflow-specific layer on top of base reliability "
-            "and policy/security coverage."
-        ),
-        config=_build_trace_domain_mutation_pack_config(tools),
+        name=pack_name,
+        description=desired_description,
+        config=desired_config,
     )
 
 
 def _build_trace_domain_mutation_pack_config(tools: list[str]) -> dict[str, Any]:
-    normalized_tools = [tool for tool in tools if isinstance(tool, str) and tool.strip()]
+    normalized_tools = _normalize_tools_for_fingerprint(tools)
     primary_tool = normalized_tools[0] if normalized_tools else "tool.default"
     secondary_tool = normalized_tools[1] if len(normalized_tools) > 1 else primary_tool
     tertiary_tool = normalized_tools[2] if len(normalized_tools) > 2 else primary_tool
 
     mutations: list[dict[str, Any]] = [
         {
-            "mutation_id": f"{_slug_tool_name(primary_tool)}-schema-drop",
+            "mutation_id": f"auto.{_slug_tool_name(primary_tool)}-schema-drop",
             "type": "schema.drop_field",
             "target": {"tool": primary_tool},
             "params": {"field": _guess_schema_field(primary_tool)},
@@ -355,7 +378,7 @@ def _build_trace_domain_mutation_pack_config(tools: list[str]) -> dict[str, Any]
             "weight": 1.2,
         },
         {
-            "mutation_id": f"{_slug_tool_name(secondary_tool)}-timeout",
+            "mutation_id": f"auto.{_slug_tool_name(secondary_tool)}-timeout",
             "type": "fault.timeout",
             "target": {"tool": secondary_tool},
             "params": {
@@ -366,14 +389,14 @@ def _build_trace_domain_mutation_pack_config(tools: list[str]) -> dict[str, Any]
             "weight": 1.6,
         },
         {
-            "mutation_id": f"{_slug_tool_name(secondary_tool)}-rate-limit",
+            "mutation_id": f"auto.{_slug_tool_name(secondary_tool)}-rate-limit",
             "type": "fault.rate_limit",
             "target": {"tool": secondary_tool},
             "probability": 0.2,
             "weight": 1.1,
         },
         {
-            "mutation_id": f"{_slug_tool_name(tertiary_tool)}-latency-spike",
+            "mutation_id": f"auto.{_slug_tool_name(tertiary_tool)}-latency-spike",
             "type": "latency_delay",
             "target": {"tool": tertiary_tool},
             "params": {"min_ms": 1500, "max_ms": 6000},
@@ -385,7 +408,7 @@ def _build_trace_domain_mutation_pack_config(tools: list[str]) -> dict[str, Any]
     for extra_tool in normalized_tools[3:6]:
         mutations.append(
             {
-                "mutation_id": f"{_slug_tool_name(extra_tool)}-timeout",
+                "mutation_id": f"auto.{_slug_tool_name(extra_tool)}-timeout",
                 "type": "fault.timeout",
                 "target": {"tool": extra_tool},
                 "params": {
@@ -401,8 +424,68 @@ def _build_trace_domain_mutation_pack_config(tools: list[str]) -> dict[str, Any]
         "version": "0.1",
         "suggested_attempts": 50,
         "max_mutations_per_attempt": 2,
+        "domain_metadata": {
+            "tool_fingerprint": _tool_fingerprint(normalized_tools) if normalized_tools else None,
+            "tool_inventory": normalized_tools,
+            "auto_mutation_prefix": "auto.",
+        },
         "mutations": mutations,
     }
+
+
+def _merge_existing_domain_pack_config(
+    *,
+    existing_config: dict[str, Any] | None,
+    auto_config: dict[str, Any],
+) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(existing_config) if isinstance(existing_config, dict) else {}
+    # Replace auto-generated metadata fields with fresh values.
+    merged["version"] = auto_config.get("version")
+    merged["suggested_attempts"] = auto_config.get("suggested_attempts")
+    merged["max_mutations_per_attempt"] = auto_config.get("max_mutations_per_attempt")
+    merged["domain_metadata"] = auto_config.get("domain_metadata")
+
+    auto_mutations = auto_config.get("mutations")
+    auto_mutation_list = (
+        [item for item in auto_mutations if isinstance(item, dict)]
+        if isinstance(auto_mutations, list)
+        else []
+    )
+
+    existing_mutations_obj = merged.get("mutations")
+    existing_mutations = (
+        [item for item in existing_mutations_obj if isinstance(item, dict)]
+        if isinstance(existing_mutations_obj, list)
+        else []
+    )
+    preserved_custom_mutations: list[dict[str, Any]] = []
+    for mutation in existing_mutations:
+        mutation_id = mutation.get("mutation_id")
+        if isinstance(mutation_id, str) and mutation_id.startswith("auto."):
+            continue
+        preserved_custom_mutations.append(mutation)
+
+    merged["mutations"] = auto_mutation_list + preserved_custom_mutations
+    return merged
+
+
+def _normalize_tools_for_fingerprint(tools: list[str]) -> list[str]:
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for tool in tools:
+        if not isinstance(tool, str):
+            continue
+        name = tool.strip()
+        if not name or name in INTERNAL_TOOLS or name in seen:
+            continue
+        seen.add(name)
+        normalized.append(name)
+    return sorted(normalized)
+
+
+def _tool_fingerprint(tools: list[str]) -> str:
+    payload = "|".join(tool.strip().lower() for tool in tools if isinstance(tool, str) and tool.strip())
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 
 def _slug_tool_name(tool_name: str) -> str:
