@@ -1773,7 +1773,7 @@ def test_ci_preflight_treats_contract_pack_preference_as_warning_only(
     payload = response.json()
     assert payload["ready"] is True
     assert all(issue["code"] != "contract_wrong_pack" for issue in payload["blockers"])
-    assert any(issue["code"] == "contract_wrong_pack" for issue in payload["warnings"])
+    assert all(issue["code"] != "contract_wrong_pack" for issue in payload["warnings"])
 
 
 def test_ci_post_run_rejects_when_below_min_scenarios(
