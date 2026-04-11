@@ -375,26 +375,6 @@ def _build_ci_preflight(
     # Quality contract pre-run validation
     contract = get_contract(db, campaign_id=campaign.campaign_id)
     if contract is not None:
-        # Check required pack IDs (advisory only)
-        required_pack_ids: list[str] = list(contract.required_pack_ids or [])
-        if required_pack_ids:
-            pack_id_str = str(campaign.mutation_pack_id) if campaign.mutation_pack_id else None
-            if pack_id_str not in required_pack_ids:
-                warnings.append(
-                    CIRunPreflightIssue(
-                        code="contract_wrong_pack",
-                        message=(
-                            f"Quality contract prefers one of {len(required_pack_ids)} configured "
-                            f"pack(s), but campaign uses "
-                            f"{'no pack' if pack_id_str is None else pack_id_str[:8] + '…'}."
-                        ),
-                        hint=(
-                            "Run will proceed with auto trace-tool coverage. Optional: switch to one of these packs for preferred chaos overlays: "
-                            + ", ".join(p[:8] + "…" for p in required_pack_ids[:4])
-                        ),
-                    )
-                )
-
         # Check required tools against trace coverage
         required_tools: list[str] = list(contract.required_tools or [])
         if required_tools and resolved_trace_ids:
@@ -836,23 +816,57 @@ def _ci_decision(
 
 
 def _mutation_coverage_for_run(db: Session, *, run: Any) -> tuple[list[str], int | None]:
-    mutation_pack_id = getattr(run, "mutation_pack_id", None)
+    summary = run.summary if isinstance(run.summary, dict) else {}
     project_id = getattr(run, "project_id", None)
-    if mutation_pack_id is None or project_id is None:
+    if project_id is None:
         return [], None
 
-    mutation_pack = db.scalar(
-        select(MutationPack).where(
-            MutationPack.mutation_pack_id == mutation_pack_id,
-            MutationPack.project_id == project_id,
+    pack_ids: list[UUID] = []
+    resolved_packs_obj = summary.get("resolved_mutation_packs")
+    if isinstance(resolved_packs_obj, list):
+        for item in resolved_packs_obj:
+            if not isinstance(item, dict):
+                continue
+            pack_id_obj = item.get("mutation_pack_id")
+            if not isinstance(pack_id_obj, str):
+                continue
+            try:
+                pack_ids.append(UUID(pack_id_obj))
+            except ValueError:
+                continue
+
+    if not pack_ids:
+        mutation_pack_id = getattr(run, "mutation_pack_id", None)
+        if mutation_pack_id is not None:
+            pack_ids.append(mutation_pack_id)
+
+    if not pack_ids:
+        return [], None
+
+    seen_categories: set[str] = set()
+    for pack_id in pack_ids:
+        mutation_pack = db.scalar(
+            select(MutationPack).where(
+                MutationPack.mutation_pack_id == pack_id,
+                MutationPack.project_id == project_id,
+            )
         )
-    )
-    if mutation_pack is None:
+        if mutation_pack is None:
+            continue
+        config = mutation_pack.config if isinstance(mutation_pack.config, dict) else {}
+        coverage = evaluate_mutation_pack_config(config)
+        seen_categories.update(
+            item.strip().lower()
+            for item in coverage.categories
+            if isinstance(item, str) and item.strip()
+        )
+
+    if not seen_categories:
         return [], None
 
-    config = mutation_pack.config if isinstance(mutation_pack.config, dict) else {}
-    coverage = evaluate_mutation_pack_config(config)
-    return coverage.categories, coverage.coverage_score
+    categories = sorted(seen_categories)
+    coverage_score = min(100, len(categories) * 20)
+    return categories, coverage_score
 
 
 def _required_mutation_categories(thresholds: dict[str, Any]) -> set[str]:

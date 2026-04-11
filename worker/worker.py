@@ -1609,16 +1609,20 @@ def execute_run(run_id: str) -> None:
 
         mutation_pack: MutationPack | None = None
         mutation_pack_config: dict[str, Any] | None = None
-        effective_mutation_pack_id = run.mutation_pack_id or campaign.mutation_pack_id
-        if effective_mutation_pack_id is not None:
-            mutation_pack = db.get(MutationPack, effective_mutation_pack_id)
-            if mutation_pack is None:
-                raise ValueError(f"Mutation pack not found for run {run_id}")
-            if mutation_pack.project_id != run.project_id:
-                raise ValueError(f"Mutation pack project mismatch for run {run_id}")
-            mutation_pack_config = (
-                mutation_pack.config if isinstance(mutation_pack.config, dict) else {}
-            )
+        resolved_overlay_config = prior_summary.get("resolved_mutation_pack_config")
+        if isinstance(resolved_overlay_config, dict):
+            mutation_pack_config = resolved_overlay_config
+        else:
+            effective_mutation_pack_id = run.mutation_pack_id or campaign.mutation_pack_id
+            if effective_mutation_pack_id is not None:
+                mutation_pack = db.get(MutationPack, effective_mutation_pack_id)
+                if mutation_pack is None:
+                    raise ValueError(f"Mutation pack not found for run {run_id}")
+                if mutation_pack.project_id != run.project_id:
+                    raise ValueError(f"Mutation pack project mismatch for run {run_id}")
+                mutation_pack_config = (
+                    mutation_pack.config if isinstance(mutation_pack.config, dict) else {}
+                )
 
         run.status = "running"
         db.commit()
