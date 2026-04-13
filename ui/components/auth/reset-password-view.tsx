@@ -54,22 +54,11 @@ export function ResetPasswordView() {
         <p className="text-xs uppercase tracking-[0.14em] text-primary">Account Recovery</p>
         <h1 className="mt-2 text-xl font-semibold text-foreground">Reset password</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enter the token from your email and choose a new password.
+          Choose a new password for your account.
         </p>
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <label className="block space-y-1">
-          <span className="text-xs text-muted-foreground">Reset token</span>
-          <input
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            placeholder="Paste reset token"
-            className="w-full rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-sm text-foreground outline-none"
-            required
-          />
-        </label>
-
         <label className="block space-y-1">
           <span className="text-xs text-muted-foreground">New password</span>
           <input

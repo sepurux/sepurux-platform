@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ExternalLink,
-  KeyRound,
   Loader2,
   LogIn,
   MonitorPlay,
@@ -246,7 +245,7 @@ export function AccessPortal() {
   const router = useRouter();
 
   const [mode, setMode] = useState<AccessMode>(
-    searchParams.get("mode") === "access" ? "access" : "demo"
+    searchParams.get("mode") === "demo" ? "demo" : "access"
   );
   const [intent, setIntent] = useState<AccessIntent>(
     searchParams.get("intent") === "login" ? "login" : "signup"
@@ -294,7 +293,7 @@ export function AccessPortal() {
   }, []);
 
   useEffect(() => {
-    setMode(searchParams.get("mode") === "access" ? "access" : "demo");
+    setMode(searchParams.get("mode") === "demo" ? "demo" : "access");
     setIntent(searchParams.get("intent") === "login" ? "login" : "signup");
   }, [searchParams]);
 
@@ -608,21 +607,15 @@ export function AccessPortal() {
               Back to site
             </Link>
 
-            {/* mode tabs */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
-                <Tab active={mode === "demo"} onClick={() => handleModeSwitch("demo")}>
-                  <span className="flex items-center gap-1.5">
-                    <MonitorPlay className="h-3 w-3" /> Demo trace
-                  </span>
-                </Tab>
-                <Tab active={mode === "access"} onClick={() => handleModeSwitch("access")}>
-                  <span className="flex items-center gap-1.5">
-                    <KeyRound className="h-3 w-3" /> Save traces
-                  </span>
-                </Tab>
-              </div>
-            </div>
+            {/* demo shortcut */}
+            <button
+              type="button"
+              onClick={() => handleModeSwitch("demo")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-1.5 text-xs font-semibold tracking-wide transition-all hover:bg-muted/50"
+              style={mode === "demo" ? { background: TEAL_DIM, color: TEAL, border: `1px solid ${TEAL_BORDER}` } : {}}
+            >
+              <MonitorPlay className="h-3 w-3" /> Demo
+            </button>
           </div>
 
           {/* heading */}
