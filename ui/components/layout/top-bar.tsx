@@ -47,7 +47,7 @@ import { cn } from "@/lib/utils";
 import { dispatchOpenNewUserTour } from "@/lib/onboarding-tour";
 
 const tabs = [
-  { href: "/", label: "Analyze Trace", section: "dashboard" },
+  { href: "/", label: "Analyze", section: "dashboard" },
   { href: "/dashboard", label: "Dashboard", section: "dashboard" },
   { href: "/traces", label: "Traces", section: "traces" },
   { href: "/campaigns", label: "Campaigns", section: "campaigns" },
