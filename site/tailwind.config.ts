@@ -21,7 +21,10 @@ const config: Config = {
       },
       colors: {
         background: "var(--background)",
+        void: "var(--void)",
         surface: "var(--surface)",
+        "surface-2": "var(--surface-2)",
+        "surface-3": "var(--surface-3)",
         sidebar: "var(--sidebar)",
         foreground: "var(--foreground)",
         card: "var(--card)",
@@ -41,9 +44,13 @@ const config: Config = {
         "neutral-muted": "var(--neutral)",
         warning: "var(--warning)",
         danger: "var(--danger)",
-        teal: {
-          DEFAULT: "#0E8A6F",
-          dim: "rgba(14,138,111,0.12)",
+        indigo: {
+          DEFAULT: "#7C3AED",
+          dim: "rgba(124,58,237,0.12)",
+        },
+        cyan: {
+          DEFAULT: "#06B6D4",
+          dim: "rgba(6,182,212,0.12)",
         },
       },
       borderRadius: {
@@ -52,22 +59,23 @@ const config: Config = {
         sm: "8px"
       },
       boxShadow: {
-        panel: "0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)",
-        glow: "0 0 0 1px rgba(14,138,111,0.15), 0 4px 24px rgba(14,138,111,0.08)",
-        button: "0 2px 8px rgba(0,0,0,0.10)",
-        insetSoft: "inset 0 1px 0 rgba(255,255,255,0.8)",
-        "teal-glow": "0 0 0 1px rgba(14,138,111,0.2), 0 4px 20px rgba(14,138,111,0.08)",
-        "teal-btn": "0 0 0 1px rgba(14,138,111,0.4), 0 2px 12px rgba(14,138,111,0.2)",
-        card: "0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05)",
+        panel: "0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
+        glow: "0 0 0 1px rgba(124,58,237,0.2), 0 4px 24px rgba(124,58,237,0.10)",
+        button: "0 2px 8px rgba(0,0,0,0.20)",
+        insetSoft: "inset 0 1px 0 rgba(255,255,255,0.06)",
+        "accent-glow": "0 0 0 1px rgba(124,58,237,0.25), 0 4px 20px rgba(124,58,237,0.15)",
+        "accent-btn": "0 0 0 1px rgba(124,58,237,0.4), 0 2px 12px rgba(124,58,237,0.2)",
+        card: "0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2)",
+        // backwards compat
+        "teal-glow": "0 0 0 1px rgba(124,58,237,0.2), 0 4px 20px rgba(124,58,237,0.10)",
+        "teal-btn": "0 0 0 1px rgba(124,58,237,0.4), 0 2px 12px rgba(124,58,237,0.2)",
       },
       backgroundImage: {
-        "grid-faint": "radial-gradient(circle at 1px 1px, rgba(148,163,184,0.10) 1px, transparent 0)",
-        "dot-grid": "radial-gradient(circle at 1px 1px, rgba(148,163,184,0.12) 1px, transparent 0)",
+        "grid-faint": "radial-gradient(circle at 1px 1px, rgba(148,163,184,0.06) 1px, transparent 0)",
+        "dot-grid": "radial-gradient(circle at 1px 1px, rgba(148,163,184,0.08) 1px, transparent 0)",
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-hero":
-          "radial-gradient(ellipse at 60% 0%, rgba(14,138,111,0.10) 0%, transparent 60%)",
-        "gradient-teal-hero":
-          "radial-gradient(circle at 50% 60%, rgba(14,138,111,0.08), transparent 55%)",
+        "gradient-hero": "radial-gradient(ellipse at 60% 0%, rgba(124,58,237,0.08) 0%, transparent 60%)",
+        "gradient-accent": "linear-gradient(135deg, #7C3AED, #06B6D4)",
       },
     },
   },

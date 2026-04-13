@@ -50,7 +50,7 @@ const docTracks = [
   },
   {
     title: "Product Overview",
-    description: "Understand how replay, mutation packs, policy gates, and CI decisions fit together.",
+    description: "Understand how the debugger, replay, mutation packs, policy packs, and CI decisions fit together.",
     href: "/product",
   },
 ];

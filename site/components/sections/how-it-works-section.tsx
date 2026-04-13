@@ -1,46 +1,44 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ArrowRight, FileText, GitCompareArrows, Search } from "lucide-react";
 
 const steps = [
   {
     step: "01",
-    title: "Capture a real workflow",
+    title: "Paste the trace",
     description:
-      "Record what the agent actually did, including prompts, tool calls, outputs, and the final decision path.",
+      "Drop in JSON, logs, or semi-structured output. The debugger tries structured parsing first and still handles raw text.",
+    icon: FileText,
   },
   {
     step: "02",
-    title: "Test the same path under failure",
+    title: "See what looks risky",
     description:
-      "Replay that workflow with failures like timeouts, schema changes, rate limits, and blocked actions to see where it breaks.",
+      "The result points to the issue step, the first signal, and the evidence that led to the call.",
+    icon: Search,
   },
   {
     step: "03",
-    title: "Give the team a clear release signal",
+    title: "Fix it fast",
     description:
-      "Turn the result into a verdict that engineering, product, and security teams can all use before shipping changes.",
+      "Use the suggested fix, save the trace, or compare it against the next run when you need a second pass.",
+    icon: GitCompareArrows,
   },
 ];
 
 export function HowItWorksSection() {
   return (
-    <section className="bg-transparent py-20 sm:py-24">
+    <section className="bg-transparent py-18 sm:py-22">
       <div className="site-container">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] lg:gap-16">
-          <div className="max-w-xl">
+        <div className="section-shell p-6 sm:p-8 lg:p-10">
+          <div className="max-w-2xl">
             <p className="section-kicker">How it works</p>
             <h2 className="section-heading mt-4 text-[--text-primary]">
-              From real agent run to clear go or no-go decision.
+              Paste, analyze, fix.
             </h2>
-            <p className="mt-5 text-base leading-8 text-slate-300 md:text-lg">
-              Sepurux helps teams understand what an AI workflow did, pressure-test the same path,
-              and decide whether that workflow is ready for production.
-            </p>
-
-            <p className="mt-6 text-sm leading-7 text-slate-400">
-              That makes the product useful to both technical teams who need detailed evidence and
-              business stakeholders who need a simple answer about release risk.
+            <p className="section-lead mt-5">
+              The flow stays short on purpose: paste the trace, locate the issue, and move on with a fix you can verify.
             </p>
           </div>
 
@@ -49,33 +47,43 @@ export function HowItWorksSection() {
             whileInView="show"
             viewport={{ once: true, amount: 0.15 }}
             variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-            className="border-l border-[--border] pl-0 md:pl-8"
+            className="mt-9 grid gap-4 md:grid-cols-3"
           >
-            <div className="space-y-8">
-              {steps.map((step) => (
-                <motion.div
+            {steps.map((step) => {
+              const Icon = step.icon;
+              return (
+                <motion.article
                   key={step.step}
                   variants={{
-                    hidden: { opacity: 0, y: 22 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
+                    hidden: { opacity: 0, y: 18 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.44, ease: "easeOut" } },
                   }}
-                  className="grid gap-4 border-b border-[--border] pb-8 md:grid-cols-[84px_minmax(0,1fr)]"
+                  whileHover={{ y: -3 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className="relative overflow-hidden rounded-[26px] border border-white/8 bg-white/[0.035] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.14)] sm:p-6"
                 >
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-white/10 bg-white/8 px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">
                     {step.step}
                   </div>
-                  <div>
-                    <h3 className="text-[1.45rem] font-semibold tracking-[-0.04em] text-[--text-primary]">
-                      {step.title}
-                    </h3>
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-                      {step.description}
-                    </p>
+                  <div className="mt-4 flex items-center gap-2 text-primary">
+                    <Icon className="h-4 w-4" />
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Step
+                    </span>
                   </div>
-                </motion.div>
-              ))}
-            </div>
+                  <h3 className="mt-3 text-[1.35rem] font-semibold tracking-[-0.035em] text-[--text-primary]">
+                    {step.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-300">{step.description}</p>
+                </motion.article>
+              );
+            })}
           </motion.div>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-slate-300">
+            <ArrowRight className="h-4 w-4 text-primary" />
+            <p>Advanced replay, mutation testing, and CI gates stay lower on the page for later.</p>
+          </div>
         </div>
       </div>
     </section>

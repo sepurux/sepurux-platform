@@ -19,8 +19,8 @@ const faqs = [
     a: "No. The default model replays from captured traces and synthetic mutation scenarios.",
   },
   {
-    q: "How are failures explained?",
-    a: "Run Inspector highlights first failing step, failing tool, failure reason, and policy events.",
+    q: "How are issues explained?",
+    a: "Run Inspector highlights the first issue step, likely tool, risk reason, and policy events.",
   },
   {
     q: "Can we define custom mutation packs?",

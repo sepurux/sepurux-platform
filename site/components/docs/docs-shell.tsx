@@ -42,8 +42,8 @@ export function DocsShell({
                 <div className="mt-8 flex flex-wrap gap-3">
                   {actions.map((action) => {
                     const baseClassName = action.external
-                      ? "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
-                      : "inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white";
+                      ? "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/16 hover:bg-white/10 hover:text-white"
+                      : "inline-flex h-11 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/16 hover:bg-white/10 hover:text-white";
 
                     if (action.external) {
                       return (
@@ -125,9 +125,9 @@ export function DocsSection({
 
 export function DocsCodeBlock({ code, label }: { code: string; label?: string }) {
   return (
-    <div className="overflow-hidden rounded-[20px] border border-white/10 bg-[var(--ink-925)] shadow-[0_18px_44px_rgba(6,8,12,0.14)]">
+    <div className="overflow-hidden rounded-[22px] border border-white/8 bg-[var(--ink-925)] shadow-[0_18px_44px_rgba(6,8,12,0.14)]">
       {label ? (
-        <div className="border-b border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+        <div className="border-b border-white/8 bg-white/[0.03] px-4 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
           {label}
         </div>
       ) : null}
