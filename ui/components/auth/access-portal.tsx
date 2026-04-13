@@ -400,7 +400,7 @@ export function AccessPortal() {
       }
       const authSession = await refreshSessionFromStoredCredentials();
       setStoredAuthSession({ ...authSession, is_demo: true });
-      router.replace(resolvePostAuthPath(nextPath, authSession));
+      router.replace("/dashboard");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to start demo session");
     } finally {
@@ -824,7 +824,7 @@ export function AccessPortal() {
                     {submittingAccess || oauthPending ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
                     ) : (
-                      <><LogIn className="h-4 w-4" /> Open saved traces</>
+                      <><LogIn className="h-4 w-4" /> Login</>
                     )}
                   </TealButton>
                   {forgotMessage ? (
