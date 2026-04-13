@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   applicationName: siteConfig.name,
   title: {
-    default: "Sepurux | Reliability Infrastructure For AI Agents",
+    default: "Sepurux | Trace Debugger for AI Agents",
     template: "%s | Sepurux",
   },
   description: siteConfig.description,
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "Sepurux | Reliability Infrastructure For AI Agents",
+    title: "Sepurux | Trace Debugger for AI Agents",
     description: siteConfig.description,
     type: "website",
     url: siteConfig.url,
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
         url: siteConfig.ogImage,
         width: 1200,
         height: 630,
-        alt: "Sepurux — Chaos Engineering for AI Agents",
+        alt: "Sepurux — Trace Debugger for AI Agents",
       },
     ],
   },
@@ -78,9 +78,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: siteConfig.twitterHandle,
     creator: siteConfig.twitterHandle,
-    title: "Sepurux | Reliability Infrastructure For AI Agents",
+    title: "Sepurux | Trace Debugger for AI Agents",
     description: siteConfig.description,
-    images: [{ url: siteConfig.ogImage, alt: "Sepurux — Chaos Engineering for AI Agents" }],
+    images: [{ url: siteConfig.ogImage, alt: "Sepurux — Trace Debugger for AI Agents" }],
   },
 };
 

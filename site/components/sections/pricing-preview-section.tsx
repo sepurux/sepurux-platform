@@ -12,7 +12,7 @@ export function PricingPreviewSection() {
         <div>
           <p className="text-xs uppercase tracking-[0.16em] text-primary">Pricing</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            Start small, scale reliability fast.
+            Start small, debug traces fast.
           </h2>
         </div>
         <Button asChild variant="outline">

@@ -7,63 +7,63 @@ import { buildAppAuthHref } from "@/lib/site";
 
 export function FinalCtaSection() {
   return (
-    <section className="ink-section relative overflow-hidden py-24 sm:py-28">
+    <section className="ink-section relative overflow-hidden py-26 sm:py-30">
       <div className="site-container">
         <div className="mx-auto max-w-4xl text-center">
           <p className="section-kicker ink-kicker">Next step</p>
           <h2 className="section-heading mt-4 text-white">
-            Ready to see how reliable your AI workflows really are?
+            Ready to debug the next trace?
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-            Start free if you want to upload traces and test workflows now. Join the waitlist if
-            you want a guided rollout for policy, governance, or private deployment needs.
+            Start with the debugger, then sign in only when you want saved traces, replay history,
+            compare runs, or continuous checks.
           </p>
         </div>
 
         <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-2">
           <a
-            href={buildAppAuthHref({ mode: "access", intent: "signup" })}
-            className="teal-glow-btn rounded-[32px] border border-[rgba(var(--accent-rgb),0.28)] bg-[linear-gradient(150deg,rgba(var(--accent-rgb),0.26),rgba(var(--warm-rgb),0.16)_48%,rgba(255,255,255,0.08))] p-7 text-left"
+            href="/sandbox"
+            className="teal-glow-btn rounded-[32px] border border-[rgba(var(--accent-rgb),0.24)] bg-[linear-gradient(150deg,rgba(var(--accent-rgb),0.28),rgba(var(--warm-rgb),0.16)_48%,rgba(255,255,255,0.07))] p-7 text-left transition-transform duration-200 hover:-translate-y-1"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-100">
-              Start free
+              Try the debugger
             </p>
             <h3 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
-              Create a workspace and start testing real agent workflows.
+              Paste a trace and see what broke.
             </h3>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-200">
-              Best for teams that already know the first workflow they want to validate.
+              Paste a trace, see what looks risky, and keep the fix moving without a sign-up wall.
             </p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
-              Create workspace
+              Analyze Trace
               <ArrowRight className="h-4 w-4" />
             </span>
           </a>
 
-          <Link
-            href="/waitlist"
-            className="rounded-[32px] border border-white/10 bg-white/[0.05] p-7 text-left backdrop-blur-sm transition-colors hover:bg-white/[0.08]"
+          <a
+            href={buildAppAuthHref({ mode: "access", intent: "signup", next: "/sandbox" })}
+            className="rounded-[32px] border border-white/8 bg-white/[0.05] p-7 text-left backdrop-blur-sm transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.08]"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Guided access
+              Save it later
             </p>
             <h3 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">
-              Join the waitlist if you want help rolling Sepurux out across your team.
+              Sign in after the first answer.
             </h3>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-300">
-              Best for security-conscious or enterprise teams that want onboarding help before
-              broader self-serve rollout.
+              Keep the same trace for replay, compare the next run, or turn it into a continuous
+              check when you need persistence.
             </p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
-              Join waitlist
+              Save traces later
               <ArrowRight className="h-4 w-4" />
             </span>
-          </Link>
+          </a>
         </div>
 
-        <div className="mx-auto mt-8 flex max-w-5xl flex-wrap items-center justify-between gap-4 rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4">
+        <div className="mx-auto mt-8 flex max-w-5xl flex-wrap items-center justify-between gap-4 rounded-[24px] border border-white/8 bg-white/[0.03] px-5 py-4">
           <p className="text-sm text-slate-300">
-            Need implementation detail first? Start with docs, then run the sandbox.
+            Need implementation detail first? Start with docs, then run the debugger.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Link
@@ -76,7 +76,7 @@ export function FinalCtaSection() {
               href="/sandbox"
               className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-slate-300 transition-colors hover:text-white"
             >
-              Explore sandbox
+              Analyze Trace
             </Link>
           </div>
         </div>

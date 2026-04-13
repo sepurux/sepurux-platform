@@ -57,7 +57,7 @@ export function WaitlistForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-border/70 bg-card/80 p-5">
+    <form onSubmit={onSubmit} className="space-y-4 rounded-[28px] border border-white/8 bg-card/82 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)] md:p-7">
       {title ? <h3 className="text-lg font-semibold text-foreground">{title}</h3> : null}
       {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
 
@@ -69,7 +69,7 @@ export function WaitlistForm({
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm outline-none transition placeholder:text-muted-foreground/60 focus:border-[rgba(var(--accent-rgb),0.4)] focus:ring-4 focus:ring-[rgba(var(--accent-rgb),0.12)]"
             placeholder="you@company.com"
           />
         </label>
@@ -79,7 +79,7 @@ export function WaitlistForm({
           <select
             value={role}
             onChange={(event) => setRole(event.target.value as WaitlistRole)}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm outline-none transition focus:border-[rgba(var(--accent-rgb),0.4)] focus:ring-4 focus:ring-[rgba(var(--accent-rgb),0.12)]"
           >
             {roles.map((item) => (
               <option key={item} value={item}>
@@ -95,7 +95,7 @@ export function WaitlistForm({
             type="text"
             value={company}
             onChange={(event) => setCompany(event.target.value)}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm outline-none transition placeholder:text-muted-foreground/60 focus:border-[rgba(var(--accent-rgb),0.4)] focus:ring-4 focus:ring-[rgba(var(--accent-rgb),0.12)]"
             placeholder="Acme Inc"
           />
         </label>
