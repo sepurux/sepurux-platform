@@ -9,11 +9,11 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
   ChevronDown,
-  Coins,
   CreditCard,
   FolderKanban,
   LogOut,
   Plus,
+  TestTube2,
   Sparkles,
   User,
 } from "lucide-react";
@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { dispatchOpenNewUserTour } from "@/lib/onboarding-tour";
 
 const tabs = [
+  { href: "/", label: "Analyze Trace", section: "dashboard" },
   { href: "/dashboard", label: "Dashboard", section: "dashboard" },
   { href: "/traces", label: "Traces", section: "traces" },
   { href: "/campaigns", label: "Campaigns", section: "campaigns" },
@@ -318,13 +319,13 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
 
   const visibleSections = new Set(authSession?.permissions.visible_sections ?? []);
   const visibleTabs = tabs.filter(
-    (tab) => visibleSections.size === 0 || visibleSections.has(tab.section)
+    (tab) => tab.href === "/" || visibleSections.size === 0 || visibleSections.has(tab.section)
   );
   const userInitials = initialsForSession(authSession);
   const userLabel = authSession?.name || authSession?.email || "Workspace User";
   const canManageWorkspace = authSession?.permissions.can_manage_workspace ?? false;
   const showProjectSelector = canManageWorkspace;
-  const creditBalance = authSession?.credits_balance;
+  const runBudget = authSession?.credits_balance;
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border/70 bg-background/72 px-4 backdrop-blur-2xl md:px-6">
@@ -375,10 +376,13 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
           data-tour="top-tabs"
         >
           {visibleTabs.map((tab) => {
-            const active = pathname === tab.href || (tab.href !== "/dashboard" && pathname.startsWith(tab.href + "/"));
-            return (
-              <Link
-                key={tab.href}
+              const active =
+                tab.href === "/"
+                  ? pathname === "/"
+                  : pathname === tab.href || pathname.startsWith(tab.href + "/");
+              return (
+                <Link
+                  key={tab.href}
                 href={tab.href}
                 className={cn(
                   "inline-flex h-8 items-center rounded-full px-4 text-sm font-medium transition-all duration-150",
@@ -394,25 +398,30 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
         </div>
       </div>
 
-      {/* right: credits + new project + theme + bell + avatar */}
+      {/* right: run budget + new project + theme + bell + avatar */}
       <div className="flex items-center gap-2">
-        {/* credits pill */}
-        {typeof creditBalance === "number" ? (
+        {/* run budget pill */}
+        {typeof runBudget === "number" ? (
           <button
             onClick={() => setCreditsModalOpen(true)}
-            data-tour="credits-button"
+            data-tour="runs-button"
             className={cn(
-              "glass-surface hidden items-center gap-1.5 px-3 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45 lg:flex",
+              "glass-surface hidden items-center gap-2 px-3 py-1.5 text-sm transition-colors duration-150 hover:bg-accent/45 lg:flex",
               authSession?.is_low_credit
                 ? "border-amber-400/45 bg-amber-500/12 text-amber-700 dark:text-amber-100"
                 : "text-muted-foreground"
             )}
           >
-            <Coins
+            <TestTube2
               className="h-3.5 w-3.5"
               style={{ color: authSession?.is_low_credit ? undefined : "var(--accent-teal)" }}
             />
-            <span className="font-medium">{creditBalance.toLocaleString()}</span>
+            <div className="flex flex-col leading-tight text-left">
+              <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                Runs left
+              </span>
+              <span className="font-medium">{runBudget.toLocaleString()}</span>
+            </div>
           </button>
         ) : null}
 
@@ -582,7 +591,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
                 <CreditCard className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Billing</p>
-                  <p className="text-xs text-muted-foreground">Plans &amp; credits</p>
+                  <p className="text-xs text-muted-foreground">Plans &amp; run budget</p>
                 </div>
               </Link>
               <button

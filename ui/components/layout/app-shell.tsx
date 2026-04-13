@@ -7,7 +7,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <Suspense
       fallback={
         <div className="app-shell-backdrop faint-grid flex min-h-screen items-center justify-center p-6 text-sm text-muted-foreground">
-          Loading workspace...
+          Loading debugger...
         </div>
       }
     >

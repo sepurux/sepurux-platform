@@ -37,7 +37,7 @@ export function IdPill({
     >
       {display}
       {copied ? (
-        <Check className="h-3 w-3 shrink-0 text-teal" />
+        <Check className="h-3 w-3 shrink-0 text-primary" />
       ) : (
         <Copy className="h-2.5 w-2.5 shrink-0 opacity-40" />
       )}

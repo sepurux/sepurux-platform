@@ -50,13 +50,13 @@ export function NewUserTour({ authSession }: { authSession: AuthSessionMetadata 
         id: "welcome",
         title: "Welcome to Sepurux",
         description:
-          "This quick tour shows where to run experiments, inspect failures, and manage credits. It takes under one minute.",
+          "This quick tour shows where to analyze a trace, inspect failures, and save useful history. It takes under one minute.",
       },
       {
         id: "sidebar-navigation",
         title: "Navigate your workflow",
         description:
-          "Use the sidebar to jump between traces, runs, campaigns, mutations, policies, and settings.",
+          "Use the sidebar to jump between the debugger, traces, runs, campaigns, mutations, policies, and settings.",
         targetSelector: '[data-tour=\"sidebar-nav\"]',
       },
       {
@@ -75,11 +75,11 @@ export function NewUserTour({ authSession }: { authSession: AuthSessionMetadata 
         optional: !canManageWorkspace,
       },
       {
-        id: "credits",
-        title: "Track credits before running",
+        id: "runs",
+        title: "Track runs before you scale",
         description:
-          "Check credit balance here before launch. Open billing to upgrade plans or top up when needed.",
-        targetSelector: '[data-tour=\"credits-button\"]',
+          "Check the run budget here before launch. Open billing to add more analyses when needed.",
+        targetSelector: '[data-tour=\"runs-button\"]',
       },
       {
         id: "account-menu",
@@ -296,4 +296,3 @@ export function NewUserTour({ authSession }: { authSession: AuthSessionMetadata 
     </div>
   );
 }
-

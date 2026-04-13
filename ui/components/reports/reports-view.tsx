@@ -219,7 +219,7 @@ function SummaryChips({ rows }: { rows: Array<{ passRate: number | null; policyV
         <span className="font-medium text-white">{totalRuns}</span> Total runs
       </span>
       <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-        <span className="font-medium text-teal">{avgPassRate === null ? "--" : formatPercent(avgPassRate, 0)}</span> Avg pass rate
+        <span className="font-medium text-primary">{avgPassRate === null ? "--" : formatPercent(avgPassRate, 0)}</span> Avg pass rate
       </span>
       <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
         <span className={`font-medium ${totalPolicyViolations > 0 ? "text-amber-400" : "text-white"}`}>{totalPolicyViolations}</span> Total policy violations

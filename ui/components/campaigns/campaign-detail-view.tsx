@@ -1581,7 +1581,7 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
         {([
           ["wrong_pack", "Pack preference mismatch. Run still executes; switch packs only when you want specific chaos overlays."],
           ["untested_tool", "Required tool never exercised. No trace in the batch called this tool — add a scenario that covers it."],
-          ["insufficient_attempts", "Too few mutation attempts. Increase run budget or lower the minimum to match your credit allocation."],
+          ["insufficient_attempts", "Too few mutation attempts. Increase run budget or lower the minimum to match your run allocation."],
         ] as [string, string][]).map(([type, desc]) => (
           <div key={type} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
             <p className="font-mono text-xs font-semibold text-rose-400">{type}</p>

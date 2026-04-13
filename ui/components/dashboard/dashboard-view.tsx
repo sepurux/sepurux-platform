@@ -245,14 +245,14 @@ function KpiCard({
   accent?: "neutral" | "success" | "danger" | "info";
 }) {
   const iconClasses: Record<string, string> = {
-    neutral: "text-blue-400 border-blue-400/20 bg-blue-400/10",
-    success: "text-teal border-teal/20 bg-teal/10",
+    neutral: "text-primary border-primary/20 bg-primary/10",
+    success: "text-success border-success/20 bg-success/10",
     danger: "text-rose-400 border-rose-400/20 bg-rose-400/10",
-    info: "text-purple-400 border-purple-400/20 bg-purple-400/10",
+    info: "text-warning border-warning/20 bg-warning/10",
   };
 
   return (
-    <Card className="overflow-hidden rounded-2xl bg-muted/30">
+    <Card className="overflow-hidden rounded-2xl bg-white/[0.03]">
       <CardContent className="p-0">
         <div className="flex items-start justify-between gap-4 p-5">
           <div>
@@ -331,7 +331,7 @@ function PassRateTrendCard({ series }: { series: Array<{ name: string; passRate:
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-info" /> Pass Rate Trend
+          <BarChart3 className="h-4 w-4 text-warning" /> Pass Rate Trend
         </CardTitle>
         <CardDescription>Recent run pass rate trend (from /runs/{`{id}`}/stats).</CardDescription>
       </CardHeader>

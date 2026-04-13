@@ -5,75 +5,75 @@
 
 :root {
   color-scheme: light;
-  --background: 210 48% 97%;
+  --background: 28 45% 97%;
   --surface: 0 0% 100%;
-  --sidebar: 212 42% 94%;
-  --foreground: 221 42% 10%;
+  --sidebar: 28 34% 94%;
+  --foreground: 24 18% 12%;
   --card: 0 0% 100%;
-  --card-foreground: 221 42% 10%;
-  --border: 214 30% 84%;
-  --input: 212 34% 91%;
-  --ring: 29 66% 54%;
-  --muted: 214 37% 92%;
-  --muted-foreground: 216 20% 36%;
-  --accent: 34 38% 92%;
-  --accent-foreground: 221 42% 10%;
-  --primary: 29 66% 54%;
+  --card-foreground: 24 18% 12%;
+  --border: 24 24% 84%;
+  --input: 26 24% 92%;
+  --ring: 29 95% 52%;
+  --muted: 28 28% 93%;
+  --muted-foreground: 24 10% 36%;
+  --accent: 31 100% 94%;
+  --accent-foreground: 24 18% 12%;
+  --primary: 29 95% 52%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 143 26% 42%;
-  --success: 143 26% 42%;
-  --info: 29 66% 54%;
-  --neutral: 214 14% 46%;
+  --secondary: 31 92% 64%;
+  --success: 143 56% 42%;
+  --info: 31 95% 58%;
+  --neutral: 24 10% 46%;
   --warning: 38 92% 45%;
   --danger: 0 72% 45%;
-  --primary-rgb: 215 132 59;
-  --teal-rgb: 79 135 103;
+  --primary-rgb: 255 122 26;
+  --teal-rgb: 255 122 26;
   --accent-teal: rgb(var(--teal-rgb));
   --accent-teal-dim: rgb(var(--teal-rgb) / 0.12);
-  --body-gradient-1: rgb(var(--primary-rgb) / 0.08);
-  --body-gradient-2: rgb(var(--teal-rgb) / 0.08);
+  --body-gradient-1: rgb(var(--primary-rgb) / 0.09);
+  --body-gradient-2: rgb(251 146 60 / 0.08);
   --body-gradient-3: rgb(var(--primary-rgb) / 0.05);
-  --body-gradient-4: rgb(var(--teal-rgb) / 0.05);
-  --grid-dot: rgba(15, 23, 42, 0.08);
+  --body-gradient-4: rgb(245 158 11 / 0.05);
+  --grid-dot: rgba(15, 23, 42, 0.06);
   --scrollbar-track: rgba(15, 23, 42, 0.05);
-  --scrollbar-thumb: rgba(15, 23, 42, 0.24);
+  --scrollbar-thumb: rgba(15, 23, 42, 0.22);
   --noise-texture: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.02) 0, transparent 46%);
 }
 
 .dark {
   color-scheme: dark;
-  --background: 223 41% 7%;
-  --surface: 223 30% 11%;
-  --sidebar: 223 36% 9%;
-  --foreground: 214 32% 93%;
-  --card: 223 28% 14%;
-  --card-foreground: 214 32% 93%;
-  --border: 221 24% 19%;
-  --input: 221 22% 15%;
-  --ring: 217 91% 60%;
-  --muted: 221 24% 15%;
-  --muted-foreground: 216 18% 64%;
-  --accent: 221 31% 20%;
-  --accent-foreground: 214 32% 93%;
-  --primary: 217 91% 60%;
+  --background: 18 17% 7%;
+  --surface: 18 14% 10%;
+  --sidebar: 18 16% 9%;
+  --foreground: 30 50% 97%;
+  --card: 18 14% 11%;
+  --card-foreground: 30 50% 97%;
+  --border: 24 12% 18%;
+  --input: 22 12% 15%;
+  --ring: 29 95% 55%;
+  --muted: 22 12% 13%;
+  --muted-foreground: 24 12% 68%;
+  --accent: 20 14% 16%;
+  --accent-foreground: 30 50% 97%;
+  --primary: 29 95% 55%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 214 95% 68%;
+  --secondary: 31 92% 62%;
   --success: 145 72% 48%;
-  --info: 214 95% 68%;
-  --neutral: 215 20% 65%;
+  --info: 31 95% 58%;
+  --neutral: 24 10% 66%;
   --warning: 38 92% 50%;
   --danger: 0 84% 60%;
-  --primary-rgb: 59 130 246;
-  --teal-rgb: 96 165 250;
+  --primary-rgb: 255 122 26;
+  --teal-rgb: 255 122 26;
   --accent-teal: rgb(var(--teal-rgb));
   --accent-teal-dim: rgb(var(--teal-rgb) / 0.14);
   --body-gradient-1: rgb(var(--primary-rgb) / 0.16);
-  --body-gradient-2: rgb(var(--teal-rgb) / 0.12);
+  --body-gradient-2: rgb(251 146 60 / 0.12);
   --body-gradient-3: rgb(var(--primary-rgb) / 0.07);
-  --body-gradient-4: rgba(37, 99, 235, 0.11);
-  --grid-dot: rgba(255, 255, 255, 0.035);
+  --body-gradient-4: rgb(245 158 11 / 0.09);
+  --grid-dot: rgba(255, 255, 255, 0.03);
   --scrollbar-track: rgba(255, 255, 255, 0.02);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb: rgba(var(--primary-rgb), 0.18);
   --noise-texture: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.025) 0, transparent 46%);
 }
 
@@ -124,7 +124,7 @@ body::before {
 
 @layer components {
   .panel-surface {
-    @apply rounded-[14px] bg-card shadow-panel backdrop-blur-xl;
+    @apply rounded-[24px] bg-card shadow-panel backdrop-blur-xl;
     border: 1px solid hsl(var(--border) / 0.78);
     background-color: hsl(var(--card) / 0.88);
     box-shadow:
@@ -140,20 +140,20 @@ body::before {
   }
 
   .glass-surface {
-    @apply rounded-xl border bg-card backdrop-blur-xl;
+    @apply rounded-[20px] border bg-card backdrop-blur-xl;
     border-color: hsl(var(--border) / 0.72);
     background-color: hsl(var(--card) / 0.65);
   }
 
   .app-shell-backdrop {
     background-image:
-      linear-gradient(to bottom, hsl(var(--background) / 0.92), hsl(var(--background) / 0.98)),
-      radial-gradient(circle at 20% 12%, var(--body-gradient-1), transparent 26%),
-      radial-gradient(circle at 90% 4%, var(--body-gradient-2), transparent 22%);
+      radial-gradient(circle at 12% 12%, var(--body-gradient-1), transparent 28%),
+      radial-gradient(circle at 90% 4%, var(--body-gradient-2), transparent 22%),
+      linear-gradient(to bottom, hsl(var(--background) / 0.92), hsl(var(--background) / 0.98));
   }
 
   .faint-grid {
-    background-size: 18px 18px;
+    background-size: 24px 24px;
     background-image: radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 0);
   }
 

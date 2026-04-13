@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("panel-surface relative overflow-hidden", className)} {...props} />
+    <div ref={ref} className={cn("panel-surface relative overflow-hidden transition-all duration-300", className)} {...props} />
   )
 );
 Card.displayName = "Card";
@@ -20,7 +20,7 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn("text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground", className)}
+      className={cn("text-base font-semibold tracking-[-0.02em] text-foreground", className)}
       {...props}
     />
   )
@@ -29,7 +29,7 @@ CardTitle.displayName = "CardTitle";
 
 const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn("mt-0.5 text-sm text-muted-foreground", className)} {...props} />
+    <p ref={ref} className={cn("mt-0.5 text-sm leading-6 text-muted-foreground", className)} {...props} />
   )
 );
 CardDescription.displayName = "CardDescription";

@@ -145,12 +145,12 @@ export function WebhooksView() {
         <Card
           className={
             testResult.delivered
-              ? "border-teal/20 bg-teal/6"
+              ? "border-primary/20 bg-primary/10"
               : "border-danger/20 bg-danger/8"
           }
         >
           <CardHeader>
-            <CardTitle className={testResult.delivered ? "text-teal" : "text-danger"}>
+            <CardTitle className={testResult.delivered ? "text-primary" : "text-danger"}>
               {testResult.delivered ? "Test Delivery Succeeded" : "Test Delivery Failed"}
             </CardTitle>
             <CardDescription>
