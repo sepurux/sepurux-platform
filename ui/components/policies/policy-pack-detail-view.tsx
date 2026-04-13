@@ -545,7 +545,7 @@ function PolicyPackPanels({
                         className={
                           row.kind === "removed"
                             ? "text-muted-foreground"
-                            : "font-mono text-xs text-teal"
+                            : "font-mono text-xs text-primary"
                         }
                       >
                         {row.after ?? "--"}

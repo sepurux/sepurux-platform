@@ -48,10 +48,10 @@ const GREEN_DIM = "var(--accent-teal-dim)";
 const GREEN_BORDER = "rgb(var(--teal-rgb) / 0.2)";
 
 const leftPanelFeatures = [
-  "Replay exact agent executions step by step",
-  "Inject schema drift, timeouts, and poisoning",
-  "Gate merges on reliability score thresholds",
-  "Policy checks before irreversible tool calls",
+  "Paste a trace and see the failing step",
+  "Keep replay and mutation tests for later",
+  "Save traces when you need history",
+  "Promote stable traces into CI checks",
 ];
 
 const socialProviders: Array<{
@@ -141,7 +141,7 @@ function Tab({
       style={
         active
           ? { background: TEAL_DIM, color: TEAL, border: `1px solid ${TEAL_BORDER}` }
-          : { color: "var(--color-muted-foreground)", border: "1px solid transparent" }
+          : { color: "hsl(var(--muted-foreground))", border: "1px solid transparent" }
       }
     >
       {children}
@@ -166,7 +166,7 @@ function TealButton({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-black transition-all disabled:opacity-50"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-50"
       style={{
         background: disabled ? "hsl(var(--primary) / 0.45)" : TEAL,
         boxShadow: disabled ? "none" : "0 0 0 1px hsl(var(--primary) / 0.4), 0 4px 24px hsl(var(--primary) / 0.2)",
@@ -193,7 +193,7 @@ function SocialButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="relative inline-flex w-full items-center justify-center rounded-2xl border border-border/70 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 transition hover:border-primary/35 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.18)] disabled:cursor-not-allowed disabled:opacity-60"
+      className="relative inline-flex w-full items-center justify-center rounded-2xl border border-border/70 bg-card/75 px-4 py-2.5 text-sm font-medium text-foreground transition hover:-translate-y-px hover:border-primary/35 hover:bg-accent/50 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.18)] disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span className="absolute left-4 flex h-6 w-6 items-center justify-center">
         <ProviderIcon provider={provider} />
@@ -238,7 +238,7 @@ function ProviderIcon({ provider }: { provider: SocialOAuthProvider }) {
     );
   }
 
-  return <Github className="h-6 w-6 text-slate-900" aria-hidden="true" />;
+  return <Github className="h-6 w-6 text-foreground" aria-hidden="true" />;
 }
 
 export function AccessPortal() {
@@ -512,13 +512,15 @@ export function AccessPortal() {
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-4">
       <div
-        className="grid w-full max-w-4xl overflow-hidden rounded-[28px] border border-border/60 lg:grid-cols-[1fr_1fr]"
-        style={{ background: "hsl(var(--card))" }}
+        className="panel-surface grid w-full max-w-5xl overflow-hidden lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]"
       >
         {/* ── Left branded panel ── */}
         <div
           className="relative hidden flex-col justify-between overflow-hidden p-8 lg:flex"
-          style={{ background: "hsl(214 27% 4%)" }}
+          style={{
+            background:
+              "radial-gradient(circle at 18% 18%, rgba(124,58,237,0.18) 0%, transparent 34%), radial-gradient(circle at 84% 14%, rgba(6,182,212,0.08) 0%, transparent 28%), linear-gradient(180deg, hsl(var(--background) / 0.98), hsl(var(--card) / 0.94))",
+          }}
         >
           {/* brand orbs */}
           <div
@@ -552,10 +554,10 @@ export function AccessPortal() {
               className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em]"
               style={{ color: TEAL }}
             >
-              Chaos engineering for AI
+              Trace debugging for AI
             </p>
             <h2 className="mb-6 text-2xl font-bold leading-snug tracking-tight text-white">
-              Break things in staging.<br />Ship with confidence.
+              Paste the trace.<br />Find the issue fast.
             </h2>
 
             <ul className="space-y-3">
@@ -573,10 +575,7 @@ export function AccessPortal() {
 
           {/* bottom stats */}
           <div className="relative z-10">
-            <div
-              className="grid grid-cols-2 gap-3 rounded-2xl border p-4"
-              style={{ borderColor: GREEN_BORDER, background: "rgb(var(--teal-rgb) / 0.05)" }}
-            >
+            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
               {[
                 { value: "12", label: "Pilot teams" },
                 { value: "99.2%", label: "Detection rate" },
@@ -589,11 +588,10 @@ export function AccessPortal() {
                 </div>
               ))}
             </div>
-            <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/55">
+            <div className="mt-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-xs text-white/60">
               <span className="font-medium text-white">Full product access</span>
               {" — "}
-              Credits are only consumed when you run campaigns, replays, and mutation-heavy
-              workflows.
+              Runs are only used when you save a trace, replay later, or run mutation-heavy workflows.
             </div>
           </div>
         </div>
@@ -615,12 +613,12 @@ export function AccessPortal() {
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
                 <Tab active={mode === "demo"} onClick={() => handleModeSwitch("demo")}>
                   <span className="flex items-center gap-1.5">
-                    <MonitorPlay className="h-3 w-3" /> Demo
+                    <MonitorPlay className="h-3 w-3" /> Sample trace
                   </span>
                 </Tab>
                 <Tab active={mode === "access"} onClick={() => handleModeSwitch("access")}>
                   <span className="flex items-center gap-1.5">
-                    <KeyRound className="h-3 w-3" /> Get Access
+                    <KeyRound className="h-3 w-3" /> Save traces
                   </span>
                 </Tab>
               </div>
@@ -631,17 +629,17 @@ export function AccessPortal() {
           <div>
             <h1 className="text-xl font-bold tracking-tight text-foreground">
               {mode === "demo"
-                ? "Try the seeded demo"
+                ? "Try a sample trace"
                 : intent === "signup"
-                ? "Create your workspace"
+                ? "Create an account after the first answer"
                 : "Welcome back"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {mode === "demo"
-                ? "A short-lived session with pre-loaded trace and campaign data."
+                ? "A short-lived session with a pre-loaded trace and no credentials needed."
                 : intent === "signup"
-                ? "Your workspace unlocks as soon as you're in."
-                : "Sign in to access your reliability dashboard."}
+                ? "Sign up once the debugger has shown you the issue, then save traces and compare runs."
+                : "Sign in to open saved traces, replay history, and compare runs."}
             </p>
           </div>
 
@@ -652,9 +650,9 @@ export function AccessPortal() {
                 className="rounded-xl border p-4 text-sm"
                 style={{ borderColor: GREEN_BORDER, background: "rgb(var(--teal-rgb) / 0.05)" }}
               >
-                <p className="font-semibold" style={{ color: GREEN }}>Seeded demo workspace</p>
+                <p className="font-semibold" style={{ color: GREEN }}>Sample trace</p>
                 <p className="mt-1 text-muted-foreground">
-                  Isolated session, resettable dataset — no credentials needed.
+                  Try the debugger on a sample failure. No credentials needed.
                 </p>
                 {demoInfo ? (
                   <p className="mt-2 text-xs text-muted-foreground/80">
@@ -668,12 +666,12 @@ export function AccessPortal() {
                 {loadingDemo ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading demo workspace...
+                    Loading sample trace...
                   </>
                 ) : (
                   <>
                     <MonitorPlay className="h-4 w-4" />
-                    Enter demo dashboard
+                    Open sample trace
                   </>
                 )}
               </TealButton>
@@ -730,8 +728,7 @@ export function AccessPortal() {
               <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground lg:hidden">
                 <span className="font-medium text-foreground">Full product access</span>
                 {" — "}
-                Credits are only consumed when you run campaigns, replays, and mutation-heavy
-                workflows.
+                Runs are only used when you save a trace, replay later, or run mutation-heavy workflows.
               </div>
 
               {/* ── SIGN UP FORM ── */}
@@ -783,7 +780,7 @@ export function AccessPortal() {
 
                   <TealButton type="submit" disabled={submittingAccess || oauthPending}>
                     {submittingAccess || oauthPending ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Creating workspace...</>
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Creating account...</>
                     ) : (
                       <><UserPlus className="h-4 w-4" /> Create account<ArrowRight className="h-3.5 w-3.5" /></>
                     )}
@@ -834,7 +831,7 @@ export function AccessPortal() {
                     {submittingAccess || oauthPending ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
                     ) : (
-                      <><LogIn className="h-4 w-4" /> Log in to dashboard</>
+                      <><LogIn className="h-4 w-4" /> Open saved traces</>
                     )}
                   </TealButton>
                   {forgotMessage ? (
@@ -844,7 +841,7 @@ export function AccessPortal() {
               )}
 
               <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-                Social sign-in creates or links your Sepurux workspace automatically. Email login keeps the same session model and billing identity.
+                Social sign-in creates or links your Sepurux workspace automatically. Email login keeps the same session model and saved-trace identity.
               </div>
             </div>
           )}

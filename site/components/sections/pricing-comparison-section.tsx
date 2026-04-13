@@ -34,23 +34,23 @@ const compactPlanCopy: Record<
   { audience: string; description: string; features: string[] }
 > = {
   free: {
-    audience: "Solo validation",
-    description: "One-time credits for early reliability workflows.",
+    audience: "Solo debugging",
+    description: "One-time analyses for early trace debugging.",
     features: [
       "Normal execution queue",
-      "Credit top-ups available",
-      "Trace, campaign, and run workflows",
+      "Saved traces available later",
+      "Trace, replay, and compare workflows",
       "Upgrade when you need governance controls",
     ],
   },
   pro: {
     audience: "Small AI teams",
-    description: "Recurring credits and guardrails for individual teams.",
+    description: "Recurring analyses and guardrails for individual teams.",
     features: [
       "Priority execution queue",
-      "Monthly credits renew each cycle",
+      "Saved traces and replay history",
       "Policy and security configuration",
-      "Trace, campaign, and run workflows",
+      "Trace, campaign, and test workflows",
     ],
   },
   team: {
@@ -60,7 +60,7 @@ const compactPlanCopy: Record<
       "Invite and manage members",
       "Manage workspaces and projects",
       "Webhook integrations",
-      "Priority queue with credit top-ups",
+      "Priority queue with analysis volume",
     ],
   },
   enterprise: {
@@ -216,7 +216,7 @@ export function PricingComparisonSection() {
   }[selectedPlan.tier];
   const capacitySummary = selectedCapacity
     ? `${selectedCapacity.traceReplays.toLocaleString()} trace replays`
-    : "Starter credit pool";
+    : "Starter analysis pool";
   const queueLabel = selectedPlan.queuePriority === "priority" ? "Priority queue" : "Standard queue";
 
   return (
@@ -227,10 +227,10 @@ export function PricingComparisonSection() {
           <div className="max-w-3xl">
             <p className="section-kicker ink-kicker">Plan comparison</p>
             <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-white md:text-5xl">
-              Pricing shaped for validation, team operations, and governed scale.
+              Plans for first analyses, replay, and CI gating.
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
-              Compare tier shape, credit volume, and execution priority. Select a plan to inspect the operational details without turning the page into a pricing wall.
+              Compare analysis volume, run priority, and what each tier unlocks. Select a plan to inspect the operational details without turning the page into a pricing wall.
             </p>
           </div>
 
@@ -376,7 +376,7 @@ export function PricingComparisonSection() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[22px] border border-white/10 bg-white/[0.04] px-4 py-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Credits
+                    Analyses
                   </p>
                   <p className="mt-2 text-xl font-semibold text-white">{selectedPlan.monthlyCredits}</p>
                 </div>

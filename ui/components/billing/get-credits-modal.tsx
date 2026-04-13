@@ -104,12 +104,12 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
           <div>
             <h2 className="text-lg font-semibold text-foreground">Choose a plan</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Compare monthly credits, run capacity, and queue priority before checkout.
+              Compare monthly analysis volume, run capacity, and queue priority before checkout.
             </p>
             {currentPlan ? (
               <p className="mt-1 text-xs text-muted-foreground">
                 Current plan: <span className="font-medium text-foreground">{currentPlan.name}</span> (
-                {currentPlan.monthly_credits.toLocaleString()} credits / month)
+                {currentPlan.monthly_credits.toLocaleString()} analyses / month)
               </p>
             ) : null}
           </div>
@@ -179,7 +179,7 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
                       ) : null}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {plan.monthly_credits.toLocaleString()} credits · {queuePriority} queue
+                      {plan.monthly_credits.toLocaleString()} analyses · {queuePriority} queue
                     </p>
                     <div className="mt-3 rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
                       <p className="font-medium uppercase tracking-wide text-foreground">Approx monthly capacity</p>
@@ -233,7 +233,7 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
           {/* operation costs */}
           <div className="mt-6 rounded-xl border border-border/50 bg-muted/20 px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Credit costs per operation
+              Run budget per operation
             </p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-muted-foreground">
               <span>

@@ -2,16 +2,27 @@ export function WalkthroughSection() {
   return (
     <section className="bg-transparent py-16 sm:py-20">
       <div className="site-container">
-        <div className="grid gap-10 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,17,32,0.94),rgba(7,13,26,0.96))] p-6 shadow-[0_28px_90px_rgba(0,4,15,0.42)] sm:p-8 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:items-start lg:gap-12 lg:p-10">
-          <div className="max-w-xl">
+        <div className="section-shell grid gap-10 p-6 sm:p-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:items-start lg:gap-12 lg:p-10">
+          <div className="max-w-xl lg:sticky lg:top-24">
             <p className="section-kicker">Product walkthrough</p>
             <h2 className="section-heading mt-4 text-[--text-primary]">
               See the full trace-to-campaign flow in one short walkthrough.
             </h2>
-            <p className="mt-5 text-base leading-8 text-slate-300 md:text-lg">
+            <p className="section-lead mt-5">
               Watch a real agent run become a trace, then a campaign, then a release verdict inside
               Sepurux.
             </p>
+            <div className="mt-7 space-y-3 text-sm text-slate-300">
+              <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                1. Receive trace artifact from a real workflow.
+              </p>
+              <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                2. Launch replay with controlled failures and policy checks.
+              </p>
+              <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                3. Ship with a clear pass/fail signal for release.
+              </p>
+            </div>
           </div>
 
           <div className="rounded-[24px] border border-white/10 bg-[rgba(255,255,255,0.03)] p-3 shadow-[0_18px_60px_rgba(0,4,15,0.4)] sm:p-4">

@@ -20,7 +20,7 @@ const PAGE_SIZE = 25;
 function statusBadge(status: string | null) {
   if (!status) return <span className="text-muted-foreground">—</span>;
   if (status === "success") return <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">success</Badge>;
-  if (status === "skipped_insufficient_credits") return <Badge variant="outline" className="border-amber-500/40 text-amber-400">skipped (credits)</Badge>;
+  if (status === "skipped_insufficient_credits") return <Badge variant="outline" className="border-amber-500/40 text-amber-400">skipped (run budget)</Badge>;
   return <Badge variant="outline" className="border-rose-500/40 text-rose-400">{status}</Badge>;
 }
 
@@ -61,7 +61,7 @@ export function ScheduledCampaignsView() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Scheduled Campaigns</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Automated mutation campaigns that run on a cron schedule with credit enforcement.
+          Automated mutation campaigns that run on a cron schedule with run-budget enforcement.
         </p>
       </div>
 

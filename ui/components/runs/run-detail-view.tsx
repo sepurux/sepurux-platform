@@ -339,7 +339,7 @@ function RunStatsCards({
               <div className="flex items-end justify-between gap-4 rounded-md border border-border bg-muted/30 px-4 py-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Score</p>
-                  <p className={cn("text-3xl font-semibold", reliability.status === "critical" ? "text-rose-400" : reliability.status === "warning" ? "text-amber-400" : "text-teal")}>
+                  <p className={cn("text-3xl font-semibold", reliability.status === "critical" ? "text-rose-400" : reliability.status === "warning" ? "text-amber-400" : "text-success")}>
                     {formatPercent(reliability.reliability_score / 100, 1)}
                   </p>
                 </div>
@@ -970,10 +970,10 @@ function derivePassRate(run: RunMetadata, stats: RunStats | null): number {
 function StatTile({ label, value, tone = "default", progress }: { label: string; value: string; tone?: "default" | "success" | "danger" | "warning" | "info"; progress?: number }) {
   const toneClasses: Record<string, string> = {
     default: "text-foreground",
-    success: "text-teal",
+    success: "text-success",
     danger: "text-rose-400",
     warning: "text-amber-400",
-    info: "text-blue-400",
+    info: "text-info",
   };
   return (
     <div className="rounded-md border border-border bg-muted/30 p-4">
@@ -981,7 +981,7 @@ function StatTile({ label, value, tone = "default", progress }: { label: string;
       <p className={cn("mt-2 text-3xl font-semibold leading-none", toneClasses[tone])}>{value}</p>
       {typeof progress === "number" ? (
         <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-teal/70 transition-all duration-300" style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+          <div className="h-full rounded-full bg-success/70 transition-all duration-300" style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
         </div>
       ) : null}
     </div>

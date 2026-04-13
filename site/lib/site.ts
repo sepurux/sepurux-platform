@@ -8,14 +8,14 @@ const defaultApiBaseUrl =
   process.env.NODE_ENV === "development"
     ? `${defaultAppUrl}/api/backend`
     : "https://app.sepurux.dev/api/backend";
-export const siteAssetVersion = process.env.NEXT_PUBLIC_SITE_ASSET_VERSION || "20260330";
+export const siteAssetVersion = process.env.NEXT_PUBLIC_SITE_ASSET_VERSION || "20260413";
 
 export type PricingTier = "starter" | "team" | "enterprise";
 
 export const siteConfig = {
   name: "Sepurux",
   description:
-    "Sepurux is the chaos engineering platform for AI agents. Inject failures, replay traces, and enforce reliability policies before your agents hit production.",
+    "Sepurux is the trace debugger for failed or risky agent runs. Paste a trace, find the failing step, and hand stable cases to replay, mutation testing, and CI later.",
   url: process.env.NEXT_PUBLIC_SITE_URL || defaultSiteUrl,
   appUrl: process.env.NEXT_PUBLIC_APP_URL || defaultAppUrl,
   apiBaseUrl: process.env.SEPURUX_API_BASE_URL || defaultApiBaseUrl,

@@ -101,7 +101,7 @@ export function BillingView() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Billing</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Subscription plans, monthly credit grants, top-ups, and queue priority for Sepurux runs.
+          Subscription plans, analysis volume, top-ups, and queue priority for Sepurux runs.
         </p>
       </div>
 
@@ -120,7 +120,7 @@ export function BillingView() {
           {state.wallet.is_low_credit ? (
             <Card className="border-amber-300 bg-amber-100 dark:border-amber-400/30 dark:bg-amber-500/10">
               <CardContent className="p-5 text-sm text-amber-900 dark:text-amber-100">
-                This workspace is under the low-credit threshold. Campaign runs will stop once the wallet reaches zero.
+                This workspace is under the low-run threshold. Campaign runs will stop once the wallet reaches zero.
               </CardContent>
             </Card>
           ) : null}
@@ -134,7 +134,7 @@ export function BillingView() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card>
               <CardHeader>
-                <CardTitle>Credits Remaining</CardTitle>
+                <CardTitle>Runs Remaining</CardTitle>
                 <CardDescription>Current wallet balance</CardDescription>
               </CardHeader>
               <CardContent>
@@ -145,7 +145,7 @@ export function BillingView() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Monthly Bucket</CardTitle>
+                <CardTitle>Monthly Run Bucket</CardTitle>
                 <CardDescription>Renews with your subscription</CardDescription>
               </CardHeader>
               <CardContent>
@@ -156,8 +156,8 @@ export function BillingView() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Top-Up Credits</CardTitle>
-                <CardDescription>Non-plan credit add-ons</CardDescription>
+                <CardTitle>Top-Up Runs</CardTitle>
+                <CardDescription>Non-plan run add-ons</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-semibold text-foreground">
@@ -191,7 +191,7 @@ export function BillingView() {
             <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
               <div>
                 <p>
-                  Monthly credits:{" "}
+                  Monthly runs:{" "}
                   <span className="font-medium text-foreground">
                     {(state.subscription.monthly_credits ?? 0).toLocaleString()}
                   </span>
@@ -241,13 +241,13 @@ export function BillingView() {
                     : "Contact sales";
 
                 return (
-                  <Card key={plan.plan_id} className={isCurrent ? "border-blue-400/40" : undefined}>
+                  <Card key={plan.plan_id} className={isCurrent ? "border-primary/40" : undefined}>
                     <CardHeader>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <CardTitle>{plan.name}</CardTitle>
                           <CardDescription>
-                            ${plan.monthly_price}/month · {plan.monthly_credits.toLocaleString()} credits
+                            ${plan.monthly_price}/month · {plan.monthly_credits.toLocaleString()} analyses
                           </CardDescription>
                         </div>
                         {isCurrent ? <Badge>Current</Badge> : null}
@@ -285,15 +285,15 @@ export function BillingView() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Top Up Credits</CardTitle>
+                <CardTitle>Top Up Runs</CardTitle>
                 <CardDescription>
-                  Add one-off credits without changing the subscription.
+                  Add one-off runs without changing the subscription.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <form className="space-y-4" onSubmit={handleTopup}>
                   <label className="block space-y-1 text-sm">
-                    <span className="text-muted-foreground">Credits</span>
+                    <span className="text-muted-foreground">Runs</span>
                     <input
                       type="number"
                       min={100}
@@ -304,17 +304,17 @@ export function BillingView() {
                     />
                   </label>
                   <Button className="w-full" type="submit" disabled={topupBusy}>
-                    {topupBusy ? "Processing..." : "Purchase Credits"}
+                    {topupBusy ? "Processing..." : "Purchase Runs"}
                   </Button>
                 </form>
 
                 <div className="rounded-md border border-border/70 bg-background/70 p-3 text-sm text-muted-foreground">
                   Operation costs:
                   <ul className="mt-2 space-y-1">
-                    <li>• Trace replay: 5 credits</li>
-                    <li>• Mutation campaign: 20 credits</li>
-                    <li>• Large campaign: 50 credits</li>
-                    <li>• Scheduled pack run: pack credit cost</li>
+                    <li>• Trace replay: 5 runs</li>
+                    <li>• Mutation campaign: 20 runs</li>
+                    <li>• Large campaign: 50 runs</li>
+                    <li>• Scheduled pack run: pack run cost</li>
                   </ul>
                 </div>
               </CardContent>

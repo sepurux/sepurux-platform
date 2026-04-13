@@ -38,8 +38,8 @@ export function DocsCodeTabs({ tabs }: { tabs: DocsTab[] }) {
   const current = tabs.find((t) => t.lang === active) ?? tabs[0];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-sm">
-      <div className="flex gap-0.5 border-b border-slate-800 bg-slate-900 px-2 pt-2">
+    <div className="overflow-hidden rounded-[22px] border border-white/8 bg-[var(--ink-925)] shadow-[0_18px_44px_rgba(6,8,12,0.14)]">
+      <div className="flex gap-0.5 border-b border-white/8 bg-white/[0.03] px-2 pt-2">
         {tabs.map((tab) => (
           <button
             key={tab.lang}

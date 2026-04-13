@@ -49,7 +49,7 @@ const themeBootScript = `
 
 export const metadata: Metadata = {
   title: "Sepurux",
-  description: "Agent Sepurux dashboard",
+  description: "Paste a trace. Find the failing step, why it failed or looks risky, and the next fix.",
   icons: {
     icon: [
       { url: uiFaviconIcoUrl, type: "image/x-icon" },
