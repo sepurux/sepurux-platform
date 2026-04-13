@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -24,6 +24,46 @@ const PUBLIC_API_KEY =
   process.env.NEXT_PUBLIC_CRASHLAB_API_KEY ??
   process.env.NEXT_PUBLIC_API_KEY ??
   "";
+
+const AUTH_THEME_STYLES = {
+  colorScheme: "dark",
+  background:
+    "radial-gradient(circle at 12% 10%, rgba(124,58,237,0.14), transparent 28%), radial-gradient(circle at 88% 6%, rgba(6,182,212,0.08), transparent 24%), linear-gradient(180deg, #050508 0%, #08080D 58%, #050508 100%)",
+  backgroundColor: "#08080D",
+  "--background": "240 16% 3%",
+  "--surface": "240 12% 8%",
+  "--sidebar": "240 12% 8%",
+  "--foreground": "240 30% 95%",
+  "--card": "240 12% 8%",
+  "--card-foreground": "240 30% 95%",
+  "--border": "240 12% 16%",
+  "--input": "240 10% 12%",
+  "--ring": "264 83% 58%",
+  "--muted": "240 10% 10%",
+  "--muted-foreground": "250 10% 67%",
+  "--accent": "264 83% 58%",
+  "--accent-foreground": "240 30% 95%",
+  "--primary": "264 83% 58%",
+  "--primary-foreground": "0 0% 100%",
+  "--secondary": "262 83% 74%",
+  "--success": "145 72% 48%",
+  "--info": "190 90% 50%",
+  "--neutral": "250 8% 65%",
+  "--warning": "38 92% 50%",
+  "--danger": "0 84% 60%",
+  "--primary-rgb": "124 58 237",
+  "--teal-rgb": "6 182 212",
+  "--accent-teal": "rgb(6 182 212)",
+  "--accent-teal-dim": "rgb(6 182 212 / 0.14)",
+  "--body-gradient-1": "rgb(124 58 237 / 0.14)",
+  "--body-gradient-2": "rgb(6 182 212 / 0.08)",
+  "--body-gradient-3": "rgb(124 58 237 / 0.05)",
+  "--body-gradient-4": "rgb(245 158 11 / 0.05)",
+  "--grid-dot": "rgba(255,255,255,0.03)",
+  "--scrollbar-track": "rgba(255,255,255,0.02)",
+  "--scrollbar-thumb": "rgba(124,58,237,0.18)",
+  "--noise-texture": "radial-gradient(circle at 0 0, rgba(255,255,255,0.025) 0, transparent 46%)",
+} as CSSProperties & Record<string, string>;
 
 function sectionForPath(pathname: string) {
   if (pathname.startsWith("/billing")) return "billing";
@@ -112,7 +152,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
             router.replace("/dashboard");
             return;
           }
-          if (!isInternalPage) {
+          if (!isInternalPage && pathname !== "/") {
             const currentSection = sectionForPath(pathname);
             if (!session.permissions.visible_sections.includes(currentSection)) {
               const nextSection = session.permissions.visible_sections[0] ?? "dashboard";
@@ -152,7 +192,13 @@ export function ShellFrame({ children }: { children: ReactNode }) {
   }, [isInternalPage, isPublicPage, pathname, router, searchParams]);
 
   if (isPublicPage) {
-    return <main className="app-shell-backdrop faint-grid min-h-screen p-4 md:p-8">{children}</main>;
+    return isAuthPage ? (
+      <main className="faint-grid min-h-screen p-4 md:p-8" style={AUTH_THEME_STYLES}>
+        {children}
+      </main>
+    ) : (
+      <main className="app-shell-backdrop faint-grid min-h-screen p-4 md:p-8">{children}</main>
+    );
   }
 
   if (gateState !== "allowed") {
@@ -161,7 +207,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
         <div className="glass-surface px-7 py-5 text-sm text-muted-foreground shadow-panel">
           <span className="inline-flex items-center gap-2 font-medium text-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Preparing workspace...
+            Preparing debugger...
           </span>
         </div>
       </div>
@@ -179,10 +225,10 @@ export function ShellFrame({ children }: { children: ReactNode }) {
         <Sidebar authSession={authSession} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <TopBar authSession={authSession} />
-          {pathname.startsWith("/dashboard") && authSession?.is_low_credit ? (
+          {authSession?.is_low_credit ? (
             <div className="border-b border-amber-300/45 bg-amber-100/90 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/22 dark:bg-amber-500/12 dark:text-amber-100 md:px-6">
-              Credits are running low. This workspace has {authSession.credits_balance ?? 0} credits remaining.
-              Upgrade the plan or top up credits before the next campaign run is blocked.
+              Run budget is running low. This workspace has {authSession.credits_balance ?? 0} analyses remaining.
+              Upgrade the plan or top up before the next run is blocked.
             </div>
           ) : null}
           <main className="faint-grid flex-1 overflow-y-auto px-4 pb-6 pt-4 md:px-6 md:pb-8 md:pt-6">

@@ -298,7 +298,7 @@ function ReliabilityPanels({ data }: { data: ReliabilityData }) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
               <CreditCard className="h-4 w-4" />
-              Credits Used This Month
+              Run Budget Used This Month
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -380,7 +380,7 @@ export function ReliabilityDashboard() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Project-wide reliability score, failure taxonomy, and credit consumption.
+          Project-wide reliability score, failure taxonomy, and run-budget consumption.
         </p>
         <Button variant="outline" size="sm" onClick={() => setReloadNonce((n) => n + 1)}>
           <RefreshCcw className="h-4 w-4" /> Refresh

@@ -65,6 +65,7 @@ function initialsForSession(authSession: AuthSessionMetadata | null) {
 }
 
 const primaryItems: NavLinkItem[] = [
+  { href: "/", label: "Analyze Trace", section: "dashboard", icon: FileSearch },
   { href: "/dashboard", label: "Dashboard", section: "dashboard", icon: Home },
   { href: "/traces", label: "Traces", section: "traces", icon: FileSearch },
   { href: "/runs", label: "Runs", section: "runs", icon: PlayCircle },
@@ -152,10 +153,11 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
   } | null>(null);
 
   const items = primaryItems.filter(
-    (item) => visibleSections.size === 0 || visibleSections.has(item.section)
+    (item) => item.href === "/" || visibleSections.size === 0 || visibleSections.has(item.section)
   );
+  const homeItem = items.find((item) => item.href === "/") ?? null;
   const dashboardItem = items.find((item) => item.href === "/dashboard") ?? null;
-  const trailingItems = items.filter((item) => item.href !== "/dashboard");
+  const trailingItems = items.filter((item) => item.href !== "/" && item.href !== "/dashboard");
   const groups = useMemo(
     () =>
       groupedItems
@@ -327,6 +329,10 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
     router.push("/auth?mode=access&intent=login");
   }
 
+  function isActiveHref(href: string) {
+    return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
+  }
+
   useEffect(() => {
     setExpandedGroups((currentValue) => {
       let changed = false;
@@ -364,17 +370,32 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
       </div>
 
       <nav className="relative z-30 flex-1 space-y-1 overflow-y-auto pointer-events-auto pr-1" data-tour="sidebar-nav">
+        {homeItem ? (
+          <Link
+            href={homeItem.href}
+            className={cn(
+              "relative z-30 group flex h-10 items-center gap-2.5 rounded-lg border pl-3 pr-2 text-[13px] transition-all duration-150",
+              isActiveHref(homeItem.href)
+                ? "border-primary/45 bg-primary/12 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]"
+                : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/50 hover:text-foreground",
+            )}
+          >
+            <homeItem.icon className={cn("h-4 w-4 shrink-0", isActiveHref(homeItem.href) ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+            <span className="flex-1 truncate">{homeItem.label}</span>
+          </Link>
+        ) : null}
+
         {dashboardItem ? (
           <Link
             href={dashboardItem.href}
             className={cn(
               "relative z-30 group flex h-10 items-center gap-2.5 rounded-lg border pl-3 pr-2 text-[13px] transition-all duration-150",
-              pathname === dashboardItem.href
+              isActiveHref(dashboardItem.href)
                 ? "border-primary/45 bg-primary/12 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.2)]"
                 : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/50 hover:text-foreground",
             )}
           >
-            <dashboardItem.icon className={cn("h-4 w-4 shrink-0", pathname === dashboardItem.href ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+            <dashboardItem.icon className={cn("h-4 w-4 shrink-0", isActiveHref(dashboardItem.href) ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
             <span className="flex-1 truncate">{dashboardItem.label}</span>
           </Link>
         ) : null}
@@ -466,8 +487,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
         })}
 
         {trailingItems.map((item) => {
-          const active =
-            pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
+          const active = isActiveHref(item.href);
           const Icon = item.icon;
 
           return (
@@ -514,7 +534,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
               onClick={() => setNotificationsMenuOpen((currentValue) => !currentValue)}
               className={cn(
                 "relative inline-flex h-11 w-11 items-center justify-center rounded-[18px] text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-foreground",
-                notificationsMenuOpen && "bg-violet-500/14 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]"
+                notificationsMenuOpen && "bg-primary/14 text-primary shadow-[0_0_0_1px_rgba(var(--primary-rgb),0.22)]"
               )}
             >
               <Bell className="h-5 w-5" />
@@ -529,7 +549,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
           <ThemeToggle
             iconOnly
             className="h-11 w-11 rounded-[18px] text-muted-foreground hover:text-foreground"
-            activeClassName="bg-violet-500/14 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]"
+            activeClassName="bg-primary/14 text-primary shadow-[0_0_0_1px_rgba(var(--primary-rgb),0.22)]"
           />
 
           <button
@@ -538,7 +558,7 @@ export function Sidebar({ authSession }: { authSession: AuthSessionMetadata | nu
             onClick={() => setBugReportOpen(true)}
             className={cn(
               "inline-flex h-11 w-11 items-center justify-center rounded-[18px] text-muted-foreground transition-colors duration-150 hover:bg-accent/45 hover:text-rose-300",
-              bugReportOpen && "bg-violet-500/14 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.24)]"
+              bugReportOpen && "bg-primary/14 text-primary shadow-[0_0_0_1px_rgba(var(--primary-rgb),0.22)]"
             )}
           >
             <Bug className="h-5 w-5" />

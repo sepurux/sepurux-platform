@@ -144,7 +144,7 @@ export function TracesListView() {
                       </TableCell>
                       <TableCell>
                         {trace.task_name ? (
-                          <span className="font-medium text-teal">{trace.task_name}</span>
+                          <span className="font-medium text-primary">{trace.task_name}</span>
                         ) : (
                           <span className="text-muted-foreground">--</span>
                         )}

@@ -120,8 +120,8 @@ function formatUsd(amount: number) {
 }
 
 function creditSourceLabel(transaction: CreditTransactionMetadata) {
-  if (transaction.type === "topup_purchase") return "Purchased credits";
-  if (transaction.type === "monthly_grant") return "Monthly credits";
+  if (transaction.type === "topup_purchase") return "Purchased runs";
+  if (transaction.type === "monthly_grant") return "Monthly runs";
   return "Workspace usage";
 }
 
@@ -567,28 +567,28 @@ export function ProfileView() {
               />
 
               <BillingRow
-                label="Credits"
+                label="Run budget"
                 content={
                   <div className="space-y-2">
                     <div>
                       <p className="font-medium text-foreground">
-                        {wallet.balance.toLocaleString()} workspace credits
+                        {wallet.balance.toLocaleString()} workspace runs
                       </p>
-                      <p className="text-sm text-muted-foreground">Credits are consumed per campaign run.</p>
+                      <p className="text-sm text-muted-foreground">Runs are consumed per campaign execution.</p>
                     </div>
                     {wallet.is_low_credit ? (
                       <p className="rounded-md border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100">
-                        Low balance — runs will stop when credits reach zero.
+                        Low balance — runs will stop when the budget reaches zero.
                       </p>
                     ) : null}
                     <div className="pt-1 space-y-1 text-sm text-muted-foreground">
                       <p>
                         <span className="font-semibold text-foreground">{wallet.monthly_credits.toLocaleString()}</span>{" "}
-                        monthly plan credits
+                        monthly plan runs
                       </p>
                       <p>
                         <span className="font-semibold text-foreground">{wallet.topup_credits.toLocaleString()}</span>{" "}
-                        purchased credits · do not expire
+                        purchased runs · do not expire
                       </p>
                     </div>
                   </div>
@@ -596,14 +596,14 @@ export function ProfileView() {
                 actions={
                   <>
                     <Button variant="outline" size="sm" onClick={() => setCreditsModalOpen(true)}>
-                      Get credits
+                      Get runs
                     </Button>
                   </>
                 }
               />
 
               <BillingRow
-                label="Buy credits"
+                label="Buy runs"
                 content={
                   <form className="flex items-center gap-2" onSubmit={handleTopup}>
                     <input
@@ -688,7 +688,7 @@ export function ProfileView() {
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-xl font-semibold text-foreground">
-                Credit usage table <span className="text-muted-foreground">(last 30 days)</span>
+                Run usage table <span className="text-muted-foreground">(last 30 days)</span>
               </h3>
               <Button type="button" onClick={() => setCreditsModalOpen(true)}>
                 Upgrade to download
@@ -705,8 +705,8 @@ export function ProfileView() {
                     <th className="px-4 py-3 font-medium">Cost</th>
                     <th className="px-4 py-3 font-medium">Balance Before</th>
                     <th className="px-4 py-3 font-medium">Balance After</th>
-                    <th className="px-4 py-3 font-medium">Credit/Debit</th>
-                    <th className="px-4 py-3 font-medium">Credit Source</th>
+                    <th className="px-4 py-3 font-medium">Run/Debit</th>
+                    <th className="px-4 py-3 font-medium">Run Source</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -741,7 +741,7 @@ export function ProfileView() {
                   ) : (
                     <tr className="border-t border-border/40 bg-card/60">
                       <td className="px-4 py-4 text-muted-foreground" colSpan={8}>
-                        No credit activity in the last 30 days.
+                        No run activity in the last 30 days.
                       </td>
                     </tr>
                   )}
@@ -787,7 +787,7 @@ export function ProfileView() {
                         member.role === "admin"
                           ? "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300"
                           : member.role === "developer"
-                          ? "bg-teal/12 text-teal"
+                          ? "bg-primary/12 text-primary"
                           : "bg-muted/50 text-muted-foreground"
                       )}>
                         {member.role}

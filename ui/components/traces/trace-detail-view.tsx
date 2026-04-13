@@ -91,7 +91,7 @@ export function TraceDetailView({ traceId }: { traceId: string }) {
                 <dt className="text-muted-foreground">Trace ID</dt>
                 <dd className="font-mono text-xs text-foreground">{state.trace.trace_id}</dd>
                 <dt className="text-muted-foreground">Task / Agent</dt>
-                <dd className="text-teal">{state.trace.task_name ?? "--"}</dd>
+                <dd className="text-primary">{state.trace.task_name ?? "--"}</dd>
                 <dt className="text-muted-foreground">Source</dt>
                 <dd className="text-foreground">{state.trace.source}</dd>
                 <dt className="text-muted-foreground">Trace Version</dt>
@@ -183,8 +183,8 @@ const STEP_TYPE_CONFIG: Record<string, { iconColor: string; dotBg: string; dotBo
   llm_call:     { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
   model:        { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
   agent_output: { iconColor: "text-primary",         dotBg: "bg-primary/10",    dotBorder: "border-primary/40",    accentBorder: "border-l-primary/60" },
-  tool_call:    { iconColor: "text-blue-400",        dotBg: "bg-blue-400/10",   dotBorder: "border-blue-400/40",   accentBorder: "border-l-blue-400/60" },
-  tool_result:  { iconColor: "text-teal",            dotBg: "bg-teal/10",       dotBorder: "border-teal/40",       accentBorder: "border-l-teal/60" },
+  tool_call:    { iconColor: "text-info",            dotBg: "bg-info/10",       dotBorder: "border-info/40",       accentBorder: "border-l-info/60" },
+  tool_result:  { iconColor: "text-success",         dotBg: "bg-success/10",    dotBorder: "border-success/40",    accentBorder: "border-l-success/60" },
   mutation:     { iconColor: "text-amber-400",       dotBg: "bg-amber-400/10",  dotBorder: "border-amber-400/40",  accentBorder: "border-l-amber-400/60" },
   failure:      { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },
   error:        { iconColor: "text-rose-400",        dotBg: "bg-rose-400/10",   dotBorder: "border-rose-400/40",   accentBorder: "border-l-rose-400/60" },

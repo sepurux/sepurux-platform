@@ -222,7 +222,7 @@ export function SettingsView() {
             ) : null}
 
             {saveMessage ? (
-              <div className="rounded-md border border-blue-500/30 bg-blue-500/10 p-2 text-sm text-blue-100">
+              <div className="rounded-md border border-primary/20 bg-primary/8 p-2 text-sm text-primary">
                 {saveMessage}
               </div>
             ) : null}

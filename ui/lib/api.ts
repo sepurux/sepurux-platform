@@ -1483,6 +1483,7 @@ export const api = {
     }),
   getTraceTimeline: (traceId: string) =>
     requestJson<TraceTimelineStep[]>(`/v1/traces/${traceId}/timeline`),
+  createTrace: (payload: unknown) => postJson<TraceMetadata, unknown>("/v1/traces", payload),
   listCampaigns: (options?: { limit?: number; offset?: number; include_archived?: boolean }) =>
     requestJson<CampaignMetadata[]>("/v1/campaigns", {
       limit: options?.limit ?? 50,
