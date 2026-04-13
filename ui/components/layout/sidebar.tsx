@@ -65,7 +65,6 @@ function initialsForSession(authSession: AuthSessionMetadata | null) {
 }
 
 const primaryItems: NavLinkItem[] = [
-  { href: "/", label: "Analyze Trace", section: "dashboard", icon: FileSearch },
   { href: "/dashboard", label: "Dashboard", section: "dashboard", icon: Home },
   { href: "/traces", label: "Traces", section: "traces", icon: FileSearch },
   { href: "/runs", label: "Runs", section: "runs", icon: PlayCircle },

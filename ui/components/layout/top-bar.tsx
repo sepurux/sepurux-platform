@@ -47,7 +47,6 @@ import { cn } from "@/lib/utils";
 import { dispatchOpenNewUserTour } from "@/lib/onboarding-tour";
 
 const tabs = [
-  { href: "/", label: "Analyze Trace", section: "dashboard" },
   { href: "/dashboard", label: "Dashboard", section: "dashboard" },
   { href: "/traces", label: "Traces", section: "traces" },
   { href: "/campaigns", label: "Campaigns", section: "campaigns" },
@@ -418,7 +417,7 @@ export function TopBar({ authSession }: { authSession: AuthSessionMetadata | nul
             />
             <div className="flex flex-col leading-tight text-left">
               <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                Runs left
+                Credits
               </span>
               <span className="font-medium">{runBudget.toLocaleString()}</span>
             </div>

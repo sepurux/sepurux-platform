@@ -613,7 +613,7 @@ export function AccessPortal() {
               <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
                 <Tab active={mode === "demo"} onClick={() => handleModeSwitch("demo")}>
                   <span className="flex items-center gap-1.5">
-                    <MonitorPlay className="h-3 w-3" /> Sample trace
+                    <MonitorPlay className="h-3 w-3" /> Demo trace
                   </span>
                 </Tab>
                 <Tab active={mode === "access"} onClick={() => handleModeSwitch("access")}>
@@ -629,7 +629,7 @@ export function AccessPortal() {
           <div>
             <h1 className="text-xl font-bold tracking-tight text-foreground">
               {mode === "demo"
-                ? "Try a sample trace"
+                ? "Try the demo trace"
                 : intent === "signup"
                 ? "Create an account after the first answer"
                 : "Welcome back"}
@@ -650,7 +650,7 @@ export function AccessPortal() {
                 className="rounded-xl border p-4 text-sm"
                 style={{ borderColor: GREEN_BORDER, background: "rgb(var(--teal-rgb) / 0.05)" }}
               >
-                <p className="font-semibold" style={{ color: GREEN }}>Sample trace</p>
+                <p className="font-semibold" style={{ color: GREEN }}>Demo trace</p>
                 <p className="mt-1 text-muted-foreground">
                   Try the debugger on a sample failure. No credentials needed.
                 </p>
@@ -666,12 +666,12 @@ export function AccessPortal() {
                 {loadingDemo ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading sample trace...
+                    Loading demo trace...
                   </>
                 ) : (
                   <>
                     <MonitorPlay className="h-4 w-4" />
-                    Open sample trace
+                    Open demo trace
                   </>
                 )}
               </TealButton>

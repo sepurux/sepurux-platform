@@ -76,6 +76,14 @@ export function SettingsView() {
     return apiBaseUrl.trim() || ENV_API_BASE_URL;
   }, [apiBaseUrl]);
 
+  const fullBaseUrl = useMemo(() => {
+    const resolved = resolveBaseForBrowser(effectiveBaseUrl);
+    if (resolved.startsWith("/") && typeof window !== "undefined") {
+      return `${window.location.origin}${resolved}`;
+    }
+    return resolved;
+  }, [effectiveBaseUrl]);
+
   function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStoredApiBaseUrl(apiBaseUrl);
@@ -181,6 +189,16 @@ export function SettingsView() {
                 placeholder="http://localhost:8000"
               />
             </label>
+
+            <div className="space-y-1 text-sm">
+              <span className="text-muted-foreground">Full Base URL</span>
+              <input
+                readOnly
+                className="w-full rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground"
+                value={fullBaseUrl}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+            </div>
 
             <label className="block space-y-1 text-sm">
               <span className="text-muted-foreground">API Key</span>

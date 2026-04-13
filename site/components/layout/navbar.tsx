@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/product", label: "Product" },
-  { href: "/sandbox", label: "Analyze Trace" },
+  { href: "/sandbox", label: "Analyze" },
   { href: "/docs", label: "Docs" },
   { href: "/company", label: "Company" },
 ];
@@ -56,18 +56,15 @@ export function Navbar() {
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
-              const isPrimaryEntry = item.href === "/sandbox";
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
                     "inline-flex h-10 items-center rounded-full px-4 font-mono text-[12px] font-medium uppercase tracking-[0.1em] transition-all duration-200",
-                    isPrimaryEntry && !isActive
-                      ? "border border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(var(--accent-rgb),0.14)] text-white shadow-[0_0_0_1px_rgba(var(--accent-rgb),0.12)]"
-                      : isActive
-                        ? "bg-white/[0.11] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                        : "text-[rgba(155,152,171,0.72)] hover:bg-white/[0.05] hover:text-white"
+                    isActive
+                      ? "bg-white/[0.11] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                      : "text-[rgba(155,152,171,0.72)] hover:bg-white/[0.05] hover:text-white"
                   )}
                 >
                   {item.label}
@@ -118,18 +115,15 @@ export function Navbar() {
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
-                const isPrimaryEntry = item.href === "/sandbox";
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={cn(
                       "flex items-center justify-between rounded-[18px] border px-4 py-3 font-mono text-[12px] font-medium uppercase tracking-[0.1em] transition-all duration-200",
-                      isPrimaryEntry && !isActive
-                        ? "border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(var(--accent-rgb),0.14)] text-white"
-                        : isActive
-                          ? "border-white/10 bg-white/[0.08] text-white"
-                          : "border-transparent bg-white/[0.03] text-white/50 hover:border-white/8 hover:bg-white/[0.05] hover:text-white"
+                      isActive
+                        ? "border-white/10 bg-white/[0.08] text-white"
+                        : "border-transparent bg-white/[0.03] text-white/50 hover:border-white/8 hover:bg-white/[0.05] hover:text-white"
                     )}
                   >
                     <span>{item.label}</span>
