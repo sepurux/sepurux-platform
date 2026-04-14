@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -19,25 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type ParseKind = "raw" | "json" | "trace-id";
-type Confidence = "low" | "medium" | "high";
 
 type Entry = {
   label: string;
   text: string;
   status: string | null;
   score: number;
-};
-
-type AnalysisResult = {
-  sourceLabel: string;
-  confidence: Confidence;
-  summary: string;
-  failureLocation: string;
-  likelyCause: string;
-  suggestedFix: string;
-  evidence: string[];
-  traceId: string | null;
-  parsedEntries: number;
 };
 
 type ParseResult = {
@@ -129,49 +116,6 @@ const DARK_PANEL_CLASS = "section-shell overflow-hidden";
 const DARK_CHIP_CLASS =
   "inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300";
 const DARK_ROW_CLASS = "rounded-[18px] border border-white/8 bg-white/[0.03] px-4 py-3";
-
-const RULES = [
-  {
-    match: /unexpected field|missing field|schema|contract|validation|deserialize|parse json|invalid json|shape mismatch/i,
-    cause: "a schema drift or contract mismatch",
-    fix: "Update the adapter or schema mapping, then replay the same trace against the new shape.",
-  },
-  {
-    match: /timeout|timed out|deadline|latency|slow/i,
-    cause: "an upstream timeout or latency spike",
-    fix: "Shorten the timeout chain, add backoff, or isolate the slow call before retrying.",
-  },
-  {
-    match: /429|rate limit|quota|too many requests/i,
-    cause: "rate limiting or quota pressure",
-    fix: "Add retry jitter, lower the burst size, or move the call behind a budget.",
-  },
-  {
-    match: /unauthorized|forbidden|401|403|permission/i,
-    cause: "an auth or permission failure",
-    fix: "Refresh the token or widen the tool permissions for this step.",
-  },
-  {
-    match: /prompt injection|unsafe|policy|blocked/i,
-    cause: "a policy guardrail blocked the action",
-    fix: "Split the safe and unsafe tool path or tune the policy rule that blocked the step.",
-  },
-  {
-    match: /null|undefined|cannot read|is not a function|typeerror/i,
-    cause: "missing data or a null-handling bug",
-    fix: "Guard the missing field and add a fallback before the tool call.",
-  },
-  {
-    match: /retry storm|recursive|loop|too many retries/i,
-    cause: "a retry loop amplified the original failure",
-    fix: "Cap the retries, add jitter, and stop retrying non-retryable errors.",
-  },
-  {
-    match: /connection reset|econnreset|socket hang up|network|fetch failed/i,
-    cause: "a transient network failure",
-    fix: "Treat it as transient, retry once, and isolate the dependency.",
-  },
-] as const;
 
 // ── Core Reliability Pack (system-generated, matches api/app/mutation_packs/core/reliability.py) ──
 const CORE_RELIABILITY_MUTATIONS: Array<{
@@ -293,35 +237,6 @@ function inferLineLabel(line: string, lineNumber: number) {
   return `Line ${lineNumber} · ${shortText(fallback, 56)}`;
 }
 
-function scoreText(text: string, status: string | null) {
-  const lower = text.toLowerCase();
-  let score = 0;
-  if (/error|failed|failure|timeout|timed out|exception|panic|invalid|mismatch|blocked|unauthorized|forbidden|429|traceback/i.test(lower)) {
-    score += 8;
-  }
-  if (/schema|contract|validation|null|undefined|retry|parse|network|rate limit|permission/i.test(lower)) {
-    score += 4;
-  }
-  if (/step|tool|call|model|agent|response|output|retry/i.test(lower)) {
-    score += 1;
-  }
-  if (status && /error|failed|failure|timeout|retry/i.test(status.toLowerCase())) {
-    score += 10;
-  }
-  return score;
-}
-
-function classifyCause(text: string) {
-  for (const rule of RULES) {
-    if (rule.match.test(text)) {
-      return rule;
-    }
-  }
-  return {
-    cause: "the first failed step in the trace",
-    fix: "Replay the same step with the original payload, compare it to the last successful step, and tighten the contract around the change.",
-  };
-}
 
 function buildEntries(parsed: ParseResult): { entries: Entry[]; sourceLabel: string } {
   const structured = parsed.parsed != null ? findEntryArray(parsed.parsed) : null;
@@ -337,7 +252,7 @@ function buildEntries(parsed: ParseResult): { entries: Entry[]; sourceLabel: str
           label: `Step ${String(index + 1).padStart(2, "0")} · ${shortText(label, 64)}`,
           text,
           status,
-          score: scoreText(text, status),
+          score: 0,
         };
       }),
       sourceLabel: "Structured JSON",
@@ -348,8 +263,8 @@ function buildEntries(parsed: ParseResult): { entries: Entry[]; sourceLabel: str
     return {
       entries:
         parsed.lines.length > 0
-          ? parsed.lines.map((line, index) => ({ label: inferLineLabel(line, index + 1), text: line, status: null, score: scoreText(line, null) }))
-          : [{ label: "JSON payload", text: stringifyValue(parsed.parsed), status: null, score: scoreText(stringifyValue(parsed.parsed), null) }],
+          ? parsed.lines.map((line, index) => ({ label: inferLineLabel(line, index + 1), text: line, status: null, score: 0 }))
+          : [{ label: "JSON payload", text: stringifyValue(parsed.parsed), status: null, score: 0 }],
       sourceLabel: "JSON paste",
     };
   }
@@ -357,8 +272,8 @@ function buildEntries(parsed: ParseResult): { entries: Entry[]; sourceLabel: str
   return {
     entries:
       parsed.lines.length > 0
-        ? parsed.lines.map((line, index) => ({ label: inferLineLabel(line, index + 1), text: line, status: null, score: scoreText(line, null) }))
-        : [{ label: "Paste", text: parsed.raw, status: null, score: scoreText(parsed.raw, null) }],
+        ? parsed.lines.map((line, index) => ({ label: inferLineLabel(line, index + 1), text: line, status: null, score: 0 }))
+        : [{ label: "Paste", text: parsed.raw, status: null, score: 0 }],
     sourceLabel: parsed.kind === "trace-id" ? "Trace ID" : "Raw logs",
   };
 }
@@ -406,83 +321,6 @@ function applyCoreMutations(entries: Entry[]): MutationPackResult {
   return { toolStepsFound: toolEntries.length, impacts };
 }
 
-function analyzeTrace(parsed: ParseResult): AnalysisResult {
-  const { entries, sourceLabel } = buildEntries(parsed);
-  const bestExplicitFailure = entries.findIndex((entry) => /error|failed|failure|timeout|retry/i.test(entry.status ?? ""));
-  const bestHeuristic = entries.reduce<{ index: number; entry: Entry; score: number }>(
-    (best, entry, index) => (entry.score > best.score ? { index, entry, score: entry.score } : best),
-    { index: 0, entry: entries[0] ?? { label: "Trace", text: parsed.raw, status: null, score: 0 }, score: -1 }
-  );
-  const failureIndex = bestExplicitFailure >= 0 ? bestExplicitFailure : bestHeuristic.index;
-  const failureEntry = entries[failureIndex] ?? bestHeuristic.entry;
-  const lastHealthy = entries
-    .slice(0, failureIndex)
-    .reverse()
-    .find((entry) => !/error|failed|failure|timeout|retry/i.test(entry.status ?? "") && entry.score < failureEntry.score);
-  const cause = classifyCause(`${failureEntry.label} ${failureEntry.text} ${entries.map((entry) => entry.text).join(" ")}`);
-  const explicitFailure =
-    /error|failed|failure|timeout|retry/i.test(failureEntry.status ?? "") ||
-    /error|failed|failure|timeout|retry/i.test(failureEntry.text);
-  const allSuccess = entries.every((e) => /^success$/i.test(e.status ?? ""));
-  const confidence: Confidence = explicitFailure ? "high" : bestHeuristic.entry.score > 5 ? "medium" : "low";
-
-  const evidence = [
-    `${entries.length} signal${entries.length === 1 ? "" : "s"} scanned from ${sourceLabel.toLowerCase()}`,
-    `First issue signal: ${failureEntry.label}`,
-    `Matched likely cause: ${cause.cause}`,
-  ];
-  if (lastHealthy) {
-    evidence.push(`Last healthy step: ${lastHealthy.label}`);
-  }
-  if (parsed.traceId) {
-    evidence.push(`Trace ID: ${parsed.traceId}`);
-  }
-
-  return {
-    sourceLabel,
-    confidence,
-    summary: allSuccess
-      ? `All ${entries.length} steps completed successfully — no failure detected.`
-      : explicitFailure
-      ? `The trace points to ${failureEntry.label}.`
-      : `The trace most likely points to ${failureEntry.label}.`,
-    failureLocation: allSuccess ? "None" : failureEntry.label,
-    likelyCause: allSuccess ? "no failure signals found" : cause.cause,
-    suggestedFix: allSuccess
-      ? "The trace looks clean. To stress-test it, try mutation testing — inject schema drift, latency, or tool errors."
-      : cause.fix,
-    evidence,
-    traceId: parsed.traceId,
-    parsedEntries: entries.length,
-  };
-}
-
-function summaryTone(confidence: Confidence) {
-  if (confidence === "high") return "success";
-  if (confidence === "medium") return "warning";
-  return "outline";
-}
-
-function ResultLine({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="grid gap-2 px-5 py-4 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-6 md:px-6">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-        {description ? <p className="mt-1 text-xs leading-5 text-muted-foreground/80">{description}</p> : null}
-      </div>
-      <div className="min-w-0 text-sm leading-7 text-foreground">{children}</div>
-    </div>
-  );
-}
-
 function CapabilityRow({
   title,
   description,
@@ -512,7 +350,6 @@ function CapabilityRow({
 
 export function TraceSandbox() {
   const [rawInput, setRawInput] = useState("");
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [mutationResult, setMutationResult] = useState<MutationPackResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -537,7 +374,6 @@ export function TraceSandbox() {
     try {
       const parsed = parseTraceInput(trimmed);
       const { entries } = buildEntries(parsed);
-      setAnalysis(analyzeTrace(parsed));
       setMutationResult(applyCoreMutations(entries));
     } catch (analysisError) {
       setError(analysisError instanceof Error ? analysisError.message : "Failed to analyze trace");
@@ -664,138 +500,70 @@ export function TraceSandbox() {
           <div className="divide-y divide-border/60">
             <div className="flex items-center justify-between gap-3 px-5 py-5 md:px-6">
               <div>
-                <p className="section-kicker">Result</p>
-                <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">What broke</h2>
+                <p className="section-kicker">Core Reliability Pack</p>
+                <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+                  Mutation impact
+                </h2>
               </div>
-              <Badge
-                variant={analysis ? summaryTone(analysis.confidence) : "outline"}
-                className={analysis ? "shadow-none" : "border-white/8 bg-white/[0.03] text-muted-foreground"}
-              >
-                {analysis ? analysis.confidence : "waiting"}
-              </Badge>
+              {mutationResult ? (
+                <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                  {mutationResult.impacts.filter((i) => i.targetedSteps.length > 0).length} / 4 active
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-muted-foreground">
+                  waiting
+                </Badge>
+              )}
             </div>
 
-            {analysis ? (
-              <>
-                <ResultLine title="What happened" description="What the debugger thinks happened">
-                  <p className="text-base font-medium leading-7 text-foreground">{analysis.summary}</p>
-                </ResultLine>
-                <ResultLine
-                  title="Likely failing step"
-                  description={`${analysis.sourceLabel} · ${analysis.parsedEntries} signal${analysis.parsedEntries === 1 ? "" : "s"} scanned`}
-                >
-                  <p className="font-medium text-foreground">{analysis.failureLocation}</p>
-                </ResultLine>
-                <ResultLine title="Why it likely failed">{analysis.likelyCause}</ResultLine>
-                <ResultLine title="Suggested next fix">{analysis.suggestedFix}</ResultLine>
-                <ResultLine title="Trace context" description="The input used to anchor the analysis">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {analysis.traceId ? (
-                      <span className="rounded-full border border-border/70 bg-muted/50 px-2.5 py-1 font-mono text-[11px] text-foreground">
-                        {analysis.traceId}
+            {mutationResult ? (
+              <div className="divide-y divide-border/60">
+                {mutationResult.impacts.map((impact) => (
+                  <div
+                    key={impact.id}
+                    className="grid gap-3 px-5 py-4 md:grid-cols-[8rem_minmax(0,1fr)] md:gap-5 md:px-6"
+                  >
+                    <div className="flex flex-col gap-1.5">
+                      <span
+                        className={`w-fit rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                          impact.category === "schema"
+                            ? "border border-indigo-400/20 bg-indigo-500/10 text-indigo-300"
+                            : "border border-amber-400/20 bg-amber-500/10 text-amber-300"
+                        }`}
+                      >
+                        {impact.category}
                       </span>
-                    ) : null}
-                    <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-muted-foreground">
-                      Source: {analysis.sourceLabel}
-                    </Badge>
-                    <Badge variant="outline" className="border-white/8 bg-white/[0.03] text-muted-foreground">
-                      {analysis.parsedEntries} signals
-                    </Badge>
+                      <p className="text-sm font-semibold text-foreground">{impact.label}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {impact.targetedSteps.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {impact.targetedSteps.map((step) => (
+                            <span
+                              key={step}
+                              className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 font-mono text-[11px] text-foreground"
+                            >
+                              {step}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <p className="text-sm leading-6 text-muted-foreground">{impact.projectedOutcome}</p>
+                    </div>
                   </div>
-                </ResultLine>
-                <div className="border-t border-border/60 px-5 py-5 md:px-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Evidence</p>
-                  <div className="mt-3 grid gap-2">
-                    {analysis.evidence.map((item) => (
-                      <div key={item} className="rounded-[16px] border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-muted-foreground">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
+                ))}
+              </div>
             ) : (
               <div className="px-5 py-6 md:px-6">
                 <p className="text-sm leading-7 text-muted-foreground">
-                  Paste a trace and click <span className="font-medium text-foreground">Analyze</span>.
-                  The sandbox will show the failing step, likely cause, and suggested fix here.
+                  Paste a trace and click <span className="font-medium text-foreground">Analyze</span> to see how the core reliability mutations would hit each step.
                 </p>
               </div>
             )}
           </div>
         </div>
       </section>
-
-      {mutationResult ? (
-        <section className={DARK_PANEL_CLASS}>
-          <div className="flex items-center justify-between gap-3 border-b border-border/60 px-5 py-5 md:px-6">
-            <div>
-              <p className="section-kicker">Core Reliability Pack</p>
-              <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-                Projected mutation impact
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                System-generated · 4 mutations · schema drift + transient fault coverage
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className={DARK_CHIP_CLASS}>system pack</span>
-              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                {mutationResult.impacts.filter((i) => i.targetedSteps.length > 0).length} / 4 active
-              </Badge>
-            </div>
-          </div>
-
-          <div className="divide-y divide-border/60">
-            {mutationResult.impacts.map((impact) => (
-              <div
-                key={impact.id}
-                className="grid gap-3 px-5 py-4 md:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1.2fr)] md:gap-6 md:px-6"
-              >
-                <div className="flex flex-col gap-1.5">
-                  <span
-                    className={`w-fit rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                      impact.category === "schema"
-                        ? "border border-indigo-400/20 bg-indigo-500/10 text-indigo-300"
-                        : "border border-amber-400/20 bg-amber-500/10 text-amber-300"
-                    }`}
-                  >
-                    {impact.category}
-                  </span>
-                  <p className="text-sm font-semibold text-foreground">{impact.label}</p>
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Targets
-                  </p>
-                  {impact.targetedSteps.length > 0 ? (
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {impact.targetedSteps.map((step) => (
-                        <span
-                          key={step}
-                          className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 font-mono text-[11px] text-foreground"
-                        >
-                          {step}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-sm text-muted-foreground/50">No targets in this trace</p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Projected outcome
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{impact.projectedOutcome}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <section className={DARK_PANEL_CLASS}>
         <div className="flex items-center justify-between gap-3 border-b border-border/60 px-5 py-5 md:px-6">
