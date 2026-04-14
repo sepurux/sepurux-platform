@@ -13,6 +13,7 @@ export type TraceMetadata = {
     tool_calls?: number;
     tool_results?: number;
     model_events?: number;
+    llm_events?: number;
     error_events?: number;
     first_event_type?: string | null;
     last_event_type?: string | null;
