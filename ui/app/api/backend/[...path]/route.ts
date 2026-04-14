@@ -32,8 +32,10 @@ function getCandidateBaseUrls() {
 
 async function proxy(request: NextRequest, { params }: RouteContext) {
   const path = params.path.join("/");
-  const requestBody =
+  const rawBody =
     request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
+  // Don't forward an empty body — some servers/proxies reject DELETE/PATCH with Content-Length: 0
+  const requestBody = rawBody || undefined;
   const baseUrls = getCandidateBaseUrls();
   let lastError: unknown = null;
 
@@ -64,8 +66,9 @@ async function proxy(request: NextRequest, { params }: RouteContext) {
         return NextResponse.redirect(location, upstream.status);
       }
 
+      // 204 No Content has no body — skip the read to avoid hanging on some runtimes
       const contentType = upstream.headers.get("content-type") ?? "application/json";
-      const bodyText = await upstream.text();
+      const bodyText = upstream.status === 204 ? "" : await upstream.text();
       const responseHeaders: Record<string, string> = {
         "content-type": contentType
       };

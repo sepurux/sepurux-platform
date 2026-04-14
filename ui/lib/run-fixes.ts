@@ -54,6 +54,18 @@ export function getInsightAutoFixAvailability(
     return { supported: true, reason: null };
   }
   if (insight.id.startsWith("insight.schema_adapter.")) {
+    // Auto-apply only works when there is a rename mutation — drop-only insights have no
+    // concrete field mapping to build from, so the template builder would fail at runtime.
+    const hasRenameEvidence = insight.evidence.top_mutations.some((m) =>
+      /rename/i.test(m.mutation_id),
+    );
+    if (!hasRenameEvidence) {
+      return {
+        supported: false,
+        reason:
+          "This schema insight does not yet include a concrete field rename to map automatically.",
+      };
+    }
     return { supported: true, reason: null };
   }
   if (insight.id.startsWith("insight.output_sanitizer.")) {

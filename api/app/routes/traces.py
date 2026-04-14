@@ -17,6 +17,7 @@ from app.services.trace_bootstrap_service import bootstrap_project_from_trace
 from app.services.trace_intake import create_trace, get_trace_payload, list_traces, trace_metadata
 from app.services.trace_intake import get_trace as get_trace_record
 from app.services.trace_step_service import ensure_trace_steps_for_trace, serialize_trace_step
+from app.services.langsmith_adapter import adapt_langsmith_trace, is_langsmith_trace
 from app.services.trace_validation import validate_and_normalize_trace
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
@@ -45,7 +46,10 @@ def post_trace(
             payload=payload,
         )
 
-    normalized_payload, validation_issues = validate_and_normalize_trace(payload)
+    # Adapt external formats before Sepurux validation
+    ingest_payload = adapt_langsmith_trace(payload) if is_langsmith_trace(payload) else payload
+
+    normalized_payload, validation_issues = validate_and_normalize_trace(ingest_payload)
     if validation_issues:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,

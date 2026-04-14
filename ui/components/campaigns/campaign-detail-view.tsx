@@ -1348,20 +1348,19 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
         }
       });
 
-    // Discover tools from traces in the eval set
+    // Discover tools from traces in the eval set — use the timeline (normalized)
+    // so LangSmith traces (which store child_runs, not events, in raw payload) are handled correctly
     const traceIds = campaign.eval_set?.trace_ids ?? [];
     if (traceIds.length > 0) {
       setLoadingTools(true);
-      void Promise.all(traceIds.map((id) => api.getTrace(id, { includePayload: true })))
-        .then((traces) => {
+      void Promise.all(traceIds.map((id) => api.getTraceTimeline(id)))
+        .then((timelines) => {
           if (cancelled) return;
           const tools = new Set<string>();
-          for (const trace of traces) {
-            const events = (trace.payload as Record<string, unknown> | null)?.events;
-            if (!Array.isArray(events)) continue;
-            for (const event of events as Record<string, unknown>[]) {
-              if (event.type === "tool_call" && typeof event.tool === "string") {
-                tools.add(event.tool);
+          for (const steps of timelines) {
+            for (const step of steps) {
+              if (step.step_type === "tool_call" && step.step_name) {
+                tools.add(step.step_name);
               }
             }
           }

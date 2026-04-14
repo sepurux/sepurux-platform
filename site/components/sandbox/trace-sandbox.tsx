@@ -14,7 +14,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { buildAppAuthHref } from "@/lib/site";
+import { buildAppAuthHref, siteConfig } from "@/lib/site";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -278,29 +278,74 @@ function buildEntries(parsed: ParseResult): { entries: Entry[]; sourceLabel: str
   };
 }
 
+// LangSmith run_types that represent actual tool calls (not orchestration)
+const LANGSMITH_TOOL_RUN_TYPES = new Set(["tool", "retriever", "embedding"]);
+
 function hasOutputField(text: string, field: string): boolean {
   return new RegExp(`"${field}"\\s*:`).test(text);
 }
 
+/**
+ * Walk a LangSmith run tree recursively and collect every run whose own
+ * run_type is a tool type. This avoids false positives on LLM/chain runs
+ * whose serialised text happens to mention "tool" via nested child_runs.
+ */
+function collectLangsmithToolRuns(value: unknown, depth = 0): Entry[] {
+  if (depth > 12 || !isPlainObject(value)) return [];
+  const results: Entry[] = [];
+  const runType = String(value.run_type ?? "").toLowerCase();
+  const name = String(value.name ?? "").trim();
+  if (LANGSMITH_TOOL_RUN_TYPES.has(runType) && name) {
+    results.push({
+      label: `Tool · ${shortText(name, 56)}`,
+      text: stringifyValue(value),
+      status: typeof value.error === "string" && (value.error as string).trim() ? "error" : "success",
+      score: 0,
+    });
+  }
+  const children = value.child_runs;
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      results.push(...collectLangsmithToolRuns(child, depth + 1));
+    }
+  }
+  return results;
+}
+
+/**
+ * True only when the entry itself (not its descendants) is a Sepurux tool event.
+ * Uses a bounded slice to avoid matching "tool" in nested child_runs JSON.
+ */
 function isToolEntry(entry: Entry): boolean {
+  // Only look at the first ~200 chars to check the entry's own type fields
+  const head = entry.text.slice(0, 200);
   return (
-    /"run_type"\s*:\s*"tool"/i.test(entry.text) ||
-    /"step_type"\s*:\s*"tool_call"/i.test(entry.text) ||
-    /"type"\s*:\s*"tool_call"/i.test(entry.text) ||
-    /"type"\s*:\s*"tool_result"/i.test(entry.text) ||
-    /\btool\b/i.test(entry.label)
+    /"step_type"\s*:\s*"tool_call"/i.test(head) ||
+    /"type"\s*:\s*"tool_call"/i.test(head) ||
+    /"type"\s*:\s*"tool_result"/i.test(head)
   );
 }
 
 function shortStepLabel(label: string): string {
-  const stripped = label.replace(/^Step \d+ · /i, "");
+  const stripped = label.replace(/^(Step \d+ · |Tool · )/i, "");
   return stripped.length <= 36 ? stripped : `${stripped.slice(0, 35)}…`;
 }
 
-function applyCoreMutations(entries: Entry[]): MutationPackResult {
-  const toolEntries = entries.filter(isToolEntry);
+function applyCoreMutations(entries: Entry[], rawParsed: unknown): MutationPackResult {
+  // For LangSmith payloads, recursively collect every real tool run instead
+  // of relying on substring matches against the top-level entry array.
+  const isLangsmith =
+    isPlainObject(rawParsed) &&
+    (typeof (rawParsed as Record<string, unknown>).run_type === "string" ||
+      Array.isArray((rawParsed as Record<string, unknown>).child_runs));
+
+  const toolEntries: Entry[] = isLangsmith
+    ? collectLangsmithToolRuns(rawParsed)
+    : entries.filter(isToolEntry);
+
   const impacts: MutationImpact[] = CORE_RELIABILITY_MUTATIONS.map((mutation) => {
     if (mutation.category === "schema" && mutation.matchField) {
+      // Schema mutations scan ALL entries (tool or not) for the target field
       const hit = entries.filter((e) => hasOutputField(e.text, mutation.matchField!));
       return {
         id: mutation.id,
@@ -356,6 +401,22 @@ export function TraceSandbox() {
 
   const helperChips = useMemo(() => ["JSON traces", "logs", "semi-structured text", "trace IDs"], []);
 
+  function handleSaveTrace() {
+    const trimmed = rawInput.trim();
+    // Only carry trace data when valid JSON is present
+    if (trimmed) {
+      try {
+        JSON.parse(trimmed);
+        const encoded = btoa(unescape(encodeURIComponent(trimmed)));
+        window.location.href = `${siteConfig.appUrl}/traces/import?trace=${encoded}`;
+        return;
+      } catch {
+        // Not valid JSON — fall through to auth redirect
+      }
+    }
+    window.location.href = buildAppAuthHref({ mode: "access", intent: "signup", next: "/traces" });
+  }
+
   function loadSample(sample: string) {
     setRawInput(sample);
     setError(null);
@@ -374,7 +435,7 @@ export function TraceSandbox() {
     try {
       const parsed = parseTraceInput(trimmed);
       const { entries } = buildEntries(parsed);
-      setMutationResult(applyCoreMutations(entries));
+      setMutationResult(applyCoreMutations(entries, parsed.parsed));
     } catch (analysisError) {
       setError(analysisError instanceof Error ? analysisError.message : "Failed to analyze trace");
     } finally {
@@ -472,11 +533,13 @@ export function TraceSandbox() {
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSearch className="h-4 w-4" />}
                   Analyze
                 </Button>
-                <Button variant="ghost" asChild className="gap-2 text-muted-foreground hover:bg-accent/45 hover:text-foreground">
-                  <Link href={buildAppAuthHref({ mode: "access", intent: "signup", next: "/sandbox" })}>
-                    Save this trace
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                <Button
+                  variant="ghost"
+                  onClick={handleSaveTrace}
+                  className="gap-2 text-muted-foreground hover:bg-accent/45 hover:text-foreground"
+                >
+                  Save this trace
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
 
