@@ -224,7 +224,7 @@ function findEntryArray(value: unknown): unknown[] | null {
   if (Array.isArray(value)) return value;
   if (!isPlainObject(value)) return null;
 
-  const candidates = [value.events, value.timeline, value.steps, value.payload, value.data, value.trace];
+  const candidates = [value.events, value.timeline, value.steps, value.child_runs, value.runs, value.payload, value.data, value.trace];
   for (const candidate of candidates) {
     const nested = findEntryArray(candidate);
     if (nested) return nested;
@@ -277,7 +277,7 @@ function buildEntries(parsed: ParseResult): { entries: Entry[]; sourceLabel: str
         const text = stringifyValue(entry);
         const status = isPlainObject(entry) ? firstString(entry, ["status", "result", "state"]) : null;
         const label = isPlainObject(entry)
-          ? firstString(entry, ["step_name", "name", "tool", "mutation_name", "id", "step_type", "type"]) ?? `Item ${index + 1}`
+          ? firstString(entry, ["step_name", "name", "tool", "mutation_name", "id", "step_type", "type", "run_type"]) ?? `Item ${index + 1}`
           : `Item ${index + 1}`;
         return {
           label: `Step ${String(index + 1).padStart(2, "0")} · ${shortText(label, 64)}`,
@@ -326,6 +326,7 @@ function analyzeTrace(parsed: ParseResult): AnalysisResult {
   const explicitFailure =
     /error|failed|failure|timeout|retry/i.test(failureEntry.status ?? "") ||
     /error|failed|failure|timeout|retry/i.test(failureEntry.text);
+  const allSuccess = entries.every((e) => /^success$/i.test(e.status ?? ""));
   const confidence: Confidence = explicitFailure ? "high" : bestHeuristic.entry.score > 5 ? "medium" : "low";
 
   const evidence = [
@@ -343,10 +344,16 @@ function analyzeTrace(parsed: ParseResult): AnalysisResult {
   return {
     sourceLabel,
     confidence,
-    summary: explicitFailure ? `The trace points to ${failureEntry.label}.` : `The trace most likely points to ${failureEntry.label}.`,
-    failureLocation: failureEntry.label,
-    likelyCause: cause.cause,
-    suggestedFix: cause.fix,
+    summary: allSuccess
+      ? `All ${entries.length} steps completed successfully — no failure detected.`
+      : explicitFailure
+      ? `The trace points to ${failureEntry.label}.`
+      : `The trace most likely points to ${failureEntry.label}.`,
+    failureLocation: allSuccess ? "None" : failureEntry.label,
+    likelyCause: allSuccess ? "no failure signals found" : cause.cause,
+    suggestedFix: allSuccess
+      ? "The trace looks clean. To stress-test it, try mutation testing — inject schema drift, latency, or tool errors."
+      : cause.fix,
     evidence,
     traceId: parsed.traceId,
     parsedEntries: entries.length,
