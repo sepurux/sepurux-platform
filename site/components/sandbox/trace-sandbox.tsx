@@ -48,6 +48,19 @@ type ParseResult = {
   lines: string[];
 };
 
+type MutationImpact = {
+  id: string;
+  category: "schema" | "fault";
+  label: string;
+  targetedSteps: string[];
+  projectedOutcome: string;
+};
+
+type MutationPackResult = {
+  toolStepsFound: number;
+  impacts: MutationImpact[];
+};
+
 const SAMPLE_JSON = JSON.stringify(
   {
     trace_id: "4a6a1d71-3d5b-4c2d-8f46-69c94b07b2d0",
@@ -159,6 +172,47 @@ const RULES = [
     fix: "Treat it as transient, retry once, and isolate the dependency.",
   },
 ] as const;
+
+// ── Core Reliability Pack (system-generated, matches api/app/mutation_packs/core/reliability.py) ──
+const CORE_RELIABILITY_MUTATIONS: Array<{
+  id: string;
+  category: "schema" | "fault";
+  label: string;
+  matchField?: string;
+  outcomeIfHit: string;
+  outcomeIfMiss: string;
+}> = [
+  {
+    id: "core.reliability.rename_status",
+    category: "schema",
+    label: "Rename status → state",
+    matchField: "status",
+    outcomeIfHit: "Downstream steps reading 'status' receive undefined — silent contract break.",
+    outcomeIfMiss: "No 'status' field in outputs — mutation has no effect on this trace.",
+  },
+  {
+    id: "core.reliability.drop_id",
+    category: "schema",
+    label: "Drop 'id' field",
+    matchField: "id",
+    outcomeIfHit: "Steps requiring an entity ID receive null — likely causes downstream tool failure.",
+    outcomeIfMiss: "No 'id' field in outputs — mutation has no effect on this trace.",
+  },
+  {
+    id: "core.reliability.timeout",
+    category: "fault",
+    label: "Inject timeout (3 s)",
+    outcomeIfHit: "Tool call replaced with TimeoutError — retry chain triggers, amplification risk.",
+    outcomeIfMiss: "No tool calls found — mutation has no target in this trace.",
+  },
+  {
+    id: "core.reliability.rate_limit",
+    category: "fault",
+    label: "Inject rate limit (HTTP 429)",
+    outcomeIfHit: "Tool call receives 429 — backoff required before retry.",
+    outcomeIfMiss: "No tool calls found — mutation has no target in this trace.",
+  },
+];
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -309,6 +363,49 @@ function buildEntries(parsed: ParseResult): { entries: Entry[]; sourceLabel: str
   };
 }
 
+function hasOutputField(text: string, field: string): boolean {
+  return new RegExp(`"${field}"\\s*:`).test(text);
+}
+
+function isToolEntry(entry: Entry): boolean {
+  return (
+    /"run_type"\s*:\s*"tool"/i.test(entry.text) ||
+    /"step_type"\s*:\s*"tool_call"/i.test(entry.text) ||
+    /"type"\s*:\s*"tool_call"/i.test(entry.text) ||
+    /"type"\s*:\s*"tool_result"/i.test(entry.text) ||
+    /\btool\b/i.test(entry.label)
+  );
+}
+
+function shortStepLabel(label: string): string {
+  const stripped = label.replace(/^Step \d+ · /i, "");
+  return stripped.length <= 36 ? stripped : `${stripped.slice(0, 35)}…`;
+}
+
+function applyCoreMutations(entries: Entry[]): MutationPackResult {
+  const toolEntries = entries.filter(isToolEntry);
+  const impacts: MutationImpact[] = CORE_RELIABILITY_MUTATIONS.map((mutation) => {
+    if (mutation.category === "schema" && mutation.matchField) {
+      const hit = entries.filter((e) => hasOutputField(e.text, mutation.matchField!));
+      return {
+        id: mutation.id,
+        category: mutation.category,
+        label: mutation.label,
+        targetedSteps: hit.map((e) => shortStepLabel(e.label)),
+        projectedOutcome: hit.length > 0 ? mutation.outcomeIfHit : mutation.outcomeIfMiss,
+      };
+    }
+    return {
+      id: mutation.id,
+      category: mutation.category,
+      label: mutation.label,
+      targetedSteps: toolEntries.map((e) => shortStepLabel(e.label)),
+      projectedOutcome: toolEntries.length > 0 ? mutation.outcomeIfHit : mutation.outcomeIfMiss,
+    };
+  });
+  return { toolStepsFound: toolEntries.length, impacts };
+}
+
 function analyzeTrace(parsed: ParseResult): AnalysisResult {
   const { entries, sourceLabel } = buildEntries(parsed);
   const bestExplicitFailure = entries.findIndex((entry) => /error|failed|failure|timeout|retry/i.test(entry.status ?? ""));
@@ -416,6 +513,7 @@ function CapabilityRow({
 export function TraceSandbox() {
   const [rawInput, setRawInput] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [mutationResult, setMutationResult] = useState<MutationPackResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -424,6 +522,7 @@ export function TraceSandbox() {
   function loadSample(sample: string) {
     setRawInput(sample);
     setError(null);
+    setMutationResult(null);
   }
 
   async function handleAnalyze() {
@@ -437,7 +536,9 @@ export function TraceSandbox() {
     setError(null);
     try {
       const parsed = parseTraceInput(trimmed);
+      const { entries } = buildEntries(parsed);
       setAnalysis(analyzeTrace(parsed));
+      setMutationResult(applyCoreMutations(entries));
     } catch (analysisError) {
       setError(analysisError instanceof Error ? analysisError.message : "Failed to analyze trace");
     } finally {
@@ -624,6 +725,77 @@ export function TraceSandbox() {
           </div>
         </div>
       </section>
+
+      {mutationResult ? (
+        <section className={DARK_PANEL_CLASS}>
+          <div className="flex items-center justify-between gap-3 border-b border-border/60 px-5 py-5 md:px-6">
+            <div>
+              <p className="section-kicker">Core Reliability Pack</p>
+              <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+                Projected mutation impact
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                System-generated · 4 mutations · schema drift + transient fault coverage
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className={DARK_CHIP_CLASS}>system pack</span>
+              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                {mutationResult.impacts.filter((i) => i.targetedSteps.length > 0).length} / 4 active
+              </Badge>
+            </div>
+          </div>
+
+          <div className="divide-y divide-border/60">
+            {mutationResult.impacts.map((impact) => (
+              <div
+                key={impact.id}
+                className="grid gap-3 px-5 py-4 md:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1.2fr)] md:gap-6 md:px-6"
+              >
+                <div className="flex flex-col gap-1.5">
+                  <span
+                    className={`w-fit rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                      impact.category === "schema"
+                        ? "border border-indigo-400/20 bg-indigo-500/10 text-indigo-300"
+                        : "border border-amber-400/20 bg-amber-500/10 text-amber-300"
+                    }`}
+                  >
+                    {impact.category}
+                  </span>
+                  <p className="text-sm font-semibold text-foreground">{impact.label}</p>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Targets
+                  </p>
+                  {impact.targetedSteps.length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {impact.targetedSteps.map((step) => (
+                        <span
+                          key={step}
+                          className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 font-mono text-[11px] text-foreground"
+                        >
+                          {step}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground/50">No targets in this trace</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Projected outcome
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{impact.projectedOutcome}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className={DARK_PANEL_CLASS}>
         <div className="flex items-center justify-between gap-3 border-b border-border/60 px-5 py-5 md:px-6">
