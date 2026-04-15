@@ -531,7 +531,7 @@ export function TraceSandbox() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={() => void handleAnalyze()} disabled={busy} className="gap-2">
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSearch className="h-4 w-4" />}
-                  Analyze
+                  Find the failure
                 </Button>
                 <Button
                   variant="ghost"
@@ -563,9 +563,9 @@ export function TraceSandbox() {
           <div className="divide-y divide-border/60">
             <div className="flex items-center justify-between gap-3 px-5 py-5 md:px-6">
               <div>
-                <p className="section-kicker">Core Reliability Pack</p>
+                <p className="section-kicker">Stress test</p>
                 <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-                  Mutation impact
+                  What else could break
                 </h2>
               </div>
               {mutationResult ? (
@@ -620,7 +620,7 @@ export function TraceSandbox() {
             ) : (
               <div className="px-5 py-6 md:px-6">
                 <p className="text-sm leading-7 text-muted-foreground">
-                  Paste a trace and click <span className="font-medium text-foreground">Analyze</span> to see how the core reliability mutations would hit each step.
+                  Paste a trace and click <span className="font-medium text-foreground">Find the failure</span> to see which fault injections would hit each step.
                 </p>
               </div>
             )}
