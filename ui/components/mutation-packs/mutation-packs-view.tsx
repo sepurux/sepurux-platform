@@ -52,13 +52,13 @@ function getPackLayer(record: MutationPackMetadata): PackLayer {
 function getPackLayerLabel(layer: PackLayer): string {
   switch (layer) {
     case "base":
-      return "Base Reliability";
+      return "Core";
     case "policy_security":
-      return "Policy & Security";
+      return "Security";
     case "domain":
-      return "Domain";
+      return "Custom";
     case "stress":
-      return "Stress";
+      return "Advanced";
   }
 }
 
@@ -182,15 +182,14 @@ export function MutationPacksView() {
     <div className="mx-auto max-w-[88rem] space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Mutation Packs</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Checks</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sepurux works best with three layers: base reliability, policy and security, then
-            domain-specific packs for your own workflows.
+            Checks are fault injectors applied during test runs. Start with core checks, add security checks if needed, then build custom ones for your own workflows.
           </p>
         </div>
         {canManageMutationPacks ? (
           <Button asChild>
-            <Link href="/mutation-packs/new">Create Mutation Pack</Link>
+            <Link href="/mutation-packs/new">New check</Link>
           </Button>
         ) : null}
       </div>
@@ -198,8 +197,7 @@ export function MutationPacksView() {
       {!canManageMutationPacks && authSession ? (
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Custom mutation packs follow workspace membership rules. Your current membership can
-            view packs but cannot create or modify them.
+            Custom checks follow workspace membership rules. Your current membership can view checks but cannot create or modify them.
           </CardContent>
         </Card>
       ) : null}
@@ -220,9 +218,9 @@ export function MutationPacksView() {
             <DataTableHeader
               icon={Zap}
               accent="amber"
-              title="Mutation Packs"
-              description="Organize reliability coverage by layer: base resilience, policy and security, then domain-specific packs for customer workflows."
-              badge={`${state.records.length} pack${state.records.length === 1 ? "" : "s"}`}
+              title="Checks"
+              description="Checks are organized by type: core checks cover common failures, security checks target injection risks, and custom checks handle your specific workflows."
+              badge={`${state.records.length} check${state.records.length === 1 ? "" : "s"}`}
             />
           </CardHeader>
           <CardContent className="pt-6">
@@ -231,11 +229,11 @@ export function MutationPacksView() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Layer</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Coverage</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Mutations</TableHead>
-                  <TableHead>Pack ID</TableHead>
+                  <TableHead>Faults</TableHead>
+                  <TableHead>Check ID</TableHead>
                   <TableHead className="text-right">Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -248,15 +246,13 @@ export function MutationPacksView() {
                         <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-muted/30">
                           <Zap className="h-5 w-5 text-muted-foreground" />
                         </div>
-                        <p className="text-sm font-medium text-foreground">No mutation packs yet</p>
+                        <p className="text-sm font-medium text-foreground">No checks yet</p>
                         <p className="text-sm leading-6 text-muted-foreground">
-                          Mutation packs control which faults get injected during replay. Sepurux
-                          ships with base and policy/security layers; create a domain pack when you
-                          need workflow-specific failures.
+                          Checks control which faults get injected during test runs. Core and security checks come built-in. Create a custom check when you need workflow-specific failures.
                         </p>
                         {canManageMutationPacks ? (
                           <Button asChild size="sm">
-                            <Link href="/mutation-packs/new">Create your first domain pack</Link>
+                            <Link href="/mutation-packs/new">Create your first custom check</Link>
                           </Button>
                         ) : null}
                       </div>

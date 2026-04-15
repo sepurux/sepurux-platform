@@ -80,14 +80,14 @@ export function PolicyPacksView() {
     <div className="mx-auto max-w-[88rem] space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Policy Packs</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Guardrails</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Review project-scoped allow, deny, and approval rules without mixing them into policy creation.
+            Allow, deny, and approval rules for this project.
           </p>
         </div>
         {canManagePolicyPacks ? (
           <Button asChild>
-            <Link href="/policies/new">Create Policy Pack</Link>
+            <Link href="/policies/new">New guardrail</Link>
           </Button>
         ) : null}
       </div>
@@ -95,7 +95,7 @@ export function PolicyPacksView() {
       {!canManagePolicyPacks && authSession ? (
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Policy packs follow workspace membership and plan access. Your current membership can review policy packs but cannot create or change them.
+            Guardrails follow workspace membership. Your current membership can view them but cannot create or change them.
           </CardContent>
         </Card>
       ) : null}
@@ -119,8 +119,8 @@ export function PolicyPacksView() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Policy Packs</CardTitle>
-            <CardDescription>{state.records.length} pack(s) in current project scope.</CardDescription>
+            <CardTitle>Guardrails</CardTitle>
+            <CardDescription>{state.records.length} guardrail{state.records.length === 1 ? "" : "s"} in this project.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -131,7 +131,7 @@ export function PolicyPacksView() {
                   <TableHead>Active</TableHead>
                   <TableHead>Unknown Tools</TableHead>
                   <TableHead>Irreversible Tools</TableHead>
-                  <TableHead>Pack ID</TableHead>
+                  <TableHead>Rule ID</TableHead>
                   {canManagePolicyPacks ? <TableHead className="text-right">Actions</TableHead> : null}
                   <TableHead className="text-right">Created</TableHead>
                 </TableRow>
@@ -143,7 +143,7 @@ export function PolicyPacksView() {
                       colSpan={canManagePolicyPacks ? 8 : 7}
                       className="py-10 text-center text-muted-foreground"
                     >
-                      No policy packs found for this project.
+                      No guardrails configured for this project.
                     </TableCell>
                   </TableRow>
                 ) : (
