@@ -76,62 +76,6 @@ function FadeUp({
   );
 }
 
-function ProblemReel() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 28, scale: 0.98 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.7, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-      className="relative min-h-[420px] overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.03] shadow-[0_24px_72px_rgba(0,0,0,0.24)] lg:min-h-[520px]"
-    >
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(circle at top right, rgba(124,58,237,0.16), transparent 40%), radial-gradient(circle at bottom left, rgba(6,182,212,0.12), transparent 42%)",
-        }}
-      />
-
-      <video
-        className="absolute inset-0 h-full w-full object-cover opacity-95"
-        src="/videos/replay.mp4"
-        poster="/images/trace.png"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        aria-label="Looping trace clip showing a failed agent path"
-      />
-
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(5,5,8,0.06) 0%, rgba(5,5,8,0.08) 44%, rgba(5,5,8,0.38) 72%, rgba(5,5,8,0.88) 100%)",
-        }}
-      />
-
-      <div className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-[linear-gradient(180deg,transparent,rgba(5,5,8,0.82)_52%,rgba(5,5,8,0.96))] p-5 sm:p-6">
-        <div className="flex items-end justify-between gap-4">
-          <div className="max-w-sm">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-400">
-              Trace replay
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              A quick visual of the same path the debugger is reading.
-            </p>
-          </div>
-          <span className="metric-chip-light shrink-0">Replay loop</span>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 // ─── Home page content ────────────────────────────────────────────────────────
 
 export function HomeContent() {
@@ -221,36 +165,7 @@ export function HomeContent() {
         />
       </section>
 
-      {/* ── 2. THE PROBLEM ───────────────────────────────────────────────── */}
-      <section className="px-5 py-32 sm:px-8 lg:px-16">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] lg:items-center">
-          <FadeUp className="max-w-3xl">
-            <p
-              className="font-display font-semibold text-white"
-              style={{
-                fontSize: "clamp(1.8rem, 4vw, 3rem)",
-                letterSpacing: "-0.04em",
-                lineHeight: "1.12",
-              }}
-            >
-              You shipped an agent. It failed. You opened the logs and found a
-              timeout, a silent fallback, or stale data — but not the cause.
-            </p>
-            <p
-              className="mt-8 max-w-xl font-sans text-lg leading-8"
-              style={{ color: "rgba(155,152,171,0.95)" }}
-            >
-              You need the failing step, the likely cause, and the next fix.
-            </p>
-          </FadeUp>
-
-          <FadeUp delay={0.12}>
-            <ProblemReel />
-          </FadeUp>
-        </div>
-      </section>
-
-      {/* ── 3. ANALYZE TRACE ─────────────────────────────────────────────── */}
+      {/* ── 2. INTERACTIVE DEMO ──────────────────────────────────────────── */}
       <section className="px-5 pb-32 sm:px-8 lg:px-16">
         <FadeUp className="mb-10">
           <h2
@@ -260,14 +175,15 @@ export function HomeContent() {
               letterSpacing: "-0.042em",
             }}
           >
-            One trace. One failing step.{" "}
-            <span style={{ color: "rgba(167,139,250,0.75)" }}>One next fix.</span>
+            Click a span. See what broke.{" "}
+            <span style={{ color: "rgba(167,139,250,0.75)" }}>See the fix.</span>
           </h2>
           <p
             className="mt-3 max-w-xl font-sans text-base leading-7"
             style={{ color: "rgba(155,152,171,0.82)" }}
           >
-            Click any span. See the exact failure, the cascade, and a specific fix.
+            A real faulted trace. Select any step to see the failure detail,
+            cascade, and suggested fix.
           </p>
         </FadeUp>
 
