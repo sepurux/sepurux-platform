@@ -312,8 +312,8 @@ export function BillingView() {
                   Operation costs:
                   <ul className="mt-2 space-y-1">
                     <li>• Trace replay: 5 runs</li>
-                    <li>• Mutation campaign: 20 runs</li>
-                    <li>• Large campaign: 50 runs</li>
+                    <li>• Test run with checks: 20 runs</li>
+                    <li>• Large test run: 50 runs</li>
                     <li>• Scheduled pack run: pack run cost</li>
                   </ul>
                 </div>

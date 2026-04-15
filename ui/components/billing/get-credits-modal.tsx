@@ -185,8 +185,8 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
                       <p className="font-medium uppercase tracking-wide text-foreground">Approx monthly capacity</p>
                       <p className="mt-1">
                         Up to {capacity.traceReplays.toLocaleString()} trace replays,{" "}
-                        {capacity.mutationCampaigns.toLocaleString()} campaigns, or{" "}
-                        {capacity.largeCampaigns.toLocaleString()} large campaigns.
+                        {capacity.mutationCampaigns.toLocaleString()} test runs with checks, or{" "}
+                        {capacity.largeCampaigns.toLocaleString()} large test runs.
                       </p>
                     </div>
 
@@ -240,10 +240,10 @@ export function GetCreditsModal({ currentPlanName, onClose }: Props) {
                 <span className="font-medium text-foreground">{TRACE_REPLAY_COST}</span> · Trace replay
               </span>
               <span>
-                <span className="font-medium text-foreground">{MUTATION_CAMPAIGN_COST}</span> · Mutation campaign
+                <span className="font-medium text-foreground">{MUTATION_CAMPAIGN_COST}</span> · Test run with checks
               </span>
               <span>
-                <span className="font-medium text-foreground">{LARGE_CAMPAIGN_COST}</span> · Large campaign (50+
+                <span className="font-medium text-foreground">{LARGE_CAMPAIGN_COST}</span> · Large test run (50+
                 attempts)
               </span>
               <span><span className="font-medium text-foreground">pack cost</span> · Scheduled pack run</span>

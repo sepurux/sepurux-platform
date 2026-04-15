@@ -59,9 +59,9 @@ export function ScheduledCampaignsView() {
   return (
     <div className="mx-auto max-w-[88rem] space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Scheduled Campaigns</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Scheduled Runs</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Automated mutation campaigns that run on a cron schedule with run-budget enforcement.
+          Automated test runs on a cron schedule with run-budget enforcement.
         </p>
       </div>
 
@@ -80,7 +80,7 @@ export function ScheduledCampaignsView() {
           <CardHeader>
             <CardTitle>Schedules</CardTitle>
             <CardDescription>
-              {state.items.length} scheduled campaign(s) in current project scope for this page.
+              {state.items.length} scheduled run{state.items.length === 1 ? "" : "s"} in current project scope for this page.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -88,7 +88,7 @@ export function ScheduledCampaignsView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Campaign</TableHead>
-                  <TableHead>Mutation Pack</TableHead>
+                  <TableHead>Checks</TableHead>
                   <TableHead>Cron Schedule</TableHead>
                   <TableHead>Enabled</TableHead>
                   <TableHead>Last Status</TableHead>
@@ -99,7 +99,7 @@ export function ScheduledCampaignsView() {
                 {state.items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                      No scheduled campaigns yet. Use the API to create one.
+                      No scheduled runs yet. Use the API to create one.
                     </TableCell>
                   </TableRow>
                 ) : (

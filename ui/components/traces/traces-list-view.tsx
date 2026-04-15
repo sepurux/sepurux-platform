@@ -104,7 +104,7 @@ export function TracesListView() {
               icon={FileSearch}
               accent="amber"
               title="Trace Catalog"
-              description="Review uploaded scenarios, source metadata, and validation state before turning traces into replayable campaign coverage."
+              description="Review uploaded scenarios, source metadata, and validation state before adding traces to a test run."
               badge={
                 searchQuery
                   ? `${filteredTraces.length} visible`

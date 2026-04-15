@@ -424,23 +424,21 @@ export function MutationPackCreateView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Create Domain Pack
+            New custom check
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sepurux already ships with base reliability and policy/security packs. Use this
-            builder for workflow- or customer-specific domain packs.
+            Sepurux ships core and security checks out of the box. Use this builder for workflow-specific custom checks.
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link href="/mutation-packs">View Packs</Link>
+          <Link href="/mutation-packs">All checks</Link>
         </Button>
       </div>
 
       {!canManageMutationPacks && authSession ? (
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Custom mutation packs follow workspace membership rules. Your current membership can
-            view packs but cannot create or modify them.
+            Custom checks follow workspace membership rules. Your current membership can view checks but cannot create or modify them.
           </CardContent>
         </Card>
       ) : null}
@@ -644,7 +642,7 @@ export function MutationPackCreateView() {
                   <Link href="/mutation-packs">Cancel</Link>
                 </Button>
                 <Button type="submit" disabled={creating}>
-                  {creating ? "Creating..." : "Create Mutation Pack"}
+                  {creating ? "Creating..." : "Create check"}
                 </Button>
               </div>
             </form>

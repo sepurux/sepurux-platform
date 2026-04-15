@@ -538,7 +538,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
           <div className="flex items-center gap-2">
             {archiveConfirm ? (
               <>
-                <span className="text-sm text-muted-foreground">Archive this campaign?</span>
+                <span className="text-sm text-muted-foreground">Archive this test run?</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -592,7 +592,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
               className="gap-1.5"
             >
               <Play className="h-3.5 w-3.5" />
-              Run Campaign
+              Run
             </Button>
           </div>
         )}
@@ -688,9 +688,9 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       {runModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-border/60 bg-card p-6 shadow-xl">
-            <h2 className="mb-1 text-base font-semibold text-foreground">Run Campaign</h2>
+            <h2 className="mb-1 text-base font-semibold text-foreground">Run test run</h2>
             <p className="mb-4 text-xs text-muted-foreground">
-              Set pass thresholds. The run will auto-cover tools from every trace and apply mutation-pack overlays if selected.
+              Set pass thresholds. The run will replay every trace and apply the selected checks if configured.
             </p>
             {runError && (
               <div className="mb-3 rounded border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
@@ -760,7 +760,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
                     </div>
                   ) : (
                     <div className="rounded border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-                      Preflight passed. This campaign is ready to run.
+                      Preflight passed. Ready to run.
                     </div>
                   )}
                   {preflight.warnings.length > 0 ? (
@@ -1194,13 +1194,13 @@ function OverviewTab({ campaign }: { campaign: CampaignMetadata }) {
       {/* Campaign Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Campaign Info</CardTitle>
+          <CardTitle>Test Run Info</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <Row label="Status">
             <Badge variant="neutral">{campaign.status}</Badge>
           </Row>
-          <Row label="Mutation Pack">
+          <Row label="Checks">
             {packName ? (
               <span className="font-mono text-xs text-foreground">{packName}</span>
             ) : (
@@ -1245,7 +1245,7 @@ function OverviewTab({ campaign }: { campaign: CampaignMetadata }) {
             {/* Required packs */}
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Required mutation packs
+                Required checks
               </p>
               {requiredPackNames.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -1474,8 +1474,7 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
               Required mutation packs
             </p>
             <p className="text-xs text-muted-foreground">
-              Preferred pack overlays. Runs still execute with automatic trace-tool baseline
-              coverage even when the selected pack differs.
+              Preferred checks. Runs still execute with baseline coverage even when the selected check differs.
             </p>
             <div className="flex flex-wrap gap-2">
               {packs.map((p) => {
@@ -1578,7 +1577,7 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
       {/* Violation legend */}
       <div className="grid gap-3 md:grid-cols-3">
         {([
-          ["wrong_pack", "Pack preference mismatch. Run still executes; switch packs only when you want specific chaos overlays."],
+          ["wrong_pack", "Check preference mismatch. Run still executes; switch checks to target specific fault types."],
           ["untested_tool", "Required tool never exercised. No trace in the batch called this tool — add a scenario that covers it."],
           ["insufficient_attempts", "Too few mutation attempts. Increase run budget or lower the minimum to match your run allocation."],
         ] as [string, string][]).map(([type, desc]) => (
