@@ -1,22 +1,16 @@
 "use client";
 
-import { useState, useCallback, type ComponentType } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   ChevronDown,
   ClipboardCopy,
   FileSearch,
-  FlaskConical,
-  GitBranch,
-  GitCompareArrows,
-  History,
   Loader2,
-  ShieldCheck,
 } from "lucide-react";
 
-import { buildAppAuthHref, siteConfig } from "@/lib/site";
-import { Badge } from "@/components/ui/badge";
+import { buildAppAuthHref } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -633,11 +627,23 @@ except ValidationError as e:
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
+const NEXT_STEPS = [
+  {
+    label: "Save & replay",
+    href: buildAppAuthHref({ mode: "access", intent: "signup", next: "/sandbox" }),
+  },
+  { label: "Stress test", href: "/product" },
+  { label: "CI gate", href: "/docs/ci-cd" },
+  { label: "Compare runs", href: "/product" },
+];
+
 function IssueRow({ issue }: { issue: IssueCard }) {
   const meta = ISSUE_META[issue.kind];
   const fix = FIX_SNIPPETS[issue.kind];
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const replayHref = buildAppAuthHref({ mode: "access", intent: "signup", next: "/traces/replay" });
 
   const handleCopyFix = useCallback(() => {
     if (!fix) return;
@@ -664,18 +670,26 @@ function IssueRow({ issue }: { issue: IssueCard }) {
         </div>
         <div className="space-y-2">
           <p className="text-sm leading-6 text-muted-foreground">{issue.detail}</p>
-          {fix && (
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              className="inline-flex items-center gap-1.5 font-mono text-[11px] font-medium text-primary transition-colors hover:brightness-125"
+          <div className="flex items-center gap-4">
+            {fix && (
+              <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                className="inline-flex items-center gap-1.5 font-mono text-[11px] font-medium text-primary transition-colors hover:brightness-125"
+              >
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+                />
+                {open ? "Hide fix" : "See fix"}
+              </button>
+            )}
+            <Link
+              href={replayHref}
+              className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ChevronDown
-                className={`h-3 w-3 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
-              />
-              {open ? "Hide fix" : "See fix"}
-            </button>
-          )}
+              Replay step <ArrowRight className="h-2.5 w-2.5" />
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -708,108 +722,46 @@ function IssueRow({ issue }: { issue: IssueCard }) {
   );
 }
 
-function EmptyResultsState() {
-  const previewLabels: IssueKind[] = [
-    "tool-failure",
-    "retry-exhausted",
-    "schema-break",
-    "hallucination-risk",
-  ];
-  const labelText: Record<IssueKind, string> = {
-    "tool-failure": "Tool failure",
-    "tool-timeout": "Tool timeout",
-    "schema-break": "Schema break",
-    "retry-exhausted": "Retry exhausted",
-    "hallucination-risk": "Hallucination risk",
-    "context-overflow": "Context overflow",
-    "fallback-triggered": "Fallback triggered",
-  };
+function SummaryBanner({
+  total,
+  highCount,
+  onCopy,
+  copied,
+}: {
+  total: number;
+  highCount: number;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  const mediumCount = total - highCount;
   return (
-    <div className="flex flex-col items-start gap-4 px-5 py-8 md:px-6">
-      <p className="text-sm text-muted-foreground">
-        Click{" "}
-        <span className="font-medium text-foreground">Find the failure</span> to
-        run the debugger.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {previewLabels.map((kind) => {
-          const meta = ISSUE_META[kind];
-          return (
-            <span
-              key={kind}
-              className={`rounded-full border px-2.5 py-0.5 font-mono text-[11px] ${meta.color} ${meta.bg} ${meta.border}`}
-            >
-              {labelText[kind]}
-            </span>
-          );
-        })}
+    <div className="flex items-center justify-between gap-3 px-5 py-4 md:px-6">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-sm font-semibold text-foreground">
+          {total} issue{total !== 1 ? "s" : ""} found
+        </span>
+        {highCount > 0 && (
+          <span className="rounded-full border border-rose-400/20 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">
+            {highCount} critical
+          </span>
+        )}
+        {mediumCount > 0 && (
+          <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">
+            {mediumCount} warning
+          </span>
+        )}
       </div>
+      <button
+        type="button"
+        onClick={onCopy}
+        className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ClipboardCopy className="h-3 w-3" />
+        {copied ? "Copied" : "Copy report"}
+      </button>
     </div>
   );
 }
-
-function CapabilityRow({
-  title,
-  description,
-  href,
-  icon: Icon,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  icon: ComponentType<{ className?: string }>;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-white/[0.03] md:px-6"
-    >
-      <div className="flex min-w-0 items-start gap-4">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-primary/20 bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground" />
-    </Link>
-  );
-}
-
-const ADVANCED_CAPABILITIES = [
-  {
-    title: "Save & replay",
-    description: "Keep this trace and re-run it after you apply a fix.",
-    href: buildAppAuthHref({ mode: "access", intent: "signup", next: "/sandbox" }),
-    icon: History,
-  },
-  {
-    title: "Compare runs",
-    description: "Side-by-side diff between this failure and your fixed run.",
-    href: "/product",
-    icon: GitCompareArrows,
-  },
-  {
-    title: "Stress test",
-    description: "Inject timeouts, schema drift, and rate limits to find the next break.",
-    href: "/product",
-    icon: FlaskConical,
-  },
-  {
-    title: "CI gate",
-    description: "Block deploys when fault rate crosses your threshold.",
-    href: "/docs/ci-cd",
-    icon: GitBranch,
-  },
-  {
-    title: "Policy gates",
-    description: "Add approval rules and release guardrails when the fix is ready.",
-    href: "/docs/policy-security",
-    icon: ShieldCheck,
-  },
-];
 
 // ── Main component ────────────────────────────────────────────────────────
 
@@ -820,42 +772,11 @@ export function TraceSandbox() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasRun, setHasRun] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  function loadSample(sample: string) {
-    setRawInput(sample);
-    setError(null);
-    setIssueCards([]);
-    setMutationResult(null);
-    setHasRun(false);
-  }
-
-  function handleSaveTrace() {
-    const trimmed = rawInput.trim();
-    if (trimmed) {
-      try {
-        JSON.parse(trimmed);
-        const encoded = btoa(unescape(encodeURIComponent(trimmed)));
-        window.location.href = `${siteConfig.appUrl}/traces/import?trace=${encoded}`;
-        return;
-      } catch {
-        // not valid JSON — fall through
-      }
-    }
-    window.location.href = buildAppAuthHref({
-      mode: "access",
-      intent: "signup",
-      next: "/traces",
-    });
-  }
-
-  async function handleAnalyze() {
-    const trimmed = rawInput.trim();
-    if (!trimmed) {
-      setError("Paste a trace, log, or JSON payload first.");
-      return;
-    }
+  async function runAnalysis(input: string) {
+    const trimmed = input.trim();
+    if (!trimmed) return;
     setBusy(true);
     setError(null);
     try {
@@ -875,6 +796,27 @@ export function TraceSandbox() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Auto-analyze the pre-loaded sample so first-time visitors see results immediately
+  useEffect(() => {
+    void runAnalysis(SAMPLE_JSON);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function loadSample(sample: string) {
+    setRawInput(sample);
+    setError(null);
+    void runAnalysis(sample);
+  }
+
+  async function handleAnalyze() {
+    const trimmed = rawInput.trim();
+    if (!trimmed) {
+      setError("Paste a trace, log, or JSON payload first.");
+      return;
+    }
+    await runAnalysis(trimmed);
   }
 
   function handleCopy() {
@@ -897,9 +839,7 @@ export function TraceSandbox() {
   const highCount = issueCards.filter((i) => i.severity === "high").length;
 
   return (
-    <div className="mx-auto max-w-[88rem] space-y-4">
-
-      {/* ── Main debug panel ──────────────────────────────────────────── */}
+    <div className="mx-auto max-w-[88rem]">
       <section className="section-shell overflow-hidden">
 
         {/* Header */}
@@ -909,7 +849,7 @@ export function TraceSandbox() {
               Debug your agent trace
             </h1>
             <p className="mt-2 text-base leading-7 text-muted-foreground">
-              Paste any trace. Run. See what broke and why.
+              Paste any trace — JSON, logs, or a trace ID. See what broke and how to fix it.
             </p>
           </div>
         </div>
@@ -919,42 +859,7 @@ export function TraceSandbox() {
 
           {/* Left: Input */}
           <div className="border-b border-border/60 xl:border-b-0 xl:border-r xl:border-border/60">
-            <div className="flex items-center justify-between gap-3 px-5 py-4 md:px-6">
-              <div>
-                <p className="section-kicker">Input</p>
-                <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">
-                  Paste trace, logs, or JSON
-                </h2>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadSample(SAMPLE_JSON)}
-                >
-                  JSON example
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadSample(SAMPLE_LOG)}
-                >
-                  Log example
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadSample(SAMPLE_TRACE_ID)}
-                >
-                  Trace ID
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-4 px-5 pb-5 md:px-6 md:pb-6">
+            <div className="space-y-4 px-5 pb-5 pt-5 md:px-6 md:pb-6">
               <textarea
                 value={rawInput}
                 onChange={(e) => setRawInput(e.target.value)}
@@ -963,84 +868,85 @@ export function TraceSandbox() {
                 placeholder="Paste a trace, log output, or JSON here…"
               />
 
+              {/* Subtle sample links */}
+              <p className="text-[11px] text-muted-foreground/60">
+                Try an example:{" "}
+                <button
+                  type="button"
+                  onClick={() => loadSample(SAMPLE_JSON)}
+                  className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  JSON trace
+                </button>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => loadSample(SAMPLE_LOG)}
+                  className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  Log output
+                </button>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => loadSample(SAMPLE_TRACE_ID)}
+                  className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  Trace ID
+                </button>
+              </p>
+
               {error && (
                 <p className="rounded-[18px] border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
                   {error}
                 </p>
               )}
 
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  onClick={() => void handleAnalyze()}
-                  disabled={busy}
-                  className="gap-2"
-                >
-                  {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileSearch className="h-4 w-4" />
-                  )}
-                  Find the failure
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={handleSaveTrace}
-                  className="gap-2 text-muted-foreground hover:bg-accent/45 hover:text-foreground"
-                >
-                  Save this trace
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                onClick={() => void handleAnalyze()}
+                disabled={busy}
+                className="gap-2"
+              >
+                {busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileSearch className="h-4 w-4" />
+                )}
+                Debug trace
+              </Button>
             </div>
           </div>
 
           {/* Right: Results */}
           <div className="divide-y divide-border/60">
-            <div className="flex items-center justify-between gap-3 px-5 py-5 md:px-6">
-              <div>
-                <p className="section-kicker">Results</p>
-                <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">
-                  {hasRun
-                    ? issueCards.length === 0
-                      ? "No issues found"
-                      : `${issueCards.length} issue${issueCards.length !== 1 ? "s" : ""} found`
-                    : "Issues detected"}
-                </h2>
-              </div>
-              {hasRun && issueCards.length > 0 && (
-                <div className="flex items-center gap-2">
-                  {highCount > 0 && (
-                    <span className="rounded-full border border-rose-400/20 bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">
-                      {highCount} high
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    <ClipboardCopy className="h-3 w-3" />
-                    {copied ? "Copied" : "Copy"}
-                  </button>
-                </div>
-              )}
-            </div>
-
             {hasRun ? (
               issueCards.length > 0 ? (
                 <>
+                  <SummaryBanner
+                    total={issueCards.length}
+                    highCount={highCount}
+                    onCopy={handleCopy}
+                    copied={copied}
+                  />
                   <div className="divide-y divide-border/60">
                     {issueCards.map((issue) => (
                       <IssueRow key={issue.id} issue={issue} />
                     ))}
                   </div>
-                  <div className="flex flex-wrap gap-3 px-5 py-4 md:px-6">
-                    <Link
-                      href="/product"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      View replay <ArrowRight className="h-3 w-3" />
-                    </Link>
+                  {/* Progressive disclosure: system layer */}
+                  <div className="flex flex-wrap items-center gap-2 px-5 py-4 md:px-6">
+                    <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/50">
+                      Next:
+                    </span>
+                    {NEXT_STEPS.map((step) => (
+                      <Link
+                        key={step.label}
+                        href={step.href}
+                        className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground"
+                      >
+                        {step.label} <ArrowRight className="h-2.5 w-2.5" />
+                      </Link>
+                    ))}
                   </div>
                 </>
               ) : (
@@ -1048,118 +954,37 @@ export function TraceSandbox() {
                   <p className="text-sm text-muted-foreground">
                     No known failure patterns detected in this trace.
                   </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {NEXT_STEPS.map((step) => (
+                      <Link
+                        key={step.label}
+                        href={step.href}
+                        className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-white/16 hover:text-foreground"
+                      >
+                        {step.label} <ArrowRight className="h-2.5 w-2.5" />
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )
             ) : (
-              <EmptyResultsState />
+              <div className="flex items-center gap-2 px-5 py-8 md:px-6">
+                {busy ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Analyzing trace…</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Paste a trace above and click{" "}
+                    <span className="font-medium text-foreground">Debug trace</span>{" "}
+                    to run.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
-      </section>
-
-      {/* ── Advanced (collapsible) ────────────────────────────────────── */}
-      <section className="section-shell overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setAdvancedOpen((o) => !o)}
-          className="flex w-full items-center justify-between gap-3 px-5 py-5 text-left transition-colors hover:bg-white/[0.02] md:px-6"
-        >
-          <div>
-            <p className="section-kicker">Advanced</p>
-            <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">
-              Stress test, replay, and CI
-            </h2>
-          </div>
-          <ChevronDown
-            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-              advancedOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {advancedOpen && (
-          <div className="border-t border-border/60">
-
-            {/* Fault injection preview — shown only after a run */}
-            {mutationResult && (
-              <div className="border-b border-border/60">
-                <div className="flex items-center justify-between gap-3 px-5 py-4 md:px-6">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Fault injection preview
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      How core reliability faults would hit each step
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="border-primary/20 bg-primary/10 text-primary"
-                  >
-                    {
-                      mutationResult.impacts.filter((i) => i.targetedSteps.length > 0)
-                        .length
-                    }{" "}
-                    / 4 active
-                  </Badge>
-                </div>
-                <div className="divide-y divide-border/60">
-                  {mutationResult.impacts.map((impact) => (
-                    <div
-                      key={impact.id}
-                      className="grid gap-3 px-5 py-4 md:grid-cols-[8rem_minmax(0,1fr)] md:gap-5 md:px-6"
-                    >
-                      <div className="flex flex-col gap-1.5">
-                        <span
-                          className={`w-fit rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                            impact.category === "schema"
-                              ? "border border-indigo-400/20 bg-indigo-500/10 text-indigo-300"
-                              : "border border-amber-400/20 bg-amber-500/10 text-amber-300"
-                          }`}
-                        >
-                          {impact.category}
-                        </span>
-                        <p className="text-sm font-semibold text-foreground">
-                          {impact.label}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        {impact.targetedSteps.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {impact.targetedSteps.map((step) => (
-                              <span
-                                key={step}
-                                className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 font-mono text-[11px] text-foreground"
-                              >
-                                {step}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          {impact.projectedOutcome}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Capability links */}
-            <div className="divide-y divide-border/60">
-              {ADVANCED_CAPABILITIES.map((item) => (
-                <CapabilityRow
-                  key={item.title}
-                  title={item.title}
-                  description={item.description}
-                  href={item.href}
-                  icon={item.icon}
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </section>
     </div>
   );
