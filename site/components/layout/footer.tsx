@@ -9,8 +9,8 @@ const footerSections = [
   {
     title: "Explore",
     links: [
-      { label: "Product", href: "/product" },
-      { label: "Replay", href: "/product" },
+      { label: "Debug", href: "/sandbox" },
+      { label: "Stress Test", href: "/product" },
       { label: "CI Gate", href: "/docs/ci-cd" },
     ],
   },
@@ -55,12 +55,11 @@ export function Footer() {
       <div className="mx-auto max-w-[1368px] space-y-8">
         <div className="grid gap-6 rounded-[32px] border border-white/8 bg-white/[0.035] p-6 shadow-[0_24px_72px_rgba(0,0,0,0.18)] md:grid-cols-[minmax(0,1.1fr)_auto] md:items-center md:p-8">
           <div className="max-w-2xl">
-            <p className="section-kicker ink-kicker">Keep the debugger first</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white sm:text-3xl">
-              Paste a trace. Find the failure. Save the useful one later.
+            <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white sm:text-3xl">
+              Your agent broke. Debug it in 30 seconds.
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-7 text-slate-300">
-              Start with Analyze Trace. Use replay, mutation testing, and CI only after the first answer shows you where to look.
+              No account, no setup. Paste a trace and get the failing step, root cause, and fix.
             </p>
           </div>
 
@@ -69,7 +68,7 @@ export function Footer() {
               href="/sandbox"
               className="inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.26)] bg-[var(--color-accent)] px-5 text-sm font-semibold text-white shadow-[0_16px_28px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
-              Analyze Trace
+              Debug your trace
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
@@ -87,7 +86,7 @@ export function Footer() {
               Sepurux
             </p>
             <p className="mt-2 font-sans text-sm leading-6 text-[rgba(90,88,112,0.9)]">
-              Trace debugger for failed or risky agent runs.
+              Debug broken AI agents. Fast.
             </p>
             <p className="mt-6 font-mono text-[11px] text-[rgba(90,88,112,0.6)]">
               © {new Date().getFullYear()} Sepurux

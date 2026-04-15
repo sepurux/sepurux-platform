@@ -9,10 +9,8 @@ import { buildAppAuthHref, siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/product", label: "Product" },
-  { href: "/sandbox", label: "Analyze" },
+  { href: "/sandbox", label: "Debug" },
   { href: "/docs", label: "Docs" },
-  { href: "/company", label: "Company" },
 ];
 
 export function Navbar() {
@@ -81,11 +79,11 @@ export function Navbar() {
               Login
             </Link>
             <Link
-              href="/waitlist"
+              href="/sandbox"
               className="group inline-flex items-center gap-1.5 font-mono text-[12px] font-medium uppercase tracking-[0.1em] transition-colors"
               style={{ color: "rgba(167,139,250,0.8)" }}
             >
-              Request Access
+              Try it free
               <span className="transition-transform duration-200 group-hover:translate-x-1" aria-hidden>
                 →
               </span>
@@ -145,11 +143,11 @@ export function Navbar() {
                   Login
                 </Link>
                 <Link
-                  href="/waitlist"
+                  href="/sandbox"
                   className="inline-flex items-center gap-2 font-mono text-[12px] font-medium uppercase tracking-[0.1em]"
                   style={{ color: "rgba(167,139,250,0.8)" }}
                 >
-                  Request Access →
+                  Try it free →
                 </Link>
               </div>
             </div>

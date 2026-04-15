@@ -159,16 +159,6 @@ export function HomeContent() {
         />
 
         <div className="relative z-10 max-w-4xl">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.7 }}
-            className="mb-8 font-mono text-[11px] font-medium uppercase tracking-[0.22em]"
-            style={{ color: "rgba(167,139,250,0.6)" }}
-          >
-            Trace debugger
-          </motion.p>
-
           <motion.h1
             initial={{ opacity: 0, y: 36 }}
             animate={{ opacity: 1, y: 0 }}
@@ -180,9 +170,9 @@ export function HomeContent() {
               letterSpacing: "-0.056em",
             }}
           >
-            Find the step that broke
+            Your agent failed.
             <br />
-            your agent.
+            Find out why in 30 seconds.
           </motion.h1>
 
           <motion.p
@@ -192,8 +182,8 @@ export function HomeContent() {
             className="mt-8 max-w-xl font-sans text-lg leading-7"
             style={{ color: "rgba(155,152,171,0.88)" }}
           >
-            Paste JSON, logs, or a trace ID. See the failing step, likely cause,
-            and next fix before a user sees it.
+            Paste any trace — JSON, logs, or a trace ID. Sepurux shows you the
+            exact step that failed, why it cascaded, and what to fix.
           </motion.p>
 
           <motion.div
@@ -206,7 +196,7 @@ export function HomeContent() {
               href="/sandbox"
               className="group inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.22)] bg-[var(--color-accent)] px-6 font-mono text-sm font-semibold text-white shadow-[0_18px_34px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
-              Analyze Trace
+              Debug your trace
               <span
                 className="transition-transform duration-200 group-hover:translate-x-1.5"
                 aria-hidden
@@ -217,7 +207,7 @@ export function HomeContent() {
           </motion.div>
 
           <p className="mt-4 max-w-xl font-mono text-[11px] uppercase tracking-[0.18em] text-[rgba(155,152,171,0.74)]">
-            No signup required for the first trace.
+            Free to use. No account required.
           </p>
         </div>
 
@@ -243,9 +233,8 @@ export function HomeContent() {
                 lineHeight: "1.12",
               }}
             >
-              You ship an agent. It returns garbage, no output, or confidently
-              wrong output. You open the logs and find a timeout in step three,
-              a silent fallback, or stale data only after the user complains.
+              You shipped an agent. It failed. You opened the logs and found a
+              timeout, a silent fallback, or stale data — but not the cause.
             </p>
             <p
               className="mt-8 max-w-xl font-sans text-lg leading-8"
@@ -278,8 +267,7 @@ export function HomeContent() {
             className="mt-3 max-w-xl font-sans text-base leading-7"
             style={{ color: "rgba(155,152,171,0.82)" }}
           >
-            Click any span. See what broke, what it cascaded into, and how to
-            fix it.
+            Click any span. See the exact failure, the cascade, and a specific fix.
           </p>
         </FadeUp>
 
@@ -351,20 +339,20 @@ export function HomeContent() {
           {[
             {
               n: "01",
-              title: "Instrument",
-              body: "One import. Sepurux captures structured trace spans automatically — no manual instrumentation required.",
-              code: "from sepurux import instrument\ninstrument()",
+              title: "Paste",
+              body: "Drop in any trace — JSON, raw logs, or a trace ID. No SDK, no setup, no account.",
+              code: null,
             },
             {
               n: "02",
-              title: "Run a chaos campaign",
-              body: "Inject realistic faults — timeouts, retrieval failures, truncated outputs — across your agent path in around 30 seconds.",
+              title: "Debug",
+              body: "Sepurux identifies the failing step, traces the cascade through downstream spans, and surfaces the root cause.",
               code: null,
             },
             {
               n: "03",
-              title: "Analyze the trace",
-              body: "See the failing step, the cascade, and the next fix. Hand stable cases to CI when you are ready.",
+              title: "Fix — then prevent",
+              body: "Apply the suggested fix. When you're ready, replay it, stress test it, and gate your next release.",
               code: null,
             },
           ].map((step, i) => (
@@ -423,18 +411,20 @@ export function HomeContent() {
           <h2
             className="font-display font-semibold text-white"
             style={{
-              fontSize: "clamp(3rem, 7vw, 6rem)",
-              lineHeight: "0.9",
-              letterSpacing: "-0.055em",
+              fontSize: "clamp(2.4rem, 6vw, 5.2rem)",
+              lineHeight: "0.94",
+              letterSpacing: "-0.05em",
             }}
           >
-            Sepurux
+            You have a broken agent.
+            <br />
+            Start here.
           </h2>
           <p
             className="mt-6 font-sans text-lg"
             style={{ color: "rgba(155,152,171,0.72)" }}
           >
-            Trace debugger for failed or risky agent runs.
+            Paste any trace. Know what failed and why in 30 seconds.
           </p>
           <div className="mt-12 flex flex-wrap items-center gap-10">
             <Link
@@ -442,7 +432,7 @@ export function HomeContent() {
               className="group inline-flex items-center gap-2 font-mono text-sm font-medium"
               style={{ color: "rgba(167,139,250,0.85)" }}
             >
-              Analyze Trace
+              Paste your trace
               <span
                 className="transition-transform duration-200 group-hover:translate-x-1.5"
                 aria-hidden
