@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useState, useCallback, type ComponentType } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -549,25 +549,161 @@ const ISSUE_META: Record<
   },
 };
 
+// ── Fix snippets ─────────────────────────────────────────────────────────
+
+const FIX_SNIPPETS: Partial<Record<IssueKind, { lang: string; code: string; note: string }>> = {
+  "tool-timeout": {
+    lang: "yaml",
+    note: "Add a retry policy and lower the timeout on the failing tool call.",
+    code: `tool_config:
+  timeout: 2000          # ms — fail fast instead of hanging
+  retry:
+    attempts: 3
+    backoff: exponential
+  fallback_source: cache_store`,
+  },
+  "tool-failure": {
+    lang: "python",
+    note: "Wrap the tool call in a try/except and surface the error before continuing.",
+    code: `try:
+    result = tool.invoke(params)
+except ToolError as e:
+    # Log and halt — don't let the agent proceed on a bad result
+    span.set_status("error", str(e))
+    raise`,
+  },
+  "retry-exhausted": {
+    lang: "yaml",
+    note: "Increase retry budget and add a fallback so the agent doesn't proceed on empty.",
+    code: `retry:
+  attempts: 5
+  backoff: exponential
+  on_exhaust: raise      # don't swallow the error silently
+fallback:
+  source: cache_store
+  max_age_seconds: 300`,
+  },
+  "hallucination-risk": {
+    lang: "python",
+    note: "Gate the LLM call on source quality before invoking.",
+    code: `if retrieval_result.count == 0 or retrieval_result.is_stale:
+    raise InsufficientContextError(
+        "Skipping LLM call — source data unavailable or stale"
+    )
+response = llm.complete(prompt)`,
+  },
+  "context-overflow": {
+    lang: "python",
+    note: "Truncate or summarise the prompt before it hits the model.",
+    code: `MAX_TOKENS = 14_000  # leave headroom below your model's limit
+
+if count_tokens(prompt) > MAX_TOKENS:
+    prompt = summarize(prompt, target_tokens=MAX_TOKENS)
+
+response = llm.complete(prompt)`,
+  },
+  "fallback-triggered": {
+    lang: "python",
+    note: "Treat fallback as a warning signal — log it and check downstream quality.",
+    code: `if result.fallback_activated:
+    logger.warning(
+        "fallback_activated",
+        step=span.name,
+        reason=result.fallback_reason,
+    )
+    # Optionally abort rather than continue on stale data
+    if not result.data:
+        raise FallbackDataMissingError(span.name)`,
+  },
+  "schema-break": {
+    lang: "python",
+    note: "Validate the tool response schema before passing it downstream.",
+    code: `from pydantic import BaseModel, ValidationError
+
+class ToolResponse(BaseModel):
+    status: str   # pin the field names you depend on
+    id: str
+
+try:
+    validated = ToolResponse(**raw_output)
+except ValidationError as e:
+    raise SchemaContractError(f"Tool response schema changed: {e}")`,
+  },
+};
+
 // ── Sub-components ────────────────────────────────────────────────────────
 
 function IssueRow({ issue }: { issue: IssueCard }) {
   const meta = ISSUE_META[issue.kind];
+  const fix = FIX_SNIPPETS[issue.kind];
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyFix = useCallback(() => {
+    if (!fix) return;
+    navigator.clipboard.writeText(fix.code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [fix]);
+
   return (
-    <div className="grid gap-3 px-5 py-4 md:grid-cols-[9rem_minmax(0,1fr)] md:gap-5 md:px-6">
-      <div className="flex flex-col gap-1.5">
-        <span
-          className={`w-fit rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] border ${meta.color} ${meta.bg} ${meta.border}`}
-        >
-          {issue.label}
-        </span>
-        {issue.step && (
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {issue.step}
+    <div className="divide-y divide-border/40">
+      <div className="grid gap-3 px-5 py-4 md:grid-cols-[9rem_minmax(0,1fr)] md:gap-5 md:px-6">
+        <div className="flex flex-col gap-1.5">
+          <span
+            className={`w-fit rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] border ${meta.color} ${meta.bg} ${meta.border}`}
+          >
+            {issue.label}
           </span>
-        )}
+          {issue.step && (
+            <span className="font-mono text-[11px] text-muted-foreground">
+              {issue.step}
+            </span>
+          )}
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm leading-6 text-muted-foreground">{issue.detail}</p>
+          {fix && (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] font-medium text-primary transition-colors hover:brightness-125"
+            >
+              <ChevronDown
+                className={`h-3 w-3 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+              />
+              {open ? "Hide fix" : "See fix"}
+            </button>
+          )}
+        </div>
       </div>
-      <p className="text-sm leading-6 text-muted-foreground">{issue.detail}</p>
+
+      {open && fix && (
+        <div className="px-5 pb-4 pt-3 md:px-6">
+          <p className="mb-2 text-xs text-muted-foreground">{fix.note}</p>
+          <div className="relative">
+            <pre
+              className="overflow-x-auto rounded-xl p-4 font-mono text-[12px] leading-5"
+              style={{
+                background: "rgba(124,58,237,0.05)",
+                border: "1px solid rgba(124,58,237,0.15)",
+                color: "rgba(167,139,250,0.85)",
+              }}
+            >
+              {fix.code}
+            </pre>
+            <button
+              type="button"
+              onClick={handleCopyFix}
+              className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-white/10 bg-black/30 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ClipboardCopy className="h-3 w-3" />
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -904,12 +1040,6 @@ export function TraceSandbox() {
                       className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
                     >
                       View replay <ArrowRight className="h-3 w-3" />
-                    </Link>
-                    <Link
-                      href="/docs/getting-started"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-mono text-[11px] font-medium text-primary transition-colors hover:brightness-110"
-                    >
-                      Fix suggestions <ArrowRight className="h-3 w-3" />
                     </Link>
                   </div>
                 </>
