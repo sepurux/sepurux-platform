@@ -11,7 +11,7 @@ const footerSections = [
     links: [
       { label: "Debug", href: "/sandbox" },
       { label: "Stress Test", href: "/product" },
-      { label: "CI Gate", href: "/docs/ci-cd" },
+      { label: "CI", href: "/docs/ci-cd" },
     ],
   },
   {

@@ -633,7 +633,7 @@ const NEXT_STEPS = [
     href: buildAppAuthHref({ mode: "access", intent: "signup", next: "/sandbox" }),
   },
   { label: "Stress test", href: "/product" },
-  { label: "CI gate", href: "/docs/ci-cd" },
+  { label: "Add to CI", href: "/docs/ci-cd" },
   { label: "Compare runs", href: "/product" },
 ];
 
