@@ -53,9 +53,9 @@ const sandboxTheme = {
 } as CSSProperties;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Analyze Trace",
+  title: "Debug your agent trace",
   description:
-    "Paste a trace. Find the failing step, likely cause, and next fix in the public sandbox before you sign in.",
+    "Paste any trace — JSON, logs, or a trace ID. See what broke, why it cascaded, and how to fix it. No account needed.",
   path: "/sandbox",
 });
 
