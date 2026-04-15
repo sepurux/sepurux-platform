@@ -88,10 +88,10 @@ export function HomeContent() {
 
       {/* ── 1. HERO ──────────────────────────────────────────────────────── */}
       <section
-        className="relative -mt-[78px] overflow-hidden px-5 pb-20 pt-[calc(78px+3.5rem)] sm:-mt-[82px] sm:px-8 sm:pt-[calc(82px+4rem)] lg:px-16"
+        className="relative -mt-[78px] overflow-hidden px-5 pb-24 pt-[calc(78px+3rem)] sm:-mt-[82px] sm:px-8 sm:pt-[calc(82px+3.5rem)] lg:px-16"
         style={{
           background:
-            "radial-gradient(ellipse at 65% 0%, rgba(124,58,237,0.09) 0%, transparent 52%)",
+            "radial-gradient(ellipse at 50% -8%, rgba(124,58,237,0.11) 0%, transparent 56%)",
         }}
       >
         {/* Top accent rule */}
@@ -111,103 +111,140 @@ export function HomeContent() {
           style={{ background: "linear-gradient(to top, #08080D 0%, transparent 100%)" }}
         />
 
-        <div className="relative z-10 mx-auto max-w-[88rem]">
-          <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.18fr)] lg:gap-14">
+        <div className="relative z-10 mx-auto max-w-[72rem]">
 
-            {/* Left: headline + CTA */}
-            <div className="flex flex-col">
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.05 }}
-                className="mb-6 font-mono text-[11px] uppercase tracking-[0.22em]"
-                style={{ color: "rgba(167,139,250,0.7)" }}
-              >
-                AI agent debugger
-              </motion.p>
+          {/* Eyebrow + H1 + brief subtext */}
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.72, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <p
+              className="mb-5 font-mono text-[11px] uppercase tracking-[0.22em]"
+              style={{ color: "rgba(167,139,250,0.7)" }}
+            >
+              AI agent debugger
+            </p>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 28 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-                className="font-display font-semibold text-white"
-                style={{
-                  fontSize: "clamp(2.6rem, 5.2vw, 4.8rem)",
-                  lineHeight: "0.93",
-                  letterSpacing: "-0.052em",
-                }}
-              >
-                Your agent failed.
-                <br />
+            <h1
+              className="font-display font-semibold text-white"
+              style={{
+                fontSize: "clamp(2.4rem, 4.6vw, 4.4rem)",
+                lineHeight: "0.95",
+                letterSpacing: "-0.05em",
+              }}
+            >
+              Your agent failed.{" "}
+              <span style={{ color: "rgba(155,152,171,0.48)" }}>
                 Find out why
-                <br />
-                in 30 seconds.
-              </motion.h1>
+                <br className="hidden sm:block" /> in 30 seconds.
+              </span>
+            </h1>
 
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="mt-7 max-w-sm font-sans text-base leading-7"
-                style={{ color: "rgba(155,152,171,0.85)" }}
-              >
-                Paste a trace. See the exact step that failed, what broke next, and how to fix it.
-              </motion.p>
+            <p
+              className="mt-5 max-w-lg font-sans text-base leading-7"
+              style={{ color: "rgba(155,152,171,0.68)" }}
+            >
+              Paste a trace. Get the exact step that failed, what broke next, and how to fix it.
+            </p>
+          </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.44 }}
-                className="mt-9 flex flex-wrap items-center gap-4"
-              >
-                <Link
-                  href="/sandbox"
-                  className="group inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.22)] bg-[var(--color-accent)] px-6 font-mono text-sm font-semibold text-white shadow-[0_18px_34px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
+          {/* Result status bar + demo — stacked as a visual unit */}
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.88, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-9"
+          >
+            {/* Status bar — looks like the debugger already ran */}
+            <div
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-t-xl px-5 py-3"
+              style={{
+                background: "rgba(10,9,20,0.92)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "#34D399" }} />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: "#34D399" }} />
+                </span>
+                <span
+                  className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em]"
+                  style={{ color: "rgba(52,211,153,0.9)" }}
                 >
-                  Analyze a trace
-                  <span
-                    className="transition-transform duration-200 group-hover:translate-x-1.5"
-                    aria-hidden
-                  >
-                    →
-                  </span>
-                </Link>
-                <Link
-                  href="/docs"
-                  className="font-mono text-sm font-medium transition-opacity hover:opacity-70"
-                  style={{ color: "rgba(155,152,171,0.6)" }}
-                >
-                  Read the docs →
-                </Link>
-              </motion.div>
+                  Analysis complete
+                </span>
+              </div>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-                className="mt-5 font-mono text-[10px] uppercase tracking-[0.18em]"
-                style={{ color: "rgba(155,152,171,0.38)" }}
-              >
-                No account · Paste any format · Instant results
-              </motion.p>
+              <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+
+              <span className="font-mono text-[10px]" style={{ color: "rgba(239,68,68,0.85)" }}>
+                1 fault detected
+              </span>
+
+              <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+
+              <span className="font-mono text-[10px]" style={{ color: "rgba(245,158,11,0.75)" }}>
+                3 steps affected
+              </span>
+
+              <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+
+              <span className="font-mono text-[10px]" style={{ color: "rgba(167,139,250,0.75)" }}>
+                Fix ready
+              </span>
+
+              <span className="ml-auto font-mono text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+                trc_8f2d94a1c3e7
+              </span>
             </div>
 
-            {/* Right: live interactive demo */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.85, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <p
-                className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em]"
-                style={{ color: "rgba(167,139,250,0.48)" }}
-              >
-                Click any span to inspect
-              </p>
+            {/* Demo — top corners square to connect with status bar */}
+            <div className="overflow-hidden rounded-b-xl" style={{ border: "1px solid rgba(255,255,255,0.08)", borderTop: "none" }}>
               <AnalyzeTraceDemo />
-            </motion.div>
+            </div>
+          </motion.div>
 
-          </div>
+          {/* CTAs — below demo, natural next step */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.55, delay: 0.42 }}
+            className="mt-8 flex flex-wrap items-center gap-5"
+          >
+            <Link
+              href="/sandbox"
+              className="group inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.22)] bg-[var(--color-accent)] px-6 font-mono text-sm font-semibold text-white shadow-[0_18px_34px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
+            >
+              Run your own trace
+              <span
+                className="transition-transform duration-200 group-hover:translate-x-1.5"
+                aria-hidden
+              >
+                →
+              </span>
+            </Link>
+            <Link
+              href="/docs"
+              className="font-mono text-sm font-medium transition-opacity hover:opacity-70"
+              style={{ color: "rgba(155,152,171,0.52)" }}
+            >
+              Read the docs →
+            </Link>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.58 }}
+            className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em]"
+            style={{ color: "rgba(155,152,171,0.3)" }}
+          >
+            No account · Paste any format · Instant results
+          </motion.p>
+
         </div>
       </section>
 
@@ -523,7 +560,7 @@ export function HomeContent() {
               href="/sandbox"
               className="group inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.22)] bg-[var(--color-accent)] px-6 font-mono text-sm font-semibold text-white shadow-[0_18px_34px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
-              Analyze a trace
+              Run your own trace
               <span
                 className="transition-transform duration-200 group-hover:translate-x-1.5"
                 aria-hidden
