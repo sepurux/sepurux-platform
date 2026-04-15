@@ -186,7 +186,7 @@ export function PolicyPackBuilder({
             <div className={cn("grid gap-4", onNameChange ? "md:grid-cols-[minmax(0,1fr)_220px]" : "md:grid-cols-1")}>
               {onNameChange ? (
                 <label className="block space-y-1.5 text-sm">
-                  <span className="text-muted-foreground">Policy Pack Name</span>
+                  <span className="text-muted-foreground">Guardrail Name</span>
                   <input
                     className="w-full rounded-xl border border-border/80 bg-background/80 px-3.5 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/45 focus:ring-2 focus:ring-primary/12 disabled:cursor-not-allowed disabled:opacity-60"
                     value={name ?? ""}

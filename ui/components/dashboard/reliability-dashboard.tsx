@@ -285,7 +285,7 @@ function ReliabilityPanels({ data }: { data: ReliabilityData }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col justify-center gap-6">
-            <KpiStat label="Campaigns Run" value={summary.campaigns_run} icon={BarChart3} />
+            <KpiStat label="Test Runs" value={summary.campaigns_run} icon={BarChart3} />
             <KpiStat
               label="Failure Categories"
               value={summary.failure_breakdown.length}

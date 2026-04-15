@@ -574,7 +574,7 @@ export function ProfileView() {
                       <p className="font-medium text-foreground">
                         {wallet.balance.toLocaleString()} workspace runs
                       </p>
-                      <p className="text-sm text-muted-foreground">Runs are consumed per campaign execution.</p>
+                      <p className="text-sm text-muted-foreground">Runs are consumed per test run execution.</p>
                     </div>
                     {wallet.is_low_credit ? (
                       <p className="rounded-md border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100">

@@ -106,7 +106,7 @@ const ADVANCED_CAPABILITIES = [
   },
   {
     title: "Continuous checks",
-    description: "Move a stable trace into scheduled campaigns and CI pre-release checks.",
+    description: "Move a stable trace into scheduled test runs and CI pre-release checks.",
     href: "/campaigns",
     icon: GitBranch,
   },

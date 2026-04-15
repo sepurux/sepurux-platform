@@ -181,7 +181,7 @@ export function PolicyPackDetailView({
   const pageTitle =
     state.status === "ready"
       ? state.record.name
-      : `Policy Pack ${shortId(policyPackId, 14)}`;
+      : `Guardrail ${shortId(policyPackId, 14)}`;
   const pageMeta =
     state.status === "ready"
       ? `${shortId(policyPackId, 14)} · ${state.record.engine} · created ${formatRelativeDate(
@@ -345,7 +345,7 @@ function PolicyPackPanels({
       <Card>
         <CardHeader>
           <CardTitle>Pack Overview</CardTitle>
-          <CardDescription>Active runtime metadata for this policy pack.</CardDescription>
+          <CardDescription>Active runtime metadata for this guardrail.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <OverviewTile
@@ -400,7 +400,7 @@ function PolicyPackPanels({
                 onClick={() => void onSavePolicy()}
                 disabled={savingPolicy}
               >
-                {savingPolicy ? "Saving..." : "Save Policy Pack"}
+                {savingPolicy ? "Saving..." : "Save guardrail"}
               </Button>
             </div>
           ) : null}

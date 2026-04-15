@@ -306,7 +306,7 @@ export function RunsListView() {
             <Search className="h-4 w-4 shrink-0" />
             <input
               className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-44"
-              placeholder="Search run, batch, or campaign"
+              placeholder="Search run, batch, or test run"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

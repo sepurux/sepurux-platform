@@ -49,7 +49,7 @@ const categories: Array<{
   {
     id: "taxonomy",
     label: "Traces & Packs",
-    helper: "Trace ingestion, mutation pack mapping, or policy pack alignment",
+    helper: "Trace ingestion, check configuration, or guardrail alignment",
   },
   {
     id: "task",

@@ -152,7 +152,7 @@ function AttemptDetailPanels({
           </CardHeader>
           <CardContent className="space-y-3">
             {attempt.seed === null ? (
-              <p className="text-sm text-muted-foreground">No mutation pack applied to this attempt.</p>
+              <p className="text-sm text-muted-foreground">No checks applied to this attempt.</p>
             ) : mutationTraceAppliedCount === 0 ? (
               <p className="text-sm text-muted-foreground">No mutations were applied for this seed.</p>
             ) : (

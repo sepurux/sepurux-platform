@@ -184,11 +184,11 @@ function RunDetailPanels({
         <div className="flex items-start gap-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
           <div>
-            <p className="font-medium text-amber-100">Mutation pack incompatible with this trace</p>
+            <p className="font-medium text-amber-100">Check incompatible with this trace</p>
             <p className="mt-0.5 text-amber-300/80">
-              All {replayContractFailures.length} attempt{replayContractFailures.length !== 1 ? "s" : ""} failed because the selected mutation pack targets tools that don't appear in this trace.
+              All {replayContractFailures.length} attempt{replayContractFailures.length !== 1 ? "s" : ""} failed because the selected check targets tools that don't appear in this trace.
               The reliability score is unaffected — no agent behaviour was tested.
-              Fix: select a mutation pack whose tools match this trace, or run without a pack to use baseline only.
+              Fix: select a check whose tools match this trace, or run without a check to use baseline only.
             </p>
           </div>
         </div>

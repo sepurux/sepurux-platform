@@ -64,21 +64,21 @@ export function PolicyPackCreateView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Create Policy Pack
+            New guardrail
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Keep policy authoring on its own screen so review and version history stay separate from creation.
+            Keep guardrail authoring on its own screen so review and version history stay separate from creation.
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link href="/policies">View Policies</Link>
+          <Link href="/policies">All guardrails</Link>
         </Button>
       </div>
 
       {!canManagePolicyPacks && authSession ? (
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Policy packs follow workspace membership and plan access. Your current membership can review policy packs but cannot create or change them.
+            Guardrails follow workspace membership and plan access. Your current membership can review guardrails but cannot create or change them.
           </CardContent>
         </Card>
       ) : null}
@@ -86,7 +86,7 @@ export function PolicyPackCreateView() {
       {canManagePolicyPacks ? (
         <Card>
           <CardHeader>
-            <CardTitle>Policy Pack</CardTitle>
+            <CardTitle>Guardrail</CardTitle>
             <CardDescription>
               Start with the guided builder, then use raw JSON only for unsupported keys.
             </CardDescription>
@@ -110,7 +110,7 @@ export function PolicyPackCreateView() {
                   <Link href="/policies">Cancel</Link>
                 </Button>
                 <Button type="submit" disabled={creating}>
-                  {creating ? "Creating..." : "Create Policy Pack"}
+                  {creating ? "Creating..." : "Create guardrail"}
                 </Button>
               </div>
             </form>

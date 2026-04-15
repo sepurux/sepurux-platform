@@ -40,7 +40,7 @@ export function MutationPackEditView({ mutationPackId }: Props) {
         const record = await api.getMutationPack(mutationPackId);
         if (cancelled) return;
         if (record.is_system) {
-          setLoadError("System mutation packs cannot be edited.");
+          setLoadError("System checks cannot be edited.");
           setLoading(false);
           return;
         }
@@ -116,7 +116,7 @@ export function MutationPackEditView({ mutationPackId }: Props) {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Edit Mutation Pack</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Edit check</h1>
           <Button asChild variant="outline">
             <Link href="/mutation-packs">Back</Link>
           </Button>
@@ -131,10 +131,10 @@ export function MutationPackEditView({ mutationPackId }: Props) {
   if (!canManageMutationPacks && authSession) {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Edit Mutation Pack</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Edit check</h1>
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Your current membership cannot modify mutation packs.
+            Your current membership cannot modify checks.
           </CardContent>
         </Card>
       </div>
@@ -145,13 +145,13 @@ export function MutationPackEditView({ mutationPackId }: Props) {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Edit Mutation Pack</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Edit check</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Update name, description, or configuration for this custom pack.
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link href="/mutation-packs">Back to Packs</Link>
+          <Link href="/mutation-packs">All checks</Link>
         </Button>
       </div>
 
