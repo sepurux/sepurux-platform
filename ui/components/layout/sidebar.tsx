@@ -76,37 +76,37 @@ const primaryItems: NavLinkItem[] = [
 
 const groupedItems: NavGroup[] = [
   {
-    label: "Campaigns",
+    label: "Test Runs",
     section: "campaigns",
     icon: FlaskConical,
     children: [
-      { href: "/campaigns", label: "View Campaigns" },
-      { href: "/campaigns/new", label: "Create Campaign", permission: "can_create_campaigns" },
-      { href: "/scheduled-campaigns", label: "Scheduled Campaigns" },
+      { href: "/campaigns", label: "All test runs" },
+      { href: "/campaigns/new", label: "New test run", permission: "can_create_campaigns" },
+      { href: "/scheduled-campaigns", label: "Scheduled runs" },
     ],
   },
   {
-    label: "Mutation Packs",
+    label: "Checks",
     section: "mutation-packs",
     icon: Bug,
     children: [
-      { href: "/mutation-packs", label: "View Packs" },
+      { href: "/mutation-packs", label: "All checks" },
       {
         href: "/mutation-packs/new",
-        label: "Create Pack",
+        label: "New check",
         permission: "can_manage_mutation_packs",
       },
     ],
   },
   {
-    label: "Policies",
+    label: "Guardrails",
     section: "policies",
     icon: Shield,
     children: [
-      { href: "/policies", label: "View Policies" },
+      { href: "/policies", label: "All guardrails" },
       {
         href: "/policies/new",
-        label: "Create Policy Pack",
+        label: "New guardrail",
         permission: "can_manage_policy_packs",
       },
     ],

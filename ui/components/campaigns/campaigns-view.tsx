@@ -122,14 +122,14 @@ export function CampaignsView() {
     <div className="mx-auto max-w-[88rem] space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Campaigns</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Test Runs</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Review campaign definitions separately from campaign creation.
+            All test runs for this project. Each run replays your traces and surfaces failures.
           </p>
         </div>
         {canCreateCampaigns ? (
           <Button asChild>
-            <Link href="/campaigns/new">Create Campaign</Link>
+            <Link href="/campaigns/new">New test run</Link>
           </Button>
         ) : null}
       </div>
@@ -137,7 +137,7 @@ export function CampaignsView() {
       {!canCreateCampaigns && authSession ? (
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Campaign creation follows your workspace membership bundle. This membership can review campaigns but cannot create or run them.
+            Test run creation follows your workspace membership. Your current plan can view runs but not create them.
           </CardContent>
         </Card>
       ) : null}
@@ -164,9 +164,9 @@ export function CampaignsView() {
             <DataTableHeader
               icon={Layers3}
               accent="emerald"
-              title="Campaign Catalog"
-              description="Track campaign definitions, attached mutation packs, and bootstrap coverage without leaving the operator flow."
-              badge={`${state.status === "ready" ? state.campaigns.length : 0} campaign${state.status === "ready" && state.campaigns.length === 1 ? "" : "s"}`}
+              title="Test Runs"
+              description="All test runs for this project, with the checks attached to each run."
+              badge={`${state.status === "ready" ? state.campaigns.length : 0} run${state.status === "ready" && state.campaigns.length === 1 ? "" : "s"}`}
               collapsible
               isOpen={isOpen}
               onToggle={() => setIsOpen((v) => !v)}
@@ -176,10 +176,10 @@ export function CampaignsView() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Campaign ID</TableHead>
+                  <TableHead>Run ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Mutation Pack</TableHead>
+                  <TableHead>Checks</TableHead>
                   {canCreateCampaigns ? <TableHead className="text-right">Actions</TableHead> : null}
                   <TableHead className="text-right">Created</TableHead>
                 </TableRow>
@@ -191,7 +191,7 @@ export function CampaignsView() {
                       colSpan={canCreateCampaigns ? 6 : 5}
                       className="py-10 text-center text-muted-foreground"
                     >
-                      No campaigns yet. Use the create page to add the first one.
+                      No test runs yet. Create one to start testing your traces.
                     </TableCell>
                   </TableRow>
                 ) : (

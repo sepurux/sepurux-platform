@@ -52,13 +52,13 @@ function getPackLayer(record: MutationPackMetadata): PackLayer {
 function getPackLayerLabel(layer: PackLayer): string {
   switch (layer) {
     case "base":
-      return "Base Reliability";
+      return "Core";
     case "policy_security":
-      return "Policy & Security";
+      return "Security";
     case "domain":
-      return "Domain";
+      return "Custom";
     case "stress":
-      return "Stress / Advanced";
+      return "Advanced";
   }
 }
 
@@ -139,7 +139,7 @@ export function CampaignCreateView() {
   const selectedPackLayer = selectedMutationPack ? getPackLayer(selectedMutationPack) : null;
   const selectedPackWarning =
     selectedMutationPack && selectedPackCategories < 2
-      ? "This pack covers only 1 mutation category — it may miss many failure types."
+      ? "This check set covers only 1 fault category — it may miss some failure types."
       : null;
 
   async function onCreateCampaign(event: FormEvent<HTMLFormElement>) {
@@ -178,20 +178,20 @@ export function CampaignCreateView() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Create Campaign</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">New test run</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Keep setup simple: pick traces in the campaign, set attempts, and optionally attach a pack for extra chaos overlays.
+            Pick your traces, set how many times to run, and optionally add checks to inject faults.
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link href="/campaigns">View Campaigns</Link>
+          <Link href="/campaigns">View test runs</Link>
         </Button>
       </div>
 
       {!canCreateCampaigns && authSession ? (
         <Card className="border-border/60">
           <CardContent className="p-5 text-sm text-muted-foreground">
-            Campaign creation follows your workspace membership bundle. This membership can review campaigns but cannot create new ones.
+            Test run creation follows your workspace membership. Your current plan can view runs but not create them.
           </CardContent>
         </Card>
       ) : null}
@@ -209,9 +209,9 @@ export function CampaignCreateView() {
       ) : !canCreateCampaigns ? null : (
         <Card>
           <CardHeader>
-            <CardTitle>Campaign Setup</CardTitle>
+            <CardTitle>Test run setup</CardTitle>
             <CardDescription>
-              Campaigns auto-cover trace tools at run time. Mutation packs are optional overlays, not required for baseline replay coverage.
+              Test runs replay your traces and surface failures automatically. Checks are optional fault injectors — skip them for a clean baseline run.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -229,7 +229,7 @@ export function CampaignCreateView() {
               </label>
 
               <label className="block space-y-1 text-sm">
-                <span className="text-muted-foreground">Mutation Pack</span>
+                <span className="text-muted-foreground">Checks (optional)</span>
                 <select
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
                   value={mutationPackId}
@@ -248,7 +248,7 @@ export function CampaignCreateView() {
                 >
                   <option value="">None</option>
                   {packGroups.base.length > 0 ? (
-                    <optgroup label="Base Reliability">
+                    <optgroup label="Core checks">
                       {packGroups.base.map((record) => (
                         <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
                           {record.name}
@@ -257,7 +257,7 @@ export function CampaignCreateView() {
                     </optgroup>
                   ) : null}
                   {packGroups.policy_security.length > 0 ? (
-                    <optgroup label="Policy & Security">
+                    <optgroup label="Security checks">
                       {packGroups.policy_security.map((record) => (
                         <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
                           {record.name}
@@ -266,7 +266,7 @@ export function CampaignCreateView() {
                     </optgroup>
                   ) : null}
                   {packGroups.domain.length > 0 ? (
-                    <optgroup label="Domain Packs">
+                    <optgroup label="Custom checks">
                       {packGroups.domain.map((record) => (
                         <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
                           {record.name}
@@ -275,7 +275,7 @@ export function CampaignCreateView() {
                     </optgroup>
                   ) : null}
                   {packGroups.stress.length > 0 ? (
-                    <optgroup label="Stress / Advanced">
+                    <optgroup label="Advanced checks">
                       {packGroups.stress.map((record) => (
                         <option key={record.mutation_pack_id} value={record.mutation_pack_id}>
                           {record.name}
@@ -289,7 +289,7 @@ export function CampaignCreateView() {
               {selectedMutationPack ? (
                 <div className="rounded-md border border-border/70 bg-background/70 p-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Pack layer</span>
+                    <span className="text-muted-foreground">Check type</span>
                     {selectedPackLayer ? (
                       <Badge variant={selectedPackLayer === "base" ? "neutral" : selectedPackLayer === "domain" ? "default" : "warning"}>
                         {getPackLayerLabel(selectedPackLayer)}
@@ -297,7 +297,7 @@ export function CampaignCreateView() {
                     ) : null}
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Category breadth</span>
+                    <span className="text-muted-foreground">Coverage</span>
                     <Badge variant={selectedPackCategories < 2 ? "default" : selectedPackCategories < 4 ? "warning" : "neutral"}>
                       {selectedPackCategories}/4 categories
                     </Badge>
@@ -312,7 +312,7 @@ export function CampaignCreateView() {
               ) : null}
 
               <label className="block space-y-1 text-sm">
-                <span className="text-muted-foreground">Attempts Count</span>
+                <span className="text-muted-foreground">How many runs</span>
                 <input
                   type="number"
                   min={MIN_ATTEMPTS}
@@ -341,7 +341,7 @@ export function CampaignCreateView() {
                   <Link href="/campaigns">Cancel</Link>
                 </Button>
                 <Button type="submit" disabled={creating}>
-                  {creating ? "Creating..." : "Create Campaign"}
+                  {creating ? "Creating..." : "Create test run"}
                 </Button>
               </div>
             </form>

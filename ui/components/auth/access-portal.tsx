@@ -48,9 +48,9 @@ const GREEN_BORDER = "rgb(var(--teal-rgb) / 0.2)";
 
 const leftPanelFeatures = [
   "Paste a trace and see the failing step",
-  "Keep replay and mutation tests for later",
-  "Save traces when you need history",
-  "Promote stable traces into CI checks",
+  "Save traces and replay them after a fix",
+  "Keep a history of failures and compare runs",
+  "Gate releases when fault rate crosses your threshold",
 ];
 
 const socialProviders: Array<{
@@ -590,7 +590,7 @@ export function AccessPortal() {
             <div className="mt-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-xs text-white/60">
               <span className="font-medium text-white">Full product access</span>
               {" — "}
-              Runs are only used when you save a trace, replay later, or run mutation-heavy workflows.
+              Runs are only used when you save a trace or replay with fault injection.
             </div>
           </div>
         </div>
@@ -649,8 +649,8 @@ export function AccessPortal() {
                 </p>
                 {demoInfo ? (
                   <p className="mt-2 text-xs text-muted-foreground/80">
-                    Limits: {demoInfo.limits.campaigns_per_hour}/hr campaigns,{" "}
-                    {demoInfo.limits.mutations_per_run}/run mutations.
+                    Limits: {demoInfo.limits.campaigns_per_hour}/hr test runs,{" "}
+                    {demoInfo.limits.mutations_per_run} faults per run.
                   </p>
                 ) : null}
               </div>
@@ -721,7 +721,7 @@ export function AccessPortal() {
               <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-xs text-muted-foreground lg:hidden">
                 <span className="font-medium text-foreground">Full product access</span>
                 {" — "}
-                Runs are only used when you save a trace, replay later, or run mutation-heavy workflows.
+                Runs are only used when you save a trace or replay with fault injection.
               </div>
 
               {/* ── SIGN UP FORM ── */}
