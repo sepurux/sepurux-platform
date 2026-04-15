@@ -333,7 +333,7 @@ function DiagnosisPanel({ highlightedSpanId }: { highlightedSpanId: string }) {
 
       <div className="space-y-2">
         <p className="font-mono text-[9px] uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,0.3)" }}>
-          Affected Downstream
+          What broke next
         </p>
         <div className="space-y-1.5">
           {DIAGNOSIS.affected.map((item) => (

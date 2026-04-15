@@ -218,7 +218,7 @@ export function HomeContent() {
               href="/sandbox"
               className="group inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.22)] bg-[var(--color-accent)] px-6 font-mono text-sm font-semibold text-white shadow-[0_18px_34px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
-              Run your own trace
+              Debug a trace
               <span
                 className="transition-transform duration-200 group-hover:translate-x-1.5"
                 aria-hidden
@@ -560,7 +560,7 @@ export function HomeContent() {
               href="/sandbox"
               className="group inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.22)] bg-[var(--color-accent)] px-6 font-mono text-sm font-semibold text-white shadow-[0_18px_34px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
-              Run your own trace
+              Debug a trace
               <span
                 className="transition-transform duration-200 group-hover:translate-x-1.5"
                 aria-hidden

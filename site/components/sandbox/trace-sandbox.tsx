@@ -846,7 +846,7 @@ export function TraceSandbox() {
         <div className="border-b border-border/60 px-5 py-5 md:px-6">
           <div className="max-w-2xl">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Debug your agent trace
+              Debug a trace
             </h1>
             <p className="mt-2 text-base leading-7 text-muted-foreground">
               Paste any trace — JSON, logs, or a trace ID. See what broke and how to fix it.

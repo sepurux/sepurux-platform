@@ -68,7 +68,7 @@ export function Footer() {
               href="/sandbox"
               className="inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.26)] bg-[var(--color-accent)] px-5 text-sm font-semibold text-white shadow-[0_16px_28px_rgba(124,58,237,0.18)] transition-transform duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
-              Debug your trace
+              Debug a trace
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
