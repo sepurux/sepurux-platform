@@ -1507,7 +1507,7 @@ def _enforce_injection_firewall(
     )
 
 
-def execute_run(run_id: str) -> None:
+def _execute_run_impl(run_id: str) -> None:
     logger.info("Executing run %s", run_id)
     run_uuid = UUID(str(run_id))
     settings = get_settings()
@@ -2134,6 +2134,27 @@ def execute_run(run_id: str) -> None:
         db.commit()
 
     logger.info("Completed run %s", run_id)
+
+
+def execute_run(run_id: str) -> None:
+    """Public entry point called by RQ. Delegates to _execute_run_impl and marks
+    the run as 'failed' in the database if an unhandled exception escapes so that
+    runs never get permanently stuck at 'running'."""
+    run_uuid = UUID(str(run_id))
+    try:
+        _execute_run_impl(run_id)
+    except Exception:
+        logger.exception("Run %s failed with an unhandled exception — marking as failed", run_id)
+        try:
+            with get_session() as db:
+                failed_run = db.get(Run, run_uuid)
+                if failed_run is not None and failed_run.status == "running":
+                    failed_run.status = "failed"
+                    db.commit()
+                    logger.info("Marked run %s as failed", run_id)
+        except Exception:
+            logger.exception("Could not update run %s status to failed after exception", run_id)
+        raise
 
 
 def _consume_wallet_credits(wallet: CreditWallet, *, amount: int) -> None:

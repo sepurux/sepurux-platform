@@ -202,6 +202,43 @@ export function RunsListView() {
     void load();
   }, [page, statusFilter]);
 
+  // Detect in-flight runs so we know whether to poll
+  const hasInFlight = useMemo(() => {
+    if (state.status !== "ready") return false;
+    return state.runs.some((r) => r.status === "running" || r.status === "queued");
+  }, [state]);
+
+  // Auto-poll every 5 s while any run is running or queued.
+  // Uses a silent inline fetch so the table doesn't flash the loading skeleton.
+  // Evicts stale batch statuses for in-flight batches so they re-fetch fresh data.
+  useEffect(() => {
+    if (!hasInFlight) return;
+    const id = setInterval(() => {
+      api
+        .listRuns({
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+          status: statusFilter === "all" ? undefined : statusFilter,
+        })
+        .then((runs) => {
+          setState({ status: "ready", runs });
+          setHasNext(runs.length === PAGE_SIZE);
+          setBatchStatuses((prev) => {
+            const next = { ...prev };
+            for (const run of runs) {
+              const batchId = getBatchId(run);
+              if (batchId && (run.status === "running" || run.status === "queued")) {
+                delete next[batchId];
+              }
+            }
+            return next;
+          });
+        })
+        .catch(() => { /* silent — don't disrupt the UI on transient poll errors */ });
+    }, 5_000);
+    return () => clearInterval(id);
+  }, [hasInFlight, page, statusFilter]);
+
   const filteredRuns = useMemo(() => {
     if (state.status !== "ready") return [];
     const q = searchQuery.trim().toLowerCase();
@@ -333,6 +370,15 @@ export function RunsListView() {
           <Button variant="outline" size="sm" onClick={() => void load()}>
             <RefreshCcw className="h-4 w-4" /> Refresh
           </Button>
+          {hasInFlight && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              Live
+            </div>
+          )}
         </div>
       </div>
 

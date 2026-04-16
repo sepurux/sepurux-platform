@@ -29,10 +29,15 @@ def build_run_insights(
         for item in most_lethal_mutations
         if _is_schema_mutation(str(item.get("mutation_id", "")))
     ]
-    retry_lethal = [
+    timeout_lethal = [
         item
         for item in most_lethal_mutations
-        if _is_retry_mutation(str(item.get("mutation_id", "")))
+        if _is_timeout_mutation(str(item.get("mutation_id", "")))
+    ]
+    rate_limit_lethal = [
+        item
+        for item in most_lethal_mutations
+        if _is_rate_limit_mutation(str(item.get("mutation_id", "")))
     ]
     poison_lethal = [
         item
@@ -69,6 +74,10 @@ def build_run_insights(
             )
         )
 
+    # Track tools already addressed by specific insights so the generic hotspot
+    # insight does not fire redundantly for the same tool.
+    covered_tools: set[str] = set()
+
     if schema_lethal:
         schema_failures = sum(_int(item.get("failures")) for item in schema_lethal)
         schema_top_tool = _tool_from_lethal(schema_lethal) or top_tool or "replay.tool"
@@ -93,29 +102,60 @@ def build_run_insights(
                 },
             )
         )
+        covered_tools.add(schema_top_tool)
 
-    if retry_lethal:
-        retry_top_tool = _tool_from_lethal(retry_lethal) or top_tool or "replay.tool"
+    if timeout_lethal:
+        timeout_top_tool = _tool_from_lethal(timeout_lethal) or top_tool or "replay.tool"
+        timeout_failures = sum(_int(item.get("failures")) for item in timeout_lethal)
         insights.append(
             _insight(
-                insight_id=f"insight.retry_backoff.{_slug(retry_top_tool)}",
-                title=f"Add bounded retries/backoff for {retry_top_tool}",
+                insight_id=f"insight.timeout_retry.{_slug(timeout_top_tool)}",
+                title=f"Handle TimeoutError in {timeout_top_tool}",
                 recommendation=(
-                    "Classify timeout/rate-limit as retryable, add jittered exponential backoff, "
-                    "and cap retry attempts to prevent runaway latency."
+                    f"Catch TimeoutError from {timeout_top_tool}, retry with jittered "
+                    "exponential backoff, and set a hard cap on retry attempts to prevent "
+                    "runaway latency."
                 ),
                 why=(
-                    "fault.timeout/fault.rate_limit appear in lethal mutations and correlate "
-                    "with repeated failures."
+                    f"Timeout mutations are linked to {timeout_failures} failed attempts "
+                    f"on {timeout_top_tool}; the agent currently propagates the error "
+                    "without retrying."
                 ),
-                confidence=_confidence(0.68, boost=boost),
+                confidence=_confidence(0.70, boost=boost),
                 evidence={
-                    "top_tools": _trim_tools_from_lethal(retry_lethal, limit=3),
-                    "top_mutations": _trim_mutations(retry_lethal, limit=3),
+                    "top_tools": _trim_tools_from_lethal(timeout_lethal, limit=3),
+                    "top_mutations": _trim_mutations(timeout_lethal, limit=3),
                     "top_reasons": top_reasons,
                 },
             )
         )
+        covered_tools.add(timeout_top_tool)
+
+    if rate_limit_lethal:
+        rate_limit_top_tool = _tool_from_lethal(rate_limit_lethal) or top_tool or "replay.tool"
+        rate_limit_failures = sum(_int(item.get("failures")) for item in rate_limit_lethal)
+        insights.append(
+            _insight(
+                insight_id=f"insight.rate_limit_backoff.{_slug(rate_limit_top_tool)}",
+                title=f"Add backoff and retry on 429s for {rate_limit_top_tool}",
+                recommendation=(
+                    f"Classify RateLimitError (HTTP 429) from {rate_limit_top_tool} as "
+                    "retryable, respect Retry-After headers where available, and cap retry "
+                    "attempts with exponential backoff."
+                ),
+                why=(
+                    f"Rate-limit mutations are linked to {rate_limit_failures} failed attempts "
+                    f"on {rate_limit_top_tool}; the agent does not back off before retrying."
+                ),
+                confidence=_confidence(0.66, boost=boost),
+                evidence={
+                    "top_tools": _trim_tools_from_lethal(rate_limit_lethal, limit=3),
+                    "top_mutations": _trim_mutations(rate_limit_lethal, limit=3),
+                    "top_reasons": top_reasons,
+                },
+            )
+        )
+        covered_tools.add(rate_limit_top_tool)
 
     if poison_lethal:
         poison_top_tool = _tool_from_lethal(poison_lethal) or top_tool or "replay.tool"
@@ -138,6 +178,11 @@ def build_run_insights(
         )
 
     hot_tool = _hot_tool(failures_by_tool)
+    if hot_tool is not None:
+        tool_name = str(hot_tool.get("tool") or "replay.tool")
+        if tool_name in covered_tools:
+            hot_tool = None
+
     if hot_tool is not None:
         tool_name = str(hot_tool.get("tool") or "replay.tool")
         fail_count = _int(hot_tool.get("count"))
@@ -346,10 +391,16 @@ def _is_schema_mutation(mutation_id: str) -> bool:
     return lower.startswith("schema.") or "rename" in lower or "schema" in lower
 
 
-def _is_retry_mutation(mutation_id: str) -> bool:
-    """Match timeout/rate-limit mutations regardless of pack namespace."""
+def _is_timeout_mutation(mutation_id: str) -> bool:
+    """Match timeout mutations regardless of pack namespace."""
     lower = mutation_id.lower()
-    return lower in {"fault.timeout", "fault.rate_limit"} or "timeout" in lower or "rate_limit" in lower
+    return lower == "fault.timeout" or "timeout" in lower
+
+
+def _is_rate_limit_mutation(mutation_id: str) -> bool:
+    """Match rate-limit mutations regardless of pack namespace."""
+    lower = mutation_id.lower()
+    return lower == "fault.rate_limit" or "rate_limit" in lower
 
 
 def _is_poison_mutation(mutation_id: str) -> bool:
