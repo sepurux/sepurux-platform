@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Layers } from "lucide-react";
 
-import { api, type CampaignMutation, type MutationPackMetadata } from "@/lib/api";
+import { api, type CampaignMutation, type MutationPackMetadata, type TraceMetadata } from "@/lib/api";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,11 @@ function getPackLayerLabel(layer: PackLayer): string {
 export function CampaignCreateView() {
   const authSession = useAuthSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pinnedTraceId = searchParams.get("traceId") ?? null;
+
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [pinnedTrace, setPinnedTrace] = useState<TraceMetadata | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -101,6 +106,15 @@ export function CampaignCreateView() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!pinnedTraceId) return;
+    let cancelled = false;
+    api.getTrace(pinnedTraceId).then((trace) => {
+      if (!cancelled) setPinnedTrace(trace);
+    }).catch(() => {/* silently ignore — traceId may be stale */});
+    return () => { cancelled = true; };
+  }, [pinnedTraceId]);
 
   const sortPacksForDisplay = (records: MutationPackMetadata[]) =>
     [...records].sort((left, right) => {
@@ -163,6 +177,7 @@ export function CampaignCreateView() {
         mutation_set: mutationSet,
         eval_set: {
           attempts_count: normalizedAttemptsCount,
+          ...(pinnedTraceId ? { trace_ids: [pinnedTraceId] } : {}),
         },
       });
       router.push("/campaigns");
@@ -216,6 +231,25 @@ export function CampaignCreateView() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onCreateCampaign}>
+              {pinnedTraceId ? (
+                <div className="flex items-start gap-3 rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                  <Layers className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">Trace pinned</p>
+                    <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                      {pinnedTrace?.task_name
+                        ? `${pinnedTrace.task_name} · ${pinnedTraceId}`
+                        : pinnedTraceId}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      This test run will replay the selected trace.{" "}
+                      <Link href="/campaigns/new" className="text-primary hover:underline">
+                        Clear
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              ) : null}
               <label className="block space-y-1 text-sm">
                 <span className="text-muted-foreground">Name</span>
                 <input
