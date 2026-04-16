@@ -22,8 +22,8 @@ EMAIL_RESEND_API_BASE_URL = (
     os.getenv("EMAIL_RESEND_API_BASE_URL", "https://api.resend.com").strip().rstrip("/")
 )
 EMAIL_LOGO_URL = os.getenv("SEPURUX_EMAIL_LOGO_URL", "").strip()
-EMAIL_BRAND_COLOR = os.getenv("SEPURUX_EMAIL_BRAND_COLOR", "#D7843B").strip()
-EMAIL_SECONDARY_COLOR = os.getenv("SEPURUX_EMAIL_SECONDARY_COLOR", "#4F8767").strip()
+EMAIL_BRAND_COLOR = os.getenv("SEPURUX_EMAIL_BRAND_COLOR", "#4f46e5").strip()
+EMAIL_SECONDARY_COLOR = os.getenv("SEPURUX_EMAIL_SECONDARY_COLOR", "#6366f1").strip()
 EMAIL_UNSUBSCRIBE_SECRET = os.getenv("EMAIL_UNSUBSCRIBE_SECRET", "").strip()
 
 
@@ -73,11 +73,11 @@ def _valid_hex_color(value: str, fallback: str) -> str:
 
 
 def _brand_color() -> str:
-    return _valid_hex_color(EMAIL_BRAND_COLOR, "#D7843B")
+    return _valid_hex_color(EMAIL_BRAND_COLOR, "#4f46e5")
 
 
 def _secondary_color() -> str:
-    return _valid_hex_color(EMAIL_SECONDARY_COLOR, "#4F8767")
+    return _valid_hex_color(EMAIL_SECONDARY_COLOR, "#6366f1")
 
 
 def _unsubscribe_secret() -> str:
@@ -120,7 +120,7 @@ def _rich_text_to_html(value: str) -> str:
             text = " ".join(html.escape(item.strip()) for item in paragraph_lines if item.strip())
             if text:
                 blocks.append(
-                    '<p style="margin:0 0 14px;color:#223127;font-size:15px;line-height:1.75;">'
+                    '<p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.75;">'
                     f"{text}"
                     "</p>"
                 )
@@ -129,13 +129,13 @@ def _rich_text_to_html(value: str) -> str:
     def flush_list() -> None:
         if list_items:
             items = "".join(
-                '<li style="margin:0 0 8px;color:#223127;">'
+                '<li style="margin:0 0 8px;color:#374151;">'
                 f"{html.escape(item)}"
                 "</li>"
                 for item in list_items
             )
             blocks.append(
-                '<ul style="margin:0 0 16px 20px;padding:0;color:#223127;font-size:15px;line-height:1.75;">'
+                '<ul style="margin:0 0 16px 20px;padding:0;color:#374151;font-size:15px;line-height:1.75;">'
                 f"{items}"
                 "</ul>"
             )
@@ -174,7 +174,6 @@ def _email_layout(
     footer_html: str | None = None,
 ) -> str:
     accent = html.escape(_brand_color(), quote=True)
-    secondary = html.escape(_secondary_color(), quote=True)
     escaped_title = html.escape(title)
     escaped_subtitle = html.escape(subtitle)
     escaped_intro = html.escape(intro_line)
@@ -182,24 +181,29 @@ def _email_layout(
     escaped_docs = html.escape(_docs_url(), quote=True)
     escaped_eyebrow = html.escape(_clean_optional_text(eyebrow) or "Sepurux")
 
-    logo_html = ""
     logo_url = _logo_url()
     if logo_url:
         logo_html = (
             f'<img src="{html.escape(logo_url, quote=True)}" alt="Sepurux" '
-            'width="132" style="display:block;max-width:132px;height:auto;margin:0 0 14px;'
+            'width="110" style="display:block;max-width:110px;height:auto;margin:0 0 22px;'
             'border:0;outline:none;text-decoration:none;" />'
+        )
+    else:
+        logo_html = (
+            '<p style="margin:0 0 22px;font-size:17px;font-weight:700;letter-spacing:-0.03em;'
+            'color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">Sepurux</p>'
         )
 
     cta_html = ""
     if cta_label and cta_url:
         cta_html = (
-            '<table role="presentation" cellspacing="0" cellpadding="0" style="margin:22px 0 0;">'
-            '<tr>'
-            '<td style="border-radius:999px;">'
+            '<table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0 4px;">'
+            "<tr>"
+            f'<td style="background:{accent};border-radius:6px;">'
             f'<a href="{html.escape(cta_url, quote=True)}" '
-            'style="display:inline-block;padding:13px 22px;border-radius:999px;'
-            f'background:{accent};color:#fffdfa;text-decoration:none;font-weight:700;font-size:14px;">'
+            'style="display:inline-block;padding:12px 24px;border-radius:6px;'
+            f'background:{accent};color:#ffffff;text-decoration:none;font-weight:600;'
+            'font-size:14px;letter-spacing:0.01em;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">'
             f"{html.escape(cta_label)}"
             "</a>"
             "</td>"
@@ -208,48 +212,71 @@ def _email_layout(
         )
 
     resolved_footer_html = footer_html or (
-        '<p style="margin:0 0 6px;">Questions or account issues? '
-        f'<a href="mailto:{escaped_support}" style="color:{secondary};text-decoration:underline;">'
+        '<p style="margin:0 0 5px;">Questions? '
+        f'<a href="mailto:{escaped_support}" style="color:{accent};text-decoration:none;font-weight:500;">'
         f"{escaped_support}"
-        "</a>.</p>"
+        "</a></p>"
         '<p style="margin:0;">Docs: '
-        f'<a href="{escaped_docs}" style="color:{secondary};text-decoration:underline;">'
+        f'<a href="{escaped_docs}" style="color:{accent};text-decoration:none;font-weight:500;">'
         f"{html.escape(_docs_url())}"
-        "</a>.</p>"
+        "</a></p>"
+    )
+
+    intro_callout = (
+        f'<div style="margin:0 0 24px;padding:14px 18px;border-left:3px solid {accent};background:#f9fafb;">'
+        f'<p style="margin:0;color:#374151;font-size:15px;line-height:1.65;">{escaped_intro}</p>'
+        "</div>"
     )
 
     return (
         "<!doctype html>"
-        '<html lang="en"><body style="margin:0;padding:0;background:#f3ede6;">'
+        '<html lang="en">'
+        '<body style="margin:0;padding:0;background:#f1f1f5;'
+        'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif;">'
         f"{_hidden_preheader_html(preheader or subtitle)}"
+        # outer wrapper
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
-        'style="width:100%;background:#f3ede6;padding:24px 12px;">'
-        '<tr><td align="center">'
+        'style="width:100%;background:#f1f1f5;padding:36px 16px 48px;">'
+        "<tr><td align=\"center\">"
+        # card
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
-        'style="max-width:680px;background:#fffdfa;border:1px solid #eadfd1;border-radius:24px;overflow:hidden;">'
-        '<tr><td style="padding:30px 32px 24px;background:#fbf5ee;border-bottom:1px solid #eadfd1;">'
+        'style="max-width:600px;background:#ffffff;border:1px solid #e2e2e8;'
+        'border-radius:8px;overflow:hidden;">'
+        # --- dark header ---
+        '<tr><td style="padding:32px 36px 28px;background:#0d0d1a;">'
         f"{logo_html}"
-        f'<p style="margin:0 0 10px;color:{accent};font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;">{escaped_eyebrow}</p>'
-        f'<h1 style="margin:0;color:#142117;font-size:30px;line-height:1.15;font-weight:700;">{escaped_title}</h1>'
-        f'<p style="margin:12px 0 0;color:#5f6d63;font-size:15px;line-height:1.6;">{escaped_subtitle}</p>'
-        '</td></tr>'
-        '<tr><td style="padding:28px 32px 10px;color:#223127;font-size:15px;line-height:1.75;">'
-        '<div style="margin:0 0 18px;padding:18px 20px;border:1px solid #e8ddd0;border-radius:18px;background:#f7f1ea;">'
-        f'<p style="margin:0;color:{secondary};font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Sepurux</p>'
-        f'<p style="margin:10px 0 0;color:#223127;font-size:15px;line-height:1.75;">{escaped_intro}</p>'
-        '</div>'
+        f'<p style="margin:0 0 10px;color:#a5b4fc;font-size:11px;font-weight:600;'
+        f'letter-spacing:0.13em;text-transform:uppercase;'
+        f'font-family:\'Courier New\',Courier,monospace;">{escaped_eyebrow}</p>'
+        f'<h1 style="margin:0 0 8px;color:#ffffff;font-size:26px;line-height:1.2;'
+        f'font-weight:700;letter-spacing:-0.02em;">{escaped_title}</h1>'
+        f'<p style="margin:0;color:#9ca3af;font-size:14px;line-height:1.6;">{escaped_subtitle}</p>'
+        "</td></tr>"
+        # --- body ---
+        '<tr><td style="padding:32px 36px 20px;">'
+        f"{intro_callout}"
         f"{body_html}"
         f"{cta_html}"
-        '</td></tr>'
-        '<tr><td style="padding:20px 32px 28px;">'
-        '<div style="padding-top:16px;border-top:1px solid #eadfd1;color:#66756c;font-size:12px;line-height:1.7;">'
+        "</td></tr>"
+        # --- footer ---
+        '<tr><td style="padding:20px 36px 28px;background:#fafafa;border-top:1px solid #f0f0f4;">'
+        '<div style="color:#9ca3af;font-size:12px;line-height:1.75;">'
         f"{resolved_footer_html}"
-        '</div>'
-        '</td></tr>'
-        '</table>'
-        '</td></tr>'
-        '</table>'
-        '</body></html>'
+        "</div>"
+        "</td></tr>"
+        "</table>"
+        # bottom tagline
+        '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+        'style="max-width:600px;">'
+        '<tr><td style="padding:14px 4px 0;text-align:center;">'
+        '<p style="margin:0;color:#9ca3af;font-size:11px;letter-spacing:0.03em;">'
+        "Sepurux &middot; AI Agent Reliability Testing"
+        "</p>"
+        "</td></tr>"
+        "</table>"
+        "</td></tr>"
+        "</table>"
+        "</body></html>"
     )
 
 
@@ -400,7 +427,7 @@ def build_newsletter_email(
     body_html = _rich_text_to_html(body)
     if summary_line:
         body_html = (
-            '<p style="margin:0 0 14px;color:#5f6d63;font-size:15px;line-height:1.75;">'
+            '<p style="margin:0 0 14px;color:#6b7280;font-size:15px;line-height:1.75;">'
             f"{html.escape(summary_line)}"
             "</p>"
         ) + body_html
@@ -442,14 +469,14 @@ def send_welcome_email(*, to_email: str, recipient_name: str | None, project_nam
         subtitle="Your workspace is ready to run reliability campaigns.",
         intro_line=f"Hi {name}, thanks for joining Sepurux.",
         body_html=(
-            f'<p style="margin:0 0 14px;color:#223127;"><strong>Workspace:</strong> {html.escape(project_name)}</p>'
-            '<p style="margin:0 0 10px;color:#223127;"><strong>Quick start</strong></p>'
-            '<ol style="margin:0 0 16px 20px;padding:0;color:#223127;font-size:15px;line-height:1.75;">'
+            f'<p style="margin:0 0 14px;color:#111827;"><strong>Workspace:</strong> {html.escape(project_name)}</p>'
+            '<p style="margin:0 0 10px;color:#111827;"><strong>Quick start</strong></p>'
+            '<ol style="margin:0 0 16px 20px;padding:0;color:#111827;font-size:15px;line-height:1.75;">'
             '<li style="margin:0 0 8px;">Sign in and open your dashboard</li>'
             '<li style="margin:0 0 8px;">Create an API key under Settings &gt; API Keys</li>'
             f'<li style="margin:0;">Send a trace or run your first campaign against <code>{html.escape(api_url)}</code></li>'
             "</ol>"
-            f'<p style="margin:0;color:#5f6d63;">Docs: <a href="{html.escape(docs_url, quote=True)}" '
+            f'<p style="margin:0;color:#6b7280;">Docs: <a href="{html.escape(docs_url, quote=True)}" '
             f'style="color:{html.escape(_secondary_color(), quote=True)};text-decoration:underline;">'
             f"{html.escape(docs_url)}</a></p>"
         ),
@@ -489,13 +516,13 @@ def send_member_invite_email(
         subtitle="You were invited to collaborate in Sepurux.",
         intro_line=f"Hi {name}, {inviter_label} invited you to {project_name} as {role}.",
         body_html=(
-            '<p style="margin:0 0 10px;color:#223127;"><strong>Workspace details</strong></p>'
-            '<div style="margin:0 0 16px;padding:14px;border:1px solid #e8ddd0;border-radius:16px;background:#f7f1ea;color:#223127;">'
+            '<p style="margin:0 0 10px;color:#111827;"><strong>Workspace details</strong></p>'
+            '<div style="margin:0 0 16px;padding:14px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;color:#111827;">'
             f"<div><code>Project ID: {html.escape(str(project_id))}</code></div>"
             '</div>'
-            '<p style="margin:0 0 14px;color:#223127;">For security, API keys are not sent by email. '
+            '<p style="margin:0 0 14px;color:#111827;">For security, API keys are not sent by email. '
             'Ask your workspace admin for API credentials, or sign in to your workspace.</p>'
-            f'<p style="margin:0;color:#5f6d63;">Docs: <a href="{html.escape(docs_url, quote=True)}" '
+            f'<p style="margin:0;color:#6b7280;">Docs: <a href="{html.escape(docs_url, quote=True)}" '
             f'style="color:{html.escape(_secondary_color(), quote=True)};text-decoration:underline;">'
             f"{html.escape(docs_url)}</a></p>"
         ),
@@ -529,8 +556,8 @@ def send_password_reset_email(
         subtitle="Secure access to your Sepurux workspace.",
         intro_line=f"Hi {name}, we received a password reset request.",
         body_html=(
-            f'<p style="margin:0 0 12px;color:#223127;">This reset link expires in <strong>{expires_minutes} minutes</strong>.</p>'
-            '<p style="margin:0;color:#5f6d63;">If you did not request this, you can safely ignore this email.</p>'
+            f'<p style="margin:0 0 12px;color:#111827;">This reset link expires in <strong>{expires_minutes} minutes</strong>.</p>'
+            '<p style="margin:0;color:#6b7280;">If you did not request this, you can safely ignore this email.</p>'
         ),
         cta_label="Reset Password",
         cta_url=reset_url,
@@ -553,7 +580,7 @@ def send_password_changed_email(*, to_email: str, recipient_name: str | None) ->
         subtitle="Your Sepurux account credentials were changed.",
         intro_line=f"Hi {name}, your password has been changed successfully.",
         body_html=(
-            '<p style="margin:0;color:#223127;">If this was not you, contact support immediately and rotate '
+            '<p style="margin:0;color:#111827;">If this was not you, contact support immediately and rotate '
             'your API keys.</p>'
         ),
         preheader="Your Sepurux password was changed.",
@@ -583,11 +610,11 @@ def send_waitlist_approval_email(
     detail_lines = []
     if company_label:
         detail_lines.append(
-            f'<p style="margin:0 0 10px;color:#223127;"><strong>Company:</strong> {html.escape(company_label)}</p>'
+            f'<p style="margin:0 0 10px;color:#111827;"><strong>Company:</strong> {html.escape(company_label)}</p>'
         )
     if role_label:
         detail_lines.append(
-            f'<p style="margin:0 0 14px;color:#223127;"><strong>Role:</strong> {html.escape(role_label)}</p>'
+            f'<p style="margin:0 0 14px;color:#111827;"><strong>Role:</strong> {html.escape(role_label)}</p>'
         )
 
     if registration_enabled:
@@ -600,9 +627,9 @@ def send_waitlist_approval_email(
             "Use the button below, then review the docs before you send your first traces."
         )
     body_html = "".join(detail_lines) + (
-        '<p style="margin:0 0 14px;color:#223127;">Your request is now in the approved cohort. '
+        '<p style="margin:0 0 14px;color:#111827;">Your request is now in the approved cohort. '
         f"{html.escape(access_copy)}</p>"
-        f'<p style="margin:0;color:#5f6d63;">Docs: <a href="{html.escape(docs_url, quote=True)}" '
+        f'<p style="margin:0;color:#6b7280;">Docs: <a href="{html.escape(docs_url, quote=True)}" '
         f'style="color:{html.escape(_secondary_color(), quote=True)};text-decoration:underline;">{html.escape(docs_url)}</a></p>'
     )
 
@@ -703,8 +730,8 @@ def send_waitlist_support_notification(
     )
 
     body_html = (
-        '<p style="margin:0 0 14px;color:#223127;">A new waitlist request was submitted.</p>'
-        '<div style="margin:0 0 16px;padding:14px;border:1px solid #e8ddd0;border-radius:16px;background:#f7f1ea;color:#223127;">'
+        '<p style="margin:0 0 14px;color:#111827;">A new waitlist request was submitted.</p>'
+        '<div style="margin:0 0 16px;padding:14px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;color:#111827;">'
         f'<p style="margin:0 0 8px;"><strong>Email:</strong> {html.escape(normalized_email)}</p>'
         f'<p style="margin:0 0 8px;"><strong>Role:</strong> {html.escape(role_label)}</p>'
         + (
@@ -773,9 +800,9 @@ def send_bug_report_notification(
     if screenshot_label and screenshot_label.startswith("data:image/"):
         screenshot_html = (
             '<div style="margin:18px 0 0;">'
-            '<p style="margin:0 0 10px;color:#5f6d63;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Screenshot</p>'
+            '<p style="margin:0 0 10px;color:#6b7280;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Screenshot</p>'
             f'<img src="{html.escape(screenshot_label, quote=True)}" alt="Bug report screenshot" '
-            'style="display:block;max-width:100%;border-radius:18px;border:1px solid #e8ddd0;" />'
+            'style="display:block;max-width:100%;border-radius:6px;border:1px solid #e5e7eb;" />'
             "</div>"
         )
         screenshot_text = "\nScreenshot: included"
@@ -800,8 +827,8 @@ def send_bug_report_notification(
     ).replace("\n\n\n", "\n\n")
 
     body_html = (
-        '<p style="margin:0 0 14px;color:#223127;">A new in-app bug report was submitted.</p>'
-        '<div style="margin:0 0 16px;padding:14px;border:1px solid #e8ddd0;border-radius:16px;background:#f7f1ea;color:#223127;">'
+        '<p style="margin:0 0 14px;color:#111827;">A new in-app bug report was submitted.</p>'
+        '<div style="margin:0 0 16px;padding:14px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;color:#111827;">'
         f'<p style="margin:0 0 8px;"><strong>Reporter:</strong> {html.escape(name_label)} ({html.escape(email_label)})</p>'
         f'<p style="margin:0 0 8px;"><strong>Role:</strong> {html.escape(role_label)}</p>'
         f'<p style="margin:0 0 8px;"><strong>Project:</strong> {html.escape(project_label)}</p>'
@@ -810,10 +837,10 @@ def send_bug_report_notification(
         f'<p style="margin:0 0 8px;"><strong>Page:</strong> {html.escape(page_label)}</p>'
         f'<p style="margin:0;"><strong>Viewport:</strong> {html.escape(viewport_label)}</p>'
         "</div>"
-        '<div style="margin:0 0 16px;padding:16px;border:1px solid #e8ddd0;border-radius:18px;background:#fffdfa;">'
-        f'<p style="margin:0 0 10px;color:#5f6d63;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">{html.escape(category_label)}</p>'
-        f'<p style="margin:0 0 10px;color:#142117;font-size:18px;font-weight:700;line-height:1.4;">{html.escape(title_label)}</p>'
-        f'<p style="margin:0;color:#223127;font-size:15px;line-height:1.75;white-space:pre-wrap;">{html.escape(description_label)}</p>'
+        '<div style="margin:0 0 16px;padding:16px;border:1px solid #e5e7eb;border-radius:6px;background:#fffdfa;">'
+        f'<p style="margin:0 0 10px;color:#6b7280;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">{html.escape(category_label)}</p>'
+        f'<p style="margin:0 0 10px;color:#0f0f23;font-size:18px;font-weight:700;line-height:1.4;">{html.escape(title_label)}</p>'
+        f'<p style="margin:0;color:#111827;font-size:15px;line-height:1.75;white-space:pre-wrap;">{html.escape(description_label)}</p>'
         "</div>"
         f"{screenshot_html}"
     )
