@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, Bot, Hammer, RefreshCcw, Wrench, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bot, Hammer, Play, RefreshCcw, Wrench, Zap } from "lucide-react";
 
 import { api, type TraceMetadata, type TraceTimelineStep } from "@/lib/api";
 import { formatDurationMs, formatRelativeDate, shortId } from "@/lib/format";
@@ -64,9 +64,16 @@ export function TraceDetailView({ traceId }: { traceId: string }) {
               : "Metadata, timeline, and payload preview for one trace."}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()}>
-          <RefreshCcw className="h-4 w-4" /> Refresh
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void load()}>
+            <RefreshCcw className="h-4 w-4" /> Refresh
+          </Button>
+          <Button asChild size="sm">
+            <Link href={`/campaigns/new?traceId=${traceId}`}>
+              <Play className="h-4 w-4" /> Run test
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {state.status === "loading" ? (
