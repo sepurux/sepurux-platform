@@ -156,7 +156,7 @@ export function HomeContent() {
             transition={{ duration: 0.88, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
             className="mt-9"
           >
-            {/* Status bar — looks like the debugger already ran */}
+            {/* Status bar — progressive reveal after demo analyzes */}
             <div
               className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-t-xl px-5 py-3"
               style={{
@@ -165,7 +165,12 @@ export function HomeContent() {
                 borderBottom: "1px solid rgba(255,255,255,0.05)",
               }}
             >
-              <div className="flex items-center gap-2">
+              <motion.div
+                className="flex items-center gap-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 1.15 }}
+              >
                 <span className="relative flex h-1.5 w-1.5 shrink-0">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "#34D399" }} />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: "#34D399" }} />
@@ -176,29 +181,68 @@ export function HomeContent() {
                 >
                   Analysis complete
                 </span>
-              </div>
+              </motion.div>
 
-              <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 1.3 }}
+                style={{ color: "rgba(255,255,255,0.1)" }}
+              >·</motion.span>
 
-              <span className="font-mono text-[10px]" style={{ color: "rgba(239,68,68,0.85)" }}>
+              <motion.span
+                className="font-mono text-[10px]"
+                style={{ color: "rgba(239,68,68,0.85)" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 1.3 }}
+              >
                 1 fault detected
-              </span>
+              </motion.span>
 
-              <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 1.45 }}
+                style={{ color: "rgba(255,255,255,0.1)" }}
+              >·</motion.span>
 
-              <span className="font-mono text-[10px]" style={{ color: "rgba(245,158,11,0.75)" }}>
+              <motion.span
+                className="font-mono text-[10px]"
+                style={{ color: "rgba(245,158,11,0.75)" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 1.45 }}
+              >
                 3 steps affected
-              </span>
+              </motion.span>
 
-              <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 1.6 }}
+                style={{ color: "rgba(255,255,255,0.1)" }}
+              >·</motion.span>
 
-              <span className="font-mono text-[10px]" style={{ color: "rgba(167,139,250,0.75)" }}>
+              <motion.span
+                className="font-mono text-[10px]"
+                style={{ color: "rgba(167,139,250,0.75)" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 1.6 }}
+              >
                 Fix ready
-              </span>
+              </motion.span>
 
-              <span className="ml-auto font-mono text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+              <motion.span
+                className="ml-auto font-mono text-[10px]"
+                style={{ color: "rgba(255,255,255,0.18)" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 1.15 }}
+              >
                 trc_8f2d94a1c3e7
-              </span>
+              </motion.span>
             </div>
 
             {/* Demo — top corners square to connect with status bar */}
