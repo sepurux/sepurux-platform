@@ -101,7 +101,7 @@ export function ResetPasswordView() {
       ) : null}
 
       {successMessage ? (
-        <p className="mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+        <p className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
           {successMessage}
         </p>
       ) : null}
