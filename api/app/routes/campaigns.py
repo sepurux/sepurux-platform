@@ -131,7 +131,7 @@ def post_campaign(
     mutation_set = payload.mutation_set or _default_campaign_mutation_set()
     _ensure_replay_mutation_set(mutation_set, mutation_pack_id=payload.mutation_pack_id)
 
-    eval_set = payload.eval_set.model_dump(exclude_none=True, exclude_unset=True)
+    eval_set = payload.eval_set.model_dump(mode="json", exclude_none=True, exclude_unset=True)
     campaign = create_campaign(
         db,
         project_id=project_scope.project_id,
