@@ -25,12 +25,11 @@ export function EnterpriseReadinessSection() {
           <div className="max-w-xl">
             <p className="section-kicker">Governed scale</p>
             <h2 className="section-heading mt-4 text-[--text-primary]">
-              Start with reliability testing, then grow into a control plane.
+              Start with the debugger, then grow into a full control plane.
             </h2>
             <p className="mt-5 text-base leading-8 text-slate-300 md:text-lg">
-              The product already spans more than replay. As programs mature, Sepurux becomes the
-              place where platform teams, security reviewers, and operators evaluate whether an AI
-              workflow should run at all.
+              As programs mature, Sepurux becomes the place where platform teams, security
+              reviewers, and operators evaluate whether an AI workflow should run at all.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">

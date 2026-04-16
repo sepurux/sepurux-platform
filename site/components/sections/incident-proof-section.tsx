@@ -4,7 +4,7 @@ const incidents = [
   {
     title: "Database timeout cascade",
     impact: "Retries would have stacked, delayed refunds, and obscured the real first failing tool.",
-    detectedBy: "Mutation pack: db.timeout + replay attribution",
+    detectedBy: "Stress test: db.timeout + replay attribution",
     response: "Caught in staging, replayed, and hardened before rollout.",
   },
   {
@@ -16,7 +16,7 @@ const incidents = [
   {
     title: "Schema drift in webhook parsing",
     impact: "Downstream logic would have silently dropped billing events while returning superficially valid responses.",
-    detectedBy: "Mutated schema replay + contract validation",
+    detectedBy: "Schema stress test + contract validation",
     response: "Parser was hardened and the CI gate blocked the change until fixed.",
   },
 ];

@@ -4,9 +4,9 @@ import { DocsCodeBlock, DocsSection, DocsShell } from "@/components/docs/docs-sh
 import { buildPageMetadata, siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "CI/CD Gate",
+  title: "CI Integration",
   description:
-    "Integrate Sepurux into CI/CD pipelines and fail release workflows when reliability or safety thresholds are violated.",
+    "Add Sepurux trace checks to your CI pipeline and block merges or deploys when pass rate drops below your threshold.",
   path: "/docs/ci-cd",
 });
 
@@ -231,9 +231,9 @@ const decisionSnippet = `{
 export default function CICDPage() {
   return (
     <DocsShell
-      kicker="Docs / CI-CD"
-      title="Turn reliability findings into release gates."
-      description="Use Sepurux in pull request and deployment workflows so regressions are blocked before production rollout."
+      kicker="Docs / CI"
+      title="Run trace checks in CI and block on failures."
+      description="Add Sepurux to your pull request and deployment workflows so failing traces block merges before they hit production."
       nav={[
         { href: "#action", label: "GitHub Action" },
         { href: "#workflow", label: "Full Workflow" },

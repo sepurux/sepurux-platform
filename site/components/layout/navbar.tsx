@@ -71,19 +71,19 @@ export function Navbar() {
             })}
           </nav>
 
-          <div className="hidden items-center gap-3 lg:flex">
+          <div className="hidden items-center gap-4 lg:flex">
             <Link
               href={loginHref}
-              className="inline-flex h-10 items-center justify-center rounded-full border border-white/10 bg-white/6 px-4 font-mono text-[12px] font-medium uppercase tracking-[0.1em] text-[rgba(241,240,245,0.84)] transition-colors hover:border-white/16 hover:bg-white/10 hover:text-white"
+              className="font-mono text-[12px] font-medium uppercase tracking-[0.1em] transition-colors"
+              style={{ color: "rgba(155,152,171,0.55)" }}
             >
               Login
             </Link>
             <Link
               href="/sandbox"
-              className="group inline-flex items-center gap-1.5 font-mono text-[12px] font-medium uppercase tracking-[0.1em] transition-colors"
-              style={{ color: "rgba(167,139,250,0.8)" }}
+              className="group inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--color-accent)] px-4 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_8px_20px_rgba(124,58,237,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
-              Try it free
+              Debug a trace
               <span className="transition-transform duration-200 group-hover:translate-x-1" aria-hidden>
                 →
               </span>
@@ -137,17 +137,17 @@ export function Navbar() {
               })}
               <div className="mt-4 flex flex-col gap-2 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                 <Link
-                  href={loginHref}
-                  className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[12px] font-medium uppercase tracking-[0.1em] text-[rgba(241,240,245,0.84)] transition-colors hover:border-white/16 hover:bg-white/10 hover:text-white"
+                  href="/sandbox"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--color-accent)] px-4 py-2.5 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_8px_20px_rgba(124,58,237,0.22)]"
                 >
-                  Login
+                  Debug a trace →
                 </Link>
                 <Link
-                  href="/sandbox"
-                  className="inline-flex items-center gap-2 font-mono text-[12px] font-medium uppercase tracking-[0.1em]"
-                  style={{ color: "rgba(167,139,250,0.8)" }}
+                  href={loginHref}
+                  className="inline-flex items-center justify-center rounded-full px-4 py-2 font-mono text-[12px] font-medium uppercase tracking-[0.1em]"
+                  style={{ color: "rgba(155,152,171,0.55)" }}
                 >
-                  Try it free →
+                  Login
                 </Link>
               </div>
             </div>

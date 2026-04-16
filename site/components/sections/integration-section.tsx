@@ -66,7 +66,7 @@ const workflow = [
   },
   {
     title: "Promote stable traces into replay and CI",
-    description: "Hand the same trace to replay, mutation testing, or pre-release checks when the fix is ready.",
+    description: "Hand the same trace to replay, stress testing, or pre-release checks when the fix is ready.",
   },
 ];
 

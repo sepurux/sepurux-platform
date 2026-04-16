@@ -8,7 +8,7 @@ const screenshots = [
   {
     title: "Dashboard",
     src: "/images/dashboard.png",
-    alt: "Sepurux dashboard showing agent trace replay and mutation timeline",
+    alt: "Sepurux dashboard showing agent trace replay and stress test timeline",
     width: 1859,
     height: 964,
   },
@@ -41,7 +41,7 @@ export function ScreenshotGallerySection() {
             Every failure, fully visible.
           </h2>
           <p className="mt-4 text-base leading-8 text-slate-400">
-            Replay traces, inspect mutations, and read the reliability report — all in one place.
+            Replay traces, review stress test results, and read the failure report — all in one place.
           </p>
         </div>
 

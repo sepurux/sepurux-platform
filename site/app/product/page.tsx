@@ -23,7 +23,7 @@ import { ScreenshotGallerySection } from "@/components/sections/screenshot-galle
 export const metadata: Metadata = buildPageMetadata({
   title: "Product",
   description:
-    "Explore Sepurux end to end: trace debugger, replay, mutation packs, policy packs, CI gating, and enterprise controls.",
+    "Explore Sepurux end to end: trace debugger, replay, stress testing, policy controls, CI integration, and team governance.",
   path: "/product",
 });
 
@@ -39,7 +39,7 @@ type Capability = {
 
 const capabilities: Capability[] = [
   {
-    title: "Analyze Trace",
+    title: "Trace Debugger",
     eyebrow: "Immediate debugger",
     description:
       "Paste JSON, logs, or raw text and isolate the failure location, likely cause, and next fix before sign-in.",
@@ -62,50 +62,50 @@ const capabilities: Capability[] = [
     title: "Compare Runs",
     eyebrow: "Change validation",
     description:
-      "Place the failed run next to the next run and verify whether the fix actually improved the path.",
+      "Place the failed run next to the fixed run and verify whether the change actually improved the path.",
     bullets: ["Side-by-side deltas", "Regression drift visible", "Shareable evidence"],
     href: "/runs",
     linkLabel: "Compare recent runs",
     icon: GitCompareArrows,
   },
   {
-    title: "Mutation Packs",
-    eyebrow: "Controlled chaos",
+    title: "Stress Tests",
+    eyebrow: "Find what breaks",
     description:
-      "Inject schema drift, latency, and injection faults into the same agent path before release.",
+      "Inject timeouts, schema breaks, and rate limits into a passing trace to find failures before release.",
     bullets: ["Weighted scenarios", "Seeded attempts", "Per-run trace output"],
     href: "/mutation-packs",
-    linkLabel: "Review mutation packs",
+    linkLabel: "Run a stress test",
     icon: FlaskConical,
   },
   {
-    title: "Policy Packs",
+    title: "Policy Controls",
     eyebrow: "Guardrails",
     description:
-      "Require approval tokens and unsafe-action checks when the workflow reaches sensitive operations.",
+      "Set limits on which tools your agent can call. Require approval before sensitive operations go through.",
     bullets: ["Approval rules", "Tool zoning", "Audit-friendly events"],
     href: "/policies",
-    linkLabel: "Open policy packs",
+    linkLabel: "Configure policies",
     icon: ShieldCheck,
   },
   {
-    title: "CI Gate",
-    eyebrow: "Release control",
+    title: "CI Integration",
+    eyebrow: "Block on failure",
     description:
-      "Turn trace evidence into a merge or deploy verdict with coverage thresholds and GitHub Actions.",
+      "Block merges and deploys when trace checks fail below your pass threshold. Integrates with GitHub Actions.",
     bullets: ["Scenario coverage", "Pass-rate thresholds", "Branch protection ready"],
     href: "/docs/ci-cd",
     linkLabel: "Read the CI guide",
     icon: GitBranch,
   },
   {
-    title: "Enterprise Controls",
+    title: "Team Controls",
     eyebrow: "Governed scale",
     description:
-      "Keep the release process tenant-scoped, reviewable, and ready for security and compliance workflows.",
+      "Keep your agent workflows reviewable and ready for security and compliance requirements as your team grows.",
     bullets: ["Scoped project access", "Audit trails", "Security docs"],
     href: "/docs/policy-security",
-    linkLabel: "See governance controls",
+    linkLabel: "See team controls",
     icon: Workflow,
   },
 ];
@@ -116,19 +116,19 @@ const heroRows = [
     copy: "Paste a trace and see where it failed or looks risky.",
   },
   {
-    title: "Operational next",
-    copy: "Replay, compare, and mutate the same path before rollout.",
+    title: "Then go deeper",
+    copy: "Replay, compare runs, and stress-test the same path before rollout.",
   },
   {
-    title: "Release control",
-    copy: "Move the evidence into policy packs and CI checks.",
+    title: "CI integration",
+    copy: "Add checks to your CI pipeline to block regressions automatically.",
   },
 ];
 
 const heroMetrics = [
   { label: "Analysis", value: "Instant", detail: "No sign-in required" },
   { label: "History", value: "Saved later", detail: "When the trace matters" },
-  { label: "Gate", value: "CI-ready", detail: "Thresholds and approvals" },
+  { label: "CI", value: "CI-ready", detail: "Block on pass rate" },
 ];
 
 function CapabilityCard({
@@ -226,12 +226,11 @@ export default function ProductPage() {
             <div className="max-w-3xl">
               <p className="section-kicker ink-kicker">Product</p>
               <h1 className="page-hero-title mt-4 text-white">
-                One product from trace analysis to CI gating.
+                Debug fast. Everything else follows when you need it.
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-                Sepurux starts with the debugger: paste a trace, see where it failed or looks risky,
-                and move into replay, mutation packs, policy packs, and release gating when you
-                need to operationalize the fix.
+                Paste a trace, see where it failed, and move into replay, stress testing, and CI
+                checks when you're ready. No account required to start.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -252,7 +251,7 @@ export default function ProductPage() {
                   href="/docs/ci-cd"
                   className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
                 >
-                  Explore CI gate
+                  CI integration docs
                 </Link>
               </div>
 
@@ -261,9 +260,9 @@ export default function ProductPage() {
                   "Trace debugger",
                   "Replay",
                   "Compare runs",
-                  "Mutation packs",
-                  "Policy packs",
-                  "CI gating",
+                  "Stress tests",
+                  "Policy controls",
+                  "CI integration",
                 ].map((chip) => (
                   <span
                     key={chip}
@@ -284,11 +283,10 @@ export default function ProductPage() {
         <div className="max-w-3xl">
           <p className="section-kicker">Platform surfaces</p>
           <h2 className="section-heading mt-3 text-[--text-primary]">
-            Built to start with analysis and end with a release verdict.
+            Starts with a trace. Goes as far as you need.
           </h2>
           <p className="section-lead mt-5">
-            The product is deliberately ordered: debugger first, operational workflows second,
-            governance and CI last.
+            Debugger first, then replay and stress testing, then CI checks and team controls.
           </p>
         </div>
 
@@ -310,11 +308,11 @@ export default function ProductPage() {
           <div className="mx-auto max-w-4xl rounded-[32px] border border-white/10 bg-white/[0.03] p-7 shadow-[0_24px_72px_rgba(0,0,0,0.24)] md:p-10">
             <p className="section-kicker ink-kicker">Ready when you are</p>
             <h2 className="section-heading mt-4 text-white">
-              Start with the debugger, then harden the fix into CI.
+              Start with the trace. Go further when you're ready.
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-              Use the sandbox for the first analysis, then move into replay, policy packs, and CI
-              gating when you want the answer to stick.
+              Use the sandbox for the first analysis, then move into replay, stress testing, and CI
+              checks when you want the fix to hold.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -329,7 +327,7 @@ export default function ProductPage() {
                 href="/docs/ci-cd"
                 className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
               >
-                Read CI guide
+                CI integration docs
               </Link>
               <Link
                 href="/waitlist"

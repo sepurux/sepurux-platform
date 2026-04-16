@@ -6,7 +6,7 @@ import { buildPageMetadata, siteConfig } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Policy & Security",
   description:
-    "Define approval-aware policy packs and tool security zones to reduce unsafe AI actions before deployment.",
+    "Set limits on what your agent can do. Require approval for sensitive tool calls and assign security zones before deployment.",
   path: "/docs/policy-security",
 });
 
@@ -49,9 +49,9 @@ const checklist = [
 export default function PolicySecurityPage() {
   return (
     <DocsShell
-      kicker="Docs / Policy-Security"
-      title="Apply guardrails before incidents happen."
-      description="Policy packs and security zoning let teams enforce safe tool behavior while keeping deployment speed."
+      kicker="Docs / Policy"
+      title="Control what your agent can do."
+      description="Set limits on which tools your agent can call. Require approval for sensitive operations and assign security zones to reduce risk before release."
       nav={[
         { href: "#policy", label: "Policy Packs" },
         { href: "#security-zones", label: "Security Zones" },
