@@ -313,32 +313,36 @@ export function InternalEmailView() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-[28px] border border-[#e9dbcb] bg-[#fffaf5] p-5 shadow-[0_20px_50px_rgba(20,33,23,0.12)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d7843b]">Live Preview</p>
-              <div className="mt-4 overflow-hidden rounded-[24px] border border-[#eadfd1] bg-white">
-                <div className="border-b border-[#eadfd1] bg-[#fbf5ee] px-6 py-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d7843b]">
+            <div className="rounded-2xl border border-border/70 bg-card/80 p-5 shadow-panel">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Live Preview</p>
+              <div className="mt-4 overflow-hidden rounded-xl border border-border/60 bg-white">
+                {/* Header — dark */}
+                <div className="bg-[#0d0d1a] px-6 py-7">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.13em] text-[#a5b4fc]">
                     {form.eyebrow || "Sepurux Newsletter"}
                   </p>
-                  <h3 className="mt-3 text-[28px] font-semibold leading-[1.1] text-[#142117]">{form.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#5f6d63]">
+                  <h3 className="mt-3 text-[26px] font-bold leading-[1.15] tracking-[-0.02em] text-white">
+                    {form.title || "Newsletter title"}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#9ca3af]">
                     {form.preview_text || form.summary || form.subject}
                   </p>
                 </div>
-                <div className="space-y-4 px-6 py-6 text-sm leading-7 text-[#223127]">
-                  <div className="rounded-[18px] border border-[#e8ddd0] bg-[#f7f1ea] px-5 py-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4f8767]">Sepurux</p>
-                    <p className="mt-2 text-sm leading-7 text-[#223127]">
+                {/* Body */}
+                <div className="space-y-4 bg-[#f9fafb] px-6 py-6 text-sm leading-7 text-[#111827]">
+                  <div className="rounded-md border-l-[3px] border-[#4f46e5] border border-[#e5e7eb] bg-white px-5 py-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4f46e5]">Sepurux</p>
+                    <p className="mt-2 text-sm leading-7 text-[#374151]">
                       {form.summary || "A concise update for subscribed Sepurux users."}
                     </p>
                   </div>
                   {previewBlocks.map((block, index) =>
                     block.type === "paragraph" ? (
-                      <p key={index} className="text-sm leading-7 text-[#223127]">
+                      <p key={index} className="text-sm leading-7 text-[#374151]">
                         {block.items[0]}
                       </p>
                     ) : (
-                      <ul key={index} className="list-disc space-y-2 pl-5 text-sm leading-7 text-[#223127]">
+                      <ul key={index} className="list-disc space-y-2 pl-5 text-sm leading-7 text-[#374151]">
                         {block.items.map((item) => (
                           <li key={item}>{item}</li>
                         ))}
@@ -347,14 +351,14 @@ export function InternalEmailView() {
                   )}
                   {form.cta_label && form.cta_url ? (
                     <div className="pt-2">
-                      <span className="inline-flex rounded-full bg-[#d7843b] px-5 py-3 text-sm font-semibold text-white">
+                      <span className="inline-flex rounded-md bg-[#4f46e5] px-5 py-3 text-sm font-semibold text-white">
                         {form.cta_label}
                       </span>
                     </div>
                   ) : null}
-                  <div className="border-t border-[#eadfd1] pt-4 text-xs leading-6 text-[#66756c]">
+                  <div className="border-t border-[#e5e7eb] pt-4 text-xs leading-6 text-[#6b7280]">
                     <p>You are receiving this email because you are subscribed to Sepurux product updates.</p>
-                    <p className="mt-1 text-[#4f8767]">Unsubscribe link appears in every newsletter.</p>
+                    <p className="mt-1 text-[#4f46e5]">Unsubscribe link appears in every newsletter.</p>
                   </div>
                 </div>
               </div>
