@@ -145,7 +145,7 @@ export function HomeContent() {
               className="mt-5 max-w-lg font-sans text-base leading-7"
               style={{ color: "rgba(155,152,171,0.68)" }}
             >
-              Paste a trace. Get the exact step that failed, what broke next, and how to fix it.
+              Paste a trace. Get the exact step that failed, what broke next, and how to fix it. Debug in the browser, record in code, and gate in CI.
             </p>
           </motion.div>
 
@@ -429,7 +429,7 @@ export function HomeContent() {
             className="mt-5 max-w-xl font-sans text-base leading-7"
             style={{ color: "rgba(155,152,171,0.72)" }}
           >
-            Sepurux starts as a debugger. When you&apos;re ready, you can replay, stress-test, and run scheduled checks from the same trace.
+            Sepurux starts as a debugger. Then you can install the recorder, capture traces automatically, replay and stress-test the same path, and gate releases in CI.
           </p>
         </FadeUp>
 
@@ -524,6 +524,43 @@ export function HomeContent() {
               </span>
             ))}
           </div>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+            {[
+              "pip install sepurux",
+              "npm install @sepurux/recorder",
+              "go get github.com/sepurux/go-recorder",
+            ].map((cmd) => (
+              <span
+                key={cmd}
+                className="font-mono text-[11px]"
+                style={{ color: "rgba(155,152,171,0.52)" }}
+              >
+                {cmd}
+              </span>
+            ))}
+          </div>
+          <p
+            className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em]"
+            style={{ color: "rgba(155,152,171,0.34)" }}
+          >
+            Debug in the browser. Record in code. Gate in CI.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Link
+              href="/docs/getting-started"
+              className="font-mono text-[11px] font-medium transition-opacity hover:opacity-70"
+              style={{ color: "rgba(155,152,171,0.52)" }}
+            >
+              Install the recorder →
+            </Link>
+            <Link
+              href="/docs/ci-cd"
+              className="font-mono text-[11px] font-medium transition-opacity hover:opacity-70"
+              style={{ color: "rgba(155,152,171,0.52)" }}
+            >
+              Gate in CI →
+            </Link>
+          </div>
         </FadeUp>
       </section>
 
@@ -569,11 +606,18 @@ export function HomeContent() {
               </span>
             </Link>
             <Link
-              href="/docs"
+              href="/docs/getting-started"
               className="font-mono text-sm font-medium transition-opacity hover:opacity-70"
               style={{ color: "rgba(155,152,171,0.55)" }}
             >
-              Read the docs →
+              Install the recorder →
+            </Link>
+            <Link
+              href="/docs/ci-cd"
+              className="font-mono text-sm font-medium transition-opacity hover:opacity-70"
+              style={{ color: "rgba(155,152,171,0.55)" }}
+            >
+              Gate in CI →
             </Link>
           </div>
         </FadeUp>
