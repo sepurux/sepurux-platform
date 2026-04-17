@@ -78,16 +78,39 @@ def evaluate_contract(
     """Evaluate a quality contract against a completed CI batch.
 
     Checks:
+    - required_pack_ids: each required check must appear in the executed batch
     - required_tools: each required tool must appear in at least one batch trace
     - min_attempts_per_pack: total attempts must meet the minimum
     """
     violations: list[ContractViolation] = []
 
-    # 1. Pack preferences are advisory and are not enforced as hard failures.
-    # Keep required_pack_ids in reports for operator visibility, but do not
-    # append wrong_pack violations so campaign outcomes focus on behavior
-    # coverage and execution quality.
+    # 1. Required checks — every required pack must appear in the executed batch.
     required_pack_ids: list[str] = list(contract.required_pack_ids or [])
+    covered_pack_ids: set[str] = set()
+    for run in batch_runs:
+        if run.mutation_pack_id is not None:
+            covered_pack_ids.add(str(run.mutation_pack_id))
+        summary = run.summary if isinstance(run.summary, dict) else {}
+        resolved_pack_ids = summary.get("resolved_mutation_pack_ids")
+        if isinstance(resolved_pack_ids, list):
+            for pack_id in resolved_pack_ids:
+                if isinstance(pack_id, str) and pack_id.strip():
+                    covered_pack_ids.add(pack_id.strip())
+
+    missing_pack_ids = [pack_id for pack_id in required_pack_ids if pack_id not in covered_pack_ids]
+    if missing_pack_ids:
+        violations.append(
+            ContractViolation(
+                type="wrong_pack",
+                detail=(
+                    f"{len(missing_pack_ids)} required check(s) never ran in this batch: "
+                    + ", ".join(missing_pack_ids)
+                ),
+                missing=missing_pack_ids,
+                required=required_pack_ids,
+                actual=", ".join(sorted(covered_pack_ids)) if covered_pack_ids else "baseline_only",
+            )
+        )
 
     # 2. Tool coverage — collect all tool calls across batch traces
     covered_tools: set[str] = set()

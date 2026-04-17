@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Archive, ArrowLeft, Play, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
 
@@ -18,6 +18,13 @@ import {
 } from "@/lib/api";
 import { IdPill } from "@/components/ui/id-pill";
 import { formatRelativeDate, shortId } from "@/lib/format";
+import {
+  getRunPreset,
+  isRunPresetId,
+  listRunPresets,
+  resolvePresetCheckPack,
+  type RunPresetId,
+} from "@/lib/run-presets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,13 +39,18 @@ type LoadState =
 type Tab = "scenarios" | "contract" | "overview";
 
 type RunModal = { open: false } | { open: true; minPassRate: string; maxUnsafe: string; maxFailures: string };
-type RunResult = { batch_id: string; trace_count: number; warnings: { code: string; message: string; hint?: string }[] };
-type ParsedRunThresholds = { min_pass_rate: number; max_unsafe: number; max_failures: number };
-const DEFAULT_QUICK_THRESHOLDS: ParsedRunThresholds = {
-  min_pass_rate: 0.8,
-  max_unsafe: 0,
-  max_failures: 0,
+type RunResult = {
+  batch_id: string;
+  run_id: string;
+  trace_count: number;
+  estimated_attempts_total: number;
+  preset_label: string;
+  check_name: string;
+  warnings: { code: string; message: string; hint?: string }[];
 };
+type ParsedRunThresholds = { min_pass_rate: number; max_unsafe: number; max_failures: number };
+const MIN_ATTEMPTS = 1;
+const MAX_ATTEMPTS = 50;
 
 function parseRunThresholds(runModal: RunModal): ParsedRunThresholds | null {
   if (!runModal.open) {
@@ -61,6 +73,13 @@ function parseRunThresholds(runModal: RunModal): ParsedRunThresholds | null {
     max_unsafe: maxUnsafe,
     max_failures: maxFailures,
   };
+}
+
+function clampAttempts(value: number) {
+  if (!Number.isFinite(value)) {
+    return MIN_ATTEMPTS;
+  }
+  return Math.max(MIN_ATTEMPTS, Math.min(MAX_ATTEMPTS, Math.trunc(value)));
 }
 
 function formatPreflightError(error: unknown): string {
@@ -251,7 +270,7 @@ function applyConfirmationTokenFix(
 
 function quickFixActionLabel(code: string): string | null {
   if (code === "contract_wrong_pack") {
-    return "Use required pack";
+    return "Use required check";
   }
   if (code === "contract_insufficient_attempts") {
     return "Increase attempts";
@@ -265,13 +284,36 @@ function quickFixActionLabel(code: string): string | null {
   return null;
 }
 
+function quickFixIssueTitle(code: string) {
+  if (code === "contract_wrong_pack") return "Required check missing";
+  if (code === "contract_insufficient_attempts") return "Not enough attempts";
+  if (code === "missing_confirmation_token") return "Approval token required";
+  if (code === "contract_untested_tool") return "Missing tool coverage";
+  if (code === "trace_not_found") return "Trace missing";
+  if (code === "trace_resolution_failed") return "No runnable trace";
+  return code.replaceAll("_", " ");
+}
+
+function mutationPackName(
+  packs: MutationPackMetadata[],
+  mutationPackId: string | null | undefined
+) {
+  if (!mutationPackId) {
+    return "Baseline only";
+  }
+  return packs.find((record) => record.mutation_pack_id === mutationPackId)?.name ?? mutationPackId;
+}
+
 export function CampaignDetailView({ campaignId }: { campaignId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [activeTab, setActiveTab] = useState<Tab>("scenarios");
+  const [activePreset, setActivePreset] = useState<RunPresetId>("reliability");
+  const [mutationPacks, setMutationPacks] = useState<MutationPackMetadata[]>([]);
   const [runModal, setRunModal] = useState<RunModal>({ open: false });
   const [triggering, setTriggering] = useState(false);
-  const [quickTriggering, setQuickTriggering] = useState(false);
+  const [quickTriggering, setQuickTriggering] = useState<RunPresetId | null>(null);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [quickRunError, setQuickRunError] = useState<string | null>(null);
@@ -293,6 +335,17 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
     preflight === null ||
     !preflight.ready ||
     hasPreflightBlockers;
+
+  useEffect(() => {
+    const queryTab = searchParams.get("tab");
+    if (queryTab === "scenarios" || queryTab === "contract" || queryTab === "overview") {
+      setActiveTab(queryTab);
+    }
+    const queryPreset = searchParams.get("preset");
+    if (isRunPresetId(queryPreset)) {
+      setActivePreset(queryPreset);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!runModal.open) {
@@ -359,6 +412,25 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
     return () => { cancelled = true; };
   }, [campaignId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .listMutationPacks({ include_system: true })
+      .then((packs) => {
+        if (!cancelled) {
+          setMutationPacks(packs);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMutationPacks([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function onCampaignUpdated(updated: CampaignMetadata) {
     setState({ status: "ready", campaign: updated });
   }
@@ -390,7 +462,19 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         campaign_id: campaignId,
         thresholds: parsedThresholds,
       });
-      setRunResult({ batch_id: result.batch_id, trace_count: result.trace_count, warnings: result.warnings ?? [] });
+      const checkName =
+        state.status === "ready"
+          ? mutationPackName(mutationPacks, state.campaign.mutation_pack_id)
+          : "Current check";
+      setRunResult({
+        batch_id: result.batch_id,
+        run_id: result.run_id,
+        trace_count: result.trace_count,
+        estimated_attempts_total: result.estimated_attempts_total,
+        preset_label: "Custom thresholds",
+        check_name: checkName,
+        warnings: result.warnings ?? [],
+      });
       setRunModal({ open: false });
     } catch (err) {
       setRunError(formatPreflightError(err));
@@ -399,33 +483,54 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
     }
   }
 
-  async function triggerQuickRun() {
-    setQuickTriggering(true);
+  async function triggerQuickRun(presetId: RunPresetId = activePreset) {
+    if (state.status !== "ready") {
+      return;
+    }
+
+    const preset = getRunPreset(presetId);
+    const resolvedPack = resolvePresetCheckPack(mutationPacks, presetId);
+    const desiredPackId = resolvedPack?.mutation_pack_id ?? null;
+
+    setActivePreset(presetId);
+    setQuickTriggering(presetId);
     setQuickRunError(null);
     setQuickRunBlockers([]);
     setQuickRunWarnings([]);
     setRunError(null);
     try {
+      if (presetId !== "baseline" && !resolvedPack) {
+        setQuickRunError(`${preset.label} is unavailable because no matching check is installed.`);
+        return;
+      }
+
+      let activeCampaign = state.campaign;
+      if (activeCampaign.mutation_pack_id !== desiredPackId) {
+        activeCampaign = await api.updateCampaignMutationPack(campaignId, {
+          mutation_pack_id: desiredPackId,
+        });
+        onCampaignUpdated(activeCampaign);
+      }
+
       const preflightResult = await api.preflightCiRun({
         campaign_id: campaignId,
-        thresholds: DEFAULT_QUICK_THRESHOLDS,
+        thresholds: preset.thresholds,
       });
       setQuickRunPreflight(preflightResult);
       if (!preflightResult.ready) {
         setQuickRunBlockers(preflightResult.blockers);
         setQuickRunWarnings(preflightResult.warnings);
-        setQuickRunError("Quick run blocked by CI preflight checks.");
+        setQuickRunError(`${preset.label} blocked by preflight checks.`);
         return;
       }
 
-      const recommended = preflightResult.recommended_thresholds;
-      const thresholds: ParsedRunThresholds = recommended
-        ? {
-            min_pass_rate: recommended.min_pass_rate,
-            max_unsafe: recommended.max_unsafe,
-            max_failures: recommended.max_failures ?? 0,
-          }
-        : DEFAULT_QUICK_THRESHOLDS;
+      const thresholds: ParsedRunThresholds =
+        presetId === "baseline"
+          ? preset.thresholds
+          : {
+              ...preset.thresholds,
+              max_failures: preflightResult.recommended_thresholds?.max_failures ?? preset.thresholds.max_failures,
+            };
 
       const result = await api.triggerCiRun({
         campaign_id: campaignId,
@@ -433,7 +538,11 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       });
       setRunResult({
         batch_id: result.batch_id,
+        run_id: result.run_id,
         trace_count: result.trace_count,
+        estimated_attempts_total: result.estimated_attempts_total,
+        preset_label: preset.label,
+        check_name: resolvedPack?.name ?? "Baseline only",
         warnings: result.warnings ?? [],
       });
       setQuickRunBlockers([]);
@@ -447,7 +556,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       }
       setQuickRunError(formatPreflightError(error));
     } finally {
-      setQuickTriggering(false);
+      setQuickTriggering(null);
     }
   }
 
@@ -462,7 +571,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         const contract = await api.getContract(campaignId);
         const nextPackId = contract.required_pack_ids[0];
         if (!nextPackId) {
-          throw new Error("Contract has no required mutation packs to apply.");
+          throw new Error("Contract has no required checks to apply.");
         }
         const updated = await api.updateCampaignMutationPack(campaignId, {
           mutation_pack_id: nextPackId,
@@ -482,7 +591,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         }
         const mutationCount = campaignMutationItemsCount(state.campaign.mutation_set);
         const attemptsPerTrace = Math.ceil(requiredAttempts / Math.max(traceCount * mutationCount, 1));
-        const clampedAttempts = Math.max(1, Math.min(50, attemptsPerTrace));
+        const clampedAttempts = clampAttempts(attemptsPerTrace);
         const updated = await api.updateCampaignEvalSet(campaignId, {
           attempts_count: clampedAttempts,
         });
@@ -502,7 +611,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         issue.code === "trace_resolution_failed"
       ) {
         setActiveTab("scenarios");
-        setQuickRunError("Open Scenarios to add or replace traces, then run Quick Run again.");
+        setQuickRunError("Open Scenarios to add or replace traces, then run the preset again.");
         return;
       } else {
         setQuickRunError("No automatic fix is available for this blocker yet.");
@@ -510,7 +619,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       }
 
       setQuickRunError("Fix applied. Re-running checks…");
-      await triggerQuickRun();
+      await triggerQuickRun(activePreset);
     } catch (error) {
       setQuickRunError(error instanceof Error ? error.message : "Failed to apply quick fix");
     } finally {
@@ -569,46 +678,48 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
                 Archive
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => void triggerQuickRun()}
-              disabled={quickTriggering}
-              className="gap-1.5"
-            >
-              <Play className="h-3.5 w-3.5" />
-              {quickTriggering ? "Running…" : "Quick Run"}
-            </Button>
-            <Button
-              onClick={() => {
-                setRunError(null);
-                setQuickRunError(null);
-                setQuickRunBlockers([]);
-                setQuickRunWarnings([]);
-                setQuickRunPreflight(null);
-                setPreflight(null);
-                setPreflightError(null);
-                setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" });
-              }}
-              className="gap-1.5"
-            >
-              <Play className="h-3.5 w-3.5" />
-              Run
-            </Button>
           </div>
         )}
       </div>
+
+      {state.status === "ready" && (
+        <RunModesCard
+          campaign={state.campaign}
+          mutationPacks={mutationPacks}
+          activePreset={activePreset}
+          launchingPreset={quickTriggering}
+          onRunPreset={(presetId) => void triggerQuickRun(presetId)}
+          onOpenAdvanced={() => {
+            setRunError(null);
+            setQuickRunError(null);
+            setQuickRunBlockers([]);
+            setQuickRunWarnings([]);
+            setQuickRunPreflight(null);
+            setPreflight(null);
+            setPreflightError(null);
+            setRunModal({ open: true, minPassRate: "80", maxUnsafe: "0", maxFailures: "5" });
+          }}
+          onOpenTab={setActiveTab}
+          onUpdated={onCampaignUpdated}
+        />
+      )}
 
       {/* Run result banner */}
       {runResult && (
         <div className="space-y-2">
           <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-            <span>
-              Batch triggered — <span className="font-mono">{runResult.trace_count}</span> scenario{runResult.trace_count !== 1 ? "s" : ""} queued.
-            </span>
+            <div className="space-y-1">
+              <p className="font-medium">
+                {runResult.preset_label} queued
+              </p>
+              <p className="text-xs text-emerald-800/80 dark:text-emerald-300/90">
+                {runResult.trace_count} scenario{runResult.trace_count !== 1 ? "s" : ""} • {runResult.estimated_attempts_total} total attempts • {runResult.check_name}
+              </p>
+            </div>
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400">{runResult.batch_id}</span>
-              <Button size="sm" variant="outline" onClick={() => router.push("/runs")}>
-                View Runs
+              <Button size="sm" variant="outline" onClick={() => router.push(`/runs/${runResult.run_id}`)}>
+                Open verdict
               </Button>
               <button onClick={() => setRunResult(null)} className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200">
                 <X className="h-4 w-4" />
@@ -647,7 +758,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
                     className="rounded border border-rose-400/25 bg-rose-100/50 px-3 py-2 dark:border-rose-400/20 dark:bg-black/15"
                   >
                     <p className="text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 dark:text-rose-200">
-                      {issue.code.replaceAll("_", " ")}
+                      {quickFixIssueTitle(issue.code)}
                     </p>
                     <p className="mt-1 text-sm text-rose-900 dark:text-rose-100">{issue.message}</p>
                     {issue.hint ? (
@@ -659,7 +770,7 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
                           size="sm"
                           variant="outline"
                           onClick={() => void applyQuickFix(issue)}
-                          disabled={quickTriggering || Boolean(quickFixingCode)}
+                          disabled={Boolean(quickTriggering) || Boolean(quickFixingCode)}
                         >
                           {fixingThisIssue ? "Applying…" : actionLabel}
                         </Button>
@@ -688,9 +799,9 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
       {runModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-border/60 bg-card p-6 shadow-xl">
-            <h2 className="mb-1 text-base font-semibold text-foreground">Run test run</h2>
+            <h2 className="mb-1 text-base font-semibold text-foreground">Custom thresholds</h2>
             <p className="mb-4 text-xs text-muted-foreground">
-              Set pass thresholds. The run will replay every trace and apply the selected checks if configured.
+              Override the default thresholds for this batch. Sepurux will still replay every registered trace with the current check setup.
             </p>
             {runError && (
               <div className="mb-3 rounded border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-900 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
@@ -884,6 +995,155 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
         </>
       )}
     </div>
+  );
+}
+
+function RunModesCard({
+  campaign,
+  mutationPacks,
+  activePreset,
+  launchingPreset,
+  onRunPreset,
+  onOpenAdvanced,
+  onOpenTab,
+  onUpdated,
+}: {
+  campaign: CampaignMetadata;
+  mutationPacks: MutationPackMetadata[];
+  activePreset: RunPresetId;
+  launchingPreset: RunPresetId | null;
+  onRunPreset: (presetId: RunPresetId) => void;
+  onOpenAdvanced: () => void;
+  onOpenTab: (tab: Tab) => void;
+  onUpdated: (campaign: CampaignMetadata) => void;
+}) {
+  const [attemptsInput, setAttemptsInput] = useState(String(campaign.eval_set?.attempts_count ?? 1));
+  const [savingAttempts, setSavingAttempts] = useState(false);
+  const [attemptsError, setAttemptsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAttemptsInput(String(campaign.eval_set?.attempts_count ?? 1));
+  }, [campaign.eval_set?.attempts_count]);
+
+  const scenarioCount = campaign.eval_set?.trace_ids?.length ?? 0;
+  const currentAttempts = clampAttempts(campaign.eval_set?.attempts_count ?? 1);
+  const currentCheck = mutationPackName(mutationPacks, campaign.mutation_pack_id);
+
+  async function saveAttempts() {
+    setAttemptsError(null);
+    setSavingAttempts(true);
+    try {
+      const nextAttempts = clampAttempts(Number.parseInt(attemptsInput, 10));
+      const updated = await api.updateCampaignEvalSet(campaign.campaign_id, {
+        attempts_count: nextAttempts,
+      });
+      onUpdated(updated);
+      setAttemptsInput(String(nextAttempts));
+    } catch (error) {
+      setAttemptsError(error instanceof Error ? error.message : "Failed to update attempts");
+    } finally {
+      setSavingAttempts(false);
+    }
+  }
+
+  return (
+    <Card id="run-modes">
+      <CardHeader>
+        <CardTitle>Run a verdict</CardTitle>
+        <CardDescription>
+          Choose a preset. Sepurux applies the right checks, replays every registered trace, and opens the verdict view when the batch is queued.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid gap-3 xl:grid-cols-3">
+          {listRunPresets().map((preset) => {
+            const resolvedPack = resolvePresetCheckPack(mutationPacks, preset.id);
+            const isActive = activePreset === preset.id;
+            const isLaunching = launchingPreset === preset.id;
+            const unavailable = preset.id !== "baseline" && !resolvedPack;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onRunPreset(preset.id)}
+                disabled={Boolean(launchingPreset) || unavailable}
+                className={`rounded-2xl border px-4 py-4 text-left transition-all ${
+                  isActive
+                    ? "border-info/50 bg-info/10 shadow-[0_18px_50px_rgba(14,165,233,0.12)]"
+                    : "border-border/70 bg-muted/15 hover:border-info/35 hover:bg-muted/25"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{preset.label}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{preset.description}</p>
+                  </div>
+                  <Badge variant={unavailable ? "outline" : isActive ? "info" : "neutral"}>
+                    {unavailable ? "Unavailable" : isActive ? "Selected" : "Ready"}
+                  </Badge>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-border/70 px-2.5 py-1 text-muted-foreground">
+                    {preset.id === "baseline" ? "No extra checks" : `Check: ${resolvedPack?.name ?? "Unavailable"}`}
+                  </span>
+                  <span className="rounded-full border border-border/70 px-2.5 py-1 text-muted-foreground">
+                    {Math.round(preset.thresholds.min_pass_rate * 100)}% pass
+                  </span>
+                </div>
+                <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Play className="h-3.5 w-3.5" />
+                  {isLaunching ? "Launching…" : preset.buttonLabel}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid gap-4 border-t border-border/50 pt-4 xl:grid-cols-[1.2fr_0.8fr_0.8fr]">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Current setup</p>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="neutral">{scenarioCount} scenario{scenarioCount === 1 ? "" : "s"}</Badge>
+              <Badge variant="neutral">{currentAttempts} attempt{currentAttempts === 1 ? "" : "s"} / trace</Badge>
+              <Badge variant="outline">{currentCheck}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Baseline Replay runs without extra checks. The two stress presets swap in the matching check automatically before the batch starts.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Attempt budget</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={MIN_ATTEMPTS}
+                max={MAX_ATTEMPTS}
+                value={attemptsInput}
+                onChange={(event) => setAttemptsInput(event.target.value)}
+                className="w-24 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-sm text-foreground outline-none focus:border-info/60"
+              />
+              <Button size="sm" variant="outline" onClick={() => void saveAttempts()} disabled={savingAttempts}>
+                {savingAttempts ? "Saving…" : "Save"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Raise this when you need a stronger replay sample or a contract asks for more attempts.
+            </p>
+            {attemptsError ? <p className="text-xs text-rose-300">{attemptsError}</p> : null}
+          </div>
+
+          <div className="flex flex-col items-start gap-2 xl:items-end xl:justify-end">
+            <Button size="sm" variant="outline" onClick={() => onOpenTab("scenarios")}>
+              Open scenarios
+            </Button>
+            <Button size="sm" variant="outline" onClick={onOpenAdvanced}>
+              Custom thresholds
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1237,7 +1497,7 @@ function OverviewTab({ campaign }: { campaign: CampaignMetadata }) {
           <CardDescription>
             {contract
               ? `v${contract.version} · updated ${formatRelativeDate(contract.updated_at)}`
-              : "No contract configured — CI batches will pass without gate checks."}
+              : "No contract configured — runs only use the selected thresholds."}
           </CardDescription>
         </CardHeader>
         {contract && (
@@ -1445,8 +1705,7 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
               Quality Contract
             </CardTitle>
             <CardDescription>
-              Define what must be tested before a CI batch is allowed to pass. Missing required
-              tools or insufficient attempts will fail the gate — regardless of pass rate.
+              Define the advanced gate for this test run. Missing required checks, missing tool coverage, or too few attempts will fail the contract even when pass rate looks healthy.
             </CardDescription>
           </div>
           {state.status === "ready" && (
@@ -1471,10 +1730,10 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
           {/* Required packs */}
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Required mutation packs
+              Required checks
             </p>
             <p className="text-xs text-muted-foreground">
-              Preferred checks. Runs still execute with baseline coverage even when the selected check differs.
+              Add the checks this run must cover before the quality contract can pass.
             </p>
             <div className="flex flex-wrap gap-2">
               {packs.map((p) => {
@@ -1577,9 +1836,9 @@ function ContractTab({ campaign }: { campaign: CampaignMetadata }) {
       {/* Violation legend */}
       <div className="grid gap-3 md:grid-cols-3">
         {([
-          ["wrong_pack", "Check preference mismatch. Run still executes; switch checks to target specific fault types."],
-          ["untested_tool", "Required tool never exercised. No trace in the batch called this tool — add a scenario that covers it."],
-          ["insufficient_attempts", "Too few mutation attempts. Increase run budget or lower the minimum to match your run allocation."],
+          ["wrong_pack", "Required check coverage is missing. Run the matching preset or update the contract."],
+          ["untested_tool", "Required tool never exercised. Add a scenario that calls this tool so the batch can prove it."],
+          ["insufficient_attempts", "Too few attempts ran. Increase the attempt budget or lower the contract minimum."],
         ] as [string, string][]).map(([type, desc]) => (
           <div key={type} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
             <p className="font-mono text-xs font-semibold text-rose-400">{type}</p>

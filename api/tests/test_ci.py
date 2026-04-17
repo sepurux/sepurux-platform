@@ -2075,7 +2075,7 @@ def test_get_ci_batch_contract_tool_coverage_uses_normalized_trace_events(
     assert required_tool in payload["contract_report"]["covered_tools"]
 
 
-def test_get_ci_batch_contract_pack_preference_mismatch_is_advisory(
+def test_get_ci_batch_contract_pack_preference_mismatch_fails_contract(
     ci_test_context: tuple[TestClient, sessionmaker[Session], FakeQueue, UUID],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2157,9 +2157,9 @@ def test_get_ci_batch_contract_pack_preference_mismatch_is_advisory(
     assert response.status_code == 200
     payload = response.json()
     assert payload["contract_report"] is not None
-    assert payload["contract_report"]["passed"] is True
-    assert payload["decision"] == "pass"
-    assert payload["contract_report"]["violations"] == []
+    assert payload["contract_report"]["passed"] is False
+    assert payload["decision"] == "fail"
+    assert payload["contract_report"]["violations"][0]["type"] == "wrong_pack"
 
 
 def test_get_ci_batch_fails_when_any_run_fails(
