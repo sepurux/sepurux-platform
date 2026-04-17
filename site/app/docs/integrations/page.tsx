@@ -6,9 +6,14 @@ import { buildPageMetadata } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Integrations",
   description:
-    "Drop-in integrations for OpenAI, LangChain, and more — auto-record traces without manual instrumentation.",
+    "Install the recorder and add drop-in integrations for OpenAI, LangChain, and more — then promote findings into CI gates.",
   path: "/docs/integrations",
 });
+
+const recorderInstallSnippet = `# Install the recorder for your stack
+pip install sepurux
+npm install @sepurux/recorder
+go get github.com/sepurux/go-recorder@latest`;
 
 const openaiSnippet = `import openai
 from sepurux import SepuruxClient
@@ -97,8 +102,8 @@ export default function IntegrationsPage() {
   return (
     <DocsShell
       kicker="Docs / Integrations"
-      title="Drop-in integrations for popular AI frameworks."
-      description="Each integration wraps your existing client or chain and records traces automatically — no manual model_step() calls needed."
+      title="Install the recorder and capture traces automatically."
+      description="Debug a trace in the browser first, then use these integrations to capture traces in code and feed the same workflows into CI gates."
       nav={[
         { href: "#overview", label: "Overview" },
         { href: "#openai", label: "OpenAI" },
@@ -106,15 +111,17 @@ export default function IntegrationsPage() {
         { href: "#coming-soon", label: "Coming Soon" },
       ]}
       actions={[
-        { href: "/docs/getting-started", label: "Getting started" },
+        { href: "/docs/getting-started", label: "Install the recorder" },
+        { href: "/docs/ci-cd", label: "Gate in CI" },
         { href: "/docs/api-reference", label: "API reference" },
       ]}
     >
       <DocsSection
         id="overview"
         title="Available Integrations"
-        description="All integrations are included in the sepurux package. No extra SDK installs beyond the framework itself."
+        description="All integrations are included in the sepurux package. Install once, capture traces automatically, then use CI to gate on reliability."
       >
+        <DocsCodeBlock code={recorderInstallSnippet} label="Install recorder" />
         <div className="grid gap-4 md:grid-cols-2">
           {integrations.map((integration) => (
             <div

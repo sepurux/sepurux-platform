@@ -6,7 +6,7 @@ import { buildPageMetadata, siteConfig } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "CI Integration",
   description:
-    "Add Sepurux trace checks to your CI pipeline and block merges or deploys when pass rate drops below your threshold.",
+    "Turn Sepurux reliability findings into CI release gates that block merges or deploys when thresholds fail.",
   path: "/docs/ci-cd",
 });
 
@@ -233,7 +233,7 @@ export default function CICDPage() {
     <DocsShell
       kicker="Docs / CI"
       title="Run trace checks in CI and block on failures."
-      description="Add Sepurux to your pull request and deployment workflows so failing traces block merges before they hit production."
+      description="Use this after debugger + recorder setup: capture traces in code, then gate pull requests and releases on reliability outcomes."
       nav={[
         { href: "#action", label: "GitHub Action" },
         { href: "#workflow", label: "Full Workflow" },
@@ -244,7 +244,7 @@ export default function CICDPage() {
         { href: "#rollout", label: "Rollout Tips" },
       ]}
       actions={[
-        { href: "/docs/getting-started", label: "Setup first" },
+        { href: "/docs/getting-started", label: "Install the recorder" },
         { href: "/docs/policy-security", label: "Policy controls" },
       ]}
     >

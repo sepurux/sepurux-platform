@@ -7,7 +7,7 @@ import { buildPageMetadata, siteConfig } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Docs",
   description:
-    "Professional Sepurux documentation for setup, SDKs, CI/CD gates, policy controls, security guardrails, and API usage.",
+    "Sepurux docs for the full loop: debug in browser, install the recorder, capture traces automatically, and gate releases in CI.",
   path: "/docs",
 });
 
@@ -15,12 +15,12 @@ const docTracks = [
   {
     title: "Getting Started",
     description:
-      "Set up environment variables, capture a trace, build a mutation pack in Basic Builder, and run checks in minutes.",
+      "Debug a trace first, install the recorder for your stack, capture traces automatically, and run checks in minutes.",
     href: "/docs/getting-started",
   },
   {
     title: "CI/CD Gate",
-    description: "Add Sepurux to GitHub workflows and block risky releases when thresholds fail.",
+    description: "Turn reliability findings into release gates in GitHub workflows.",
     href: "/docs/ci-cd",
   },
   {
@@ -55,7 +55,12 @@ const docTracks = [
   },
 ];
 
-const quickstartSnippet = `SEPURUX_API_BASE_URL=${siteConfig.appUrl}/api/backend
+const quickstartSnippet = `# Install the recorder for your stack
+pip install sepurux
+npm install @sepurux/recorder
+go get github.com/sepurux/go-recorder@latest
+
+SEPURUX_API_BASE_URL=${siteConfig.appUrl}/api/backend
 SEPURUX_UI_BASE_URL=${siteConfig.appUrl}
 SEPURUX_API_KEY=<project_api_key>
 SEPURUX_PROJECT_ID=<project_uuid>`;
@@ -77,29 +82,29 @@ export default function DocsPage() {
   return (
     <DocsShell
       kicker="Documentation"
-      title="Operational docs for teams shipping reliable AI agents."
-      description="Use the docs the same way you use the product: start from a real workflow, connect a project, capture a trace, and move into replay, policy, and CI control."
+      title="Debug in the browser. Record in code. Gate in CI."
+      description="Use the docs as one loop: debug a trace in the browser, install the recorder in code, capture traces automatically, then turn findings into CI release gates."
       nav={[
         { href: "#start", label: "Start Here" },
         { href: "#tracks", label: "Documentation Tracks" },
         { href: "#resources", label: "Reference Resources" },
       ]}
       actions={[
-        { href: "/docs/getting-started", label: "Open quickstart" },
-        { href: "/docs/api-reference", label: "API reference" },
-        { href: "/docs/ci-cd", label: "CI guide" },
+        { href: "/sandbox", label: "Debug a trace" },
+        { href: "/docs/getting-started", label: "Install the recorder" },
+        { href: "/docs/ci-cd", label: "Gate in CI" },
       ]}
     >
       <DocsSection
         id="start"
         title="Start Here"
-        description="Validate the full setup path in three steps before diving deeper into CI, policy, and enterprise controls."
+        description="Run the full adoption path in three steps before diving deeper into policy and enterprise controls."
       >
         <div className="space-y-5">
           {[
-            ["1. Connect a project", "Generate a project API key and copy your project UUID from the app workspace."],
-            ["2. Set the environment", "Define the base URLs and auth variables once in your shell or CI secrets."],
-            ["3. Capture, build, run", "Record a trace, create a mutation pack, and execute the first reliability run."],
+            ["1. Debug in browser", "Start with a real failing trace in the debugger and confirm the failing step plus next fix."],
+            ["2. Install the recorder", "Use pip, npm, or go get once, then capture traces automatically from real code paths."],
+            ["3. Gate in CI", "Promote stable traces into CI checks so reliability failures block risky releases."],
           ].map(([title, body]) => (
             <div key={title} className="grid gap-3 border-t border-[--border] pt-4 md:grid-cols-[180px_minmax(0,1fr)]">
               <p className="text-sm font-semibold text-[--text-primary]">{title}</p>
