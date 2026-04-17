@@ -74,6 +74,12 @@ export function getInsightAutoFixAvailability(
   if (insight.id.startsWith("insight.retry_backoff.")) {
     return { supported: true, reason: null };
   }
+  if (insight.id.startsWith("insight.timeout_retry.")) {
+    return { supported: true, reason: null };
+  }
+  if (insight.id.startsWith("insight.rate_limit_backoff.")) {
+    return { supported: true, reason: null };
+  }
   if (insight.id.startsWith("insight.tool_hotspot.")) {
     if (inferRetryableReason(insight) !== null) {
       return { supported: true, reason: null };
@@ -138,6 +144,12 @@ export function buildTemplateFromInsightEvidence(
     return buildSchemaAdapterTemplate(insight, evidence);
   }
   if (insight.id.startsWith("insight.retry_backoff.")) {
+    return buildRetryTemplate(insight, evidence);
+  }
+  if (insight.id.startsWith("insight.timeout_retry.")) {
+    return buildRetryTemplate(insight, evidence);
+  }
+  if (insight.id.startsWith("insight.rate_limit_backoff.")) {
     return buildRetryTemplate(insight, evidence);
   }
   if (insight.id.startsWith("insight.tool_hotspot.")) {
@@ -373,10 +385,24 @@ function scoreAttemptForInsight(
     score += 20;
   }
   if (
-    insight.id.startsWith("insight.retry_backoff.") &&
+    (insight.id.startsWith("insight.retry_backoff.") ||
+      insight.id.startsWith("insight.timeout_retry.") ||
+      insight.id.startsWith("insight.rate_limit_backoff.")) &&
     isRetryableReason(attempt.failure_reason)
   ) {
     score += 20;
+  }
+  if (
+    insight.id.startsWith("insight.timeout_retry.") &&
+    attempt.failure_reason === "timeout"
+  ) {
+    score += 15;
+  }
+  if (
+    insight.id.startsWith("insight.rate_limit_backoff.") &&
+    attempt.failure_reason === "rate_limited"
+  ) {
+    score += 15;
   }
 
   return score;
@@ -437,6 +463,12 @@ function inferRetryableReason(insight: RunInsight): string | null {
   }
   if (insight.id.startsWith("insight.retry_backoff.")) {
     return "timeout";
+  }
+  if (insight.id.startsWith("insight.timeout_retry.")) {
+    return "timeout";
+  }
+  if (insight.id.startsWith("insight.rate_limit_backoff.")) {
+    return "rate_limited";
   }
   return null;
 }
