@@ -23,7 +23,7 @@ import { ScreenshotGallerySection } from "@/components/sections/screenshot-galle
 export const metadata: Metadata = buildPageMetadata({
   title: "Product",
   description:
-    "Explore Sepurux end to end: trace debugger, replay, stress testing, policy controls, CI integration, and team governance.",
+    "Explore the Sepurux loop end to end: debug in browser, record in code, and gate in CI.",
   path: "/product",
 });
 
@@ -112,16 +112,16 @@ const capabilities: Capability[] = [
 
 const heroRows = [
   {
-    title: "Debugger first",
+    title: "Debug in the browser",
     copy: "Paste a trace and see where it failed or looks risky.",
   },
   {
-    title: "Then go deeper",
-    copy: "Replay, compare runs, and stress-test the same path before rollout.",
+    title: "Record in code",
+    copy: "Install the recorder to capture traces automatically from real workflows.",
   },
   {
-    title: "CI integration",
-    copy: "Add checks to your CI pipeline to block regressions automatically.",
+    title: "Gate in CI",
+    copy: "Turn reliability findings into release gates that block regressions automatically.",
   },
 ];
 
@@ -229,8 +229,8 @@ export default function ProductPage() {
                 Debug fast. Everything else follows when you need it.
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-                Paste a trace, see where it failed, and move into replay, stress testing, and CI
-                checks when you're ready. No account required to start.
+                Debug in the browser first, then install the recorder to capture traces in code,
+                and gate releases in CI when the workflow is stable. No account required to start.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -238,20 +238,20 @@ export default function ProductPage() {
                   href="/sandbox"
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.28)] bg-[var(--color-accent)] px-5 text-sm font-semibold text-white transition hover:brightness-110"
                 >
-                  Analyze Trace
+                  Debug a trace
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/docs/getting-started"
                   className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
                 >
-                  Read docs
+                  Install the recorder
                 </Link>
                 <Link
                   href="/docs/ci-cd"
                   className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
                 >
-                  CI integration docs
+                  Gate in CI
                 </Link>
               </div>
 
@@ -286,7 +286,7 @@ export default function ProductPage() {
             Starts with a trace. Goes as far as you need.
           </h2>
           <p className="section-lead mt-5">
-            Debugger first, then replay and stress testing, then CI checks and team controls.
+            Debug in the browser, record in code, then gate in CI.
           </p>
         </div>
 
@@ -311,8 +311,8 @@ export default function ProductPage() {
               Start with the trace. Go further when you're ready.
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 md:text-lg">
-              Use the sandbox for the first analysis, then move into replay, stress testing, and CI
-              checks when you want the fix to hold.
+              Use the sandbox for the first analysis, install the recorder for continuous capture,
+              then move into replay, stress testing, and CI gates when you want the fix to hold.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -320,14 +320,20 @@ export default function ProductPage() {
                 href="/sandbox"
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.28)] bg-[var(--color-accent)] px-5 text-sm font-semibold text-white transition hover:brightness-110"
               >
-                Analyze Trace
+                Debug a trace
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/docs/ci-cd"
                 className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
               >
-                CI integration docs
+                Gate in CI
+              </Link>
+              <Link
+                href="/docs/getting-started"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-slate-100 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                Install the recorder
               </Link>
               <Link
                 href="/waitlist"

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { DocsCodeBlock, DocsSection, DocsShell } from "@/components/docs/docs-shell";
 import { DocsCodeTabs } from "@/components/docs/docs-code-tabs";
@@ -7,7 +8,7 @@ import { buildPageMetadata, siteConfig } from "@/lib/site";
 export const metadata: Metadata = buildPageMetadata({
   title: "Getting Started",
   description:
-    "Set up Sepurux quickly: install the SDK, set environment variables, record your first trace, and run your first campaign.",
+    "Get started fast: debug in the browser, install the recorder, capture traces automatically, and turn runs into CI gates.",
   path: "/docs/getting-started",
 });
 
@@ -230,8 +231,8 @@ export default function GettingStartedPage() {
   return (
     <DocsShell
       kicker="Docs / Getting Started"
-      title="Go from zero to your first reliability run."
-      description="This guide gets a team from initial setup to a working trace and campaign execution path with production-safe defaults."
+      title="Debug in the browser. Record in code. Gate in CI."
+      description="This guide walks from first debugger run to recorder install and automated trace capture, then into campaign checks that you can promote into CI gates."
       nav={[
         { href: "#prerequisites", label: "Prerequisites" },
         { href: "#install", label: "Install" },
@@ -243,8 +244,9 @@ export default function GettingStartedPage() {
         { href: "#first-run", label: "First Run" },
       ]}
       actions={[
+        { href: "/sandbox", label: "Debug a trace" },
+        { href: "/docs/ci-cd", label: "Gate in CI" },
         { href: "/docs/api-reference", label: "API guide" },
-        { href: "/docs/ci-cd", label: "CI/CD guide" },
       ]}
     >
       <DocsSection
@@ -269,7 +271,7 @@ export default function GettingStartedPage() {
       <DocsSection
         id="install"
         title="Install"
-        description="Add the Sepurux SDK for your language. Each SDK provides an ergonomic recorder API and auto-uploads traces on exit."
+        description="Install the recorder for your language. Each SDK auto-uploads traces on exit."
       >
         <DocsCodeTabs tabs={installTabs} />
       </DocsSection>
@@ -285,7 +287,7 @@ export default function GettingStartedPage() {
       <DocsSection
         id="first-trace"
         title="Record Your First Trace"
-        description="Instrument one agent workflow and confirm the trace appears in the Sepurux dashboard."
+        description="Instrument one workflow in code and confirm trace capture in Sepurux."
       >
         <DocsCodeTabs tabs={firstTraceTabs} />
       </DocsSection>
@@ -368,10 +370,19 @@ with SepuruxCallbackHandler("refund_flow", campaign_id="...") as handler:
 
       <DocsSection
         id="first-run"
-        title="Run with Trace + Campaign + Mutation Pack"
-        description="Pass campaign_id and mutation_pack when recording to auto-enqueue a reliability run on trace upload."
+        title="Run Checks from Recorded Traces"
+        description="Pass campaign_id and mutation_pack when recording to auto-enqueue a reliability run, then promote the same run pattern to CI."
       >
         <DocsCodeTabs tabs={runWithPackTabs} />
+        <div className="rounded-2xl border border-[--border] bg-white/8 shadow-sm p-4">
+          <p className="text-sm font-semibold text-[--text-primary]">Next step: Gate in CI</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            Once this run is stable, add the same trace + campaign path to GitHub workflows so release gating uses production-like scenarios.
+          </p>
+          <Link href="/docs/ci-cd" className="mt-3 inline-flex text-sm font-medium text-[--text-primary] underline underline-offset-4">
+            Open CI/CD guide
+          </Link>
+        </div>
       </DocsSection>
     </DocsShell>
   );

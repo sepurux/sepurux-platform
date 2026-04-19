@@ -2,6 +2,11 @@
 
 This guide deploys the current Sepurux app stack on a single Hetzner server with Docker Compose.
 
+**Prefer Coolify as the only public reverse proxy (TLS on 80/443)?** Use
+[Coolify migration](coolify-migration.md) and
+[`infra/docker-compose.coolify.yml`](../infra/docker-compose.coolify.yml) instead
+of the Caddy container below.
+
 It uses:
 
 - [infra/docker-compose.hetzner.yml](../infra/docker-compose.hetzner.yml)

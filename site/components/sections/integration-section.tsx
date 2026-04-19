@@ -61,12 +61,12 @@ const workflow = [
     description: "Keep the real agent story instead of rebuilding it by hand.",
   },
   {
-    title: "Debug the issue before you persist it",
-    description: "Use the paste-and-analyze flow first, then save the useful trace when it earns a place in history.",
+    title: "Install the recorder in code",
+    description: "Capture traces automatically from real workflows after the first browser debug pass.",
   },
   {
-    title: "Promote stable traces into replay and CI",
-    description: "Hand the same trace to replay, stress testing, or pre-release checks when the fix is ready.",
+    title: "Promote stable traces into CI gates",
+    description: "Hand the same trace to replay, stress testing, or release gating when the fix is ready.",
   },
 ];
 
@@ -115,18 +115,27 @@ export function IntegrationSection() {
           <div className="max-w-xl">
             <p className="section-kicker ink-kicker">Fits your stack</p>
             <h2 className="section-heading mt-4 text-white">
-              Paste the trace first. Save, replay, or gate later.
+              Debug in the browser. Record in code. Gate in CI.
             </h2>
             <p className="section-lead mt-5">
-              Sepurux is easiest to adopt when the first step is obvious: paste the trace, see what broke, then decide whether it deserves replay, mutation testing, or CI.
+              Sepurux is easiest to adopt when the first step is obvious: debug a trace first, then install the recorder to capture traces automatically, and gate releases in CI.
             </p>
-            <Link
-              href="/docs/integrations"
-              className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:text-white"
-            >
-              Open SDK and integration guide
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="mt-8 flex flex-wrap items-center gap-5">
+              <Link
+                href="/docs/getting-started"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:text-white"
+              >
+                Install the recorder
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/docs/ci-cd"
+                className="inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:-translate-y-0.5 hover:text-white"
+              >
+                Gate in CI
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           <div className="border-l border-white/8 pl-0 lg:pl-8">
