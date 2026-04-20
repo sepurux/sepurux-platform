@@ -136,6 +136,12 @@ If something goes wrong: bring the old `docker-compose.hetzner.yml` (with Caddy)
 back up and `docker compose up -d`, and temporarily **detach** domains in Coolify
 or stop Coolify’s proxy — only one system should bind `80/443`.
 
+## Postgres data on a new server
+
+Coolify creates a **new** `pgdata` volume unless you explicitly reuse old storage.
+To copy production data from the previous box, follow
+[postgres-migrate-to-coolify.md](./postgres-migrate-to-coolify.md).
+
 ## Files
 
 - Compose without Caddy: [`../infra/docker-compose.coolify.yml`](../infra/docker-compose.coolify.yml)
